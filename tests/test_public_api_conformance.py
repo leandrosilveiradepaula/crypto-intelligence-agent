@@ -83,8 +83,8 @@ class ErrorConformanceTests(unittest.TestCase):
                 self.assertEqual(len(transport.urls), 1)
                 self.assertEqual(sleeps, [])
 
-    def test_forbidden_and_ip_ban_do_not_trigger_retries(self):
-        for status in (403, 418):
+    def test_forbidden_ip_ban_and_legal_restriction_do_not_retry(self):
+        for status in (403, 418, 451):
             with self.subTest(status=status):
                 adapter, transport, sleeps = adapter_for([HttpResponse(status, "{}")])
                 with self.assertRaises(ExchangeAccessError):
