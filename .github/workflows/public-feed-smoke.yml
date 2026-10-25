@@ -252,3 +252,30 @@ jobs:
           python3 -m scripts.probe_kraken_btc_eth_universe \
             --allow-public-network --allow-private-kraken-universe \
             --registry expanded-10
+
+  kraken-three-price-pages-private:
+    if: >-
+      github.event.issue.number == 122 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-kraken-three-private-price-pages-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout reviewed main without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Capture bounded multi-crypto price-only data into private disposable SQLite
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          private_dir="$(mktemp -d)"
+          chmod 700 "$private_dir"
+          trap 'rm -rf "$private_dir"' EXIT
+          python3 -m scripts.collect_private_kraken_research \
+            --database "$private_dir/research.sqlite" \
+            --allow-public-network --allow-private-persistence \
+            --registry expanded-10 --max-price-symbols 3

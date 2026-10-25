@@ -42,7 +42,9 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotRegex(s, r"(?m)^\s+uses:\s+(?:docker|peter-evans/create-pull-request)")
 
     def test_smoke_is_bounded_and_explicitly_read_only(self):
-        s = self.source
+        # The legacy Binance smoke has no DB. A separate, explicitly guarded
+        # Kraken research job may use only a disposable private SQLite file.
+        s = self.source.split("\n  independent-provider-probe:", 1)[0]
         for token in (
             "python3 -m crypto_intelligence_agent",
             "--mode live --allow-public-network",
@@ -252,6 +254,31 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
             "python3 -m scripts.probe_kraken_btc_eth_universe",
             "--allow-public-network --allow-private-kraken-universe",
             "--registry expanded-10",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertIn("  contents: read", s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+
+
+
+    def test_three_private_chart_pages_are_owner_only_and_ephemeral(self):
+        s = self.source
+        for token in (
+            "kraken-three-price-pages-private:",
+            "github.event.issue.number == 122",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-three-private-price-pages-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.collect_private_kraken_research",
+            '--database "$private_dir/research.sqlite"',
+            "trap 'rm -rf", "chmod 700", "mktemp -d",
+            "--allow-public-network --allow-private-persistence",
+            "--registry expanded-10 --max-price-symbols 3",
             "persist-credentials: false",
             "timeout-minutes: 2",
         ):

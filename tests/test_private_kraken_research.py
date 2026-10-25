@@ -115,6 +115,54 @@ class Reader:
         return price_page() if self.page is None else self.page
 
 
+
+class MultiReader(Reader):
+    """Fake venue with four verified crypto futures and one tokenized equity."""
+
+    def __init__(self, *, bad_symbol=None):
+        contracts = [
+            instrument("PF_XBTUSD", "BTC", pair="XBT:USD"),
+            instrument("PF_ETHUSD", "ETH"),
+            instrument("PF_SOLUSD", "SOL"),
+            instrument("PF_DOGEUSD", "DOGE"),
+            instrument("PF_AAPLXUSD", "AAPLX", category="xStocks"),
+        ]
+        tickers = [
+            ticker("PF_XBTUSD", "100000000.1"),
+            ticker("PF_ETHUSD", "90000000.2"),
+            ticker("PF_SOLUSD", "80000000.3"),
+            ticker("PF_DOGEUSD", "70000000.4"),
+            ticker("PF_AAPLXUSD", "99999999999999"),
+        ]
+        super().__init__(market_value=KrakenCurrentResearchSnapshot(
+            captured_start_ms=NOW + 20, captured_end_ms=NOW + 80,
+            instruments=tuple(contracts), tickers=tuple(tickers),
+        ))
+        self.bad_symbol = bad_symbol
+
+    def staged_closed_candles(self, *, symbol, interval, start_open_ms, end_open_ms):
+        self.calls.append(symbol)
+        self.asserted = (symbol, interval, start_open_ms, end_open_ms)
+        assert interval == "1h" and start_open_ms == START and end_open_ms == END
+        assert symbol in ("PF_XBTUSD", "PF_ETHUSD", "PF_SOLUSD", "PF_DOGEUSD")
+        timestamp = NOW + 400 + (len(self.calls) - 1) * 100
+        rows = [
+            {"time": START + i * HOUR, "open": "101.123456789123456789",
+             "high": "120", "low": "90", "close": "105.987654321987654321",
+             "volume": "77.123456789987654321"}
+            for i in range(3)
+        ]
+        staged = stage_kraken_trade_candles(
+            {"candles": rows, "more_candles": False},
+            symbol=symbol, interval="1h",
+            start_open_ms=START, end_open_ms=END, observed_at_ms=timestamp,
+        )
+        result = KrakenCapturedCandleResearchPage(observed_at_ms=timestamp, staged=staged)
+        if symbol == self.bad_symbol:
+            result = replace(result, staged=replace(staged, candles=staged.candles[:2]))
+        return result
+
+
 def collect(path, reader, *, now=NOW, decide=NOW + 200, **kwargs):
     values = iter((now, decide))
     return capture_private_research(
@@ -194,6 +242,92 @@ class PrivateLocalResearchTests(unittest.TestCase):
             collect(self.db, reader, registry_variant="arbitrary-external.json")
         self.assertEqual(reader.calls, [])
         self.assertFalse(self.db.exists())
+
+    def test_explicit_three_price_symbols_are_real_ranked_and_btc_first(self):
+        reader = MultiReader()
+        result = collect(self.db, reader, registry_variant="expanded-10",
+                         max_price_symbols=3)
+        self.assertEqual(reader.calls,
+                         ["instruments_and_tickers", "PF_XBTUSD",
+                          "PF_ETHUSD", "PF_SOLUSD"])
+        self.assertEqual(result.eligible_contracts, 4)
+        self.assertEqual(result.selected_bases_limit, 10)
+        self.assertEqual(result.price_symbols_validated, 3)
+        self.assertEqual(result.public_gets_on_success, 5)
+        self.assertEqual(result.private_price_candles_added, 9)
+        self.assertEqual(result.price_candles_in_window, 9)
+        self.assertTrue(result.price_window_complete)
+        self.assertFalse(result.canonical_ohlcv_approved)
+        self.assertFalse(result.historical_top50_approved)
+        archive = SQLiteKrakenPriceOnlyArchive(self.db)
+        for symbol in ("PF_XBTUSD", "PF_ETHUSD", "PF_SOLUSD"):
+            with self.subTest(symbol=symbol):
+                quality = archive.price_quality(
+                    symbol=symbol, interval="1h", start_open_ms=START,
+                    end_open_ms=END, as_of_ms=NOW + 2000)
+                self.assertTrue(quality.complete)
+                self.assertEqual(quality.captured, 3)
+                self.assertFalse(quality.canonical_ohlcv)
+        with sqlite3.connect(self.db) as db:
+            self.assertEqual(db.execute(
+                "SELECT COUNT(*) FROM kraken_research_prices").fetchone()[0], 9)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM candles").fetchone()[0], 0)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0], 0)
+            self.assertEqual(db.execute(
+                "SELECT COUNT(*) FROM kraken_research_price_pages").fetchone()[0], 3)
+
+    def test_limit_five_does_not_invent_fifth_market(self):
+        reader = MultiReader()
+        result = collect(self.db, reader, registry_variant="expanded-10",
+                         max_price_symbols=5)
+        self.assertEqual(result.price_symbols_validated, 4)
+        self.assertEqual(result.public_gets_on_success, 6)
+        self.assertEqual(result.price_candles_in_window, 12)
+        self.assertEqual(reader.calls, [
+            "instruments_and_tickers", "PF_XBTUSD", "PF_ETHUSD",
+            "PF_SOLUSD", "PF_DOGEUSD"])
+        self.assertFalse(result.historical_top50_approved)
+
+    def test_default_two_base_registry_bounds_even_larger_chart_budget(self):
+        reader = MultiReader()
+        result = collect(self.db, reader, max_price_symbols=5)
+        self.assertEqual(result.selected_bases_limit, 2)
+        self.assertEqual(result.price_symbols_validated, 2)
+        self.assertEqual(result.public_gets_on_success, 4)
+        self.assertEqual(reader.calls,
+                         ["instruments_and_tickers", "PF_XBTUSD", "PF_ETHUSD"])
+
+    def test_invalid_budget_is_rejected_before_any_network_or_disk(self):
+        for bad in (0, 6, -1, True, False, 2.5, "3", None):
+            reader = MultiReader()
+            with self.subTest(bad=bad), self.assertRaises(LocalResearchError):
+                collect(self.db, reader, registry_variant="expanded-10",
+                        max_price_symbols=bad)
+            self.assertEqual(reader.calls, [])
+            self.assertFalse(self.db.exists())
+
+    def test_invalid_second_chart_prevents_all_new_database_writes(self):
+        reader = MultiReader(bad_symbol="PF_ETHUSD")
+        with self.assertRaises(DataGapError):
+            collect(self.db, reader, registry_variant="expanded-10",
+                    max_price_symbols=3)
+        self.assertEqual(reader.calls,
+                         ["instruments_and_tickers", "PF_XBTUSD", "PF_ETHUSD"])
+        self.assertFalse(self.db.exists())
+
+    def test_three_chart_pages_replay_idempotently_across_sessions(self):
+        first = collect(self.db, MultiReader(), registry_variant="expanded-10",
+                        max_price_symbols=3)
+        again = collect(self.db, MultiReader(), registry_variant="expanded-10",
+                        max_price_symbols=3)
+        self.assertEqual(first.private_price_candles_added, 9)
+        self.assertEqual(again.private_price_candles_added, 0)
+        self.assertTrue(again.price_window_complete)
+        with sqlite3.connect(self.db) as db:
+            self.assertEqual(db.execute(
+                "SELECT COUNT(*) FROM kraken_research_prices").fetchone()[0], 9)
+            self.assertEqual(db.execute(
+                "SELECT COUNT(*) FROM kraken_research_price_pages").fetchone()[0], 3)
 
     def test_cross_session_replay_is_idempotent(self):
         self.assertEqual(collect(self.db, Reader()).private_price_candles_added, 3)
