@@ -223,8 +223,8 @@ class CryptoRegistryHistory:
                 if snapshot != previous:
                     raise DataValidationError("conflicting registry snapshot at same observed time")
                 return
-            if snapshot.label == previous.label:
-                raise DataValidationError("same immutable label cannot identify a later revision")
+            if any(item.label == snapshot.label for item in self._snapshots):
+                raise DataValidationError("immutable registry label cannot be reused in later history")
         self._snapshots.append(snapshot)
 
     def as_of(self, market_observed_at_ms: int, *, max_age_ms: int) -> CryptoRegistrySnapshot:
