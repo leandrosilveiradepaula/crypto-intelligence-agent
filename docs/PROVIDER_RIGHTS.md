@@ -100,3 +100,6 @@ Wikidata estrutura os dados em licença CC0 (https://www.wikidata.org/wiki/Wikid
 
 ## J1/WU34 — Armazenamento privado é distinto de redistribuição
 A extensão price-only usa SQLite **local/descartável de pesquisa privada** e não disponibiliza arquivos de mercado no repositório, API pública ou UI. Na execução GitHub Actions owner-only, a pesquisa é apagada antes da resposta; log não inclui preços nem volumes. Isso não concede licença comercial ou de redistribuição de dados/derivados Kraken. Conserva `commercial_or_public_distribution_authorized = false` e bloqueia qualquer publicação sem evidência específica e gate humano. Nenhuma ordem nem deploy está habilitado.
+
+## J1/WU35 — Snapshot Kraken e dados de ticker só transitam em pesquisa privada
+O snapshot de universo corrente usa `volumeQuote` obtido de API pública, mas esse número NÃO é logado, servido por API, commitado nem publicado. O SQLite do runner é temporário e excluído ao término; a saída sanitizada fornece apenas contagens/flags, sem dump de instrumentos. Isso não confere direitos comerciais de redistribuição nem licenças de agregados/alertas derivados; release público continua BLOQUEADO em #48 e exige autorização aplicável.

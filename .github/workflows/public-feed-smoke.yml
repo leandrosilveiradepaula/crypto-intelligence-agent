@@ -207,3 +207,25 @@ jobs:
           set -eu
           python3 -m scripts.probe_kraken_price_archive \
             --allow-public-network --allow-private-kraken-prices
+
+  kraken-btc-eth-current-universe:
+    if: >-
+      github.event.issue.number == 115 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-kraken-btc-eth-current-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted main without credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify BTC ETH reviewed registry against current Kraken contracts
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_kraken_btc_eth_universe \
+            --allow-public-network --allow-private-kraken-universe
