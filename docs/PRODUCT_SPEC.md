@@ -41,3 +41,7 @@ Existe um verificador para conferir se tranches e preenchimentos fictícios resp
 
 ## Pré-trabalho de trajetória intrabar J3/PRE1 — pesquisa, não backtest homologado
 Um candle OHLC informa o intervalo do preço, mas não a ordem do extremo high e low. Um cenário que toca stop e target (ou liquidação hipotética) no mesmo candle não é contado como vitória, mesmo quando o candle fecha acima do target para uma posição LONG. Gaps de abertura não garantem execução no preço limite. O detector de pesquisa usa exclusivamente fixtures sintéticas, registra ambiguidade e não calcula risco financeiro, liquidacão real, custos, funding ou retorno. Critérios de aceite J3 (trajetória intrabar verificável, mark/liquidação, custo líquido e walk-forward) continuam pendentes.
+
+
+## Pré-trabalho de custos financeiros J3/PRE2 — não representa retorno
+Uma calculadora sintética separa **taxas**, **slippage adverso** e **funding assinado** em unidades abstratas de quote, com notionals e bps fornecidos explicitamente. Nenhum preço de preenchimento, moeda de margem real, alavancagem de corretora, contrato, troca cambial ou PnL foi definido. Um valor total negativo indica apenas possível crédito hipotético de funding acima de custos, não ganho financeiro. Dados reais, horários/tiers corretos de funding, impacto de mercado, liquidação e validação de risco deverão entrar na J3 operacional somente após J1/J2 aprovadas.

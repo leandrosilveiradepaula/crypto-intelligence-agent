@@ -70,7 +70,9 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU28 #91 — CONCLUÍDA como proteção de evidência documental:** PR #92 merged SHA `d3af3088088c7e7f638cb745ca5848ddbb2b9a43`, CI #40227134838 SUCCESS (**515 testes offline, compileall, 12 docs**), issue encerrada. Auditor recusa Kraken Spot/Derivatives US como prova de PF_ Futures; mantém etiquetas de insuficiência para volume, registro crypto-only e rights. Não libera Top50, OHLCV canônico, 50x real ou licença; issues #32/#36/#48 e J1 #2 abertas.
 
-**J3/PRE1 #94 — em implementação somente sintética:** detectar o primeiro toque de stop/target/liquidação hipotética em OHLC, reportando toques no mesmo candle como ordem intrabar **indeterminada**; gaps não são fills ao limite. Validar todo candle com helper J2 e jamais produzir PnL, lucro, execução, formula real de liquidação ou aceite J3 #4.
+**J3/PRE1 #94 — CONCLUÍDA somente como observação SINTÉTICA:** PR #95 merged SHA `3a30150268d6ead7daabe16884827b655b5b1e7c`, CI #40229271296 SUCCESS (**548 testes offline, compileall, 12 docs**); reconhece gap e toques múltiplos sem ordem, nenhuma execução/liquidação real, PnL ou lucro. Issue encerrada, J3 #4 aberta.
+
+**J3/PRE2 #96 — em implementação:** cenários abstratos de taxas, slippage e funding assinado com eventos fictícios; cálculo de custo exato mas nunca PnL/FX/fee real. Inputs não provam preços, quote currency, ordens ou dados de mercado. J3 #4 e J1/J2 continuam sem homologação.
 
 **J1 #32/#36/#48 — diligência complementar registrada em issues:** padrão CAIP-19 identifica ativos por chain+namespace+reference, mas não atesta crypto-only/venue; SLIP-0044 é lista de derivação de wallets, não registro de perpétuos; CoinGecko Demo não inclui direitos comerciais; chart/analytics Kraken não provam unidade de volume. Sem feed real e mantendo gates abertos.
 

@@ -161,3 +161,7 @@ O auditor OFFLINE `readiness_evidence.py` diferencia documentação Kraken Futur
 
 ## J3/PRE1 — Toque intrabar em OHLC sintético, sem afirmar vitória
 `synthetic_intrabar_barriers.py` recebe candles fechados **sintéticos** e um plano de referência LONG/SHORT com stop, target e liquidação HIPOTÉTICA opcional. Reutiliza a validação temporal J2. Reporta o primeiro candle com níveis observados, distinguindo aberturas já além do limite de toques na faixa high/low; **dois ou mais toques no mesmo candle têm ordem desconhecida**, mesmo se o fechamento favorece o alvo. Não calcula fill, execução ao limite, retorno, taxa, funding, slippage, liquidação real ou PnL e mantém flags live/backtest false. J1 #2, J2 #3 e J3 #4 continuam sem homologação; veja D52 e `docs/STRATEGY_SPEC.md`.
+
+
+## J3/PRE2 — Custos assinados de cenário SINTÉTICO, não PnL
+`synthetic_cost_scenarios.py` calcula custos hipotéticos de taxa e slippage adverso por perna e funding com sinal LONG/SHORT sobre notionals em unidades **abstratas** fornecidas pelo teste, sem inferir preço, mercado, moeda, leverage real ou preenchimento de ordem. Usa `Decimal` preciso, eventos fictícios com IDs `fixture_funding_*` e idempotência **somente em memória**, recusa conflito ou cronologia suspeita. O total pode ser NEGATIVO por um crédito hipotético de funding — **isso não é lucro ou resultado financeiro comprovado**. J3 #4 e J1 #2 não estão homologadas, nenhuma ordem é enviada. Veja D53 e `docs/STRATEGY_SPEC.md`.
