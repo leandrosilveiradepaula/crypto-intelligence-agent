@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from decimal import Decimal
 import unittest
 
@@ -263,6 +263,19 @@ class OkxOfflineSchemaTests(unittest.TestCase):
             stage(start=START, end=START + 301 * HOUR, max_candles=300)
         with self.assertRaises(DataValidationError):
             stage(price_adjustment="forward")
+
+    def test_authority_flags_are_not_dataclass_constructor_fields(self):
+        candle = stage().candles[0]
+        page = stage()
+        with self.assertRaises(TypeError):
+            replace(candle, crypto_identity_verified=True)
+        with self.assertRaises(TypeError):
+            replace(candle, exchange_schema_verified_live=True)
+        with self.assertRaises(TypeError):
+            replace(page, rights_for_distribution=True)
+        self.assertFalse(candle.crypto_identity_verified)
+        self.assertFalse(candle.exchange_schema_verified_live)
+        self.assertFalse(page.rights_for_distribution)
 
     def test_replay_is_deterministic_and_result_is_immutable(self):
         self.assertEqual(stage(fixture()), stage(deepcopy(fixture())))
