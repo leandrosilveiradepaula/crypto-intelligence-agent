@@ -10,7 +10,7 @@
 - **WU2:** issue #13 fechada, PR #14 merged `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`, CI 42 offline.
 - **WU3:** issue #15 fechada, PR #16 merged `9631e4445678bc4c7067964b537da924b5b89a0b`, CI pós-merge run 40188838338 SUCCESS com 58 testes Python offline, compileall e 10 docs.
 - **WU4:** issue #17 fechada, PR #18 merged `8fc2f75460e93ef898ae14e3c48ef0348692c857`, CI pós-merge run 40189235249 SUCCESS com 65 testes Python offline, compileall e 10 docs.
-- **WU5:** issue #19 ABERTA, nenhuma PR de implementação ou sessão Codex comprovada. Objetivo: conformidade pública USD-M, diagnóstico de payload/relógio/limites/qualidade e smoke live estritamente opt-in, sem CI online.
+- **WU5:** issue #19 ABERTA, implementação offline em `feat/j1-wu5-public-api-conformance`; classificação de HTTP 403/418, retry conservador de 429, conformance de payload e testes. Não presumir PR/CI/merge completados até verificação. Nenhum smoke live comprovado.
 - **J2–J7:** issues #3–#8 aguardando dependências. Fonte de verdade: GitHub ao vivo e decisões versionadas.
 
 ## Evidências e limitações
@@ -21,6 +21,6 @@
 
 ## Próxima ação concreta autorizada
 1. Conferir HEAD, issues, PRs e CI no GitHub antes de agir; não duplicar #19.
-2. Desenvolver as partes offline e revisáveis da WU5 com fixtures de conformidade, documentação e testes; obter prova de smoke live somente em executor com acesso público explícito e dentro dos limites gratuitos. Se rede bloqueada, registrar e prosseguir nas tarefas independentes.
+2. Validar e integrar as partes offline da WU5 via PR com testes, revisão e HEAD exato. Smoke live continua opcional e depende de executor explicitamente autorizado com rede; não declarar homologação sem essa evidência.
 3. Revisar a PR, corrigir regressões, integrar sem produção somente com CI/gates verdes e SHA exato; manter J1 aberta até cobertura/qualidade verificadas.
 4. Ao pedir "gere prompt para novo chat", entregar prontamente missão, regras, decisões, jornada, entregas, issues/PRs/SHAs, testes, bloqueios e ação seguinte para retomada autônoma.
