@@ -73,6 +73,28 @@ class PipelineTests(unittest.TestCase):
             required_symbols=required_symbols,
         )
 
+    def test_offline_mode_rejects_network_transport_before_any_request(self):
+        adapter = BinanceFuturesPublicAdapter(clock_ms=lambda: DEMO_CLOCK)
+        with self.assertRaises(ValueError):
+            ReadOnlyCollectionPipeline(
+                adapter, self.store, clock_ms=lambda: DEMO_CLOCK,
+                mode="offline", source_name="synthetic_fixture",
+            )
+
+    def test_live_mode_rejects_fixtures_and_false_source_labels(self):
+        transport = OfflineFixtureTransport()
+        adapter = BinanceFuturesPublicAdapter(transport, clock_ms=lambda: DEMO_CLOCK)
+        with self.assertRaises(ValueError):
+            ReadOnlyCollectionPipeline(
+                adapter, self.store, clock_ms=lambda: DEMO_CLOCK,
+                mode="live", source_name="binance_usdm_public",
+            )
+        with self.assertRaises(ValueError):
+            ReadOnlyCollectionPipeline(
+                adapter, self.store, clock_ms=lambda: DEMO_CLOCK,
+                mode="offline", source_name="binance_usdm_public",
+            )
+
     def test_two_symbols_through_adapter_sqlite_backfill_and_quality(self):
         pipeline, transport = self.create_pipeline()
         response = self.run_pipeline(pipeline)
