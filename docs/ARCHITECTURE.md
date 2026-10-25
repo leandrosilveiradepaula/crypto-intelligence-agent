@@ -46,3 +46,7 @@ Kraken `KrakenPublicReadOnlyResearch` permanece isolado de API/UI de distribuiç
 
 ## Estudo de schema Bybit com unidades documentadas (J1/WU18)
 `bybit_linear_candle_research.py` é isolado e **puramente offline**, sem endpoint ou autenticação, para analisar o schema do candidato Bybit V5 linear: OHLC em ordem descendente, `volume` moeda-base e `turnover` na moeda de cotação USDT/USDC conforme API oficial. Exige metadados injetados de `LinearPerpetual`/`Trading`, validação temporal, string Decimal e candles fechados. Não migra storage, não cria contratos `ClosedCandle` canônicos nem libera seleção Top50 ou estratégia. Mudança de provedor ou licença comercial exigiria evidência e gate separado; `docs/PROVIDER_RIGHTS.md` inclui Bybit.
+
+
+## Direitos de dados segregados da ingestão (J1/WU19)
+`provider_usage_gate.py` é um módulo offline de classificação de finalidade de uso, separado dos clientes públicos, storage e UI. Escopos são por dataset/provedor/finalidade e exigem revisão temporal, mas nenhuma declaração introduzida pelo chamador pode liberar distribuição comercial/pública ou sinalizar release. Auditoria jurídica/contratual de licença e autorização da finalidade real permanecem gates humanos e externos, conforme `docs/PROVIDER_RIGHTS.md`.

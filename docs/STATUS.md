@@ -36,6 +36,14 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU18 #50 concluída no escopo offline:** PR [#51](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/51) merged SHA `6f147844a514f2b83b29084fb3bc5d4b2377355d`; CI pós-merge [40204649232](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40204649232) SUCCESS (**229 testes offline, compileall, 12 docs**). Parser sintético Bybit V5 linear distingue `volume` base e `turnover` USDT/USDC, mas **não houve GET, feed real, licença comercial, troca de fornecedor ou `ClosedCandle` canônico**. Issue #50 encerrada. J1 #2 ainda aberta.
 
+**WU16 #46 concluída:** PR #47 integrada SHA `6d5b37aba154b0fb6a950fbffa4ba3e18d01410e`, CI 213 testes offline. Cliente Kraken público GET-only, opt-in, Decimal e OHLC em staging, sem ordens.
+
+**WU17 #48 parcialmente entregue:** PR #49 de política de direitos integrada SHA `4d06ce7fee2ddb459fbf08a7efa98d6d2bff4997`, 12 documentos validados; autorização de distribuição ainda não obtida.
+
+**WU18 #50 concluída em pesquisa offline:** PR #51 integrada SHA `6f147844a514f2b83b29084fb3bc5d4b2377355d`, CI pós-merge **229 testes offline, 12 docs**; parser Bybit linear com base volume e quote turnover documentados em USDT/USDC, sem rede ou licença de uso homologada.
+
+**WU19 #52 em implementação:** branch `feat/j1-provider-usage-rights-gate`. Gate tipado de finalidade por provedor/dataset, sempre fail-closed para distribuição externa, sem permissões reais. PR/CI/merge ainda não confirmados.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
