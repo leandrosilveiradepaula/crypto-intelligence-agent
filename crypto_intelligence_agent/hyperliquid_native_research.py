@@ -27,6 +27,28 @@ _INTERVALS = frozenset({
     "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d",
 })
 _SYMBOL = re.compile(r"(?:[A-Z0-9]{2,20}|k[A-Z0-9]{2,20})")
+# Other members of the reported native universe are NOT research targets.
+# Their exact trading-asset naming rules do not establish crypto identity.
+# Validate only a bounded, inert name with no HIP-3/spot namespace markers.
+_NON_TARGET_NATIVE_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,63}")
+_METADATA_REASONS = frozenset({
+    "target_symbol_invalid", "snapshot_shape", "universe_alignment",
+    "universe_entry", "native_name_or_namespace", "duplicate_native_name",
+    "target_missing", "target_delisted_or_context",
+    "target_leverage_precision", "target_day_notional",
+    "target_mark_price", "target_open_interest", "target_funding",
+})
+
+
+class NativeMetadataSchemaError(DataValidationError):
+    """Fixed, non-sensitive diagnostic reason: never include external values."""
+
+    def __init__(self, reason: str) -> None:
+        if reason not in _METADATA_REASONS:
+            raise ValueError("internal invalid metadata diagnostic reason")
+        self.reason = reason
+        super().__init__("native_metadata_" + reason)
+
 _UNSIGNED = re.compile(r"(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?")
 _SIGNED = re.compile(r"-?(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?")
 
@@ -123,51 +145,75 @@ def _ms(value: Any, label: str) -> int:
 def _native_perp_context(
     snapshot: Any, *, symbol: str, observed_at_ms: int,
 ) -> NativePerpMetadataResearch:
-    """Read the native dex context only; positional mapping is strictly checked.
+    """Validate one requested perp by exact position; other names are inert.
 
-    The caller cannot establish real venue or crypto-only identity by claiming
-    dex_scope=''. The function never fetches dex metadata independently.
+    The response may legitimately contain delisted, inactive or unusual
+    unrelated native contracts. Those entries cannot approve the requested
+    BTC instrument, and a malformed selected entry still fails closed.
+    This is *not* a positive crypto-only/rights/venue identity check.
     """
+    if type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None:
+        raise NativeMetadataSchemaError("target_symbol_invalid")
     if type(snapshot) not in (list, tuple) or len(snapshot) != 2:
-        raise DataValidationError("Hyperliquid metaAndAssetCtxs requires [meta, contexts]")
+        raise NativeMetadataSchemaError("snapshot_shape")
     info, ctxs = snapshot
     if (type(info) is not dict or type(ctxs) is not list
             or type(info.get("universe")) is not list):
-        raise DataValidationError("native metadata and context arrays malformed")
+        raise NativeMetadataSchemaError("snapshot_shape")
     universe = info["universe"]
     if not 1 <= len(universe) <= MAX_INSTRUMENTS or len(universe) != len(ctxs):
-        raise DataValidationError("native context count/asset count mismatch")
+        raise NativeMetadataSchemaError("universe_alignment")
+    if "tokens" in info:
+        raise NativeMetadataSchemaError("native_name_or_namespace")
     names: set[str] = set()
     found_index: int | None = None
     for i, item in enumerate(universe):
         if type(item) is not dict:
-            raise DataValidationError("native perp metadata requires objects")
+            raise NativeMetadataSchemaError("universe_entry")
         name = item.get("name")
-        if type(name) is not str or _SYMBOL.fullmatch(name) is None or name in names:
-            raise DataValidationError("native universe names invalid, duplicate or HIP-3 prefixed")
+        # This check is intentionally looser than the selected instrument
+        # regex: an unrelated 1-letter/ticker-form native perp may exist.
+        # Any spot (@, /) or HIP-3 (:) namespace still fails closed.
+        if (type(name) is not str
+                or _NON_TARGET_NATIVE_NAME.fullmatch(name) is None
+                or "tokens" in item):
+            raise NativeMetadataSchemaError("native_name_or_namespace")
+        if name in names:
+            raise NativeMetadataSchemaError("duplicate_native_name")
         names.add(name)
+        flag = item.get("isDelisted", False)
+        if type(flag) is not bool:
+            raise NativeMetadataSchemaError("universe_entry")
         if name == symbol:
             found_index = i
     if found_index is None:
-        raise DataValidationError("symbol absent from caller-supplied native perp universe")
+        raise NativeMetadataSchemaError("target_missing")
     item, context = universe[found_index], ctxs[found_index]
-    if type(context) is not dict or item.get("isDelisted", False) is not False:
-        raise DataValidationError("delisted instrument or missing asset context")
+    if type(context) is not dict or item.get("isDelisted", False):
+        raise NativeMetadataSchemaError("target_delisted_or_context")
     lev, decimals = item.get("maxLeverage"), item.get("szDecimals")
     if (type(lev) is not int or not 1 <= lev <= 200
             or type(decimals) is not int or not 0 <= decimals <= 18):
-        raise DataValidationError("invalid reported perp leverage or quantity precision")
+        raise NativeMetadataSchemaError("target_leverage_precision")
+
+    def require_decimal(field: str, reason: str, *, positive: bool = False,
+                        signed: bool = False) -> Decimal:
+        try:
+            return _decimal_text(context.get(field), field,
+                                 positive=positive, signed=signed)
+        except DataValidationError:
+            raise NativeMetadataSchemaError(reason) from None
+
     return NativePerpMetadataResearch(
         symbol=symbol,
         max_leverage_reported=lev,
         size_decimals_reported=decimals,
-        day_notional_reported=_decimal_text(context.get("dayNtlVlm"), "dayNtlVlm"),
-        mark_price_reported=_decimal_text(context.get("markPx"), "markPx", positive=True),
-        open_interest_reported=_decimal_text(context.get("openInterest"), "openInterest"),
-        funding_rate_reported=_decimal_text(context.get("funding"), "funding", signed=True),
+        day_notional_reported=require_decimal("dayNtlVlm", "target_day_notional"),
+        mark_price_reported=require_decimal("markPx", "target_mark_price", positive=True),
+        open_interest_reported=require_decimal("openInterest", "target_open_interest"),
+        funding_rate_reported=require_decimal("funding", "target_funding", signed=True),
         observed_at_ms=observed_at_ms,
     )
-
 
 def stage_hyperliquid_native_perp_candles(
     meta_and_asset_ctxs: Any,

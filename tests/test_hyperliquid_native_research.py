@@ -8,7 +8,8 @@ import unittest
 
 from crypto_intelligence_agent.hyperliquid_native_research import (
     DOCUMENTED_RECENT_HISTORY_CANDLES, MAX_RESEARCH_PAGE, SOURCE,
-    NativeCandleResearch, stage_hyperliquid_native_perp_candles,
+    NativeCandleResearch, NativeMetadataSchemaError,
+    stage_hyperliquid_native_perp_candles,
 )
 from crypto_intelligence_agent.market_data import (
     ClosedCandle, DataGapError, DataValidationError,
@@ -235,6 +236,92 @@ class HyperliquidNativeResearchTests(unittest.TestCase):
         self.assertEqual(result.symbol, "BTC")
         self.assertFalse(result.metadata.crypto_identity_verified)
         self.assertFalse(result.ready_for_canonical_ohlcv)
+
+    def test_unrelated_short_or_mixed_case_names_do_not_block_selected_btc(self):
+        for other_name in ("X", "SomeNative", "kPEPE", "NATIVE-1", "NATIVE.V2"):
+            ctx = market_metadata()
+            ctx[0]["universe"].insert(0, {
+                "name": other_name, "szDecimals": 2, "maxLeverage": 5,
+                "isDelisted": True,
+            })
+            ctx[1].insert(0, None)
+            with self.subTest(other=other_name):
+                result = stage(ctx=ctx)
+                self.assertEqual(result.metadata.symbol, "BTC")
+                self.assertEqual(result.metadata.max_leverage_reported, 50)
+                self.assertFalse(result.ready_for_live_top50)
+                self.assertFalse(result.metadata.crypto_identity_verified)
+
+    def test_unrelated_context_fields_not_required_for_selected_btc(self):
+        ctx = market_metadata()
+        ctx[0]["universe"].append({
+            "name": "UNRELATED", "isDelisted": False,
+            "szDecimals": 1, "maxLeverage": 3,
+        })
+        ctx[1].append({"markPx": None, "funding": None})
+        self.assertEqual(stage(ctx=ctx).metadata.symbol, "BTC")
+
+    def test_spot_or_hip3_namespace_always_rejected_even_if_unrelated(self):
+        for name in ("xyz:TSLA", "@123", "PURR/USDC", "A B", "", "\u0000"):
+            ctx = market_metadata()
+            ctx[0]["universe"].append({"name": name})
+            ctx[1].append(None)
+            with self.subTest(name=name), self.assertRaises(NativeMetadataSchemaError) as exc:
+                stage(ctx=ctx)
+            self.assertEqual(exc.exception.reason, "native_name_or_namespace")
+        ctx = market_metadata()
+        ctx[0]["universe"].append({"name": "SPOT", "tokens": [1, 0]})
+        ctx[1].append(None)
+        with self.assertRaises(NativeMetadataSchemaError) as exc:
+            stage(ctx=ctx)
+        self.assertEqual(exc.exception.reason, "native_name_or_namespace")
+        ctx = market_metadata()
+        ctx[0]["tokens"] = [{"name": "BTC"}]
+        with self.assertRaises(NativeMetadataSchemaError) as exc:
+            stage(ctx=ctx)
+        self.assertEqual(exc.exception.reason, "native_name_or_namespace")
+
+    def test_native_context_btc_target_strict_independent_of_unrelated(self):
+        variations = [
+            ("target_missing", lambda x: x[0]["universe"][0].update(name="ETH")),
+            ("target_delisted_or_context", lambda x: x[0]["universe"][0].update(isDelisted=True)),
+            ("target_delisted_or_context", lambda x: x[1].__setitem__(0, None)),
+            ("target_leverage_precision", lambda x: x[0]["universe"][0].update(maxLeverage=True)),
+            ("target_leverage_precision", lambda x: x[0]["universe"][0].update(szDecimals=-1)),
+            ("target_day_notional", lambda x: x[1][0].update(dayNtlVlm="NaN")),
+            ("target_mark_price", lambda x: x[1][0].update(markPx=None)),
+            ("target_mark_price", lambda x: x[1][0].update(markPx="0")),
+            ("target_open_interest", lambda x: x[1][0].update(openInterest=1.25)),
+            ("target_funding", lambda x: x[1][0].update(funding="Infinity")),
+        ]
+        for expected, mutate in variations:
+            ctx = market_metadata()
+            mutate(ctx)
+            with self.subTest(expected=expected), self.assertRaises(NativeMetadataSchemaError) as exc:
+                stage(ctx=ctx)
+            self.assertEqual(exc.exception.reason, expected)
+            self.assertNotIn("77777", str(exc.exception))
+
+    def test_duplicate_or_misaligned_universe_cannot_approve_btc(self):
+        ctx = market_metadata()
+        ctx[0]["universe"].append({"name": "BTC", "maxLeverage": 3, "szDecimals": 2})
+        ctx[1].append(None)
+        with self.assertRaises(NativeMetadataSchemaError) as exc:
+            stage(ctx=ctx)
+        self.assertEqual(exc.exception.reason, "duplicate_native_name")
+        ctx = market_metadata()
+        ctx[1].append(None)
+        with self.assertRaises(NativeMetadataSchemaError) as exc:
+            stage(ctx=ctx)
+        self.assertEqual(exc.exception.reason, "universe_alignment")
+
+    def test_unrelated_malformed_is_delisted_flag_rejected(self):
+        ctx = market_metadata()
+        ctx[0]["universe"].append({"name": "X", "isDelisted": "false"})
+        ctx[1].append(None)
+        with self.assertRaises(NativeMetadataSchemaError) as exc:
+            stage(ctx=ctx)
+        self.assertEqual(exc.exception.reason, "universe_entry")
 
     def test_native_scope_only_not_hip3(self):
         for val in ("xyz", "HIP3", "native", 0, None, False):

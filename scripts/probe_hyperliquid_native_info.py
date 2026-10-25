@@ -20,7 +20,8 @@ from urllib.request import (
 )
 
 from crypto_intelligence_agent.hyperliquid_native_research import (
-    _native_perp_context, stage_hyperliquid_native_perp_candles,
+    NativeMetadataSchemaError, _native_perp_context,
+    stage_hyperliquid_native_perp_candles,
 )
 from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
 
@@ -197,8 +198,13 @@ def inspect_once(
         report["closed_candle_count"] = len(page.candles)
         report["observed_schema_conformance"] = "pass_metadata_and_three_closed_candles"
         report["status"] = "schema_observed_no_live_readiness"
+    except NativeMetadataSchemaError as exc:
+        report["status"] = "invalid_provider_schema"
+        report["rejection_stage"] = "native_metadata"
+        report["rejection_code"] = exc.reason
     except (DataValidationError, DataGapError):
         report["status"] = "invalid_provider_schema"
+        report["rejection_stage"] = "candles_or_window"
     except InfoSmokeError as exc:
         report["status"] = exc.code
     # No response objects or market values escape this function.
