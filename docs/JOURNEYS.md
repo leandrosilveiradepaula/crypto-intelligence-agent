@@ -64,8 +64,8 @@
 
 - J1/WU28 #91 / PR #92: auditoria fail-closed do escopo documental Kraken Futures PF_ versus Kraken Spot OHLCVT e Derivatives US CME/Bitnomial, integrada SHA `d3af3088088c7e7f638cb745ca5848ddbb2b9a43`, CI #40227134838 SUCCESS (515 testes offline/12 docs). Issue encerrada, sem resolver fonte independente crypto-only, unidade de volume ou licença. J1 #2 e #32/#36/#48 permanecem abertas.
 
-- J1/WU29 #99: correção fail-closed de inconsistência entre numerador do símbolo Kraken PF_ e base/pair do instrumento/ticker, incluindo alias API XBT→BTC; em implementação/testes/CI. Não prova registro crypto-only ou volume financeiro, e não habilita Top50 live. J1 #2/#32/#36/#48 abertas.
+- J1/WU29 #99 / PR #100: proteção fail-closed de inconsistência entre símbolo PF_ e base/pair Kraken com alias oficial XBT→BTC, merged SHA `2fcc768ea878ce1a78060fbb9abb5be7bbffb97a`, CI #40231112282 SUCCESS (**591 testes offline**, 12 docs), issue fechada. Não prova registro crypto-only, volume financeiro ou Top50 real.
 
-- J1/WU30 #101: correção da fronteira `CryptoRegistryHistory.append` que aceitava dataclasses diretas com SHA inválido ou evidência incompleta, agora revalida manifesto v1 inteiro e `publisher_root` derivado. Em implementação/CI com testes offline; não aprova fontes externas/Top50. J1 #2/#32/#36/#48 abertas.
+- J1/WU30 #101 / PR #102: `CryptoRegistryHistory.append` revalida manifesto v1 e SHA/evidence derivados mesmo para dataclass direta, merged SHA `e7f62a5fd56d1cc30ee84238cb313d18a029d9d1`, CI #40231467471 SUCCESS (**610 testes offline**, 12 docs), issue fechada. Autenticidade externa/Top50 permanecem bloqueados; J1 #2/#32/#36/#48 abertas.
 
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
