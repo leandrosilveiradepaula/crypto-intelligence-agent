@@ -1,0 +1,36 @@
+name: J1 previous issue_comment evidence audit (GitHub-only, read-only)
+
+# One-purpose job: review existing Actions metadata. No exchange API and no
+# report publication to issues, check writes, commits, branches or artifacts.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".github/workflows/j1-evidence-run-audit.yml"
+      - "scripts/audit_j1_issue_comment_runs.py"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'audit/j1-run-evidence' &&
+      github.event.pull_request.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted same-repository owner branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enumerate old issue_comment run IDs (NO market probes)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.audit_j1_issue_comment_runs --allow-github-actions-read
