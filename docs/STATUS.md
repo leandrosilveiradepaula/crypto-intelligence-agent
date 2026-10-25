@@ -84,6 +84,9 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU32 #107 — PR #108 integrada, prova live pendente:** merge `9b66a359d1fa1d7a3ce83f66e1e002aa825de354`, CI PR #40236541641 SUCCESS (626 testes), CI pós-merge #40236593184 SUCCESS. Primeiro owner-run #40236605217 FALHOU antes de qualquer GET com `ModuleNotFoundError` no entrypoint. Correção com execução como módulo e teste subprocess em `fix/j1-wu32-okx-entrypoint`; sem observação real OKX até reexecução controlada. Dados de mercado de uso pessoal, não publicação; nenhuma prova de identidade, histórico Top50 ou permissão comercial. Docs D57; issues J1 #2/#32/#36/#48 abertas.
 
+**J1/WU32 #107 — probe executado, acesso OKX BLOQUEADO:** PR #109 integrada `2a7b3de97e1af1224cc78168f7b8e782067f420b`, CI #40236692028 SUCCESS (**627 testes offline**). Segundo owner-run #40236734900/job #121299805518 tentou 1 GET de instrumentos, retornou `access_or_rate_restricted`, não executou GET de candles; 0 candles, 0 ordens, direitos/Top50 false. **Sem retentativa ou contorno**.
+**J1/WU33 #110 — registro BTC/ETH real de pesquisa em validação:** duas referências externas de identidade por ativo, revisão técnica assistida por IA, hash SHA256 e vigência point-in-time; ainda **não** há Top50 real, feeds canônicos, autorização comercial nem J1 homologada.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
