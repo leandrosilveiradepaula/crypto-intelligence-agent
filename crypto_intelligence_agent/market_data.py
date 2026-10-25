@@ -183,7 +183,20 @@ class BinanceFuturesPublicAdapter:
         self._clock_ms = clock_ms or (lambda: int(time() * 1000))
         self._max_snapshot_age_ms = max_snapshot_age_ms
 
+    def _validate_live_observation(self, observed_at_ms: int) -> int:
+        # Both exchangeInfo and rolling 24h tickers are LIVE views. Neither
+        # may be labelled as if retrieved from a prior historical timestamp.
+        observed = _integer_value(observed_at_ms, "observed_at_ms")
+        now = _integer_value(self._clock_ms(), "clock_ms")
+        if observed > now or now - observed > self._max_snapshot_age_ms:
+            raise DataValidationError(
+                "live exchange data cannot reconstruct a historical snapshot; "
+                "persist actual observations for historical replay"
+            )
+        return observed
+
     def contracts(self, *, observed_at_ms: int) -> tuple[ContractSpec, ...]:
+        observed_at_ms = self._validate_live_observation(observed_at_ms)
         payload = self._get_json("/fapi/v1/exchangeInfo")
         if not isinstance(payload, Mapping) or not isinstance(payload.get("symbols"), list):
             raise DataValidationError("exchangeInfo must contain a symbols list")
@@ -200,17 +213,9 @@ class BinanceFuturesPublicAdapter:
     ) -> UniverseSnapshot:
         if max_symbols <= 0 or min_onboard_age_ms < 0:
             raise ValueError("max_symbols must be positive and min_onboard_age_ms cannot be negative")
-        # The public 24h ticker is a LIVE rolling window, not a historical
-        # point-in-time endpoint. Reject arbitrary backdating of snapshots:
-        # replay must use universe snapshots actually captured at the time.
-        observed = _integer_value(observed_at_ms, "observed_at_ms")
-        now = _integer_value(self._clock_ms(), "clock_ms")
-        if observed > now or now - observed > self._max_snapshot_age_ms:
-            raise DataValidationError(
-                "live 24h ticker cannot reconstruct a historical universe; "
-                "persist snapshots at observation time for replay"
-            )
-        contracts = self.contracts(observed_at_ms=observed)
+        # A public rolling-24h ticker is not a historical universe endpoint.
+        observed_at_ms = self._validate_live_observation(observed_at_ms)
+        contracts = self.contracts(observed_at_ms=observed_at_ms)
         ticker_payload = self._get_json("/fapi/v1/ticker/24hr")
         if not isinstance(ticker_payload, list):
             raise DataValidationError("24hr ticker response must be a list")
