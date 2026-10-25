@@ -18,7 +18,9 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU9 #30 concluída:** PR #31 merged SHA `82236f2ee5345277fb3ffc92391594fb9d01fa3f`; CI pós-merge run 40199470161 SUCCESS com **115 testes Python offline** e 10 docs. Seletor conservador Kraken exige registro positivo e versionado de ativos cripto, exclui tokenizados e só então ranqueia volumeQuote USD até 50. Nenhum Top50 real validado.
 
-**WU10 #32 em implementação:** branch `feat/j1-crypto-registry-provenance`. Contrato offline imutável de identidade/revisão/licença, hash SHA256, histórico append-only e integração ao seletor WU9 com antiviés temporal. Testes/PR/CI/merge ainda dependem de verificação. Fontes de registro **real** e direitos comerciais seguem pendentes; não existe lista produtiva de criptoativos aprovados.
+**WU10 #32 parcialmente entregue:** PR #33 merged SHA `6be53f170edb81656d43d8ebf6e25c4ecdaaa9ed`, run CI pós-merge `40200232080` SUCCESS com **135 testes offline** e **11 docs**. Infraestrutura de registro/versionamento SHA256 e proteção point-in-time pronta, mas **issue #32 permanece aberta** porque falta validar fontes e licenças de ativos reais; não existe lista real aprovada.
+
+**WU11 #34 em implementação:** branch `feat/j1-kraken-candle-staging`, parser OHLC Kraken fechado UTC com volume bruto **não verificado**. PR/CI/merge ainda pendentes de confirmação. Não promover automaticamente os dados ao `ClosedCandle` nem usar volume artificial em backtest.
 
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.

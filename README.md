@@ -63,3 +63,7 @@ A [PR #31](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/p
 
 ## Registro cripto com histórico verificável — WU10
 O módulo `crypto_intelligence_agent/crypto_asset_registry.py` valida manifestos **internos de pesquisa** (SHA256, revisão identificada, duas fontes independentes, tempos UTC), rejeita revisões posteriores à observação e inclui a versão integral do registro no `UniverseSnapshot`. A [issue #32](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/32) rastreia a WU10. O esquema, direitos de uso e riscos ficam em [docs/CRYPTO_REGISTRY.md](docs/CRYPTO_REGISTRY.md). Não há lista real homologada de moedas nem integração comercial com APIs pagas; todos os testes usam fixtures sintéticas e não enviam ordens.
+
+
+## Kraken: candles de pesquisa e limite de volume
+A [issue #34](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/34) valida OHLC temporalmente fechado com preços Decimal e timestamps UTC no parser `crypto_intelligence_agent/kraken_candle_validation.py`. A coluna `volume` da API é armazenada somente como **`raw_trade_volume_unverified`** em memória; sem unidades verificadas, ela **não** se torna `base_volume`/`quote_volume` nem alimenta o backtest. Referência: https://docs.kraken.com/api/docs/futures-api/charts/candles. Nenhum GET extra, chaves, ordens reais ou deploy.
