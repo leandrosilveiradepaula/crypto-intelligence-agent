@@ -29,3 +29,6 @@ O SQLite opt-in contém dois grupos independentes de registros: o `UniverseSnaps
 
 ## Testes e evidências
 A CI roda testes offline de clock real/injetado, manifesto point-in-time e expirado, xStocks, ausência de BTC, três candles, volume opaco, arquivo seguro 0600, SQLite persistente e replay cross-session, falha de provedor sem retry, recusa de gravação dentro do repo, import da CLI e ausência de operações reais. Fluxo live histórico comprovado apenas nas WU34/WU35; a WU36 entrega **código local**, não uma execução da VPS.
+
+## Opção WU37: expandir o registro local sem simular ativos
+Depois de observar/revisar o manifesto v2 `crypto-bases-10-20261025-v2.json`, a mesma CLI local da WU36 aceita `--registry expanded-10` junto das demais flags opt-in; a opção é restrita às revisões internas `btc-eth` ou `expanded-10`, sem aceitar URL externa, input livre ou conteúdo baixado. A identidade passa a cobrir até **10 bases**, mas o coletor de candles continua capturando somente três preços 1h do BTC, em SQLite privado. A seleção de `UniverseSnapshot` reflete somente os contratos realmente presentes/ativos e com USD quote nas consultas Kraken. O default `btc-eth` permanece para reproduzir os checkpoints anteriores. Nenhuma execução da VPS, histórico Top50, direitos comerciais, API CoinGecko ou conversão de volume canônico foi autorizada.
