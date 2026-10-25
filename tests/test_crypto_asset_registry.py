@@ -206,6 +206,12 @@ class RegistryUnitTests(unittest.TestCase):
             history.append(CryptoRegistrySnapshot.from_manifest(
                 signed_fixture(unsigned_manifest(
                     observed=T0 + 2 * HOUR, label="reviewed-fixture-v2"))))
+        # A label from the FIRST snapshot must also not be recycled
+        # after a different, later revision was appended.
+        with self.assertRaises(DataValidationError):
+            history.append(CryptoRegistrySnapshot.from_manifest(
+                signed_fixture(unsigned_manifest(
+                    observed=T0 + 2 * HOUR, label="reviewed-fixture-v1"))))
 
     def test_no_future_registry_backfill_or_stale_reference(self):
         future = CryptoRegistrySnapshot.from_manifest(signed_fixture(
