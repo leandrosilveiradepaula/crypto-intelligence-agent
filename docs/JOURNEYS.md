@@ -72,3 +72,5 @@ A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausên
 
 
 - J1/WU31 #104 — defesa OFFLINE contra variantes textuais de categorias TradFi no seletor Kraken, sem aceitação positiva de crypto-only; PR/CI pendentes nesta etapa, J1 bloqueada por #32/#36/#48.
+
+- J1/WU32 #107 — experimento mínimo privado de conformidade OKX BTC perp, reutilizando parser WU22 com até dois GETs e três candles fechados, sem direitos para release, identidade cripto aprovada ou `ClosedCandle` canônico. Branch `feat/j1-wu32-okx-personal-conformance`; PR/CI/run a registrar após verificação. Não concluir J1 por um único BTC.
