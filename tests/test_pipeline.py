@@ -117,8 +117,8 @@ class PipelineTests(unittest.TestCase):
         pipeline, transport = self.create_pipeline()
         result = self.run_pipeline(pipeline, required_symbols=("BTCUSDT",))
         events = self.store.collection_events()
-        self.assertEqual(len(events), 3)
-        self.assertEqual([event.status for event in events], ["success"] * 3)
+        self.assertEqual(len(events), 4)
+        self.assertEqual([event.status for event in events], ["success"] * 4)
         self.assertEqual([event.endpoint for event in events], list(result.endpoints))
         self.assertTrue(all(event.mode == "offline" for event in events))
         self.assertEqual(events[-1].candles_committed, 3)
@@ -141,7 +141,7 @@ class PipelineTests(unittest.TestCase):
         repeated = self.run_pipeline(pipeline)
         self.assertEqual([r.pages_committed for r in repeated.results], [0, 0])
         self.assertEqual([r.persisted_candles for r in repeated.results], [3, 3])
-        self.assertEqual(len(self.store.collection_events()), 8)
+        self.assertEqual(len(self.store.collection_events()), 10)
 
     def test_required_symbol_must_belong_to_ranked_universe(self):
         pipeline, _ = self.create_pipeline()
@@ -241,7 +241,7 @@ class CLITests(unittest.TestCase):
         self.assertEqual(result, 0)
         payload = json.loads(out.getvalue())
         self.assertEqual(payload["status"], "success")
-        self.assertEqual(payload["audit_events"], 4)
+        self.assertEqual(payload["audit_events"], 5)
         self.assertTrue(payload["data"]["synthetic"])
         self.assertEqual(payload["database"], "temporary_removed_after_run")
 
@@ -269,7 +269,7 @@ class CLITests(unittest.TestCase):
                 exchange="binance", market="linear_perpetual", symbol="BTCUSDT",
                 interval="1h", start_open_ms=0, end_open_ms=3 * HOUR,
             )), 3)
-            self.assertEqual(len(saved.collection_events()), 3)
+            self.assertEqual(len(saved.collection_events()), 4)
 
     def test_cli_errors_explicitly_for_unranked_symbol_without_network(self):
         output = io.StringIO()
