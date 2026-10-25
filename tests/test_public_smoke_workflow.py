@@ -132,5 +132,26 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
 
 
 
+    def test_vike_manifest_probe_is_keyless_owner_only_and_not_ci(self):
+        s = self.source
+        for token in (
+            "vike-keyless-manifest:",
+            "github.event.issue.number == 63",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-vike-keyless-manifest-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 scripts/probe_vike_public_manifest.py",
+            "--allow-public-network --allow-vike-manifest-research",
+            "timeout-minutes: 2",
+            "persist-credentials: false",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+        self.assertNotRegex(s, r"(?m)^\s{2}(?:push|pull_request|schedule|workflow_dispatch):")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -114,3 +114,7 @@ A J1 ainda não tem registro real Top50, unidade financeira dos candles Kraken h
 
 ## Pesquisa offline de esquema OKX V5 SWAP — WU22
 O módulo `crypto_intelligence_agent/okx_swap_candle_research.py` valida somente fixtures sintéticas de candles históricos de swaps lineares. Campos documentados `vol` (contratos), `volCcy` (moeda-base), `volCcyQuote` (USDT/USDC) e `confirm=1` são conservados com Decimal exato; não há conversão para USD, feed live, autorização de licença, mudança de fornecedor, armazenamento ou negociação. A API Agreement OKX 9.4 restringe usos de mercado a fins pessoais não comerciais, com direitos de redistribuição não demonstrados. Ver D40, DATA_CONTRACT e PROVIDER_RIGHTS.
+
+
+## Vike/Hyperliquid — diligência de fonte gratuita, sem ativação (WU23)
+A Vike declara CC BY 4.0 com atribuição para os arquivos de dados e permite manifesto público keyless de amostras BTC: `https://data.vike.io/archive/hl-samples/manifest.json`. O projeto valida **apenas os metadados publicados** (`scripts/probe_vike_public_manifest.py`) em testes offline e disponibiliza um único diagnóstico GET owner-only (issue #63, comando literal) sem conta, chave ou dados de carteiras nos logs. Não foram atestadas licença upstream, identidade crypto-only, precisão Decimal de Float64, conteúdo dos Parquets ou prontidão live. J1 permanece aberta. Mais em `docs/PROVIDER_RIGHTS.md` e `docs/VALIDATION_PLAN.md`.
