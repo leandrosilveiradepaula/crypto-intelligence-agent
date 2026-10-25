@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from .market_data import ClosedCandle, DataGapError, MarketDataCheckpoint, interval_duration_ms
+from .market_data import ClosedCandle, DataGapError, MarketDataCheckpoint, interval_duration_ms, interval_open_aligned
 from .storage import MarketDataStore
 
 
@@ -29,12 +29,6 @@ class BackfillResult:
     candles_committed: int
     checkpoint: MarketDataCheckpoint | None
 
-
-def _is_aligned(time_ms: int, interval: str, duration_ms: int) -> bool:
-    # Binance weekly klines begin on Monday UTC. Unix epoch began Thursday,
-    # thus a weekly start is four days after the epoch, not epoch % week == 0.
-    offset = 4 * 86_400_000 if interval == "1w" else 0
-    return (time_ms - offset) % duration_ms == 0
 
 
 class HistoricalBackfill:
@@ -58,8 +52,8 @@ class HistoricalBackfill:
         if (type(start_open_ms) is not int or type(end_open_ms) is not int
                 or type(observed_at_ms) is not int or start_open_ms < 0
                 or observed_at_ms < 0 or end_open_ms <= start_open_ms
-                or not _is_aligned(start_open_ms, interval, duration)
-                or not _is_aligned(end_open_ms, interval, duration)):
+                or not interval_open_aligned(interval, start_open_ms)
+                or not interval_open_aligned(interval, end_open_ms)):
             raise ValueError("backfill needs a nonnegative, interval-aligned [start, end) window and UTC observation")
         if not (exchange and market and symbol and source_name):
             raise ValueError("exchange, market, symbol and source_name must be nonempty")
@@ -76,8 +70,8 @@ class HistoricalBackfill:
                 raise DataGapError("checkpoint source/version does not match requested collection lineage")
             saved_next = checkpoint.confirmed_end_ms + 1
             lineage_start = checkpoint.confirmed_start_ms
-            if (not _is_aligned(lineage_start, interval, duration)
-                    or not _is_aligned(saved_next, interval, duration)
+            if (not interval_open_aligned(interval, lineage_start)
+                    or not interval_open_aligned(interval, saved_next)
                     or start_open_ms < lineage_start
                     or start_open_ms > saved_next):
                 raise DataGapError("requested window is outside the contiguous checkpoint lineage")
