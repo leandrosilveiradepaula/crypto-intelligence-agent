@@ -40,7 +40,7 @@ def fixture(name: str) -> HttpResponse:
 
 class PublicAdapterTests(unittest.TestCase):
     def adapter(self, routes: dict[str, HttpResponse | Exception]) -> BinanceFuturesPublicAdapter:
-        return BinanceFuturesPublicAdapter(FixtureTransport(routes), close_safety_ms=1_000)
+        return BinanceFuturesPublicAdapter(FixtureTransport(routes), close_safety_ms=1_000, clock_ms=lambda: 10_000)
 
     def test_contracts_are_typed_decimal_and_utc_milliseconds(self) -> None:
         contracts = self.adapter({"exchangeInfo": fixture("exchange_info.json")}).contracts(observed_at_ms=10_000)
