@@ -101,7 +101,10 @@ class SyntheticExitSchedule:
     exited_total_units: Decimal
     remaining_units: Decimal
     allocations: tuple[SyntheticExitAllocation, ...]
-    quality: str = "synthetic_percentage_research_only"
+
+    @property
+    def quality(self) -> str:
+        return "synthetic_percentage_research_only"
 
     @property
     def approved_for_live_execution(self) -> bool:
