@@ -26,8 +26,10 @@ class RoutedTransport:
     def __init__(self, contracts, tickers):
         self.contracts = contracts
         self.tickers = tickers
+        self.request_count = 0
 
     def get(self, url: str, timeout_seconds: float) -> HttpResponse:
+        self.request_count += 1
         return HttpResponse(200, json.dumps(self.contracts if "exchangeInfo" in url else self.tickers))
 
 
@@ -72,7 +74,14 @@ class MarketIntegrityRegressionTests(unittest.TestCase):
         adapter = BinanceFuturesPublicAdapter(transport)
         with self.assertRaises(DataValidationError):
             adapter.universe(observed_at_ms=10_000)
-        self.assertEqual(transport.get("https://fapi.binance.com/fapi/v1/exchangeInfo", 2).status, 200)
+        self.assertEqual(transport.request_count, 0)  # reject before reaching live endpoints
+
+    def test_live_contract_metadata_cannot_be_backdated(self):
+        transport = ConstantTransport(example_contracts())
+        adapter = BinanceFuturesPublicAdapter(transport)
+        with self.assertRaises(DataValidationError):
+            adapter.contracts(observed_at_ms=10_000)
+        self.assertEqual(transport.request_count, 0)
 
     def test_duplicate_conflicting_ticker_rows_are_not_last_wins(self):
         tickers = example_tickers()
@@ -97,7 +106,7 @@ class MarketIntegrityRegressionTests(unittest.TestCase):
     def test_negative_contract_filters_cannot_enter_domain(self):
         payload = example_contracts()
         payload["symbols"][0]["filters"][0]["tickSize"] = "-0.10"
-        adapter = BinanceFuturesPublicAdapter(ConstantTransport(payload))
+        adapter = BinanceFuturesPublicAdapter(ConstantTransport(payload), clock_ms=lambda: 10_000)
         with self.assertRaises(DataValidationError):
             adapter.contracts(observed_at_ms=10_000)
 
