@@ -194,3 +194,6 @@ O registro v2 `registries/crypto-bases-10-20261025-v2.json` documenta BTC/ETH/SO
 
 ## J1/WU38 — Pesquisa local de até 5 perps sem volume canônico
 A CLI já existente `python3 -m scripts.collect_private_kraken_research` oferece `--max-price-symbols 1..5` (default 1) e mantém `--registry expanded-10` como opt-in. O seletor Kraken corrente define os contratos elegíveis; o coletor captura BTC primeiro mais até N-1 perps crypto por ranking USD, com 3 barras 1h price-only cada, no máximo 2+N GETs e SQLite privado fora do Git. Não inventa contratos ou `base_volume/quote_volume`, nem atribui direito comercial, Top50 histórico, PnL ou execução. Ver `docs/J1_PRIVATE_RESEARCH.md` e D64.
+
+## J1/WU39 — Contrato de volume Bybit documentado, sem API externa
+A API Bybit V5 documenta para perps lineares USDT/USDC o `volume` em moeda-base e `turnover` em moeda-quote. O novo módulo `bybit_instrument_volume_contract.py` confere `instruments-info` de um contrato da base revisada (v1/v2) antes de reutilizar o parser offline já existente. Todos os dados são sintéticos, sem URL visitada pelo código, sem banco, `ClosedCandle`, credenciais ou ordens; termos de licença não dão direito comercial/publicação dos dados Bybit. A J1 #2 e os gates #32/#36/#48 seguem abertos. Veja D65, `docs/DATA_CONTRACT.md` e `docs/PROVIDER_RIGHTS.md`.
