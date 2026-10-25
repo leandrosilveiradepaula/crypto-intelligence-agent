@@ -110,3 +110,12 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - Limites: 8 segundos de timeout e 4 MiB de corpo. Saída JSON de prova usa UTC ISO, status HTTP, contagem de instrumentos, contagem **heurística** de símbolos `PI_`/`PF_` e até 5 símbolos de exemplo. Isso **não** comprova liquidez, volume USDT comparável, contratos lineares ou histórico contínuo.
 - Workflow de issue #23 sob comando literal do proprietário `/probe-kraken-public-v1`; runner padrão público, 2 minutos, permissões somente leitura; nenhum agendamento ou CI online. Se houver erro por política do fornecedor ou DNS, parar sem retries, registrar evidência e não contornar restrições.
 - Só projetar um adaptador Kraken e critérios de elegibilidade após observar que a API pública é efetivamente acessível e quais contratos/volumes ela oferece. Fonte oficial: https://docs.kraken.com/api/docs/futures-api/charts/candles .
+
+
+## Conformance de metadados, tickers e candles Kraken — WU7
+- A WU6 executou um GET real de instrumentos: run `40198042787`, HTTP200, 231 instrumentos, 213 prefixos PI_/PF_ (não 213 contratos cripto elegíveis).
+- A probe WU7 é `python3 scripts/probe_kraken_market_schema.py --allow-public-network --allow-kraken-schema-probe`. Ambas flags são exigidas; nenhuma consulta acontece em testes automáticos.
+- A probe usa caminhos fixos do **mesmo provedor independente** (`/derivatives/api/v3/instruments`, `/derivatives/api/v3/tickers` e `/api/charts/v1/trade/PF_XBTUSD/1h?count=3`), no máximo 3 GETs, sem redirects nem retries, até 8 segundos e 4MiB por request, sem chaves ou persistência da resposta. Retorna apenas campos allowlist/nomes de campos, status, UTC e contagens.
+- Não interpretar um HTTP200 nem uma lista de símbolos PI_/PF_ como evidência de 50 criptoativos líquidos; `PF_AAPLXUSD` é exemplo de categoria não cripto que precisa ser excluída. Precisamos estudar tipo de instrumento, tickers/volume cotado e unidades de `contractSize` para seleção e ranking válidos.
+- Campos de candles `time,open,high,low,close,volume` e `more_candles` são verificados estruturalmente, porém **não são tratados como velas fechadas validadas** sem regras de finalização e intervalos confirmados.
+- Workflow owner-only exige comentário exato `/probe-kraken-market-v1` na issue #25. Um run real fornece evidência pontual de schema, não homologação do feed ou autorização de trading. Não tentar contornar políticas de Binance ou de Kraken.
