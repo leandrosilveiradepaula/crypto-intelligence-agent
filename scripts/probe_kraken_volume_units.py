@@ -148,6 +148,8 @@ def make_report(
     call = opener or _default_open
     now = clock_ms or (lambda: int(time() * 1000))
     observed_at_ms = now()
+    if type(observed_at_ms) is not int or observed_at_ms <= 0:
+        raise ValueError("invalid runner clock for public diagnostic")
     report: dict[str, object] = {
         "source": "kraken_futures_public", "symbol": SYMBOL,
         "observed_at_utc": datetime.fromtimestamp(
