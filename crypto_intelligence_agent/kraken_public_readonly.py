@@ -10,6 +10,7 @@ An HTTP200 snapshot is not a historical universe or permission to trade.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from time import time
 from types import MappingProxyType
 from typing import Any, Callable, Mapping
@@ -42,6 +43,11 @@ _TICKER_FIELDS = frozenset({
 })
 _MAX_TIMEOUT_S = 10.0
 _MAX_SNAPSHOT_SPAN_MS = 30_000
+_CHART_URL = re.compile(
+    r"^https://futures\\.kraken\\.com/api/charts/v1/trade/"
+    r"PF_[A-Z0-9]{2,40}/(?:1m|5m|15m|30m|1h|4h|12h|1d|1w)"
+    r"\\?from=[0-9]{1,16}&to=[0-9]{1,16}$"
+)
 
 
 class _RejectRedirects(HTTPRedirectHandler):
@@ -150,7 +156,7 @@ class KrakenPublicReadOnlyResearch:
         if (not url.startswith(_HOST + "/")
                 or not (url == _HOST + _INSTRUMENTS_PATH
                         or url == _HOST + _TICKERS_PATH
-                        or url.startswith(_HOST + "/api/charts/v1/trade/PF_"))):
+                        or _CHART_URL.fullmatch(url) is not None)):
             raise ExchangeAccessError("unapproved Kraken public URL")
         request = Request(url, method="GET", headers={"Accept": "application/json"})
         try:
