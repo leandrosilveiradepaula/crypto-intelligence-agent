@@ -271,8 +271,14 @@ class RegistrySelectionTests(unittest.TestCase):
     def test_future_market_data_and_old_market_data_both_rejected(self):
         with self.assertRaisesRegex(DataValidationError, "future market"):
             self.select(observed=T0 + 201, decision=T0 + 200)
+        # Exactly at the configured freshness boundary is still valid.
+        self.assertEqual(len(self.select(
+            observed=T0 + 100, decision=T0 + 300100,
+            max_market_age=300000,
+        ).eligible), 1)
+        # One millisecond beyond the boundary must fail closed.
         with self.assertRaisesRegex(DataValidationError, "stale"):
-            self.select(observed=T0 + 100, decision=T0 + 300100,
+            self.select(observed=T0 + 100, decision=T0 + 300101,
                         max_market_age=300000)
 
     def test_stale_registry_fails_not_silently_reused(self):
