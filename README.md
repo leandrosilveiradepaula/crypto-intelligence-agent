@@ -74,3 +74,7 @@ A [issue #36](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 
 O primeiro run real da WU12, [40201172859](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40201172859), recebeu HTTP200 no chart, mas rejeitou a estrutura ou quantidade de candles e não consultou o ticker. Nenhum volume foi homologado. A correção da issue #36 introduz apenas diagnóstico sanitizado de tipos/contagens e não relaxa as exigências do feed.
+
+
+## Compatibilidade real do volume Kraken (WU13)
+O run [40201488833](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40201488833) provou que 27 candles retornaram `volume` como **string decimal**, divergindo do tipo int64 descrito em documentação. A [issue #39](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/39) normaliza esse número como `Decimal` bruto, sem afirmar unidade financeira, sem criar `ClosedCandle` ou converter para volume cotado. Os testes offline continuam sendo o gate obrigatório.
