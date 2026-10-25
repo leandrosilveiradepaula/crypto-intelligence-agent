@@ -229,3 +229,26 @@ jobs:
           set -eu
           python3 -m scripts.probe_kraken_btc_eth_universe \
             --allow-public-network --allow-private-kraken-universe
+
+  kraken-ten-base-research-universe:
+    if: >-
+      github.event.issue.number == 120 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-kraken-ten-crypto-bases-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted default branch without persisted auth
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: One-shot Kraken ten-base internal research ranking (two GETs)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_kraken_btc_eth_universe \
+            --allow-public-network --allow-private-kraken-universe \
+            --registry expanded-10
