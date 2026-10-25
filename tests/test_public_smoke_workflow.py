@@ -82,7 +82,7 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
             "github.event.comment.body == '/probe-kraken-market-v1'",
             "github.event.comment.user.login == 'leandrosilveiradepaula'",
             "github.actor == 'leandrosilveiradepaula'",
-            "python3 scripts/probe_kraken_market_schema.py",
+            "python3 -m scripts.probe_kraken_market_schema",
             "--allow-public-network --allow-kraken-schema-probe",
             "timeout-minutes: 2",
         ):
