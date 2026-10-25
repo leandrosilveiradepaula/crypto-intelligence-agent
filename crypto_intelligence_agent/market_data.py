@@ -261,6 +261,9 @@ class BinanceFuturesPublicAdapter:
         limit: int = 500,
     ) -> tuple[ClosedCandle, ...]:
         interval_ms = _interval_ms(interval)
+        observed_at_ms = _integer_value(observed_at_ms, "observed_at_ms")
+        if observed_at_ms > _integer_value(self._clock_ms(), "clock_ms"):
+            raise DataValidationError("future observation timestamp cannot close an in-progress candle")
         if eligible_symbols is not None and symbol not in eligible_symbols:
             raise IneligibleSymbolError(f"{symbol} is not in the supplied eligible universe")
         if limit < 1 or limit > 1_500:
