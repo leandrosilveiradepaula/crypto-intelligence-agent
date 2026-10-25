@@ -82,3 +82,7 @@ O run [40201488833](https://github.com/leandrosilveiradepaula/crypto-intelligenc
 
 ## WU13 concluída — volume Kraken preservado sem inferência
 A [PR #40](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/40) corrigiu o formato decimal-string observado dos candles Kraken. O [run #40201868577](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40201868577) confirmou 2 GET HTTP200 e 24 candles fechados com `volume` bruto acumulado; ainda `unit_proof=false`. O número de volume bruto do chart **não** é volume financeiro comparável sem conhecer unidade/multiplicadores e sem alinhar janelas. A [issue #36](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/36) continua aberta; nenhuma negociação real foi executada.
+
+
+## Gate conservador de alavancagem por instrumento (WU14)
+A [issue #42](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/42) rastreia um módulo **somente de pesquisa** que compara a alavancagem global solicitada (50x padrão) a uma tabela externa/versionada de limites Kraken conforme exposição agregada em USD. Se o contrato/tier permitir apenas 10x, 50x é **recusado**, não reduzido silenciosamente. Fixtures são sintéticas: não equivalem à margem real, liquidação ou permissão de operar. A fonte documental é a [tabela oficial de níveis e alavancagem](https://support.kraken.com/br/articles/360022632452-derivatives-margin-schedule-maximum-leverage). Sem ordens ou custo extra.
