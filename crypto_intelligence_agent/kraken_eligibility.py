@@ -125,7 +125,7 @@ def select_kraken_research_universe(
         raise ValueError("observed_at_ms must be nonnegative UTC milliseconds")
     if type(max_symbols) is not int or not 1 <= max_symbols <= 50:
         raise ValueError("max_symbols must be between 1 and 50")
-    if not isinstance(registry_version, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,60}", registry_version):
+    if not isinstance(registry_version, str) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,80}", registry_version):
         raise ValueError("registry_version must be an explicit immutable label")
     if not isinstance(verified_crypto_bases, frozenset) or not verified_crypto_bases:
         raise ValueError("nonempty verified crypto-asset registry is required")
