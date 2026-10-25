@@ -90,6 +90,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU34 #112 EM IMPLEMENTAÇÃO:** `SQLiteKrakenPriceOnlyArchive` adiciona trilha local opt-in de preço OHLC da Kraken, com precisão Decimal, receipts, replay, as-of/qualidade e exclusão total de volume econômico; script privado owner-only de 1 GET com banco descartável. PR/CI/live pendentes nesta etapa. Sem converter em `ClosedCandle`, Top50, direito comercial ou negociação. J1 #2/#32/#36/#48 abertas.
 
+**J1/WU34 #112 — integrada, sonda real ainda sem captura:** PR #113 merged SHA `87b3f96653f97ef05798e918686b7fbe951622c2`, CI PR #40237817824 SUCCESS (652 testes offline); owner-run #40237870818 / job #121303219268 executou 1 GET Kraken e recusou página (`invalid_chart_or_price_only_page`), 0 candles armazenados. SDK chart `to` é inclusivo, cliente enviava fim exclusivo; correção testada em `fix/j1-wu34-kraken-exclusive-to`, confirmação real pendente. Não promover para `ClosedCandle` nem fechar #36/#48/#2.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
