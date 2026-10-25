@@ -67,3 +67,7 @@ O módulo `crypto_intelligence_agent/crypto_asset_registry.py` valida manifestos
 
 ## Kraken: candles de pesquisa e limite de volume
 A [issue #34](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/34) valida OHLC temporalmente fechado com preços Decimal e timestamps UTC no parser `crypto_intelligence_agent/kraken_candle_validation.py`. A coluna `volume` da API é armazenada somente como **`raw_trade_volume_unverified`** em memória; sem unidades verificadas, ela **não** se torna `base_volume`/`quote_volume` nem alimenta o backtest. Referência: https://docs.kraken.com/api/docs/futures-api/charts/candles. Nenhum GET extra, chaves, ordens reais ou deploy.
+
+
+## Pesquisa da unidade de volume Kraken (WU12)
+A [issue #36](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/36) propõe um diagnóstico opcional de **dois GETs públicos** de BTC, sem credenciais nem ordens. Exige flags `--allow-public-network --allow-volume-diagnostic`, publica apenas soma de 24 candles UTC totalmente fechados e volume reportado pelo ticker 24h. O próprio relatório define `unit_proof=false`: semântica da unidade e janelas de 24h não são automaticamente comparáveis, portanto nenhum dado é convertido a `ClosedCandle` por essa pesquisa. CI segue offline e R$0.
