@@ -25,11 +25,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="absolute path outside repo, in owner-only directory (0700)")
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--allow-private-persistence", action="store_true")
+    parser.add_argument("--registry", choices=("btc-eth", "expanded-10"), default="btc-eth")
     args = parser.parse_args(argv)
     try:
         summary = capture_private_research(
             db_path=args.database, allow_public_network=args.allow_public_network,
             allow_private_persistence=args.allow_private_persistence,
+            registry_variant=args.registry,
         )
         result = {"status": "private_local_capture_complete", **asdict(summary)}
     except LocalResearchError as error:

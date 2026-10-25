@@ -21,7 +21,7 @@ from crypto_intelligence_agent.kraken_public_readonly import (
 )
 from crypto_intelligence_agent.kraken_price_archive import SQLiteKrakenPriceOnlyArchive
 from crypto_intelligence_agent.market_data import (
-    DataGapError, DuplicateCandleError, ExchangeAccessError,
+    DataGapError, DataValidationError, DuplicateCandleError, ExchangeAccessError,
 )
 from crypto_intelligence_agent.private_kraken_research import (
     LocalResearchError, _REPO_ROOT, _REGISTRY_PATH, capture_private_research,
@@ -171,6 +171,29 @@ class PrivateLocalResearchTests(unittest.TestCase):
         self.assertEqual(rows[0].first_observed_at_ms, NOW + 400)
         self.assertFalse(rows[0].canonical_ohlcv)
         self.assertFalse(hasattr(rows[0], "quote_volume"))
+
+    def test_expanded_ten_base_manifest_is_explicit_and_preserves_price_only(self):
+        reader = Reader()
+        result = collect(self.db, reader, registry_variant="expanded-10")
+        self.assertEqual(result.selected_bases_limit, 10)
+        # Fake exchange holds only BTC+ETH; the other eight are NOT invented.
+        self.assertEqual(result.eligible_contracts, 2)
+        self.assertEqual(result.private_price_candles_added, 3)
+        self.assertTrue(result.price_window_complete)
+        self.assertFalse(result.historical_top50_approved)
+        self.assertFalse(result.canonical_ohlcv_approved)
+        self.assertEqual(reader.calls, ["instruments_and_tickers", "chart"])
+        with sqlite3.connect(self.db) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM candles").fetchone()[0], 0)
+            self.assertEqual(db.execute(
+                "SELECT COUNT(*) FROM kraken_research_prices").fetchone()[0], 3)
+
+    def test_expanded_registry_revision_rejects_unrecognized_choice_pre_network(self):
+        reader = Reader()
+        with self.assertRaises(LocalResearchError):
+            collect(self.db, reader, registry_variant="arbitrary-external.json")
+        self.assertEqual(reader.calls, [])
+        self.assertFalse(self.db.exists())
 
     def test_cross_session_replay_is_idempotent(self):
         self.assertEqual(collect(self.db, Reader()).private_price_candles_added, 3)

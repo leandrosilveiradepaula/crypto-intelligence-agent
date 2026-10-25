@@ -1,0 +1,209 @@
+{
+  "assets": [
+    {
+      "base": "BTC",
+      "canonical_id": "bitcoin-mainnet",
+      "evidence": [
+        {
+          "asset_ref": "bitcoin-mainnet",
+          "observed_at_ms": 1792964997555,
+          "publisher": "bitcoin-org",
+          "url": "https://bitcoin.org/en/faq"
+        },
+        {
+          "asset_ref": "bitcoin",
+          "observed_at_ms": 1792964997555,
+          "publisher": "ecb",
+          "url": "https://www.ecb.europa.eu/ecb-and-you/explainers/tell-me/html/what-is-bitcoin.en.html"
+        }
+      ],
+      "reviewed_at_ms": 1792964997555,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ETH",
+      "canonical_id": "ethereum-native-ether",
+      "evidence": [
+        {
+          "asset_ref": "native-ether",
+          "observed_at_ms": 1792964997555,
+          "publisher": "ethereum-foundation",
+          "url": "https://ethereum.org/pt-br/what-is-ether/"
+        },
+        {
+          "asset_ref": "ethereum",
+          "observed_at_ms": 1792964997555,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/ethereum"
+        }
+      ],
+      "reviewed_at_ms": 1792964997555,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "SOL",
+      "canonical_id": "solana-native-sol",
+      "evidence": [
+        {
+          "asset_ref": "solana",
+          "observed_at_ms": 1792968148000,
+          "publisher": "solana-docs",
+          "url": "https://solana.com/learn/introduction-to-solana-tokens"
+        },
+        {
+          "asset_ref": "solana",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/solana"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "XRP",
+      "canonical_id": "xrp-ledger-native-xrp",
+      "evidence": [
+        {
+          "asset_ref": "xrp-ledger",
+          "observed_at_ms": 1792968148000,
+          "publisher": "ripple",
+          "url": "https://ripple.com/xrp/"
+        },
+        {
+          "asset_ref": "xrp",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/xrp"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ADA",
+      "canonical_id": "cardano-native-ada",
+      "evidence": [
+        {
+          "asset_ref": "cardano-ada",
+          "observed_at_ms": 1792968148000,
+          "publisher": "cardano-docs",
+          "url": "https://docs.cardano.org/about-cardano/new-to-cardano/what-is-a-cryptocurrency"
+        },
+        {
+          "asset_ref": "cardano",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/cardano"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "DOGE",
+      "canonical_id": "dogecoin-native-doge",
+      "evidence": [
+        {
+          "asset_ref": "dogecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "dogecoin-org",
+          "url": "https://dogecoin.com/"
+        },
+        {
+          "asset_ref": "dogecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/dogecoin"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "LTC",
+      "canonical_id": "litecoin-native-ltc",
+      "evidence": [
+        {
+          "asset_ref": "litecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "litecoin-org",
+          "url": "https://litecoin.org/"
+        },
+        {
+          "asset_ref": "litecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/litecoin"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "AVAX",
+      "canonical_id": "avalanche-primary-native-avax",
+      "evidence": [
+        {
+          "asset_ref": "avalanche-avax",
+          "observed_at_ms": 1792968148000,
+          "publisher": "avalanche-docs",
+          "url": "https://docs.avax.network/docs/primary-network/avax-token"
+        },
+        {
+          "asset_ref": "avalanche",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/avalanche"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "LINK",
+      "canonical_id": "chainlink-link-token",
+      "evidence": [
+        {
+          "asset_ref": "chainlink-link",
+          "observed_at_ms": 1792968148000,
+          "publisher": "chainlink-org",
+          "url": "https://chain.link/economics"
+        },
+        {
+          "asset_ref": "chainlink",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/chainlink"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "DOT",
+      "canonical_id": "polkadot-native-dot",
+      "evidence": [
+        {
+          "asset_ref": "polkadot-dot",
+          "observed_at_ms": 1792968148000,
+          "publisher": "polkadot-wiki",
+          "url": "https://wiki.polkadot.com/learn/learn-dot/"
+        },
+        {
+          "asset_ref": "polkadot",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/polkadot"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    }
+  ],
+  "label": "crypto-bases-10-20261025-review-v2",
+  "observed_at_ms": 1792968148000,
+  "schema_version": 1,
+  "sha256": "a95179a342289833f3b14f0c2442163acdcb32f1ca0c9569fa01adeaa3534746",
+  "usage_policy": "internal_research_only"
+}

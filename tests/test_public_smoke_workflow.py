@@ -239,5 +239,28 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("secrets.", s)
         self.assertNotIn("contents: write", s)
 
+
+    def test_ten_crypto_bases_research_probe_is_owner_only(self):
+        s = self.source
+        for token in (
+            "kraken-ten-base-research-universe:",
+            "github.event.issue.number == 120",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-ten-crypto-bases-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.probe_kraken_btc_eth_universe",
+            "--allow-public-network --allow-private-kraken-universe",
+            "--registry expanded-10",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertIn("  contents: read", s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+
+
 if __name__ == "__main__":
     unittest.main()
