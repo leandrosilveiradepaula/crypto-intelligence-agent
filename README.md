@@ -118,3 +118,7 @@ O módulo `crypto_intelligence_agent/okx_swap_candle_research.py` valida somente
 
 ## Vike/Hyperliquid — diligência de fonte gratuita, sem ativação (WU23)
 A Vike declara CC BY 4.0 com atribuição para os arquivos de dados e permite manifesto público keyless de amostras BTC: `https://data.vike.io/archive/hl-samples/manifest.json`. O projeto valida **apenas os metadados publicados** (`scripts/probe_vike_public_manifest.py`) em testes offline e disponibiliza um único diagnóstico GET owner-only (issue #63, comando literal) sem conta, chave ou dados de carteiras nos logs. Não foram atestadas licença upstream, identidade crypto-only, precisão Decimal de Float64, conteúdo dos Parquets ou prontidão live. J1 permanece aberta. Mais em `docs/PROVIDER_RIGHTS.md` e `docs/VALIDATION_PLAN.md`.
+
+
+## Pré-cálculo de indicadores J2 (exclusivamente offline e sintético)
+`synthetic_feature_engine.py` calcula EMA(close), TR/ATR Wilder, extremos N barras anteriores, razão de volume cotado contra média anterior e retorno simples, usando `Decimal`, períodos explícitos e apenas `ClosedCandle.quality=synthetic_fixture` contíguos e fechados antes da decisão. Nenhum sinal de compra, posição, resultado de backtest, API de mercado ou ordem é produzido. A J1 permanece não homologada; ver D42 e `docs/STRATEGY_SPEC.md`.
