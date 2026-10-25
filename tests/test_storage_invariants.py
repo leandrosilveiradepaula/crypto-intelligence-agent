@@ -158,6 +158,14 @@ class PersistenceInvariantTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             SQLiteMarketDataStore(":memory:")
 
+    def test_resume_at_page_boundary_preserves_checkpoint_start(self):
+        self.run_backfill(WindowSource(self.rows), end=2 * HOUR)
+        continued = self.run_backfill(WindowSource(self.rows), start=2 * HOUR, end=4 * HOUR)
+        self.assertEqual(continued.checkpoint.confirmed_start_ms, 0)
+        self.assertEqual(continued.checkpoint.confirmed_end_ms, 4 * HOUR - 1)
+        replay = self.run_backfill(WindowSource(self.rows), start=0, end=4 * HOUR)
+        self.assertEqual(replay.pages_committed, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
