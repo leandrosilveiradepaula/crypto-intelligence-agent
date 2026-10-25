@@ -219,5 +219,25 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", s)
         self.assertNotIn("secrets.", s)
 
+
+    def test_btc_eth_private_universe_probe_is_owner_only(self):
+        s = self.source
+        for token in (
+            "kraken-btc-eth-current-universe:",
+            "github.event.issue.number == 115",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-btc-eth-current-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.probe_kraken_btc_eth_universe",
+            "--allow-public-network --allow-private-kraken-universe",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+
 if __name__ == "__main__":
     unittest.main()
