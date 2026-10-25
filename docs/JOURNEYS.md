@@ -17,6 +17,7 @@
 - WU3 #15 / PR #16: pipeline CLI e auditoria offline, integrada.
 - WU4 #17 / PR #18: relógio remoto e gate de diferença, integrada.
 - WU5 #19: conformance Binance e evidência de HTTP 451, permanece aberta sem feed live homologado.
-- WU6 #23: avaliação de fornecedor público independente Kraken Futures, probe de instrumentos sem credenciais, em andamento; não pressupor troca de venue.
+- WU6 #23 / PR #24: Kraken Futures independente, GET instrumentos HTTP200 (run 40198042787), 231 instrumentos e 213 candidatos heurísticos; concluída, sem troca de venue.
+- WU7 #25: conformance de instrumentos/tickers/candles, sem assumir classificação crypto-only ou Top50 até evidência de schema.
 
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
