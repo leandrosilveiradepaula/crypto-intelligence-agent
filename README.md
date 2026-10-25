@@ -188,3 +188,6 @@ Para testar a seleção real sem fabricar um Top50, a sonda privada WU35 usa o r
 
 ## J1/WU36 — Coleta pessoal persistente, opcional e somente leitura
 O fluxo `scripts.collect_private_kraken_research` reúne o seletor Kraken BTC/ETH real e três candles fechados de **preço apenas** em um SQLite local, sem ordens nem execução automática. Exige dois opt-ins e caminho absoluto em diretório privado fora do GitHub; não faz rede na CI. A estratégia e os backtests financeiros não podem usar candles sem volume canônico comprovado; a licença comercial e o Top50 continuam bloqueados. Documentação de escopo e operação futura: `docs/J1_PRIVATE_RESEARCH.md`.
+
+## J1/WU37 — Registro real opt-in de 10 identidades
+O registro v2 `registries/crypto-bases-10-20261025-v2.json` documenta BTC/ETH/SOL/XRP/ADA/DOGE/LTC/AVAX/LINK/DOT com uma fonte oficial e outra independente por ativo, SHA256/UTC point-in-time e `internal_research_only`. O seletor Kraken de pesquisa WU35 e a CLI privada persistente WU36 aceitam `--registry expanded-10` (sem alterar o default `btc-eth`), mas só escolhem ativos que realmente passarem os filtros de contrato/ticker em cada captura. Isso não fornece Top50 histórico, licença comercial, volume econômico de candles, sinais ou negociação. Ver D63 e `docs/CRYPTO_REGISTRY.md`.
