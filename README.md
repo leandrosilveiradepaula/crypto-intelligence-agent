@@ -137,3 +137,7 @@ A rotina `scripts/audit_j1_issue_comment_runs.py` permite consultar *somente* os
 
 ## WU27 — Estrutura global vs prova BTC no contexto Hyperliquid
 A rotina offline de `metaAndAssetCtxs` valida a posição de BTC nos arrays, mas não exige que todos os símbolos **não-alvo** tenham a mesma forma do ticker BTC. Contextos opcionais ou inativos de outros contratos não autorizam nem desautorizam BTC. O alvo deve estar ativo e possuir contexto financeiro válido. Para futuros diagnósticos (somente com autorização de execução), a recusa pode emitir uma categoria fixa e sanitizada, sem dados brutos. A falha real do run #40218132668 não pode ser reconstruída a partir do hash e não houve novo POST. Sem liberação de Top50/dados canônicos/licença.
+
+
+## J4/PRE1 — Fatias sintéticas para saídas parciais
+`synthetic_partial_exits.py` calcula percentuais de realizações sobre posição inicial ou saldo restante, com piso residual configurável e conservação exata via `Decimal`. Exemplo 50%, 60% e 70% do restante deixa 6% da posição. É um **planejador matemático sem corretora**, não possui preço, PnL, ordem, fills, lote real ou trailing; não habilita sinais/live/50x. J4 #5 e J1 #2 permanecem abertas. Veja D47 em `docs/DECISIONS.md` e o plano de validação.
