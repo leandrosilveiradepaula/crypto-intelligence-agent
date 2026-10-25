@@ -49,8 +49,15 @@ class OkxSwapHistoryCandleResearch:
     documented_quote_volume: Decimal
     unit_basis: str = UNIT_BASIS
     source: str = SOURCE
-    crypto_identity_verified: bool = False
-    exchange_schema_verified_live: bool = False
+    @property
+    def crypto_identity_verified(self) -> bool:
+        """Research parsing can never authenticate a crypto-only identity."""
+        return False
+
+    @property
+    def exchange_schema_verified_live(self) -> bool:
+        """An offline fixture is not live exchange evidence."""
+        return False
 
 
 @dataclass(frozen=True)
@@ -65,7 +72,10 @@ class OkxSwapHistoryPageResearch:
     instrument_observed_at_ms: int
     candles: tuple[OkxSwapHistoryCandleResearch, ...]
     source: str = SOURCE
-    rights_for_distribution: bool = False
+    @property
+    def rights_for_distribution(self) -> bool:
+        """A JSON payload cannot confer a market-data distribution license."""
+        return False
 
 
 def _exact_decimal(value: Any, name: str, *, zero_allowed: bool) -> Decimal:
