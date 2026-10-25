@@ -55,6 +55,13 @@ class MarketIntegrityRegressionTests(unittest.TestCase):
                 with self.assertRaises(DataValidationError):
                     adapter.closed_candles("BTCUSDT", "1h", observed_at_ms=10_000_000)
 
+    def test_future_observation_cannot_mark_incomplete_candles_closed(self):
+        transport = ConstantTransport(example_klines())
+        adapter = BinanceFuturesPublicAdapter(transport, clock_ms=lambda: 10_000)
+        with self.assertRaises(DataValidationError):
+            adapter.closed_candles("BTCUSDT", "1h", observed_at_ms=20_000_000)
+        self.assertEqual(transport.request_count, 0)
+
     def test_wrong_candle_close_time_is_rejected_even_for_single_row(self):
         rows = [example_klines()[1]]
         rows[0][6] += 50
