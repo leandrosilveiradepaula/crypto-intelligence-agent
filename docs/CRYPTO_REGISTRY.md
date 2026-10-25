@@ -91,7 +91,7 @@ due diligence de identidade e compliance.
 conflitos; repetição idêntica é idempotente. `as_of(market_observed_at_ms,
 max_age_ms=...)` escolhe somente um registro já existente **no instante
 da amostra de mercado**, nunca o snapshot de amanhã para um backtest de ontem.
-Rejeita ausência e obsolescência conforme limite informado pelo chamador.
+Rejeita ausência e obsolescência conforme limite informado pelo chamador. Esta proteção contra **look-ahead** não pode ser contornada pelo replay de snapshots capturados em data posterior.
 
 `select_at(..., market_observed_at_ms=..., decision_at_ms=...,
 max_market_age_ms=..., max_registry_age_ms=...)` verifica também que
