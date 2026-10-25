@@ -38,13 +38,13 @@
 
 - WU22 #60 / PR #61: parser OKX V5 SWAP offline, volumes contratos/base/quote + confirm documentados, integrado SHA `ee8c36d09a90192cbf5220c10ec28b876852508c`, CI PR #40214317197 SUCCESS (279 testes e 12 docs). Nenhuma identidade crypto-only, licença de redistribuição, feed live ou troca de venue validada.
 
-- WU23 #63 / PR #64: diligência Vike Hyperliquid, manifesto keyless e CC BY declarada, código offline integrado SHA `c4cb8b1e7f31c3bde917e78185aeceb0a6a6733c` (CI #40214978748 SUCCESS: 293 testes offline/12 docs). Comando owner-only publicado na issue, run externo ainda não verificado; sem licença upstream, inspeção Parquet ou release. Issue segue aberta.
+- WU23 #63 / PR #64: manifesto Vike keyless validado no run real `40215045758` job `121234257255` SUCCESS (SHA256 `9329c928aba6fc710a981ee9f985a75006af61147ac887bd960a544a6812ce7a`), issue fechada para diligência de manifesto. Parquet, licença upstream e Top50 não validados.
 
 - WU24 #69 / PR #70: pesquisa de contrato nativo Hyperliquid /info, perps e candles somente por fixtures, integrada SHA `49458f5db870651035d77c2470fe62386cfab652`; CI PR #40217228473 SUCCESS (338 testes offline/12 docs). Não comprova unidade de volume, licença, 5.000 candles reais, identidade crypto-only ou execução. Não muda venue operacional; issue encerrada.
 
-- WU25 #72 / PR #73: código de diagnóstico mínimo owner-only para meta + 3 candles BTC 1h na API informativa Hyperliquid integrado SHA `11e9d840f53701c1a8fb2bb38c5dae61098c0905`, CI #40218027418 SUCCESS (361 testes offline, 12 docs). Comando proprietário publicado #6401021095, run externo não verificável; issue #72 permanece aberta. Nenhum direito, unidade de volume ou Top50 validado.
+- WU25 #72 / PR #73: run real `40218132668` job `121243633007` FAILURE após primeiro POST /info, `invalid_provider_schema`/1 request; nenhum candleSnapshot executado. Origem do desvio não demonstrada sem corpo de resposta, issue segue aberta sem repetir sondagem.
 
-- WU26 #75: auditoria pontual e read-only de runs `issue_comment` já disparados para #63/#72, sem nova sondagem de mercado; PR/CI e evidências pendentes. Não comprova por si mesma HTTP ou direitos.
+- WU26 #75 / PR #76: audit read-only de 54 runs issue_comment do GitHub Actions, recuperados IDs/logs originais de Vike e Hyperliquid; CI #40219481048 SUCCESS (378 tests, 12 docs), auditoria #40219481021 SUCCESS, merged SHA `9d20a34404146f3ee7a8290542cd46d519dfb7c7`, issue encerrada. Nenhum novo GET/POST de mercado ou permissão de escrita.
 
 ## Preparação independente de J2 (J1 permanece aberta)
 - J2/PRE1 #66 / PR #67: motor matemático offline de indicadores causais somente para `ClosedCandle` sintéticos, integrado SHA `cf1c4cacffa4f5b46475a73dcc6bc9f5631b2e5d`, CI #40216432146 SUCCESS (315 testes, 12 docs). Sem habilitar estratégias, backtest, negociação ou antecipar aceite J1/J2; issue encerrada.
