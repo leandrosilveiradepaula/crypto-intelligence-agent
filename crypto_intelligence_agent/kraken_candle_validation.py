@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+import re
 from typing import Any, Mapping
 
 from .market_data import (
@@ -23,6 +24,9 @@ KRAKEN_RESOLUTIONS = frozenset({
 })
 MAX_CANDLES = 500
 MAX_INT64 = (1 << 63) - 1
+# Chart public docs say number<int64>, but live run #40201488833 returned
+# decimal strings on all 27 candles. Preserve units UNKNOWN in both cases.
+_RAW_DECIMAL_STRING = re.compile(r"(?:0|[1-9][0-9]{0,18})(?:\.[0-9]{1,18})?")
 
 
 @dataclass(frozen=True)
@@ -37,7 +41,7 @@ class KrakenTradeCandleStaging:
     high: Decimal
     low: Decimal
     close: Decimal
-    raw_trade_volume_unverified: int
+    raw_trade_volume_unverified: Decimal
     raw_volume_unit: str = "unverified"
     source: str = SOURCE
 
@@ -105,12 +109,22 @@ def _decimal_price(value: Any, field: str) -> Decimal:
     return parsed
 
 
-def _raw_trade_volume(value: Any) -> int:
-    # Public docs specify integer<int64>, but never say that this equals
-    # base_volume or quote_volume. Keep the value opaque in staging.
-    if type(value) is not int or value < 0 or value > MAX_INT64:
-        raise DataValidationError("Kraken candle volume must be a nonnegative int64")
-    return value
+def _raw_trade_volume(value: Any) -> Decimal:
+    """Strictly parse documented int64 OR observed fixed-point decimal string.
+
+    This is an opaque *trade volume measurement*, NOT base/quote volume.
+    Never route float/bool through Decimal(str(x)); never infer notional.
+    """
+    if type(value) is int:
+        if value < 0 or value > MAX_INT64:
+            raise DataValidationError("Kraken raw volume integer exceeds nonnegative int64")
+        return Decimal(value)
+    if type(value) is not str or _RAW_DECIMAL_STRING.fullmatch(value) is None:
+        raise DataValidationError("Kraken raw volume requires int64 or bounded decimal string")
+    parsed = Decimal(value)
+    if not parsed.is_finite() or parsed > MAX_INT64:
+        raise DataValidationError("Kraken raw volume is out of permitted range")
+    return parsed
 
 
 def stage_kraken_trade_candles(
