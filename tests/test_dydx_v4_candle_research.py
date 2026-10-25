@@ -168,7 +168,7 @@ class DydxV4UnitContractTests(unittest.TestCase):
             row.update({"trades": trades, "baseTokenVolume": base, "usdVolume": usd})
             with self.subTest(case=(trades, base, usd)):
                 if valid:
-                    self.assertEqual(stage(candles=payload).candles[1].trade_count, 0)
+                    self.assertEqual(stage(candles=payload).candles[2].trade_count, 0)
                 else:
                     with self.assertRaises(DataValidationError):
                         stage(candles=payload)
