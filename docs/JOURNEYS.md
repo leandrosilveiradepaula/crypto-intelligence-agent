@@ -52,7 +52,8 @@
 - J2/PRE1 #66 / PR #67: motor matemático offline de indicadores causais somente para `ClosedCandle` sintéticos, integrado SHA `cf1c4cacffa4f5b46475a73dcc6bc9f5631b2e5d`, CI #40216432146 SUCCESS (315 testes, 12 docs). Sem habilitar estratégias, backtest, negociação ou antecipar aceite J1/J2; issue encerrada.
 
 ## Preparação independente de J3 (J1/J2/J3 operacionais ainda não homologadas)
-- J3/PRE1 #94: detector de toques de barreiras em OHLC **sintético** com semântica de gaps e toques múltiplos ambíguos, nivel de liquidação hipotético, helper causal reutilizado de J2; em implementação/CI. Não inferir ordem intrabar, PnL, liquidação real ou lucro; epic J3 #4 aberta.
+- J3/PRE1 #94 / PR #95: detector de toques de barreiras em OHLC SINTÉTICO, com gaps/ambiguidade e liquidação hipotética, integrada SHA `3a30150268d6ead7daabe16884827b655b5b1e7c`, CI #40229271296 SUCCESS (**548 testes offline**, 12 docs); issue encerrada, J3 #4 segue sem aceite.
+- J3/PRE2 #96: contabilidade PURA de taxas/slippage e funding assinado em quote abstrata com eventos fictícios; em implementação/CI, sem preço, PnL, contas reais, fees reais, liberação de live ou ordem.
 
 ## Preparação matemática independente de J4 (J1/J2/J3 e J4 operacional permanecem abertos)
 - J4/PRE1 #81 / PR #82: percentuais INITIAL_POSITION/REMAINING_BALANCE e runner em unidades sintéticas, código integrado SHA `c4f6b94fd5a89724185b9a486818a6c8fa84adf0`, CI #40223997038 SUCCESS (**414 testes offline, 12 docs**). Issue encerrada; sem ledger, PnL ou ordens.
