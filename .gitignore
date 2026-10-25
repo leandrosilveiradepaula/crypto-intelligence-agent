@@ -1,0 +1,11 @@
+# Local settings and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+.DS_Store
