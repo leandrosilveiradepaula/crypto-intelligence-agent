@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import json
+import math
 from time import sleep, time
 from typing import Any, Callable, Mapping, Protocol, Sequence
 from urllib.error import HTTPError, URLError
@@ -56,6 +57,10 @@ class RateLimitError(MarketDataError):
 
 class HttpResponseError(MarketDataError):
     pass
+
+
+class ExchangeAccessError(HttpResponseError):
+    """The public endpoint is forbidden or the source temporarily banned."""
 
 
 class DataTimeoutError(MarketDataError):
@@ -136,10 +141,24 @@ class MarketDataCheckpoint:
 class HttpResponse:
     status: int
     body: str
+    headers: Mapping[str, str] | None = None
 
 
 class HttpTransport(Protocol):
     def get(self, url: str, timeout_seconds: float) -> HttpResponse: ...
+
+
+def _public_headers(response: Any) -> dict[str, str]:
+    """Retain only non-secret rate-limit metadata from public responses."""
+    incoming = getattr(response, "headers", None)
+    if incoming is None:
+        return {}
+    result: dict[str, str] = {}
+    for key in ("Retry-After", "X-MBX-USED-WEIGHT-1M"):
+        value = incoming.get(key)
+        if value is not None:
+            result[key.lower()] = str(value)
+    return result
 
 
 class UrllibTransport:
@@ -148,9 +167,15 @@ class UrllibTransport:
     def get(self, url: str, timeout_seconds: float) -> HttpResponse:
         try:
             with urlopen(url, timeout=timeout_seconds) as response:  # nosec B310 - public configured endpoint
-                return HttpResponse(response.status, response.read().decode("utf-8"))
+                return HttpResponse(
+                    response.status, response.read().decode("utf-8"),
+                    _public_headers(response),
+                )
         except HTTPError as error:
-            return HttpResponse(error.code, error.read().decode("utf-8", errors="replace"))
+            return HttpResponse(
+                error.code, error.read().decode("utf-8", errors="replace"),
+                _public_headers(error),
+            )
         except (TimeoutError, URLError) as error:
             raise DataTimeoutError(f"public market-data request timed out: {error}") from error
 
@@ -169,11 +194,14 @@ class BinanceFuturesPublicAdapter:
         initial_backoff_seconds: float = 0.25,
         clock_ms: Callable[[], int] | None = None,
         max_snapshot_age_ms: int = 300_000,
+        max_retry_wait_seconds: float = 10.0,
+        sleep_fn: Callable[[float], None] = sleep,
     ) -> None:
         if (timeout_seconds <= 0 or close_safety_ms < 0
                 or max_rate_limit_retries < 0 or initial_backoff_seconds < 0
-                or max_snapshot_age_ms < 0):
-            raise ValueError("invalid timeout, candle-safety, retry, backoff, or snapshot-age configuration")
+                or max_snapshot_age_ms < 0 or not math.isfinite(max_retry_wait_seconds)
+                or max_retry_wait_seconds < 0 or not callable(sleep_fn)):
+            raise ValueError("invalid timeout, candle-safety, retries, wait, or snapshot-age configuration")
         self._transport = transport or UrllibTransport()
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
@@ -182,6 +210,8 @@ class BinanceFuturesPublicAdapter:
         self._initial_backoff_seconds = initial_backoff_seconds
         self._clock_ms = clock_ms or (lambda: int(time() * 1000))
         self._max_snapshot_age_ms = max_snapshot_age_ms
+        self._max_retry_wait_seconds = max_retry_wait_seconds
+        self._sleep_fn = sleep_fn
 
     @property
     def transport(self) -> HttpTransport:
@@ -302,18 +332,36 @@ class BinanceFuturesPublicAdapter:
         url = f"{self._base_url}{path}{suffix}"
         for attempt in range(self._max_rate_limit_retries + 1):
             response = self._transport.get(url, self._timeout_seconds)
-            if response.status != 429:
-                break
-            if attempt < self._max_rate_limit_retries:
-                sleep(self._initial_backoff_seconds * (2 ** attempt))
-        if response.status == 429:
-            raise RateLimitError("public API throttled the request (HTTP 429) after bounded retries")
-        if response.status >= 400:
-            raise HttpResponseError(f"public API returned HTTP {response.status}")
-        try:
-            return json.loads(response.body)
-        except json.JSONDecodeError as error:
-            raise DataValidationError("public API returned invalid JSON") from error
+            if response.status in (403, 418):
+                raise ExchangeAccessError(
+                    f"public exchange access rejected with HTTP {response.status}; "
+                    "network, geographic policy or IP restrictions must be checked"
+                )
+            if response.status == 429:
+                if attempt >= self._max_rate_limit_retries:
+                    raise RateLimitError("public API throttled (HTTP 429) after bounded retries")
+                delay = self._initial_backoff_seconds * (2 ** attempt)
+                headers = response.headers or {}
+                retry_after = headers.get("retry-after", headers.get("Retry-After"))
+                if retry_after is not None:
+                    try:
+                        seconds = float(retry_after)
+                    except (TypeError, ValueError) as error:
+                        raise RateLimitError("invalid Retry-After header; refusing repeated requests") from error
+                    if not math.isfinite(seconds) or seconds < 0:
+                        raise RateLimitError("invalid Retry-After header; refusing repeated requests")
+                    delay = max(delay, seconds)
+                if delay > self._max_retry_wait_seconds:
+                    raise RateLimitError("requested Retry-After exceeds safe retry wait limit; aborting")
+                self._sleep_fn(delay)
+                continue
+            if not 200 <= response.status < 300:
+                raise HttpResponseError(f"public API returned HTTP {response.status}")
+            try:
+                return json.loads(response.body)
+            except json.JSONDecodeError as error:
+                raise DataValidationError("public API returned invalid JSON") from error
+        raise RateLimitError("public API throttled after bounded retries")
 
     @staticmethod
     def _parse_contract(raw: Any, observed_at_ms: int) -> ContractSpec:
