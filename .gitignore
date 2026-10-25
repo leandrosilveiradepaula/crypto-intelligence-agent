@@ -9,3 +9,11 @@ __pycache__/
 .venv/
 venv/
 .DS_Store
+
+# Local market-history stores: never commit captured account or market data
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+data/
