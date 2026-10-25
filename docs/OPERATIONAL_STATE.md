@@ -1,4 +1,4 @@
-# Estado operacional — WU21 auditoria de proveniência offline, 2026-10-25 UTC
+# Estado operacional — pós-WU21; bloqueios de evidência real, 2026-10-25 UTC
 
 Projeto: Crypto Intelligence Agent. Repo PÚBLICO: `leandrosilveiradepaula/crypto-intelligence-agent`.
 Missão: futuros perpétuos crypto, entradas quantitativas e saídas parciais; operação manual sem ordens reais nesta fase.
@@ -32,11 +32,12 @@ Autonomia: `AGENTS.md`; não pedir "prossiga", avançar em microtarefas seguras,
 - Documentação oficial Bybit Get Kline distingue base/quote volumes (https://bybit-exchange.github.io/docs/v5/market/kline), mas termos Bybit API restringem exploração comercial/revenda (https://www.bybit.com/en/help-center/article/API-Terms); nenhum direito/uso live concedido. Kraken WU12 #36 segue sem unidade de candle comprovada.
 - WU19 #52 CONCLUÍDA no escopo técnico: PR #53 merged SHA `f19ce8b854bd024e22ccaf6bc6b0d276b70efec2`, HEAD `bfa1af42d961cc2bc22776f1ef95a97554aa45a2`, CI PR #40205837293 SUCCESS (240 testes offline, compileall e 12 docs segundo revisão). Nenhum direito de publicação adquirido.
 - WU20 #54 CONCLUÍDA: PR #55 integrada via squash SHA `7c0642d2d2769a8d12f5651af3f7280fce06ed88`; HEAD da revisão `1758ce8728e8034cc429839482466ecd7611ba21`, workflow #40209121605 SUCCESS (docs, sintaxe Python, testes offline). Relatório estático `scripts/j1_readiness_report.py` mantém fail-closed para Top50 real, OHLCV canônico e divulgação; issue #54 fechada.
-- WU21 #56 EM IMPLEMENTAÇÃO: branch `feat/j1-wu21-evidence-provenance`, validador offline `readiness_evidence.py`, integração opcional ao relatório J1, testes e documentação de alegações de fonte/digest/UTC. PR, CI e merge desta unidade pendentes de verificação; nenhuma evidência live autenticada nem direitos adquiridos. PR docs #57 já merged SHA `acb1ad0672c04221059e1d264659542d6558aba0` com workflow #40211847220 SUCCESS.
+- WU21 #56 CONCLUÍDA no escopo offline: PR #58 merged via squash SHA `c73817ddda007355696ed0649b43c6ca59da9fcf`, HEAD de revisão `e62affc63bb0eb2816fddda5806d02d3e2d9c105`, CI PR #40212786207 SUCCESS (docs, sintaxe Python, testes offline), review #5644170378. Issue #56 encerrada. Validador `readiness_evidence.py` e CLI opcional sem novos GETs; nenhum claim concede identidade, licença, unidade Kraken ou prontidão live. PR #57 docs integrada SHA `acb1ad0672c04221059e1d264659542d6558aba0`, workflow #40211847220 SUCCESS.
+- WU12 #36 pesquisa documental adicional: https://docs.kraken.com/api/docs/futures-api/charts/candles especifica `volume` como int64 mas não atesta contratos/base/quote; documento trade history não prova agregado de candles. Comentário de evidência na issue #36, `unit_proof=false`.
 - J2–J7 issues #3–#8 dependentes; sem motor de estratégias, backtest financeiro, VPS em produção ou operações reais.
 
 ## Próxima ação concreta
-1. WU19 #52/PR #53, WU20 #54/PR #55 e docs PR #57 já integradas, não repetir. Concluir WU21 #56 na branch `feat/j1-wu21-evidence-provenance`: revisar testes/CI, corrigir falhas e merge seguro sem produção após checagem de SHA.
+1. WU19 #52/PR #53, WU20 #54/PR #55, docs #57 e WU21 #56/PR #58 já integradas; não repetir. J1 #2 permanece bloqueada para aceite de dados reais: identificação cripto real/licenciada #32, unidade Kraken #36, direitos externos #48 e acesso Binance #19. Priorizar evidência independente/documental e pesquisa offline de caminhos compatíveis com R$0 sem afirmar licença.
 2. WU19 tem caráter **informativo** e sempre recusa uso externo/comercial em código; não fabricar licença nem aceitar flag sintética como autorização. Gate jurídico/regional/release continua externo e sujeito à decisão do Product Owner. Não publicar feed.
 3. WU10 #32 requer registro cripto real e licença; WU12 #36 segue sem atestado de unidade do candle Kraken, WU17 #48 aguarda direitos para eventual distribuição, Binance #19 bloqueada HTTP451. Não repetir sondagem Kraken #40201868577.
 4. Atualizar CI/SHAs, issues e bloqueios no GitHub. J1 épica #2 aberta; zero custo adicional, sem ordens, deploy ou migrations sensíveis. Prosseguir apenas tarefas independentes seguras e reversíveis.
