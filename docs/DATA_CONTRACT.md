@@ -79,3 +79,12 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - O limite padrão é `5000 ms`, configurável com `--max-clock-skew-ms` (não negativo). Falha é registrada como evento `GET /fapi/v1/time` com status `failure` e não gera snapshots/candles, evitando falsa integridade temporal.
 - O relatório JSON exibe `server_time_ms`, `clock_offset_ms`, `clock_round_trip_ms`; o evento de sucesso grava os valores estimados. Uma amostra não comprova sincronização permanente nem elimina atraso de publicação da exchange.
 - O transporte de fixtures responde a `/fapi/v1/time` com valor **sintético**, sem rede. O modo live exige consentimento explícito para GETs públicos e não participa dos testes CI. Documentação de referência: https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data .
+
+## WU5 — Conformidade de endpoints públicos e rate limits (código offline)
+
+- O adaptador distingue HTTP 403 (acesso negado) e HTTP 418 (bloqueio/banimento de IP) de falhas gerais, por `ExchangeAccessError`; não deduz automaticamente a causa (geografia, WAF, rede ou política de IP). Nenhuma dessas respostas deve ser repetida automaticamente.
+- HTTP 429 pode incluir `Retry-After`; quando fornecido em segundos numéricos finitos, o cliente respeita o maior entre esse intervalo e o backoff exponencial local. Um atraso maior que `max_retry_wait_seconds` (padrão 10 s) resulta em `RateLimitError` sem nova tentativa, para evitar piorar bloqueios de IP. Cabeçalhos inválidos falham de modo explícito, não são ignorados.
+- `HttpResponse.headers` guarda **apenas** `retry-after` e `x-mbx-used-weight-1m` extraídos da resposta; nenhum header de autenticação, cookie ou dado privado é persistido. O modo de teste usa `sleep_fn` injetável e fixtures de HTTP para executar sem sleeps nem rede.
+- Respostas HTTP fora de 2xx não são aceitas como JSON de mercado; payloads incorretos de `serverTime`, `exchangeInfo`, `ticker/24hr` ou `klines` devem falhar explícita e seguramente.
+- A CLI já aceita `--mode live --allow-public-network` e limita a demonstração por `--max-symbols`, `--candles`, `--page-size`; sua execução real é **opcional e NÃO foi realizada** nesta WU5. CI permanece somente offline. Se o ambiente não acessar endpoints públicos, registrar bloqueio de execução e não declarar cobertura live homologada.
+- Documentação oficial: https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data .
