@@ -29,3 +29,7 @@ Existe um cálculo determinístico e sintético de fatias sobre quantidade inici
 
 ## Eventos manuais de saída: limite do protótipo de replay J4/PRE2
 O replay de eventos atualmente é **apenas sintético e em memória**: contabiliza parcial de tranche somente quando há evento explícito, deduplica event_id idêntico em uma única execução e não simula preço de execução. Não identifica eventos duplicados com IDs diferentes ou falhas entre sessões; logo **não** constitui histórico auditável de posições reais, PnL, acompanhamento do usuário nem ordem manual enviada. Tais funções exigem transações, IDs confiáveis, preço, taxa, lotes, funding e risco aprovados. O produto continua com operações reais manuais e sem automação.
+
+
+## Pré-condição de registro de posição (J4/PRE3 — não operacional)
+A opção de alavancagem global 50x e margens configuráveis agora possui um **contrato sintético imutável**: cada abertura fictícia copia o valor de alavancagem da configuração daquele instante, preservando o passado. Os valores de margem são abstratos e não implicam qualquer moeda, exposição, liquidação ou corretora real. Eventos fictícios de saída são vinculados à posição de pesquisa pelo ID, mas a deduplicação ainda funciona somente dentro do mesmo replay; não existem usuários, conta, ordens, ledger financeiro nem posição manual homologada. A UI/execução reais seguem fora do escopo até os gates J1/J3/J4.

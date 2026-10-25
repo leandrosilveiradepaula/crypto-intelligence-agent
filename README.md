@@ -145,3 +145,7 @@ A rotina offline de `metaAndAssetCtxs` valida a posição de BTC nos arrays, mas
 
 ## J4/PRE2 — Replay in-memory de preenchimentos parciais SINTÉTICOS
 `synthetic_manual_exit_replay.py` recebe o plano matemático PRE1 e eventos fictícios explícitos, em sequência UTC, para reconstruir quantitativos de saídas parciais sem precificar ordens. IDs idênticos/payload igual contam uma vez; reutilização conflitante é erro, mas IDs diferentes do mesmo fill econômico **não** são detectados sem fonte de verdade externa. Nenhum mercado, conta, persistência, taxa, trailing, PnL ou envio de ordem é integrado. J4 #5 e J1 #2 permanecem abertos; confira D48 e `docs/STRATEGY_SPEC.md`.
+
+
+## J4/PRE3 — Estado imutável de posição SINTÉTICA
+`synthetic_position_state.py` define uma posição de fixture, não financeira: ID `fixture_*`, LONG/SHORT, plano PRE1, margem Decimal abstrata e `leverage_at_open` capturado de uma configuração imutável de pesquisa (50x inicial, configurável apenas para **novas** posições). Eventos PRE2 são vinculados ao ID antes do replay, sem cross-position fill. Não existe exchange, moeda de margem comprovada, preço, multiplicador, lot/step de contrato, liquidação, taxas, PnL, sinal, ledger persistente ou ordem; todos os gates de uso live permanecem falsos. Veja D49 e `docs/STRATEGY_SPEC.md`.
