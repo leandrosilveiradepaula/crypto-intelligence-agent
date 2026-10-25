@@ -71,3 +71,6 @@ A [issue #34](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 ## Pesquisa da unidade de volume Kraken (WU12)
 A [issue #36](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/36) propõe um diagnóstico opcional de **dois GETs públicos** de BTC, sem credenciais nem ordens. Exige flags `--allow-public-network --allow-volume-diagnostic`, publica apenas soma de 24 candles UTC totalmente fechados e volume reportado pelo ticker 24h. O próprio relatório define `unit_proof=false`: semântica da unidade e janelas de 24h não são automaticamente comparáveis, portanto nenhum dado é convertido a `ClosedCandle` por essa pesquisa. CI segue offline e R$0.
+
+
+O primeiro run real da WU12, [40201172859](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40201172859), recebeu HTTP200 no chart, mas rejeitou a estrutura ou quantidade de candles e não consultou o ticker. Nenhum volume foi homologado. A correção da issue #36 introduz apenas diagnóstico sanitizado de tipos/contagens e não relaxa as exigências do feed.
