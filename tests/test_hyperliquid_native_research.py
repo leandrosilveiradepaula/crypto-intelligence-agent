@@ -42,10 +42,13 @@ def candle_fixture():
     ]
 
 
-def stage(ctx=None, rows=None, **opts):
+NOT_PROVIDED = object()
+
+
+def stage(ctx=NOT_PROVIDED, rows=NOT_PROVIDED, **opts):
     return stage_hyperliquid_native_perp_candles(
-        market_metadata() if ctx is None else ctx,
-        candle_fixture() if rows is None else rows,
+        market_metadata() if ctx is NOT_PROVIDED else ctx,
+        candle_fixture() if rows is NOT_PROVIDED else rows,
         symbol=opts.get("symbol", "BTC"),
         dex_scope=opts.get("dex", ""),
         interval=opts.get("interval", "1h"),
