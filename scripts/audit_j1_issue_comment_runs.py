@@ -174,7 +174,10 @@ def _audit(
         created = _date(run.get("created_at"))
         if run.get("event") != "issue_comment":
             raise AuditError("unexpected_trigger_event")
-        if type(run.get("actor")) is not dict or run["actor"].get("login") != OWNER:
+        actor = run.get("actor")
+        if type(actor) is not dict or type(actor.get("login")) is not str:
+            raise AuditError("actor_schema_invalid")
+        if actor["login"] != OWNER:
             # Do not inspect runs created by other actors or publish other jobs.
             continue
         run_status = _state(run.get("status"), completion=False)
