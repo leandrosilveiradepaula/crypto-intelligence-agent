@@ -58,6 +58,6 @@
 - J4/PRE3 #86 / PR #87: posição fictícia com leverage_at_open e replay PRE2 vinculado, merged SHA `afb034d3435162402af673a8946bb2d747950326`, CI #40225049332 SUCCESS (473 testes offline, 12 docs), issue concluída. Não atesta posições reais.
 - J4/PRE4 #88 / PR #89: auditoria de step/min-exit/residual por regras Decimal **hipotéticas** em planos e fills PRE1/PRE2/PRE3, integrada SHA `677f0c299cbfc1b0dc772f6d5d110a63c277dea9`, CI #40225440872 SUCCESS (**502 testes offline**, 12 docs), issue encerrada. Nunca arredondar nem indicar executabilidade na venue. J4 #5 segue aberta, sem aceite operacional.
 
-- J1/WU28 #91: auditoria fail-closed do **escopo do produto** em evidências, distinguindo Kraken Futures PF_ de Kraken Spot OHLCVT e Kraken Derivatives US CME/Bitnomial, com rótulos insuficientes de volume, identidade e licenciamento. PR/CI em revisão, sem uso live, registry aprovado, licença ou novas consultas de mercado.
+- J1/WU28 #91 / PR #92: auditoria fail-closed do escopo documental Kraken Futures PF_ versus Kraken Spot OHLCVT e Derivatives US CME/Bitnomial, integrada SHA `d3af3088088c7e7f638cb745ca5848ddbb2b9a43`, CI #40227134838 SUCCESS (515 testes offline/12 docs). Issue encerrada, sem resolver fonte independente crypto-only, unidade de volume ou licença. J1 #2 e #32/#36/#48 permanecem abertas.
 
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
