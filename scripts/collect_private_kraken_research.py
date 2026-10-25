@@ -26,12 +26,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--allow-private-persistence", action="store_true")
     parser.add_argument("--registry", choices=("btc-eth", "expanded-10"), default="btc-eth")
+    parser.add_argument("--max-price-symbols", type=int, default=1,
+                        help="1 to 5 real eligible perpetuals (BTC first); max 2+N GETs")
     args = parser.parse_args(argv)
     try:
         summary = capture_private_research(
             db_path=args.database, allow_public_network=args.allow_public_network,
             allow_private_persistence=args.allow_private_persistence,
             registry_variant=args.registry,
+            max_price_symbols=args.max_price_symbols,
         )
         result = {"status": "private_local_capture_complete", **asdict(summary)}
     except LocalResearchError as error:
