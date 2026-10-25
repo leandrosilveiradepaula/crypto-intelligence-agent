@@ -56,5 +56,23 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotRegex(s, r"\b(?:order|withdraw|POST|DELETE|deploy)\b", msg="smoke must not contain trading or deployment verbs")
 
 
+    def test_second_provider_probe_is_one_shot_owner_only(self):
+        s = self.source
+        for token in (
+            "independent-provider-probe:",
+            "github.event.issue.number == 23",
+            "github.event.comment.body == '/probe-kraken-public-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "timeout-minutes: 2",
+            "python3 scripts/probe_public_kraken.py --allow-public-network",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+
+
+
 if __name__ == "__main__":
     unittest.main()

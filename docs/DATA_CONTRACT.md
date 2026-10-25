@@ -103,3 +103,10 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - Workflow `issue_comment` iniciado explicitamente pelo proprietário na issue #19. A CLI começou em modo `live` e falhou na primeira rota GET pública de horário da Binance, retornando `HttpResponseError` HTTP **451**; saída sem dados.
 - **Resultado:** conectividade HTTP alcançou uma resposta de restrição, sem evidência de candles, elegibilidade ou dados reais válidos. Não presume indisponibilidade universal do provedor, não prova qual legislação/território causou o retorno e não autoriza contorno de bloqueios.
 - O adaptador agora considera HTTP 451 como `ExchangeAccessError` sem novas tentativas, junto com 403/418, com regressão offline. Nunca usar esse runner para repetidas consultas ao endpoint que rejeita acesso. A issue #19 continua aberta; avaliar outras fontes públicas independentes sob termos legais próprios.
+
+## Pesquisa independente WU6: Kraken Futures
+
+- Probe `python3 scripts/probe_public_kraken.py --allow-public-network`, uma única consulta GET de instrumentos a host fixo `futures.kraken.com`, sem seguir redirects, sem salvar resposta bruta, sem credenciais nem comandos de trade. Execução normal sem flag recusa a rede.
+- Limites: 8 segundos de timeout e 4 MiB de corpo. Saída JSON de prova usa UTC ISO, status HTTP, contagem de instrumentos, contagem **heurística** de símbolos `PI_`/`PF_` e até 5 símbolos de exemplo. Isso **não** comprova liquidez, volume USDT comparável, contratos lineares ou histórico contínuo.
+- Workflow de issue #23 sob comando literal do proprietário `/probe-kraken-public-v1`; runner padrão público, 2 minutos, permissões somente leitura; nenhum agendamento ou CI online. Se houver erro por política do fornecedor ou DNS, parar sem retries, registrar evidência e não contornar restrições.
+- Só projetar um adaptador Kraken e critérios de elegibilidade após observar que a API pública é efetivamente acessível e quais contratos/volumes ela oferece. Fonte oficial: https://docs.kraken.com/api/docs/futures-api/charts/candles .
