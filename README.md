@@ -23,4 +23,7 @@ O primeiro bloco da J1 oferece contratos tipados e um adaptador público, estrit
 ```powershell
 python -m unittest discover -s tests -v
 python scripts/check_docs.py
+python -m compileall -q crypto_intelligence_agent tests
 ```
+
+O GitHub Actions valida também todos os testes Python offline. Os endpoints de volume móvel 24h e metadados de contratos são atuais: não os utilize para gerar retrospectivamente um universo histórico; ver [contrato de dados](docs/DATA_CONTRACT.md).
