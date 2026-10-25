@@ -24,6 +24,7 @@ from crypto_intelligence_agent.market_data import (
     DataTimeoutError, DataValidationError, ExchangeAccessError, HttpResponseError,
 )
 from crypto_intelligence_agent.storage import SQLiteMarketDataStore
+from crypto_intelligence_agent.research_registry_catalog import load_reviewed_registry
 
 REGISTRY_PATH = (Path(__file__).resolve().parent.parent /
                  "registries" / "crypto-btc-eth-20261025-v1.json")
@@ -38,7 +39,7 @@ class UniverseProbeError(ValueError):
 def inspect_once(
     *, allow_public_network: bool, allow_private_kraken_universe: bool,
     client: Any | None = None, clock_ms: Callable[[], int] | None = None,
-    registry_data: bytes | None = None,
+    registry_data: bytes | None = None, registry_variant: str = "btc-eth",
 ) -> dict[str, Any]:
     if allow_public_network is not True or allow_private_kraken_universe is not True:
         raise UniverseProbeError("double_opt_in_required")
@@ -46,13 +47,16 @@ def inspect_once(
     now = clock()
     if type(now) is not int or not 0 < now < 253_402_300_799_999:
         raise UniverseProbeError("invalid_utc_clock")
-    registry = load_registry_json(
-        REGISTRY_PATH.read_bytes() if registry_data is None else registry_data)
+    if registry_data is not None and registry_variant != "btc-eth":
+        raise UniverseProbeError("injected_registry_revision_not_allowed")
+    registry = (load_reviewed_registry(registry_variant, as_of_ms=now)
+                if registry_data is None else load_registry_json(registry_data))
     if registry.observed_at_ms > now:
         raise UniverseProbeError("reviewed_registry_not_yet_observed")
     history = CryptoRegistryHistory((registry,))
     report: dict[str, Any] = {
-        "schema_version": "j1-kraken-btc-eth-private-universe-v1",
+        "schema_version": ("j1-kraken-private-universe-v2" if registry_variant == "expanded-10"
+                           else "j1-kraken-btc-eth-private-universe-v1"),
         "provider": "kraken_futures",
         "observed_at_utc": datetime.fromtimestamp(now / 1000, timezone.utc)
             .isoformat(timespec="seconds"),
@@ -132,11 +136,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--allow-private-kraken-universe", action="store_true")
+    parser.add_argument("--registry", choices=("btc-eth", "expanded-10"), default="btc-eth")
     args = parser.parse_args()
     try:
         result = inspect_once(
             allow_public_network=args.allow_public_network,
-            allow_private_kraken_universe=args.allow_private_kraken_universe)
+            allow_private_kraken_universe=args.allow_private_kraken_universe,
+            registry_variant=args.registry)
     except UniverseProbeError as error:
         result = {"status": str(error), "max_gets": 2,
                   "requests_attempted_exact": None, "orders_sent": False}
