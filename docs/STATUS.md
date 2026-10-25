@@ -68,6 +68,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J4/PRE4 #88 — CONCLUÍDA somente em aritmética SINTÉTICA:** PR #89 merged SHA `677f0c299cbfc1b0dc772f6d5d110a63c277dea9`, CI #40225440872 SUCCESS (**502 testes offline**, compileall, 12 docs). Passo Decimal/mínimo de tranche, fill individual e residual com regra hipotética e sem arredondamento. Issue #88 fechada; J4 #5, J3 #4 e J1 #2 não homologadas. Nada de lot/step real, USD/notional, order/trade ou idempotência persistente.
 
+**J1/WU28 #91 — validação de escopo documental em implementação:** auditor de evidências já existente impede misturar Kraken Spot OHLCVT ou Kraken Derivatives US (CME/Bitnomial) com PF_ Futures; categoriza o que a tabela perp realmente informa (inclui PF_AAPLXUSD/Apple, classes de alavancagem diversas), o que o chart **não** informa (unidade de volume) e o que o notice jurídico **não** concede (licença comercial). Testes offline, sem novo feed; #32/#36/#48 continuam abertas e todos `ready_for_*` falsos.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 

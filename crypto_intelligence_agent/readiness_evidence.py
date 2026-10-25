@@ -72,6 +72,85 @@ def _public_source_url(value: Any) -> str:
     return value
 
 
+# WU28: Distinct Kraken product families are NOT interchangeable.
+# This list recognizes ONLY stable, official page paths with clear products.
+# Everything else remains unverified, not implicitly an approved reference.
+_KRAKEN_SUPPORT = "support.kraken.com"
+_KRAKEN_DOCS = frozenset({"docs.kraken.com", "docs-legacy.kraken.com"})
+
+
+def _known_kraken_product_surface(source_url: str) -> str:
+    """Classify an official URL's *document scope*, NOT its content/rights.
+
+    No fetching, redirects, reading remote metadata or vendor authentication.
+    Host/path spoofing cannot grant an attestation: unknown stays unverified.
+    """
+    p = urlsplit(source_url)
+    host = (p.hostname or "").lower()
+    if host not in _KRAKEN_DOCS and host != _KRAKEN_SUPPORT:
+        return "unknown_reference"
+    # Do not let percent-encoded paths evade product-mismatch checks.
+    if "%" in p.path:
+        raise DataValidationError("ambiguous encoded Kraken source path")
+    path = p.path.lower().rstrip("/")
+    if host == _KRAKEN_SUPPORT:
+        pieces = path.split("/")
+        if "articles" not in pieces:
+            return "unknown_reference"
+        slug = pieces[-1]
+        if slug in ("market-data", "contract-specifications"):
+            return "kraken_derivatives_us_cme_bitnomial"
+        if slug.startswith("360047124832-"):
+            return "kraken_spot_ohlcvt"
+        if slug.startswith("4844359082772-"):
+            return "kraken_futures_perp_contract_specs"
+    if host in _KRAKEN_DOCS:
+        if path == "/api/docs/futures-api/charts/candles":
+            return "kraken_futures_candle_chart_schema"
+        if path == "/api/docs/guides/global-intro":
+            return "kraken_api_usage_notices"
+    return "unknown_reference"
+
+
+def _source_applicability(
+    *, capability: str, provider: str, dataset: Dataset,
+    source_url: str, origin: str,
+) -> str:
+    """Reject known cross-product citations; never assert a positive grant.
+
+    A valid HTTPS URL, even from Kraken itself, never proves crypto identity,
+    futures candle volume unit, actual historical membership or redistribution.
+    """
+    surface = _known_kraken_product_surface(source_url)
+    if surface == "unknown_reference":
+        return "unknown_reference_requires_independent_review"
+    if provider != "kraken_futures":
+        raise DataValidationError("Kraken documentation cannot prove another provider scope")
+    if surface in ("kraken_spot_ohlcvt", "kraken_derivatives_us_cme_bitnomial"):
+        raise DataValidationError("Kraken source is a different product, not PF futures")
+    if origin == "observed_summary":
+        raise DataValidationError("a documentation page is not an observed market run")
+    if surface == "kraken_futures_candle_chart_schema":
+        if dataset is not Dataset.CANDLES:
+            raise DataValidationError("Futures candle chart source is not an instrument or rights grant")
+        if capability == "kraken_candle_volume_units":
+            return "chart_volume_field_documented_unit_not_defined"
+        if capability == "closed_candle_parser":
+            return "candle_schema_only_not_live_conformance"
+        raise DataValidationError("Kraken candle schema cannot certify this capability")
+    if surface == "kraken_futures_perp_contract_specs":
+        if capability == "crypto_only_identity" and dataset is Dataset.INSTRUMENTS:
+            return "instrument_list_includes_non_crypto_no_positive_registry_proof"
+        if capability == "kraken_candle_volume_units" and dataset is Dataset.CANDLES:
+            return "current_contract_lot_not_historical_candle_volume_unit"
+        raise DataValidationError("contract table does not support requested evidence scope")
+    if surface == "kraken_api_usage_notices":
+        if capability == "provider_external_rights":
+            return "terms_notice_requires_permission_not_a_rights_grant"
+        raise DataValidationError("Kraken API usage notice does not prove market schema")
+    raise DataValidationError("unrecognized official source scope")
+
+
 def canonical_claim_sha256(unsigned_claim: dict[str, Any]) -> str:
     """Hash only the unsigned JSON claim: integrity, NOT a vendor signature."""
     if type(unsigned_claim) is not dict or set(unsigned_claim) != (_CLAIM_KEYS - {"claim_sha256"}):
@@ -165,6 +244,10 @@ class EvidenceClaim:
             raise DataValidationError("unknown dataset or purpose") from error
         _validate_scope(capability, provider, dataset_enum, purpose_enum, quote)
         source_url = _public_source_url(raw["source_url"])
+        _source_applicability(
+            capability=capability, provider=provider, dataset=dataset_enum,
+            source_url=source_url, origin=origin,
+        )
         version, reviewer = raw["source_version"], raw["reviewed_by"]
         if (type(version) is not str or _VERSION.fullmatch(version) is None
                 or type(reviewer) is not str or _REVIEWER.fullmatch(reviewer) is None):
@@ -247,6 +330,10 @@ def audit_evidence_json(
             "valid_until_ms": c.valid_until_ms, "claim_sha256": c.claim_sha256,
             "issue": _ISSUE_BY_CAPABILITY[c.capability],
             "verification": "metadata_valid_only_not_authenticated",
+            "source_applicability": _source_applicability(
+                capability=c.capability, provider=c.provider, dataset=c.dataset,
+                source_url=c.source_url, origin=c.origin,
+            ),
         }
         for c in sorted(claims, key=lambda c: (c.capability, c.provider, c.dataset.value, c.claim_sha256))
     ]
