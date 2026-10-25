@@ -60,7 +60,9 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU27 #78 — CONCLUÍDA OFFLINE:** PR #79 merged SHA `da62b41f69596c756d04cc5188b755bfaa97f862`, CI #40221224643 SUCCESS (**387 testes offline, compileall, 12 docs**). Parser valida BTC alvo com rigidez e preserva instrumentos não-alvo como dados inertes; agora oferece categorias de falha sanitizadas. Issue #78 encerrada. Falha histórica #72 permanece sem causa específica comprovada, nenhum novo POST, direitos/licença, Top50 ou produção liberados.
 
-**J4/PRE1 #81 — em implementação como pré-trabalho sintético:** política de fatias de saídas com `INITIAL_POSITION`/`REMAINING_BALANCE`, runner floor e conservação exata; nunca ordens, fills, lot quantization, preço, PnL, margem ou fechamento real. J4 #5 e J1 #2 abertas. Em paralelo, issue #36 recebeu conclusão documental complementar: schema de volume Kraken não especifica unidade nem justifica conversão para USD.
+**J4/PRE1 #81 — CONCLUÍDA apenas como matemática sintética:** PR #82 merged SHA `c4f6b94fd5a89724185b9a486818a6c8fa84adf0`, CI #40223997038 SUCCESS (**414 testes offline, compileall, 12 docs**). Quantidades INITIAL/REMAINING e runner exato com propriedades live/order/fill não autorizadas; #81 encerrada.
+
+**J4/PRE2 #83 — em implementação:** replay puramente sintético de preenchimentos manuais de tranches com idempotência apenas em memória, temporalidade e conservação exata. Não se trata de posição real, execução, PnL, venue lot-size ou idempotência cross-session. J4 #5 e J1 #2 abertas. Issue Kraken #36 segue sem prova de unidade ou conversão USD.
 
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
