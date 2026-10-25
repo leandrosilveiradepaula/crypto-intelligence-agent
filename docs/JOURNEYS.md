@@ -40,7 +40,7 @@
 
 - WU23 #63 / PR #64: diligência Vike Hyperliquid, manifesto keyless e CC BY declarada, código offline integrado SHA `c4cb8b1e7f31c3bde917e78185aeceb0a6a6733c` (CI #40214978748 SUCCESS: 293 testes offline/12 docs). Comando owner-only publicado na issue, run externo ainda não verificado; sem licença upstream, inspeção Parquet ou release. Issue segue aberta.
 
-- WU24 #69: pesquisa de contrato nativo Hyperliquid /info, perps e candles somente por fixtures; retenção e direitos reais ainda não confirmados, em implementação. Não muda venue operacional.
+- WU24 #69 / PR #70: pesquisa de contrato nativo Hyperliquid /info, perps e candles somente por fixtures, integrada SHA `49458f5db870651035d77c2470fe62386cfab652`; CI PR #40217228473 SUCCESS (338 testes offline/12 docs). Não comprova unidade de volume, licença, 5.000 candles reais, identidade crypto-only ou execução. Não muda venue operacional; issue encerrada.
 
 ## Preparação independente de J2 (J1 permanece aberta)
 - J2/PRE1 #66 / PR #67: motor matemático offline de indicadores causais somente para `ClosedCandle` sintéticos, integrado SHA `cf1c4cacffa4f5b46475a73dcc6bc9f5631b2e5d`, CI #40216432146 SUCCESS (315 testes, 12 docs). Sem habilitar estratégias, backtest, negociação ou antecipar aceite J1/J2; issue encerrada.
