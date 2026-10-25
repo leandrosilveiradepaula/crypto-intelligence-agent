@@ -21,4 +21,5 @@ Estratégias validadas, backtest de retorno líquido, gestão de posições real
 Custo adicional autorizado R$ 0, repositório PÚBLICO sem segredos; nenhuma API paga, ordem real, release ou migration sensível. Consultar docs/OPERATIONAL_STATE.md e GitHub ao vivo antes da próxima ação.
 
 
-- **WU6 — issue #23:** pesquisa de viabilidade da Kraken Futures como fonte pública independente. Branch `research/j1-kraken-public-feasibility`: probe GET único, offline por padrão, sem dados brutos ou credenciais; ainda não declarar API acessível, PR integrada ou mercado elegível sem evidência do run correspondente.
+- **WU6 — issue #23, concluída:** PR #24 integrada, SHA `76490ac8790138642f34de710c5f2e4bb2cf3d09`; GitHub run [40198042787](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40198042787) em 25/10/2026 13:32:08Z retornou **HTTP 200**, 231 instrumentos, 213 candidatos PI_/PF_ por heurística; há ativos tokenizados não cripto (ex. PF_AAPLXUSD), portanto nenhum Top50 cripto foi confirmado.
+- **WU7 — issue #25, EM DESENVOLVIMENTO:** branch `research/j1-kraken-market-conformance`, até três GET públicos independentes para esquema de instrumentos, tickers/volume e candles de BTC. Não presumir PR/CI/run ou elegibilidade final antes das respectivas evidências.
