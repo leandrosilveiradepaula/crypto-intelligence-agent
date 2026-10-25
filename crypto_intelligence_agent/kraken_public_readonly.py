@@ -44,9 +44,9 @@ _TICKER_FIELDS = frozenset({
 _MAX_TIMEOUT_S = 10.0
 _MAX_SNAPSHOT_SPAN_MS = 30_000
 _CHART_URL = re.compile(
-    r"^https://futures\\.kraken\\.com/api/charts/v1/trade/"
+    r"^https://futures\.kraken\.com/api/charts/v1/trade/"
     r"PF_[A-Z0-9]{2,40}/(?:1m|5m|15m|30m|1h|4h|12h|1d|1w)"
-    r"\\?from=[0-9]{1,16}&to=[0-9]{1,16}$"
+    r"\?from=[0-9]{1,16}&to=[0-9]{1,16}$"
 )
 
 
