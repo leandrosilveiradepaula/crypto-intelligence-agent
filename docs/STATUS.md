@@ -14,7 +14,9 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 | WU6 Kraken instrumentos | #23 / #24 | `76490ac8790138642f34de710c5f2e4bb2cf3d09` | GET200, 231 instrumentos, run 40198042787 |
 | WU7 Kraken ticker/candles BTC | #25 / #26/#27 | `1c982eed74516ac70407c49ff5d2c98c2f88ee5b` | 3 GET200, run 40198745112, 99 testes |
 
-**WU8 — issue #28 em desenvolvimento** na branch `research/j1-kraken-asset-taxonomy`. Reutiliza probe de 1 GET para medir categorias/flags `tradfi`/tags, com workflow sob comentário do proprietário. Nenhum resultado WU8 live/PR/CI/merge deve ser presumido antes de verificá-los.
+**WU8 #28 concluída:** PR #29 integrada SHA `7e9b73bf3b5b19f5a56288326784d2280121c9d9`. Run `40199111677` SUCCESS, 1 GET HTTP200: 231 instrumentos, `category=xStocks` em PF_AAPLXUSD mas `tradfi=false` (mesmo valor que BTC/ETH), categorias DeFi/Meme/Equities/Forex etc; 102 testes offline verdes. Não existe filtro crypto-only automático aprovado ainda.
+
+**WU9 #30 em implementação**, branch `feat/j1-kraken-fail-closed-universe`: seletor puro e conservador com registro externo de bases cripto injetado, exclusão de tokenizados e ranking volumeQuote USD até max50. PR/CI/merge ainda pendentes, não afirmar elegibilidade Top50 real.
 
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
