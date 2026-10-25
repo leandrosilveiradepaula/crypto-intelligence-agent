@@ -13,7 +13,7 @@ from .market_data import DataValidationError, HttpResponse
 
 
 class OfflineFixtureTransport:
-    """Emulate three public Binance USD-M GET endpoints with synthetic fixtures."""
+    """Emulate read-only Binance USD-M GET endpoints with synthetic fixtures."""
 
     def __init__(
         self,
@@ -34,7 +34,10 @@ class OfflineFixtureTransport:
         self.requests.append(url)
         parsed = urlparse(url)
         params = parse_qs(parsed.query)
-        if parsed.path == "/fapi/v1/exchangeInfo":
+        if parsed.path == "/fapi/v1/time":
+            # Synthetic demo clock, not a live exchange time sample.
+            value = {"serverTime": 20_000_000}
+        elif parsed.path == "/fapi/v1/exchangeInfo":
             value = dict(self._exchange_info)
             value["symbols"] = [
                 row for row in value["symbols"] if row["symbol"] in self._symbols
