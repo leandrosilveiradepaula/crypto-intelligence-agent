@@ -37,3 +37,7 @@ A opção de alavancagem global 50x e margens configuráveis agora possui um **c
 
 ## Pré-validação aritmética de lotes (J4/PRE4)
 Existe um verificador para conferir se tranches e preenchimentos fictícios respeitam **passos e quantidades mínimas hipotéticas** informadas como fixtures. Ele não altera o plano nem arredonda valores para caber em lotes, e não deduz tamanho de contrato, mínimo notional, moeda do colateral, preço de execução, taxa ou direitos de distribuição. Mesmo uma saída `arithmetically_compatible` não é autorização de operar ou gerar alertas live. Dados reais e contratos por instrumento ainda dependem de validação externa, risco e J1/J3/J4.
+
+
+## Pré-trabalho de trajetória intrabar J3/PRE1 — pesquisa, não backtest homologado
+Um candle OHLC informa o intervalo do preço, mas não a ordem do extremo high e low. Um cenário que toca stop e target (ou liquidação hipotética) no mesmo candle não é contado como vitória, mesmo quando o candle fecha acima do target para uma posição LONG. Gaps de abertura não garantem execução no preço limite. O detector de pesquisa usa exclusivamente fixtures sintéticas, registra ambiguidade e não calcula risco financeiro, liquidacão real, custos, funding ou retorno. Critérios de aceite J3 (trajetória intrabar verificável, mark/liquidação, custo líquido e walk-forward) continuam pendentes.

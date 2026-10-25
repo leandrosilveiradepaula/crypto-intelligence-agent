@@ -139,6 +139,28 @@ def _checked_candles(
     return tuple(candles)
 
 
+def validate_synthetic_research_price(value: Decimal, name: str) -> None:
+    """Apply the same bounded Decimal price policy as J2 synthetic candles."""
+    _numeric(value, name, strictly_positive=True)
+
+
+def validate_synthetic_closed_candles(
+    candles: Sequence[ClosedCandle], *,
+    decision_at_ms: int,
+    close_safety_ms: int = 1_000,
+) -> tuple[ClosedCandle, ...]:
+    """Reuse J2's fail-closed one-series check for offline J3 research.
+
+    This only validates that a SYNTHETIC OHLCV fixture is causally available.
+    It does NOT authenticate market data, future intrabar order, prices or
+    license a provider. An immutable tuple is returned without a live grant.
+    """
+    return _checked_candles(
+        candles, decision_at_ms=decision_at_ms,
+        close_safety_ms=close_safety_ms,
+    )
+
+
 def compute_synthetic_features(
     candles: Sequence[ClosedCandle],
     *,
