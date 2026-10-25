@@ -33,3 +33,7 @@ O replay de eventos atualmente é **apenas sintético e em memória**: contabili
 
 ## Pré-condição de registro de posição (J4/PRE3 — não operacional)
 A opção de alavancagem global 50x e margens configuráveis agora possui um **contrato sintético imutável**: cada abertura fictícia copia o valor de alavancagem da configuração daquele instante, preservando o passado. Os valores de margem são abstratos e não implicam qualquer moeda, exposição, liquidação ou corretora real. Eventos fictícios de saída são vinculados à posição de pesquisa pelo ID, mas a deduplicação ainda funciona somente dentro do mesmo replay; não existem usuários, conta, ordens, ledger financeiro nem posição manual homologada. A UI/execução reais seguem fora do escopo até os gates J1/J3/J4.
+
+
+## Pré-validação aritmética de lotes (J4/PRE4)
+Existe um verificador para conferir se tranches e preenchimentos fictícios respeitam **passos e quantidades mínimas hipotéticas** informadas como fixtures. Ele não altera o plano nem arredonda valores para caber em lotes, e não deduz tamanho de contrato, mínimo notional, moeda do colateral, preço de execução, taxa ou direitos de distribuição. Mesmo uma saída `arithmetically_compatible` não é autorização de operar ou gerar alertas live. Dados reais e contratos por instrumento ainda dependem de validação externa, risco e J1/J3/J4.
