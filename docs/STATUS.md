@@ -72,7 +72,7 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J3/PRE1 #94 — CONCLUÍDA somente como observação SINTÉTICA:** PR #95 merged SHA `3a30150268d6ead7daabe16884827b655b5b1e7c`, CI #40229271296 SUCCESS (**548 testes offline, compileall, 12 docs**); reconhece gap e toques múltiplos sem ordem, nenhuma execução/liquidação real, PnL ou lucro. Issue encerrada, J3 #4 aberta.
 
-**J3/PRE2 #96 — em implementação:** cenários abstratos de taxas, slippage e funding assinado com eventos fictícios; cálculo de custo exato mas nunca PnL/FX/fee real. Inputs não provam preços, quote currency, ordens ou dados de mercado. J3 #4 e J1/J2 continuam sem homologação.
+**J3/PRE2 #96 — CONCLUÍDA apenas em matemática SINTÉTICA:** PR #97 merged SHA `ea13ea60c617eb57973a6b6e708b06fc325afc96`, CI PR #40229681278 SUCCESS (**577 testes offline, compileall, 12 docs**), issue fechada. Fees/slippage por perna e funding assinado em quote abstrata com precisão Decimal e dedup in-memory. Total de custo negativo não é lucro; flags de PnL/venue/FX/ordens permanecem false. J1 #2, J2 #3, J3 #4 e J4 #5 não homologadas.
 
 **J1 #32/#36/#48 — diligência complementar registrada em issues:** padrão CAIP-19 identifica ativos por chain+namespace+reference, mas não atesta crypto-only/venue; SLIP-0044 é lista de derivação de wallets, não registro de perpétuos; CoinGecko Demo não inclui direitos comerciais; chart/analytics Kraken não provam unidade de volume. Sem feed real e mantendo gates abertos.
 
