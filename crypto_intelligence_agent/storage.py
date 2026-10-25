@@ -30,6 +30,26 @@ class MarketDataStore(Protocol):
     def save_universe_snapshot(self, snapshot: UniverseSnapshot) -> None: ...
     def universe_snapshot(self, *, observed_at_ms: int, selection_rule_version: str, source: str) -> UniverseSnapshot | None: ...
     def quality_report(self, *, exchange: str, market: str, symbol: str, interval: str, start_open_ms: int, end_open_ms: int) -> DataQualityReport: ...
+    def record_collection_event(self, event: CollectionEvent) -> None: ...
+
+
+@dataclass(frozen=True)
+class CollectionEvent:
+    """Durable metadata about public reads; no credentials or private URLs."""
+
+    observed_start_ms: int
+    observed_end_ms: int
+    mode: str
+    source: str
+    exchange: str
+    endpoint: str
+    selection_rule_version: str
+    symbol: str | None
+    interval: str | None
+    status: str
+    detail: str
+    pages_committed: int = 0
+    candles_committed: int = 0
 
 
 @dataclass(frozen=True)
@@ -113,6 +133,15 @@ class SQLiteMarketDataStore:
                     observed_at_ms INTEGER NOT NULL, selection_rule_version TEXT NOT NULL, source TEXT NOT NULL,
                     eligible_json TEXT NOT NULL, excluded_json TEXT NOT NULL,
                     PRIMARY KEY (observed_at_ms, selection_rule_version, source)
+                );
+                CREATE TABLE IF NOT EXISTS collection_events (
+                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    observed_start_ms INTEGER NOT NULL, observed_end_ms INTEGER NOT NULL,
+                    mode TEXT NOT NULL, source TEXT NOT NULL, exchange TEXT NOT NULL,
+                    endpoint TEXT NOT NULL, selection_rule_version TEXT NOT NULL,
+                    symbol TEXT, interval TEXT, status TEXT NOT NULL,
+                    detail TEXT NOT NULL, pages_committed INTEGER NOT NULL,
+                    candles_committed INTEGER NOT NULL
                 );
             """)
 
@@ -243,6 +272,46 @@ class SQLiteMarketDataStore:
             eligible=tuple(UniverseMember(item["symbol"], item["rank"], Decimal(item["quote_volume"])) for item in json.loads(row["eligible_json"])),
             excluded=json.loads(row["excluded_json"]),
         )
+
+    def record_collection_event(self, event: CollectionEvent) -> None:
+        if (type(event.observed_start_ms) is not int or type(event.observed_end_ms) is not int
+                or event.observed_start_ms < 0 or event.observed_end_ms < event.observed_start_ms
+                or event.mode not in {"offline", "live"}
+                or event.status not in {"success", "failure"}
+                or event.pages_committed < 0 or event.candles_committed < 0
+                or not event.source or not event.exchange or not event.endpoint
+                or not event.selection_rule_version):
+            raise ValueError("invalid collection audit event")
+        with self._transaction() as connection:
+            connection.execute(
+                """INSERT INTO collection_events (
+                    observed_start_ms, observed_end_ms, mode, source, exchange,
+                    endpoint, selection_rule_version, symbol, interval, status,
+                    detail, pages_committed, candles_committed
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    event.observed_start_ms, event.observed_end_ms,
+                    event.mode, event.source, event.exchange, event.endpoint,
+                    event.selection_rule_version, event.symbol, event.interval,
+                    event.status, event.detail, event.pages_committed,
+                    event.candles_committed,
+                ),
+            )
+
+    def collection_events(self) -> tuple[CollectionEvent, ...]:
+        with self._transaction() as connection:
+            rows = connection.execute(
+                "SELECT * FROM collection_events ORDER BY event_id"
+            ).fetchall()
+        return tuple(CollectionEvent(
+            observed_start_ms=row["observed_start_ms"],
+            observed_end_ms=row["observed_end_ms"],
+            mode=row["mode"], source=row["source"], exchange=row["exchange"],
+            endpoint=row["endpoint"], selection_rule_version=row["selection_rule_version"],
+            symbol=row["symbol"], interval=row["interval"], status=row["status"],
+            detail=row["detail"], pages_committed=row["pages_committed"],
+            candles_committed=row["candles_committed"],
+        ) for row in rows)
 
     def quality_report(self, *, exchange: str, market: str, symbol: str, interval: str, start_open_ms: int, end_open_ms: int) -> DataQualityReport:
         duration = interval_duration_ms(interval)
