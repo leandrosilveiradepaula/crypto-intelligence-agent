@@ -17,7 +17,7 @@ from typing import Iterator, Protocol, Sequence
 
 from .market_data import (
     ClosedCandle, ContractSpec, DataGapError, DuplicateCandleError,
-    MarketDataCheckpoint, UniverseMember, UniverseSnapshot, interval_duration_ms,
+    MarketDataCheckpoint, UniverseMember, UniverseSnapshot, interval_duration_ms, interval_open_aligned,
 )
 
 
@@ -244,7 +244,8 @@ class SQLiteMarketDataStore:
 
     def quality_report(self, *, exchange: str, market: str, symbol: str, interval: str, start_open_ms: int, end_open_ms: int) -> DataQualityReport:
         duration = interval_duration_ms(interval)
-        if end_open_ms <= start_open_ms or start_open_ms % duration or end_open_ms % duration:
+        if (end_open_ms <= start_open_ms or not interval_open_aligned(interval, start_open_ms)
+                or not interval_open_aligned(interval, end_open_ms)):
             raise ValueError("quality window must be a non-empty interval-aligned [start, end) range")
         candles = self.candles(exchange=exchange, market=market, symbol=symbol, interval=interval, start_open_ms=start_open_ms, end_open_ms=end_open_ms)
         opens = {candle.open_time_ms for candle in candles}
