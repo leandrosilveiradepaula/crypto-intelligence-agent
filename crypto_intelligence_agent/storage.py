@@ -41,12 +41,22 @@ class DataQualityReport:
     expected_candles: int
     persisted_candles: int
     missing_open_times_ms: tuple[int, ...]
-    conflicting_duplicates: int
+    # Rejected conflicts are not retained as market data. We intentionally
+    # report "not measured" rather than fabricating a zero incident count.
+    conflicting_duplicates: int | None
     latest_checkpoint: MarketDataCheckpoint | None
 
     @property
     def complete(self) -> bool:
-        return not self.missing_open_times_ms and self.persisted_candles == self.expected_candles
+        checkpoint = self.latest_checkpoint
+        return bool(
+            not self.missing_open_times_ms
+            and self.persisted_candles == self.expected_candles
+            and checkpoint is not None
+            and checkpoint.integrity == "complete"
+            and checkpoint.confirmed_start_ms <= self.start_open_ms
+            and checkpoint.confirmed_end_ms >= self.end_open_ms - 1
+        )
 
 
 class SQLiteMarketDataStore:
@@ -54,6 +64,10 @@ class SQLiteMarketDataStore:
 
     def __init__(self, path: str | Path) -> None:
         self._path = str(path)
+        # Every operation uses a fresh connection for explicit transaction
+        # boundaries. Plain :memory: would silently lose its schema on close.
+        if not self._path or self._path == ":memory:":
+            raise ValueError("provide a durable SQLite file path, not ':memory:'")
         self._initialize()
 
     @contextmanager
@@ -121,8 +135,28 @@ class SQLiteMarketDataStore:
                 "SELECT * FROM checkpoints WHERE data_type=? AND exchange=? AND symbol=? AND interval IS ?",
                 (checkpoint.data_type, checkpoint.exchange, checkpoint.symbol, checkpoint.interval),
             ).fetchone())
-            if previous and checkpoint.confirmed_end_ms < previous.confirmed_end_ms:
-                raise DataGapError("checkpoint cannot move backwards")
+            if previous is None:
+                if checkpoint.confirmed_start_ms != candles[0].open_time_ms:
+                    raise DataGapError("first checkpoint must begin at first persisted candle")
+            else:
+                if (checkpoint.source != previous.source
+                        or checkpoint.contract_version != previous.contract_version
+                        or checkpoint.confirmed_start_ms != previous.confirmed_start_ms
+                        or previous.integrity != "complete"):
+                    raise DataGapError("checkpoint provenance, start or integrity has changed")
+                if checkpoint.confirmed_end_ms < previous.confirmed_end_ms:
+                    raise DataGapError("checkpoint cannot move backwards")
+                if checkpoint.confirmed_end_ms > previous.confirmed_end_ms:
+                    if candles[0].open_time_ms != previous.confirmed_end_ms + 1:
+                        raise DataGapError("checkpoint extension must be adjacent to saved history")
+                    prev_open = previous.confirmed_end_ms + 1 - interval_duration_ms(previous.interval)
+                    last_saved = connection.execute(
+                        """SELECT * FROM candles WHERE exchange=? AND market=? AND symbol=?
+                           AND interval=? AND open_time_ms=?""",
+                        (previous.exchange, candles[0].market, previous.symbol, previous.interval, prev_open),
+                    ).fetchone()
+                    if last_saved is None or last_saved["close_time_ms"] != previous.confirmed_end_ms:
+                        raise DataGapError("checkpoint belongs to missing or different-market history")
             connection.execute(
                 "INSERT OR REPLACE INTO checkpoints VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 _checkpoint_values(checkpoint),
@@ -154,7 +188,18 @@ class SQLiteMarketDataStore:
                     str(contract.tick_size), str(contract.step_size), str(contract.min_qty),
                     str(contract.min_notional) if contract.min_notional is not None else None, contract.source,
                 )
-                connection.execute("INSERT OR REPLACE INTO contract_specs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values)
+                existing = connection.execute(
+                    """SELECT * FROM contract_specs WHERE exchange=? AND market=? AND symbol=?
+                       AND observed_at_ms=?""",
+                    (contract.exchange, contract.market, contract.symbol, contract.observed_at_ms),
+                ).fetchone()
+                if existing is not None and _contract_from_row(existing) != contract:
+                    raise DuplicateCandleError(
+                        f"conflicting immutable contract snapshot at {contract.exchange}/{contract.symbol}/{contract.observed_at_ms}"
+                    )
+                connection.execute(
+                    "INSERT OR IGNORE INTO contract_specs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", values
+                )
 
     def contracts(self, *, exchange: str, market: str, observed_at_ms: int) -> tuple[ContractSpec, ...]:
         with self._transaction() as connection:
@@ -207,17 +252,37 @@ class SQLiteMarketDataStore:
         return DataQualityReport(
             exchange=exchange, market=market, symbol=symbol, interval=interval, start_open_ms=start_open_ms, end_open_ms=end_open_ms,
             expected_candles=(end_open_ms - start_open_ms) // duration, persisted_candles=len(candles), missing_open_times_ms=missing,
-            conflicting_duplicates=0,
+            conflicting_duplicates=None,
             latest_checkpoint=self.latest_checkpoint(data_type="closed_candle", exchange=exchange, symbol=symbol, interval=interval),
         )
 
 
 def _validate_checkpoint_page(candles: Sequence[ClosedCandle], checkpoint: MarketDataCheckpoint) -> None:
     first, last = candles[0], candles[-1]
+    duration = interval_duration_ms(first.interval)
     if (checkpoint.data_type != "closed_candle" or checkpoint.exchange != first.exchange
             or checkpoint.symbol != first.symbol or checkpoint.interval != first.interval
-            or checkpoint.confirmed_end_ms != last.close_time_ms or checkpoint.confirmed_start_ms > first.open_time_ms):
-        raise DataGapError("checkpoint does not describe the committed candle page")
+            or checkpoint.confirmed_end_ms != last.close_time_ms
+            or checkpoint.confirmed_start_ms > first.open_time_ms
+            or checkpoint.integrity != "complete"):
+        raise DataGapError("checkpoint does not describe a complete candle page")
+    for index, candle in enumerate(candles):
+        if (candle.exchange, candle.market, candle.symbol, candle.interval) != (
+            first.exchange, first.market, first.symbol, first.interval
+        ):
+            raise DataGapError("mixed candle identities inside one committed page")
+        if candle.close_time_ms != candle.open_time_ms + duration - 1:
+            raise DataGapError("invalid candle duration in committed page")
+        if index and candle.open_time_ms != candles[index - 1].open_time_ms + duration:
+            raise DataGapError("gap or non-monotonic ordering inside committed page")
+        values = (candle.open, candle.high, candle.low, candle.close, candle.base_volume, candle.quote_volume)
+        if any(not isinstance(v, Decimal) or not v.is_finite() for v in values):
+            raise DataGapError("non-decimal or nonfinite market data in committed page")
+        if (min(candle.open, candle.high, candle.low, candle.close) <= 0
+                or candle.high < max(candle.open, candle.close)
+                or candle.low > min(candle.open, candle.close)
+                or candle.base_volume < 0 or candle.quote_volume < 0):
+            raise DataGapError("invalid OHLC or negative volume in committed page")
 
 
 def _candle_values(candle: ClosedCandle) -> tuple[object, ...]:
