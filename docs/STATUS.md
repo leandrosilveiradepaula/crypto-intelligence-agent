@@ -48,6 +48,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU22 #60 concluída no escopo offline:** PR #61 merged SHA `ee8c36d09a90192cbf5220c10ec28b876852508c` com CI #40214317197 SUCCESS (**279 testes offline, compileall, 12 docs**). Parser OKX SWAP com volume contrato/base/quote, confirmação de candle, direitos/proveniência sempre fail-closed. Não houve GET, licença de mercado, Top50 real, candle canônico, troca de venue, trade ou deploy.
 
+**WU23 #63 em implementação:** pesquisa de manifesto público keyless Vike/Hyperliquid e licença CC BY declarada. Script com validações de schema/tempo, testes adversariais e execução remota somente por comando owner-only; não há acesso REST com chave, inspeção de Parquet nem direitos upstream demonstrados.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
