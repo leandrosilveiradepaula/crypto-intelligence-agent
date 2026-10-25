@@ -114,7 +114,7 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 
 ## Conformance de metadados, tickers e candles Kraken — WU7
 - A WU6 executou um GET real de instrumentos: run `40198042787`, HTTP200, 231 instrumentos, 213 prefixos PI_/PF_ (não 213 contratos cripto elegíveis).
-- A probe WU7 é `python3 scripts/probe_kraken_market_schema.py --allow-public-network --allow-kraken-schema-probe`. Ambas flags são exigidas; nenhuma consulta acontece em testes automáticos.
+- A probe WU7 é `python3 -m scripts.probe_kraken_market_schema --allow-public-network --allow-kraken-schema-probe`. Ambas flags são exigidas; nenhuma consulta acontece em testes automáticos.
 - A probe usa caminhos fixos do **mesmo provedor independente** (`/derivatives/api/v3/instruments`, `/derivatives/api/v3/tickers` e `/api/charts/v1/trade/PF_XBTUSD/1h?count=3`), no máximo 3 GETs, sem redirects nem retries, até 8 segundos e 4MiB por request, sem chaves ou persistência da resposta. Retorna apenas campos allowlist/nomes de campos, status, UTC e contagens.
 - Não interpretar um HTTP200 nem uma lista de símbolos PI_/PF_ como evidência de 50 criptoativos líquidos; `PF_AAPLXUSD` é exemplo de categoria não cripto que precisa ser excluída. Precisamos estudar tipo de instrumento, tickers/volume cotado e unidades de `contractSize` para seleção e ranking válidos.
 - Campos de candles `time,open,high,low,close,volume` e `more_candles` são verificados estruturalmente, porém **não são tratados como velas fechadas validadas** sem regras de finalização e intervalos confirmados.
