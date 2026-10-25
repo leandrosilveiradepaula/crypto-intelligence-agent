@@ -102,6 +102,20 @@ class ProvenanceTests(unittest.TestCase):
             self.audited(claim(capability="kraken_candle_volume_units",
                               provider="kraken_futures", quote_currency="USD"))
 
+    def test_okx_schema_evidence_cannot_claim_live_permissions(self):
+        candidate = claim(capability="okx_quote_currency", provider="okx_v5")
+        observed = self.audited(candidate)
+        self.assertEqual(observed["claims"][0]["issue"], 60)
+        self.assertFalse(observed["live_evidence_authenticated"])
+        self.assertFalse(observed["external_rights_authorized"])
+        report = readiness_snapshot(evidence_json=payload(candidate), decision_at_ms=NOW)
+        self.assertFalse(report["ready_for_live_top50"])
+        self.assertFalse(report["ready_for_canonical_ohlcv"])
+        for variant in ({"provider":"bybit_v5"}, {"quote_currency":"USD"},
+                        {"quote_currency":"unverified"}, {"purpose":"public_display"}):
+            with self.subTest(variant=variant), self.assertRaises(DataValidationError):
+                self.audited(claim(capability="okx_quote_currency", provider="okx_v5", **variant))
+
     def test_claimed_public_rights_never_authorize_distribution(self):
         rights = claim(
             capability="provider_external_rights", provider="kraken_futures",
