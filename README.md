@@ -40,3 +40,7 @@ python -m crypto_intelligence_agent --database /tmp/crypto-market-demo.sqlite3 -
 A saída é um JSON com origens de endpoints, hora de captura, símbolos, cobertura e auditoria. Um banco não informado é temporário e removido ao fim do comando; bancos locais são ignorados pelo Git. O modo offline representa **dados sintéticos**, sem validade para pesquisas de rentabilidade.
 
 O modo de rede requer duas opções deliberadas: `--mode live --allow-public-network`, usa apenas GETs públicos da Binance USD-M e nunca é disparado em CI. Consulte `docs/DATA_CONTRACT.md` para limitações e não use isso como autorização de implantação ou negociação.
+
+## Proteção temporal (WU4)
+
+Antes da coleta de contratos, universo e candles, o pipeline consulta o horário público do servidor da exchange (`GET /fapi/v1/time`) e falha se o desvio de relógio mais a incerteza estimada por latência ultrapassar o limite. Esse limite é configurável: `--max-clock-skew-ms 5000` (padrão). O modo offline simula também essa resposta e não acessa a rede. Trata-se de teste de segurança temporal, **não** de homologação da API real.
