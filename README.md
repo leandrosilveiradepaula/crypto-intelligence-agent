@@ -141,3 +141,7 @@ A rotina offline de `metaAndAssetCtxs` valida a posição de BTC nos arrays, mas
 
 ## J4/PRE1 — Fatias sintéticas para saídas parciais
 `synthetic_partial_exits.py` calcula percentuais de realizações sobre posição inicial ou saldo restante, com piso residual configurável e conservação exata via `Decimal`. Exemplo 50%, 60% e 70% do restante deixa 6% da posição. É um **planejador matemático sem corretora**, não possui preço, PnL, ordem, fills, lote real ou trailing; não habilita sinais/live/50x. J4 #5 e J1 #2 permanecem abertas. Veja D47 em `docs/DECISIONS.md` e o plano de validação.
+
+
+## J4/PRE2 — Replay in-memory de preenchimentos parciais SINTÉTICOS
+`synthetic_manual_exit_replay.py` recebe o plano matemático PRE1 e eventos fictícios explícitos, em sequência UTC, para reconstruir quantitativos de saídas parciais sem precificar ordens. IDs idênticos/payload igual contam uma vez; reutilização conflitante é erro, mas IDs diferentes do mesmo fill econômico **não** são detectados sem fonte de verdade externa. Nenhum mercado, conta, persistência, taxa, trailing, PnL ou envio de ordem é integrado. J4 #5 e J1 #2 permanecem abertos; confira D48 e `docs/STRATEGY_SPEC.md`.

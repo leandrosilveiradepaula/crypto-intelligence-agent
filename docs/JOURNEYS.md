@@ -52,6 +52,7 @@
 - J2/PRE1 #66 / PR #67: motor matemático offline de indicadores causais somente para `ClosedCandle` sintéticos, integrado SHA `cf1c4cacffa4f5b46475a73dcc6bc9f5631b2e5d`, CI #40216432146 SUCCESS (315 testes, 12 docs). Sem habilitar estratégias, backtest, negociação ou antecipar aceite J1/J2; issue encerrada.
 
 ## Preparação matemática independente de J4 (J1/J2/J3 e J4 operacional permanecem abertos)
-- J4/PRE1 #81: porcentagens INITIAL_POSITION/REMAINING_BALANCE, runner piso da quantidade inicial e conservação exata em Decimal, somente unidades **sintéticas**. Em implementação/CI, não cria ledger de posições, PnL, trailing ou ordens.
+- J4/PRE1 #81 / PR #82: percentuais INITIAL_POSITION/REMAINING_BALANCE e runner em unidades sintéticas, código integrado SHA `c4f6b94fd5a89724185b9a486818a6c8fa84adf0`, CI #40223997038 SUCCESS (**414 testes offline, 12 docs**). Issue encerrada; sem ledger, PnL ou ordens.
+- J4/PRE2 #83: replay offline de eventos MANUAIS fictícios com IDs idempotentes apenas em memória, progresso de tranche, timestamp e controle de overfill; em implementação, PR/CI pendentes. Não é contabilidade real nem substitui J1/J3/J4 operacional.
 
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
