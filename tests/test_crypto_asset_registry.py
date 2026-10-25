@@ -6,6 +6,7 @@ asserted or independently licensed by these tests.
 from __future__ import annotations
 
 from copy import deepcopy
+from decimal import Decimal
 import json
 import unittest
 from unittest.mock import patch
@@ -343,7 +344,7 @@ class RegistrySelectionTests(unittest.TestCase):
             max_market_age_ms=300000, max_registry_age_ms=HOUR,
         )
         self.assertEqual([m.symbol for m in out.eligible], ["PF_XBTUSD"])
-        self.assertEqual(out.eligible[0].quote_volume, __import__("decimal").Decimal("101.001"))
+        self.assertEqual(out.eligible[0].quote_volume, Decimal("101.001"))
 
 
 if __name__ == "__main__":
