@@ -71,3 +71,11 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - Seleção de universo suporta `--max-symbols` de 1 até 50, sem hardcode de símbolos no modo live; `--symbols` opcional limita-se aos contratos ranqueados/eligíveis. Janelas `[start-ms, end-ms)`, intervalo, page size e idade mínima são configuráveis.
 - CLI sem `--database` cria banco temporário e o remove ao sair. Para inspeção/replay, usar caminho explícito **fora do GitHub público**, sem publicar `*.sqlite*`. Modo offline suporta fixture horária ilustrativa BTC/ETH; não extrapolar cobertura dessa fixture.
 - Relatórios de qualidade incluem candles esperados/gravados, lacunas, checkpoint, status e proveniência. `None` na contagem de conflitos significa **não medido**. Sem sinais de negociação, backtest, ML, deploy ou homologação de feed real.
+
+## WU4 — Conformidade temporal com relógio da exchange
+
+- `BinanceFuturesPublicAdapter.server_time_ms()` realiza somente `GET /fapi/v1/time`, sem credenciais, e exige `{"serverTime": <inteiro UTC-ms não negativo>}`. Respostas inválidas, HTTP 429/5xx ou timeout falham explicitamente.
+- Antes de coletar metadados, universo ou candles, o pipeline mede horário local antes/depois da resposta. Estima o deslocamento do relógio da exchange em relação ao ponto médio local, além da incerteza por latência (metade do RTT, conservadoramente arredondado). Bloqueia a coleta se `abs(offset_ms) + ceil(RTT/2) > max_clock_skew_ms`.
+- O limite padrão é `5000 ms`, configurável com `--max-clock-skew-ms` (não negativo). Falha é registrada como evento `GET /fapi/v1/time` com status `failure` e não gera snapshots/candles, evitando falsa integridade temporal.
+- O relatório JSON exibe `server_time_ms`, `clock_offset_ms`, `clock_round_trip_ms`; o evento de sucesso grava os valores estimados. Uma amostra não comprova sincronização permanente nem elimina atraso de publicação da exchange.
+- O transporte de fixtures responde a `/fapi/v1/time` com valor **sintético**, sem rede. O modo live exige consentimento explícito para GETs públicos e não participa dos testes CI. Documentação de referência: https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data .
