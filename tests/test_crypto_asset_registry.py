@@ -6,13 +6,15 @@ asserted or independently licensed by these tests.
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import replace
 from decimal import Decimal
 import json
 import unittest
 from unittest.mock import patch
 
 from crypto_intelligence_agent.crypto_asset_registry import (
-    CryptoRegistryHistory, CryptoRegistrySnapshot, SOURCE_POLICY,
+    CryptoRegistryHistory, CryptoRegistrySnapshot, IdentityEvidence,
+    VerifiedAsset, SOURCE_POLICY,
     load_registry_json, registry_sha256,
 )
 from crypto_intelligence_agent.market_data import DataValidationError
@@ -228,6 +230,169 @@ class RegistryUnitTests(unittest.TestCase):
             registry = CryptoRegistrySnapshot.from_manifest(signed_fixture())
             history = CryptoRegistryHistory([registry])
             self.assertEqual(history.as_of(T0 + 1, max_age_ms=1000), registry)
+
+
+class RegistryBoundaryIntegrityTests(unittest.TestCase):
+    """History must not trust dataclass construction over validated manifest."""
+
+    def setUp(self):
+        self.valid = CryptoRegistrySnapshot.from_manifest(signed_fixture())
+
+    def test_manifest_created_snapshot_still_appends_normally(self):
+        hist = CryptoRegistryHistory([self.valid, self.valid])
+        self.assertIs(hist.as_of(T0, max_age_ms=0), self.valid)
+        self.assertEqual(hist.as_of(T0, max_age_ms=0).sha256_digest,
+                         self.valid.sha256_digest)
+
+    def test_equivalent_direct_instance_with_valid_hash_is_structurally_accepted(self):
+        # History can accept a directly constructed *canonical equivalent*,
+        # not only objects created via a named factory; no trusted boolean.
+        direct = CryptoRegistrySnapshot(
+            observed_at_ms=self.valid.observed_at_ms,
+            label=self.valid.label,
+            sha256_digest=self.valid.sha256_digest,
+            assets=self.valid.assets,
+        )
+        self.assertIs(CryptoRegistryHistory([direct]).as_of(T0, max_age_ms=0), direct)
+
+    def test_direct_constructor_with_forged_sha_cannot_enter_history(self):
+        forged = CryptoRegistrySnapshot(
+            observed_at_ms=self.valid.observed_at_ms,
+            label=self.valid.label,
+            sha256_digest="0" * 64,
+            assets=self.valid.assets,
+        )
+        with self.assertRaisesRegex(DataValidationError, "hash mismatch"):
+            CryptoRegistryHistory([forged])
+        with self.assertRaisesRegex(DataValidationError, "hash mismatch"):
+            CryptoRegistryHistory().append(forged)
+
+    def test_direct_mutation_of_label_without_new_digest_rejected(self):
+        forged = replace(self.valid, label="forged-fixture-v2")
+        with self.assertRaisesRegex(DataValidationError, "hash mismatch"):
+            CryptoRegistryHistory([forged])
+
+    def test_direct_empty_and_mutable_assets_are_not_accepted(self):
+        for bad in ((), [], [self.valid.assets[0]], [self.valid.assets[0]] * 2001,
+                    ({"base": "BTC"},), ("BTC",)):
+            with self.subTest(bad=str(type(bad))[:30]), self.assertRaises(DataValidationError):
+                CryptoRegistryHistory([replace(self.valid, assets=bad)])
+
+    def test_direct_asset_with_one_source_is_rejected(self):
+        asset = self.valid.assets[0]
+        bad_asset = replace(asset, evidence=(asset.evidence[0],))
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([replace(self.valid, assets=(bad_asset,))])
+
+    def test_direct_asset_with_two_same_publisher_sources_rejected(self):
+        asset = self.valid.assets[0]
+        dup = replace(asset.evidence[1], publisher=asset.evidence[0].publisher)
+        bad_asset = replace(asset, evidence=(asset.evidence[0], dup))
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([replace(self.valid, assets=(bad_asset,))])
+
+    def test_direct_asset_with_incorrect_derived_publisher_root_rejected(self):
+        asset = self.valid.assets[0]
+        fake_evidence = replace(asset.evidence[0], publisher_root="fabricated.test")
+        bad_asset = replace(asset, evidence=(fake_evidence, asset.evidence[1]))
+        # publisher_root is not in the unsigned JSON. Old SHA stays the same,
+        # so equality to reconstructed canonical evidence must catch it.
+        with self.assertRaisesRegex(DataValidationError, "differs from canonical"):
+            CryptoRegistryHistory([replace(self.valid, assets=(bad_asset,))])
+
+    def test_direct_asset_with_bad_source_url_rejected(self):
+        asset = self.valid.assets[0]
+        fake_source = replace(asset.evidence[0], url="https://api.kraken.com/fake")
+        bad_asset = replace(asset, evidence=(fake_source, asset.evidence[1]))
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([replace(self.valid, assets=(bad_asset,))])
+
+    def test_direct_asset_with_mutable_evidence_list_rejected(self):
+        asset = self.valid.assets[0]
+        forged = replace(self.valid, assets=(replace(asset, evidence=list(asset.evidence)),))
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([forged])
+
+    def test_direct_asset_with_non_evidence_object_rejected(self):
+        asset = self.valid.assets[0]
+        forged = replace(self.valid, assets=(replace(asset, evidence=(
+            {"publisher": "fake"}, asset.evidence[1],
+        )),))
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([forged])
+
+    def test_direct_asset_with_future_review_rejected(self):
+        asset = self.valid.assets[0]
+        forged = replace(self.valid, assets=(replace(asset, reviewed_at_ms=T0 + 1),))
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([forged])
+
+    def test_direct_asset_with_future_evidence_rejected(self):
+        asset = self.valid.assets[0]
+        bad_evidence = replace(asset.evidence[0], observed_at_ms=T0 + 1)
+        forged = replace(self.valid, assets=(
+            replace(asset, evidence=(bad_evidence, asset.evidence[1])),))
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([forged])
+
+    def test_direct_asset_with_duplicate_base_or_canonical_id_rejected(self):
+        asset = self.valid.assets[0]
+        dupe_base = replace(asset, canonical_id="second-id")
+        dupe_id = replace(asset, base="ETH")
+        for asset_b in (dupe_base, dupe_id):
+            with self.subTest(asset_b=asset_b), self.assertRaises(DataValidationError):
+                CryptoRegistryHistory([replace(self.valid, assets=(asset, asset_b))])
+
+    def test_direct_snapshot_with_bad_time_label_or_digest_type_rejected(self):
+        for field, value in (
+            ("observed_at_ms", True), ("observed_at_ms", -1),
+            ("label", "not valid / snapshot"),
+            ("sha256_digest", "invalid"), ("sha256_digest", 42),
+        ):
+            with self.subTest(field=field, value=value), self.assertRaises(DataValidationError):
+                CryptoRegistryHistory([replace(self.valid, **{field: value})])
+
+    def test_direct_snapshot_subclass_not_a_structural_approval(self):
+        class UnreviewedRegistry(CryptoRegistrySnapshot):
+            pass
+        forged = UnreviewedRegistry(
+            self.valid.observed_at_ms, self.valid.label,
+            self.valid.sha256_digest, self.valid.assets,
+        )
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([forged])
+
+    def test_rejection_does_not_poison_existing_history(self):
+        hist = CryptoRegistryHistory([self.valid])
+        forged = replace(self.valid, sha256_digest="0" * 64)
+        with self.assertRaises(DataValidationError):
+            hist.append(forged)
+        self.assertEqual(hist.as_of(T0 + 100, max_age_ms=200), self.valid)
+        later = CryptoRegistrySnapshot.from_manifest(signed_fixture(
+            unsigned_manifest(observed=T0 + HOUR, label="later-valid"),
+        ))
+        hist.append(later)
+        self.assertEqual(hist.as_of(T0 + HOUR, max_age_ms=0), later)
+
+    def test_bad_direct_registry_cannot_select_ranked_universe(self):
+        bad = replace(self.valid, sha256_digest="0" * 64)
+        with self.assertRaises(DataValidationError):
+            CryptoRegistryHistory([bad]).select_at(
+                instruments=[contract("PF_XBTUSD", "BTC")],
+                tickers=[ticker("PF_XBTUSD", "1000000")],
+                market_observed_at_ms=T0+1, decision_at_ms=T0+2,
+                max_market_age_ms=100, max_registry_age_ms=100,
+            )
+
+    def test_no_network_for_snapshot_boundary_revalidation(self):
+        with patch("urllib.request.urlopen", side_effect=AssertionError("no network")):
+            self.assertEqual(
+                CryptoRegistryHistory([self.valid]).as_of(T0, max_age_ms=0),
+                self.valid,
+            )
+        # Fake HTTPS URL and a correct hash are still only self-certified.
+        self.assertEqual(self.valid.assets[0].evidence[0].url,
+                         "https://project.example.org/asset/btc")
 
 
 class RegistrySelectionTests(unittest.TestCase):
