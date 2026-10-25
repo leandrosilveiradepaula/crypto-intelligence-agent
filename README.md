@@ -56,3 +56,6 @@ Um GET real de Kraken mostrou que BTC e ações tokenizadas podem compartilhar `
 
 ## Triagem conservadora de instrumentos Kraken (WU9)
 A taxonomia real da [WU8](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/28), run [40199111677](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40199111677), provou que xStocks podem ter `tradfi=false`. O módulo de pesquisa `crypto_intelligence_agent/kraken_eligibility.py` só ranqueia contratos Kraken quando recebe um **registro externo/versionado de bases cripto verificadas**, além de critérios ativos de quote USD, ticker perpetual e volumeQuote Decimal. Sem tal registro, falha em vez de incluir instrumentos não cripto; ainda não integra sinais ou operações, nem comprova Top50.
+
+## Estado da triagem Kraken (WU9/WU10)
+A [PR #31](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/31) integrou seletor puro que evita incluir ações tokenizadas por prefixo/flag, exigindo um **registro externo e versionado de bases criptográficas verificadas**. CI pós-merge: 115 testes offline. A [issue #32](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/32) trata de estabelecer esse registro com evidência ponto-no-tempo. Ainda não foi gerado um Top50 real, não houve alteração de fornecedor principal nem operação financeira.
