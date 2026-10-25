@@ -258,7 +258,7 @@ class BybitOfficialSchemaConformanceTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             pair(metadata=raw, chart_at=NOW + 30_001)
         with self.assertRaises(DataValidationError):
-            pair(metadata=raw, contract_at=NOW + 2)
+            pair(metadata=raw, contract_at=KLINE_NOW + 1)
         with self.assertRaises(DataValidationError):
             pair(metadata=raw, contract_at=NOW - 100_000)
 
