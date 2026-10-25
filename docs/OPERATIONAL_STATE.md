@@ -1,4 +1,4 @@
-# Estado operacional — pós-WU13 live; J1 ainda não homologada (2026-10-25 UTC)
+# Estado operacional — WU19 gate de direitos por finalidade, 2026-10-25 UTC
 
 Projeto: Crypto Intelligence Agent. Repo PÚBLICO: `leandrosilveiradepaula/crypto-intelligence-agent`.
 Missão: futuros perpétuos crypto, entradas quantitativas e saídas parciais; operação manual sem ordens reais nesta fase.
@@ -30,11 +30,12 @@ Autonomia: `AGENTS.md`; não pedir "prossiga", avançar em microtarefas seguras,
 - Pesquisa documental em 2026-10-25: Kraken margin schedule define níveis I–VIII e caps por notional, com critérios especiais para BTC/ETH/SOL e classes A–G; cada instrumento tem classe própria, alterável sem aviso. Fontes https://support.kraken.com/br/articles/360022632452-derivatives-margin-schedule-maximum-leverage e https://support.kraken.com/br/articles/4844359082772-linear-multi-collateral-derivatives-contract-specifications .
 - WU18 #50 ENCERRADA no escopo sintético: PR #51 merged SHA `6f147844a514f2b83b29084fb3bc5d4b2377355d`, revisão head `220b52754e4dacfc0d66d07c725909e489a437ae`, CI pré-merge #40204578556 e pós-merge #40204649232 SUCCESS (**229 testes Python offline, compileall, 12 docs**). Parser Bybit linear exige category/perpetual/Trading, fecha candles reverse UTC e distingue Decimal `documented_base_volume` e `documented_quote_turnover` em USDT/USDC. Zero GET Bybit/live dados, nenhuma licença/negociação/troca de venue homologadas. Issue #50 fechada.
 - Documentação oficial Bybit Get Kline distingue base/quote volumes (https://bybit-exchange.github.io/docs/v5/market/kline), mas termos Bybit API restringem exploração comercial/revenda (https://www.bybit.com/en/help-center/article/API-Terms); nenhum direito/uso live concedido. Kraken WU12 #36 segue sem unidade de candle comprovada.
+- WU19 #52 em implementação: branch `feat/j1-provider-usage-rights-gate`, política técnica por modalidade/provedor/dataset e provas sintéticas de recusa de publicação. Nenhuma licença válida reivindicada nem release habilitado, PR/CI/merge pendentes de verificação.
 - J2–J7 issues #3–#8 dependentes; sem motor de estratégias, backtest financeiro, VPS em produção ou operações reais.
 
 ## Próxima ação concreta
-1. Conferir main e issues abertas #2, #19, #32, #36, #48 antes de novas work units. WU16 #46 PR #47 integrada, WU17 docs #49 integrada, WU18 #50 PR #51 integrada; não duplicar parser/vendor.
-2. Pendente real da J1: identidade crypto-only verificável e direitos de mercado por finalidade (WU10 #32 e WU17 #48), unidade/contrato de trade candles Kraken (WU12 #36), disponibilidade/cobertura histórica; não inventar unidade ou Top50. Avaliar fonte gratuita com direitos explícitos antes de usar mercado real além de pesquisa permitida.
-3. Não executar novos GETs live em Bybit ou repetir Kraken run #40201868577 sem hipótese/evidência justificadas. Bybit offline documenta unidades base/quote em USDT/USDC, mas não prova mercado real/licença e não converte USDT em USD. Binance HTTP451 #19 sem contorno.
-4. Somente avançar com hipótese técnica independente validável ou registrar bloqueio externo; GH é fonte da verdade, custo R$0, sem ordens, deploy, migrations de produção ou publicação de market data de terceiros. J1 épica #2 continua aberta.
-5. Em "gere prompt para novo chat", entregar handoff operacional completo com fatos e hipóteses separados, issues/PR/SHAs/CI e próxima ação concreta autorizada.
+1. Conferir estado GitHub vivo. WU16 #46/PR #47, WU17 docs #48/PR #49, WU18 #50/PR #51 já integradas e não devem ser duplicadas. Concluir WU19 #52 na branch `feat/j1-provider-usage-rights-gate`, abrir PR, executar/revisar CI no HEAD exato e merge seguro somente sem produção.
+2. WU19 tem caráter **informativo** e sempre recusa uso externo/comercial em código; não fabricar licença nem aceitar flag sintética como autorização. Gate jurídico/regional/release continua externo e sujeito à decisão do Product Owner. Não publicar feed.
+3. WU10 #32 requer registro cripto real e licença; WU12 #36 segue sem atestado de unidade do candle Kraken, WU17 #48 aguarda direitos para eventual distribuição, Binance #19 bloqueada HTTP451. Não repetir sondagem Kraken #40201868577.
+4. Atualizar CI/SHAs, issues e bloqueios no GitHub. J1 épica #2 aberta; zero custo adicional, sem ordens, deploy ou migrations sensíveis. Prosseguir apenas tarefas independentes seguras e reversíveis.
+5. Ao pedido "gere prompt para novo chat", fornecer handoff operacional verificado com repositório, decisões, jornada, issues/PRs/SHAs, testes, bloqueios e próxima ação.
