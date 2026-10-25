@@ -38,4 +38,6 @@
 
 - WU22 #60 / PR #61: parser OKX V5 SWAP offline, volumes contratos/base/quote + confirm documentados, integrado SHA `ee8c36d09a90192cbf5220c10ec28b876852508c`, CI PR #40214317197 SUCCESS (279 testes e 12 docs). Nenhuma identidade crypto-only, licença de redistribuição, feed live ou troca de venue validada.
 
+- WU23 #63: diligência da Vike Hyperliquid com licença CC BY declarada e manifesto público keyless; validação offline e diagnóstico owner-only opcional, em implementação; sem permissão de release.
+
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
