@@ -150,16 +150,35 @@ class KrakenCandleStagingTests(unittest.TestCase):
                 with self.assertRaises(DataValidationError):
                     parse(body)
 
-    def test_trade_volume_only_accepts_64bit_nonnegative_integers(self):
-        for val in (-1, True, 1.25, "25", 2 ** 63):
+    def test_trade_volume_accepts_observed_decimal_strings_without_assuming_units(self):
+        for val, expected in (
+            ("25", Decimal("25")), ("25.123456789123456789",
+             Decimal("25.123456789123456789")),
+            ("0.000000000000000001", Decimal("0.000000000000000001")),
+            (25, Decimal("25")), (0, Decimal("0")),
+        ):
+            with self.subTest(value=val):
+                body = fixture_payload()
+                body["candles"][0]["volume"] = val
+                result = parse(body)
+                self.assertEqual(result.candles[0].raw_trade_volume_unverified, expected)
+                self.assertIs(type(result.candles[0].raw_trade_volume_unverified), Decimal)
+                self.assertEqual(result.candles[0].raw_volume_unit, "unverified")
+                self.assertFalse(hasattr(result.candles[0], "base_volume"))
+                self.assertFalse(hasattr(result.candles[0], "quote_volume"))
+
+    def test_trade_volume_rejects_precision_fabrication_and_unbounded_values(self):
+        for val in (
+            -1, True, 1.25, 2 ** 63, None, "", "NaN", "Infinity",
+            "-1.0", "1e2", "01.0", "1.0000000000000000001",
+            "12345678912345678912345678", "9999999999999999999",
+            [], {},
+        ):
             with self.subTest(value=val):
                 body = fixture_payload()
                 body["candles"][0]["volume"] = val
                 with self.assertRaises(DataValidationError):
                     parse(body)
-        body = fixture_payload()
-        body["candles"][0]["volume"] = 0
-        self.assertEqual(parse(body).candles[0].raw_trade_volume_unverified, 0)
 
     def test_request_limits_interval_symbol_and_alignment(self):
         for interval in ("3m", "8h", "2h", "1M", "abc"):

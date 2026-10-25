@@ -88,6 +88,36 @@ class KrakenVolumeResearchTests(unittest.TestCase):
         self.assertEqual(report["raw_volume_unit"], "unverified")
         self.assertIn("not_exact", report["rolling_24h_alignment"])
 
+    def test_real_http200_decimal_string_volume_schema_is_parsed_without_unit_claim(self):
+        # Run 40201488833 observed decimal-string volume in all 27 candles.
+        body = chart_payload()
+        for row in body["candles"]:
+            row["volume"] = str(row["volume"]) + ".12500000"
+        report = summarize_closed_chart(body, observed_at_ms=NOW)
+        self.assertEqual(report["closed_candles_used"], 24)
+        self.assertEqual(report["sum_24_closed_hours_raw_volume_unverified"],
+                         "375.00000000")
+        self.assertEqual(report["raw_volume_unit"], "unverified")
+        opener = Opener(Response(body), Response(ticker_payload()))
+        observed = make_report(opener=opener, clock_ms=lambda: NOW)
+        self.assertEqual(observed["status"], "observed_aggregates_not_unit_proof")
+        self.assertEqual(observed["requests_attempted"], 2)
+        self.assertEqual(observed["chart"]["sum_24_closed_hours_raw_volume_unverified"],
+                         "375.00000000")
+        self.assertFalse(observed["unit_proof"])
+        self.assertEqual([q[1] for q in opener.requests], ["GET", "GET"])
+
+    def test_decimal_string_volume_rejects_unsafe_values_without_second_get(self):
+        for bad in ("NaN", "-1.00", "1e7", "0.0000000000000000001", "01.0"):
+            with self.subTest(bad=bad):
+                body = chart_payload()
+                body["candles"][0]["volume"] = bad
+                opener = Opener(Response(body))
+                result = make_report(opener=opener, clock_ms=lambda: NOW)
+                self.assertEqual(result["status"], "invalid_chart_or_insufficient_data")
+                self.assertEqual(result["requests_attempted"], 1)
+                self.assertFalse(result["unit_proof"])
+
     def test_candle_still_open_is_excluded_not_used_as_complete(self):
         report = summarize_closed_chart(chart_payload(), observed_at_ms=27 * HOUR - 1)
         self.assertEqual(report["closed_candles_used"], 24)

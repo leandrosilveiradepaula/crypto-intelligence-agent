@@ -1,4 +1,4 @@
-# Estado operacional — WU12 diagnóstico estrutural, 2026-10-25 UTC
+# Estado operacional — WU13 correção de volume Kraken, 2026-10-25 UTC
 
 Projeto: Crypto Intelligence Agent. Repo PÚBLICO: `leandrosilveiradepaula/crypto-intelligence-agent`.
 Missão: futuros perpétuos crypto, entradas quantitativas e saídas parciais; operação manual sem ordens reais nesta fase.
@@ -18,13 +18,14 @@ Autonomia: `AGENTS.md`; não pedir "prossiga", avançar em microtarefas seguras,
 - WU10 #32 permanece ABERTA para obter fonte/licença de registro REAL: PR #33 merged SHA `6be53f170edb81656d43d8ebf6e25c4ecdaaa9ed`, CI pós-merge run 40200232080 SUCCESS (**135 testes offline + compileall + 11 docs**). Entregue manifesto SHA256 e referências independentes, histórico append-only/antiviés temporal, mas sem base real aprovada. CoinGecko/CoinPaprika free não dão direitos comerciais gerais; não importar dados silenciosamente.
 - WU11 #34 encerrada: PR #35 merged SHA `a93f967cc4c5127e492f2878b62ccc9ce5f76428`, CI pós-merge run 40200619598 SUCCESS (149 unittest offline, compileall, 11 docs). `kraken_candle_validation.py` valida OHLC Decimal, UTC-ms, candle fechado, gaps sem inferir base_volume/quote_volume; sem internet ou armazenamento.
 - WU12 #36 ATIVA: PR #37 integrada SHA `b607e2f32c5df8144790e58471133fb4fb9559a0`; CI pós-merge run 40201054020 SUCCESS (163 unittest offline, compileall, 11 docs). Primeiro smoke GitHub owner-only run `40201172859`, UTC 2026-10-25T14:12:51Z: GET público Kraken chart BTC 1h HTTP200 em 144ms, rejeitado como `invalid_chart_or_insufficient_data`. **Somente 1 GET**; ticker não consultado, não houve unidade demonstrada e `unit_proof=false`. A causa específica de incompatibilidade não foi registrada no resumo anterior.
-- Branch `fix/j1-volume-probe-structural-diagnostics`: melhoria de telemetria de schema, contagens de candles fechados, tipos de volume, timestamps válidos e motivo de rejeição; não relaxar parser nem promover volumes. PR/CI/merge e novo run precisam de evidência independente.
+- WU12 segunda execução: PR #38 merged SHA `af0e431e5fba56e6fb5eb09c9c2e4e3418b93d1c`, CI pós-merge run `40201436568` SUCCESS (**166 testes offline, 11 docs**); segundo owner-run `40201488833`, UTC 2026-10-25T14:16:56Z, 1 GET chart BTC HTTP200 em 203ms, 27 candles, 26 fechados, 27 volumes DECIMAL-STRING, zero int, `more_candles=false`. A documentação Kraken descreve volume int64, mas a resposta real discorda. Ticker não lido, `unit_proof=false`.
+- WU13 #39 ativa: branch `fix/j1-kraken-decimal-string-volumes`, normalizador único de volume bruto Decimal no staging WU11 e script WU12, sem inferir unidade. PR/CI/merge e run ainda a validar.
 - Documentação adicional `docs/CRYPTO_REGISTRY.md`: política de identidade, revisão, uso restrito interno, esquema e antiviés temporal. Sem consumo de API de terceiros na WU10.
 - J2–J7 issues #3–#8 dependentes; sem motor de estratégias, backtest financeiro, VPS em produção ou operações reais.
 
 ## Próxima ação concreta
-1. Conferir main, issue #36, branch de diagnóstico. Abrir/revisar PR de correção de telemetria, CI offline no HEAD exato, integrar somente não-prod e com gates verdes.
-2. Uma vez após merge, disparar owner-only `/probe-kraken-volume-v1` na issue #36 para obter **apenas** contagens, tipos e horários sanitizados; não repetir agressivamente nem contornar bloqueios. Registrar URL e diagnóstico antes de decidir sobre schema.
-3. Se chart não oferecer 24 barras completas ou volume não for int64, manter volume sem unidade e preparar solução contratual baseada em documentação/licença, sem alterar ClosedCandle ou trocar de fonte por inferência. Testes com dados sintéticos não validam live.
-4. WU10 #32 ainda exige fonte/licença de registro de assets reais; épica #2 J1 segue aberta, Binance #19 com HTTP451. Sem gasto, trading, deploy ou segredos. Não repetir GET Binance que retornou HTTP451 nem tentar contornar política.
+1. Verificar GitHub vivo/issue #39 e branch de correção Decimal. Concluir regressões de string decimal real, limites de precisão e tipos, atualizar contratos e abrir PR; revisar/CI/SHAs verdes, merge seguro não produtivo.
+2. Depois do merge, acionar exatamente um owner-only `/probe-kraken-volume-v1` na issue #36 para confirmar que o chart é lido e se ticker público responde, sem converter unidades ou assumir janela 24h idêntica.
+3. Pesquisa oficial de unidade volume/multiplicadores Kraken continua; se o significado não for demonstrado, manter `unit_proof=false` e `ClosedCandle` bloqueado para Kraken. Registrar URL, tempos/valores agregados **sanitizados** e evidências.
+4. WU10 #32 continua dependente de fontes/licenças crypto-only reais; épica #2 J1 aberta, Binance #19 HTTP451. Sem ordens, custos, deploy ou segredos. Não repetir GET Binance que retornou HTTP451 nem tentar contornar política.
 5. Se usuário pedir "gere prompt para novo chat", entregar continuidade completa com repositório, regras, decisões, jornada, evidências, issues/PRs/SHAs, testes e próxima ação autorizada.

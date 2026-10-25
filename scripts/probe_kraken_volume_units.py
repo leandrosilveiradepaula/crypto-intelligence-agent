@@ -18,6 +18,8 @@ from urllib.request import Request
 from scripts.probe_public_kraken import (
     MAX_RESPONSE_BYTES, MAX_TIMEOUT_SECONDS, _default_open,
 )
+from crypto_intelligence_agent.kraken_candle_validation import _raw_trade_volume
+from crypto_intelligence_agent.market_data import DataValidationError
 
 
 CANDLES_URL = "https://futures.kraken.com/api/charts/v1/trade/PF_XBTUSD/1h?count=27"
@@ -153,19 +155,24 @@ def summarize_closed_chart(
     if (not isinstance(rows, list) or not 24 <= len(rows) <= MAX_ROWS
             or type(payload.get("more_candles")) is not bool):
         raise ValueError("chart does not contain 24-27 candles and a pagination flag")
-    validated: list[tuple[int, int]] = []
+    validated: list[tuple[int, Decimal]] = []
     previous_time = -1
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError("chart candle must be an object")
-        timestamp, volume = row.get("time"), row.get("volume")
-        if (type(timestamp) is not int or timestamp < 0 or timestamp % HOUR_MS != 0
-                or timestamp <= previous_time
-                or type(volume) is not int or volume < 0 or volume >= (1 << 63)):
-            raise ValueError("invalid chart candle timestamp or unverified int64 volume")
+        timestamp = row.get("time")
+        if (type(timestamp) is not int or timestamp < 0
+                or timestamp % HOUR_MS != 0 or timestamp <= previous_time):
+            raise ValueError("invalid chart timestamp, order or UTC hour grid")
         previous_time = timestamp
+        try:
+            # Share WU11 strict parser: the actual chart returned bounded
+            # decimal-string values, not the documented int64 field type.
+            raw_volume = _raw_trade_volume(row.get("volume"))
+        except DataValidationError as exc:
+            raise ValueError("invalid unverified raw volume type or value") from exc
         if timestamp + HOUR_MS - 1 + CLOSE_SAFETY_MS <= observed_at_ms:
-            validated.append((timestamp, volume))
+            validated.append((timestamp, raw_volume))
     if len(validated) < WINDOW_HOURS:
         raise ValueError("not enough closed hourly candles")
     sample = validated[-WINDOW_HOURS:]
@@ -176,7 +183,9 @@ def summarize_closed_chart(
         "closed_candles_used": WINDOW_HOURS,
         "window_start_open_time_ms": sample[0][0],
         "window_end_open_exclusive_ms": sample[-1][0] + HOUR_MS,
-        "sum_24_closed_hours_raw_volume_unverified": str(sum(v for _, v in sample)),
+        "sum_24_closed_hours_raw_volume_unverified": str(
+            sum((v for _, v in sample), Decimal(0))
+        ),
         "raw_volume_unit": "unverified",
         "chart_count_received": len(rows),
         "pagination_flag_present": True,
