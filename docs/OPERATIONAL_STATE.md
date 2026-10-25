@@ -13,7 +13,8 @@ Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como
 - WU2 #13, PR #14 merged no SHA `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`.
 - WU3 #15, PR #16 merged no SHA `9631e4445678bc4c7067964b537da924b5b89a0b`; CI pós-merge run 40188838338 SUCCESS (58 testes offline).
 - WU4 #17, PR #18 merged no SHA `8fc2f75460e93ef898ae14e3c48ef0348692c857`; CI pós-merge run 40189235249 SUCCESS (65 testes offline).
-- WU5 #19 permanece **ABERTA**; PR #20 merged no SHA `cddfc2535aac7c3b7ae9bc04fea160419344ee7f`; CI HEAD original `a616aa4161941c0cee57ed57883ded78cfed78e6` run 40189543705 SUCCESS; CI pós-merge run 40189603458 SUCCESS (78 unittest, compileall e 10 docs). Entregue somente conformance offline, HTTP 403/418, Retry-After limitado para 429, payloads públicos e auditoria de falhas.
+- WU5 #19 permanece **ABERTA**; PRs #20/#21/#22 integradas. #20: `cddfc2535aac7c3b7ae9bc04fea160419344ee7f` (78 testes offline). #21: `09617e0197c250e3b13c7486a60067791ed41a52` (81 testes offline, workflow owner-only). #22: `32c63d0beccdf4734cf06d0f37d04f9ae833fc1f` (CI pós-merge verde com 81 testes), erro 451 classificado fail-closed e evidência real versionada.
+- WU6 #23: pesquisa de fonte independente Kraken Futures, branch `research/j1-kraken-public-feasibility`; probe de 1 GET de instrumentos, sem autenticação, testes offline, disparo por comentário owner-only. Ainda não executar nem afirmar resultado antes de PR/checks/merge.
 - J2–J7: issues #3–#8 ainda dependem de J1, sem código de estratégia em produção.
 
 ### Limites e bloqueio verdadeiro
@@ -23,8 +24,8 @@ Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como
 - Nenhum gasto extra, credencial, ordem de trade ou release de produção.
 
 ### Próxima ação concreta
-1. Conferir HEAD real da main, issues/PRs, AGENTS.md e docs antes de qualquer alteração; não duplicar #19.
-2. Validar e integrar a PR documental/operacional da branch `chore/j1-explicit-live-smoke` (issue #19), com workflow GET público restrito a comentário exato do proprietário, CI offline e revisão no SHA. Somente após o workflow estar no `main`, acionar explicitamente um único smoke pelo comentário `/run-readonly-smoke-v1` na issue #19. Registrar link do run, status/timestamps/cobertura e erro real ou sucesso. O GitHub Actions padrão para repositório público não exige custo adicional. Sem secrets/trades.
-3. Se não houver executor com rede, registrar gate live pendente e concluir qualquer outra validação offline útil. Não inferir sucesso real de testes de fixture.
-4. Após evidências, revisar/ corrigir, integrar mudanças sem produção somente com CI/gates/SHA conferidos; atualizar STATUS e OPERATIONAL_STATE. Manter J1 aberta até aceite efetivo.
+1. Conferir HEAD/PRs/issues antes de agir, inclusive #19 (bloqueada por 451 no GitHub runner) e #23 (fonte independente em avaliação). Não recriar trabalhos.
+2. Concluir teste offline, revisão, CI e integração segura da work unit #23. Somente depois do merge, acionar uma única sondagem GET de `futures.kraken.com` via comentário exato do proprietário na issue #23; registrar status e run. O workflow não é parte da CI de push/PR.
+3. Se a fonte responder com sucesso, validar quantidade/tipo de contratos e metadados e planejar adaptador desacoplado como issue nova. Se responder 403/418/451, falhar sem retry/contorno e pesquisar outros provedores independentes permitidos.
+4. Atualizar STATUS e OPERATIONAL_STATE com evidências, e manter J1 aberta até aceite efetivo de dados live/históricos.
 5. Ao pedir "gere prompt para novo chat", produzir prompt completo de continuidade com repositório, regras, decisões, jornadas, evidências, issues/PRs/SHAs, testes, bloqueios e próxima ação autorizada.
