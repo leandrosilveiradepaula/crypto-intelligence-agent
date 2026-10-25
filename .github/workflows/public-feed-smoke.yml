@@ -1,6 +1,6 @@
 name: J1 public-feed smoke (explicit owner command)
 # Intentionally not triggered by push, pull_request, cron, or deployment.
-# Only the repo owner's exact comment on issue #19 can run this one-shot GET.
+# Owner-only exact issue comments trigger each bounded diagnostic job.
 on:
   issue_comment:
     types: [created]
@@ -163,3 +163,25 @@ jobs:
           set -eu
           python3 -m scripts.probe_hyperliquid_native_info \
             --allow-public-network --allow-hyperliquid-info-probe
+
+  okx-private-btc-conformance:
+    if: >-
+      github.event.issue.number == 107 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-okx-private-btc-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted branch without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: One-shot keyless OKX personal BTC conformance (two GETs maximum)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 scripts/probe_okx_personal_candles.py \
+            --allow-public-network --allow-okx-personal-probe
