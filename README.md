@@ -98,3 +98,7 @@ A [issue #46](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 ## Direitos e licenças dos dados públicos Kraken (WU17)
 O [guia oficial da Kraken](https://docs-legacy.kraken.com/api/docs/guides/global-intro/#notices) informa que usos comerciais não pessoais de dados dos endpoints públicos podem exigir autorização prévia. A [issue #48](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/48) e [docs/PROVIDER_RIGHTS.md](docs/PROVIDER_RIGHTS.md) separam pesquisa/código público de redistribuição de dados e publicação comercial. O cliente Kraken continua rede-off por padrão; **nenhum direito comercial ou lançamento público foi aprovado**. Nenhuma despesa, autorização de trading ou mudança de finalidade foi inferida.
+
+
+## Pesquisa de alternativa com unidades OHLCV documentadas (WU18)
+A [issue #50](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/50) avalia **somente em testes offline** o schema de candles lineares Bybit V5. Sua [documentação oficial](https://bybit-exchange.github.io/docs/v5/market/kline) distingue volume em moeda-base e turnover em USDT/USDC, ao contrário da ambiguidade Kraken. Este estudo NÃO conecta Bybit, não aprova licença comercial nem troca a fonte de dados atual; `docs/PROVIDER_RIGHTS.md` registra a restrição dos termos da API. Nenhum backtest financeiro, dados live, ordem ou serviço pago é habilitado.
