@@ -14,6 +14,7 @@ from .market_data import (
     UniverseSnapshot, interval_duration_ms, interval_open_aligned,
 )
 from .storage import CollectionEvent, MarketDataStore
+from .offline_fixtures import OfflineFixtureTransport
 
 
 CONTRACTS_ENDPOINT = "GET /fapi/v1/exchangeInfo"
@@ -102,8 +103,13 @@ class ReadOnlyCollectionPipeline:
     ):
         if mode not in {"offline", "live"}:
             raise ValueError("collection mode must be offline or live")
-        if not source_name or not selection_rule_version:
-            raise ValueError("source name and selection version are required")
+        is_fixture = isinstance(adapter.transport, OfflineFixtureTransport)
+        if mode == "offline" and (not is_fixture or source_name != "synthetic_fixture"):
+            raise ValueError("offline pipeline requires the offline-only synthetic fixture transport")
+        if mode == "live" and (is_fixture or source_name != "binance_usdm_public"):
+            raise ValueError("live pipeline cannot use fixture transport or mislabel its public source")
+        if not selection_rule_version:
+            raise ValueError("selection version is required")
         self._adapter = adapter
         self._store = store
         self._clock_ms = clock_ms
