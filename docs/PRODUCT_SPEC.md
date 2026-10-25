@@ -21,3 +21,7 @@ Sem execução automática de ordens reais, sem dependência de serviços pagos 
 
 ## Direitos de dados de mercado antes de lançar ou distribuir
 A interface inicialmente serve pesquisa/alertas/execução manual; o modo final de disponibilização (uso pessoal interno, painel privado para titular, acesso de terceiros ou serviço comercial) exige decisão do Product Owner quando for relevante para publicação. Acesso GET público/HTTP200 **não significa** autorização para redistribuir ou monetizar market data. O guia oficial Kraken informa que usos comerciais não pessoais de endpoints públicos requerem permissão prévia: https://docs-legacy.kraken.com/api/docs/guides/global-intro/#notices . Por padrão, **não lançar** produto público/comercial com dados Kraken nem exportar feeds/fixtures reais sem evidência de direitos aplicáveis e gate de release. Continuar desenvolvimento offline, com dados sintéticos, custo extra R$0 e sem ordens reais. Critérios: `docs/PROVIDER_RIGHTS.md`.
+
+
+## Fronteira do protótipo matemático de saídas (J4/PRE1)
+Existe um cálculo determinístico e sintético de fatias sobre quantidade inicial/saldo remanescente e piso residual. Isso não constitui conta, posição financeira, capacidade de ordem, trailing, execução nem corretagem homologada: as quantidades são abstratas e podem ser menores que o mínimo da exchange real. A regra geral de margem, alavancagem gravada na abertura e saídas **manuais** não foi alterada, nem o objetivo de capturar tendências. Nenhuma promessa de resultado ou J4 operacional aceita por essa entrega.
