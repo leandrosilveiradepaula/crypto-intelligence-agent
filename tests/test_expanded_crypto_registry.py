@@ -19,7 +19,7 @@ from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.research_registry_catalog import (
     REGISTRY_VARIANTS, load_reviewed_registry,
 )
-from scripts.probe_kraken_btc_eth_universe import inspect_once
+from scripts.probe_kraken_btc_eth_universe import UniverseProbeError, inspect_once
 
 ROOT = Path(__file__).resolve().parent.parent / "registries"
 V1 = ROOT / "crypto-btc-eth-20261025-v1.json"
@@ -179,7 +179,7 @@ class ExpandedRegistryTests(unittest.TestCase):
     def test_ask_v2_before_it_existed_never_calls_exchange(self):
         old_time = T - 1000
         reader = FakeReader(current_sample(at=T + HOUR))
-        with self.assertRaises(DataValidationError):
+        with self.assertRaises(UniverseProbeError):
             inspect_once(
                 allow_public_network=True, allow_private_kraken_universe=True,
                 registry_variant="expanded-10",
