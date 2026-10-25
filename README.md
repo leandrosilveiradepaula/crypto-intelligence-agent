@@ -2,25 +2,27 @@
 
 Plataforma de inteligência quantitativa para futuros perpétuos de criptomoedas: pesquisa de entradas, backtesting realista e gerenciamento de realizações parciais de posições vencedoras.
 
-**Estado:** J0 documental concluída e J1 em desenvolvimento. A WU1 de dados foi integrada; a WU2 de persistência/backfill está em revisão. Ainda não há motor de sinais, estratégia de trading validada ou ordens reais.
+**Estado:** J0 documental concluída; J1 em desenvolvimento. WU1 e WU2 integradas. A aplicação ainda não possui motor de sinais, estratégia financeira validada ou ordens reais.
 
 ## Documentação
-- [Regras para agentes](AGENTS.md)
-- [Produto](docs/PRODUCT_SPEC.md) e [decisões aprovadas](docs/DECISIONS.md)
+- [Regras de agentes](AGENTS.md)
+- [Produto](docs/PRODUCT_SPEC.md) e [decisões](docs/DECISIONS.md)
 - [Arquitetura](docs/ARCHITECTURE.md), [contrato de dados](docs/DATA_CONTRACT.md) e [estratégias](docs/STRATEGY_SPEC.md)
-- [Validação](docs/VALIDATION_PLAN.md) e [jornadas](docs/JOURNEYS.md)
+- [Plano de validação](docs/VALIDATION_PLAN.md) e [jornadas](docs/JOURNEYS.md)
 - [Status](docs/STATUS.md) e [estado operacional](docs/OPERATIONAL_STATE.md)
 
-## Desenvolvimento
-ChatGPT coordena GitHub, revisão, integração e continuidade; Codex executa work units. A J1/WU1 (#9) foi integrada pela [PR #12](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/12); a WU2 está na [issue #13](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/13) e adiciona SQLite local, replay e backfill offline. Isso não comprova cobertura histórica de produção nem conclui a J1.
+## Engenharia e testes
+ChatGPT coordena GitHub, testes, revisão, integração e continuidade; Codex executa work units de engenharia. J1/WU1: [PR #12](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/12). J1/WU2: [PR #14](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/14). Próxima: [issue #15](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/15), J1/WU3.
 
-## Testes locais, offline
+Comandos offline:
 ```bash
 python -m unittest discover -s tests -v
 python scripts/check_docs.py
 python -m compileall -q crypto_intelligence_agent tests
 ```
 
-O GitHub Actions executa esses checks. Todos os testes usam fixtures, sem chamadas externas nem credenciais. Endpoints de 24h volume/contratos são atuais e NÃO autorizam reconstrução retroativa de universo histórico.
+CI pós-WU2: 42 testes Python offline, compilação e documentação aprovados. Este projeto ainda não foi homologado com dados reais nem implantado.
 
-Custo operacional adicional autorizado: R$0. Repositório público: nunca publicar segredos, credenciais ou informações privadas de VPS.
+Os dados de volume móvel 24h e contratos atuais não constituem histórico de universo ponto-no-tempo. SQLite local é referência, não decisão de banco de produção.
+
+**Custo operacional adicional autorizado:** R$0. Repositório público: não versionar segredos, credenciais ou bancos capturados.

@@ -1,18 +1,16 @@
 # Status — Crypto Intelligence Agent
 
-## J0 — Fundação documental
-- Issue #1 encerrada. PRs #10 e #11 integradas, com CI documental aprovada.
-- Decisões, arquitetura candidata, regras de autonomia, jornadas, critérios de aceite e contrato de dados versionados.
+## J0 — Fundação documental concluída
+- Issue #1 encerrada; PRs #10 e #11 integradas. Regras de autonomia, arquitetura, produto, validação, jornadas e contratos versionados.
 
 ## J1 — Dados, EM ANDAMENTO
-- WU1 (#9) concluída pela PR #12 e integrada no commit `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
-- CI antes do merge: SUCCESS, run 40159360299 no SHA `d477388d26a9859544f1e7c24206855b23c95b04`: 17 testes offline, compileall e 10 documentos.
-- CI pós-merge: SUCCESS, run 40159403768 no SHA integrado.
-- Entregue: adaptador de futuros público somente leitura, contratos tipados, validação temporal, OHLC, volume e fixtures.
-- WU2 (#13) em revisão na PR #14: SQLite local desacoplado, backfill paginado, continuidade verificada dos checkpoints, rollback atômico, replay e relatório de qualidade offline. Integração e CI final dependem de conferência do SHA atual.
-- Ainda NÃO entregue: operação contínua, fonte histórica ponto-no-tempo independente, sinais, pesquisa financeira ou implantação. A J1 não está concluída.
+- WU1, issue #9: PR #12 integrada, commit `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`. Adaptador público read-only, contratos de dados, validação temporal e fixtures. CI pós-merge aprovada.
+- WU2, issue #13: PR #14 integrada, commit `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`. Backfill paginado, SQLite local transacional, checkpoints contínuos verificáveis, imutabilidade de contratos, replays, snapshots, qualidade, testes de falha e documentação.
+- CI da PR #14: run 40168249829 SUCCESS, HEAD `9ac750ff3f92d56189ce55a670391292d3716ec2`, com 42 testes offline, compileall e 10 documentos.
+- CI pós-merge PR #14: run 40168285079 SUCCESS no commit `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`; 42 testes offline.
+- Próxima work unit preparada: issue #15, J1/WU3 — orquestração read-only, capturas auditáveis de universo, fluxo offline ponta a ponta e avaliação de qualidade. **Codex ainda não disparado para #15.**
+- J1 ainda NÃO validada em operação contínua. Cobertura histórica externa/ponto-no-tempo, retenção, monitoramento, riscos de exchange e desempenho de sistema continuam pendentes.
 
-## Restrições
-Custo adicional R$0. Repositório público por decisão do Product Owner. Sem negociação real, credenciais de ordens, APIs pagas ou deploy nesta fase.
-
-Fonte operacional mais específica: docs/OPERATIONAL_STATE.md. Conferir GitHub vivo antes de qualquer ação.
+## Restrições permanentes
+Custo adicional autorizado: R$0. GitHub público; sem segredos ou bancos de dados capturados no repositório. Nenhum deploy, ordem real, backtest validado ou alegação de lucro.
+Fonte operacional: docs/OPERATIONAL_STATE.md. Verificar GitHub vivo antes de agir.
