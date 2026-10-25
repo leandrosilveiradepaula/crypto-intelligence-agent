@@ -17,6 +17,7 @@ from .storage import CollectionEvent, MarketDataStore
 from .offline_fixtures import OfflineFixtureTransport
 
 
+CLOCK_ENDPOINT = "GET /fapi/v1/time"
 CONTRACTS_ENDPOINT = "GET /fapi/v1/exchangeInfo"
 UNIVERSE_ENDPOINT = "GET /fapi/v1/exchangeInfo + GET /fapi/v1/ticker/24hr"
 CANDLES_ENDPOINT = "GET /fapi/v1/klines"
@@ -39,6 +40,9 @@ class CollectionSummary:
     source: str
     exchange: str
     selection_rule_version: str
+    server_time_ms: int
+    clock_offset_ms: int
+    clock_round_trip_ms: int
     contracts_observed_at_ms: int
     universe_observed_at_ms: int
     selected_symbols: tuple[str, ...]
@@ -100,6 +104,7 @@ class ReadOnlyCollectionPipeline:
         mode: str,
         source_name: str,
         selection_rule_version: str = "j1-wu3-v1",
+        max_clock_skew_ms: int = 5_000,
     ):
         if mode not in {"offline", "live"}:
             raise ValueError("collection mode must be offline or live")
@@ -110,6 +115,9 @@ class ReadOnlyCollectionPipeline:
             raise ValueError("live pipeline cannot use fixture transport or mislabel its public source")
         if not selection_rule_version:
             raise ValueError("selection version is required")
+        if type(max_clock_skew_ms) is not int or max_clock_skew_ms < 0:
+            raise ValueError("max_clock_skew_ms must be a nonnegative integer")
+        self._max_clock_skew_ms = max_clock_skew_ms
         self._adapter = adapter
         self._store = store
         self._clock_ms = clock_ms
@@ -156,6 +164,31 @@ class ReadOnlyCollectionPipeline:
             raise DataValidationError("historical window extends beyond the observation clock")
         if len(set(required_symbols)) != len(required_symbols):
             raise ValueError("required_symbols must not contain duplicates")
+
+        # Exchange time is an unauthenticated public GET, not an order.
+        # Comparing the local before/after observations bounds uncertainty from
+        # response latency. Reject ambiguous samples to avoid misclassifying an
+        # in-progress market candle as already closed.
+        clock_start = self._clock()
+        try:
+            server_time_ms = self._adapter.server_time_ms()
+            clock_end = self._clock()
+            if clock_end < clock_start:
+                raise DataValidationError("local clock moved backwards during server-time check")
+            round_trip_ms = clock_end - clock_start
+            offset_ms = server_time_ms - (clock_start + clock_end) // 2
+            if abs(offset_ms) + (round_trip_ms + 1) // 2 > self._max_clock_skew_ms:
+                raise DataValidationError("exchange clock skew or round-trip uncertainty exceeds configured limit")
+            self._record(
+                endpoint=CLOCK_ENDPOINT, status="success", start_ms=clock_start,
+                detail=f"offset_ms={offset_ms};round_trip_ms={round_trip_ms}",
+            )
+        except Exception as exc:
+            self._record(
+                endpoint=CLOCK_ENDPOINT, status="failure", start_ms=clock_start,
+                detail=type(exc).__name__,
+            )
+            raise
 
         contracts_start = self._clock()
         try:
@@ -261,11 +294,14 @@ class ReadOnlyCollectionPipeline:
         return CollectionSummary(
             mode=self._mode, source=self._source_name, exchange="binance",
             selection_rule_version=self._version,
+            server_time_ms=server_time_ms,
+            clock_offset_ms=offset_ms,
+            clock_round_trip_ms=round_trip_ms,
             contracts_observed_at_ms=contracts_end,
             universe_observed_at_ms=universe_end,
             selected_symbols=tuple(selected), excluded=dict(normalized.excluded),
             window_start_ms=start_open_ms, window_end_ms=end_open_ms,
             interval=interval, results=tuple(results),
-            endpoints=(CONTRACTS_ENDPOINT, UNIVERSE_ENDPOINT, CANDLES_ENDPOINT),
+            endpoints=(CLOCK_ENDPOINT, CONTRACTS_ENDPOINT, UNIVERSE_ENDPOINT, CANDLES_ENDPOINT),
             synthetic=self._mode == "offline",
         )
