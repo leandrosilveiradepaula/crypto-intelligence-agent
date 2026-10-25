@@ -197,9 +197,17 @@ class ReadOnlyCollectionPipeline:
         eligible = {member.symbol for member in normalized.eligible}
         required = tuple(required_symbols)
         if required and (any(symbol not in eligible for symbol in required) or len(required) > max_symbols):
+            self._record(
+                endpoint=UNIVERSE_ENDPOINT, status="failure",
+                detail="required_symbol_not_in_ranked_universe", start_ms=universe_start,
+            )
             raise DataValidationError("required symbol is absent from the currently eligible ranked universe")
         selected = required if required else tuple(m.symbol for m in normalized.eligible)
         if not selected:
+            self._record(
+                endpoint=UNIVERSE_ENDPOINT, status="failure",
+                detail="empty_eligible_universe", start_ms=universe_start,
+            )
             raise DataValidationError("eligible universe is empty; no historical data collected")
 
         reader = _ProvenanceCandleReader(self._adapter, synthetic=self._mode == "offline")
