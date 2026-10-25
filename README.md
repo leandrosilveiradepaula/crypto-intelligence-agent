@@ -39,3 +39,8 @@ A validação **live** não é executada em CI automática. O workflow `.github/
 ## Smoke real de GET público — restrição observada
 
 O [run 40197499250](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40197499250) foi acionado explicitamente na issue #19 em 25/10/2026 e recebeu HTTP **451** na primeira consulta ao serviço público USD-M da Binance. **Zero candles reais coletados.** Não repetir nem contornar a restrição. A causa geográfica/legal específica não foi comprovada, e a J1 continua aguardando uma fonte pública independente e verificável. Testes offline verdes não mudam esse status.
+
+## Pesquisa de fonte independente
+
+A [issue #23](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/23) investiga a API pública de instrumentos da Kraken Futures, que é **outro fornecedor**, não um proxy para a Binance. O teste de viabilidade usa uma única requisição GET e retorna apenas um resumo sanitizado:
+`python3 scripts/probe_public_kraken.py --allow-public-network`. Sem essa flag, o script não acessa a rede. Resultado positivo de conectividade ainda não prova elegibilidade dos contratos, qualidade ou continuidade de histórico.
