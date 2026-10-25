@@ -263,7 +263,7 @@ class KrakenPublicReadOnlyTests(unittest.TestCase):
                 symbol="PF_XBTUSD", interval="1h",
                 start_open_ms=START + 1, end_open_ms=END,
             )
-        self.assertEqual(len(opener.calls), [])
+        self.assertEqual(len(opener.calls), 0)
 
     def test_policy_http_451_is_single_terminal_error(self):
         opener = FakeOpener(HTTPError("https://futures.kraken.com", 451,
