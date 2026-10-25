@@ -387,6 +387,15 @@ def interval_duration_ms(interval: str) -> int:
     return _interval_ms(interval)
 
 
+def interval_open_aligned(interval: str, open_time_ms: int) -> bool:
+    """Check UTC grid alignment, accounting for Monday-open weekly candles."""
+    duration = _interval_ms(interval)
+    if type(open_time_ms) is not int or open_time_ms < 0:
+        return False
+    anchor = 4 * 86_400_000 if interval == "1w" else 0
+    return (open_time_ms - anchor) % duration == 0
+
+
 def _string(raw: Mapping[str, Any], field: str) -> str:
     value = raw.get(field)
     if not isinstance(value, str) or not value:
