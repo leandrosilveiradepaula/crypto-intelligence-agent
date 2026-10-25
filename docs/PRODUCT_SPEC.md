@@ -1,0 +1,19 @@
+# Especificação do produto
+
+## Objetivo
+Plataforma de inteligência quantitativa que pesquisa entradas de alto potencial em futuros perpétuos e auxilia a captura progressiva de lucros em operações vencedoras. Nenhuma promessa de rentabilidade.
+
+## Contratos principais
+- Universo dinâmico de contratos elegíveis; usar volume comparável, filtros de liquidez e histórico de elegibilidade para evitar viés de sobrevivência.
+- Alavancagem global padrão 50x; valor gravado ao abrir cada posição. Alterar a configuração só modifica novas posições.
+- Margem por posição configurável; número de posições variável conforme oportunidades e capital, não uma meta de 20/50/100.
+- Motor de sinais com múltiplas estratégias, regimes do BTC, força relativa, tendência, compressão, rompimento, correções, volume, volatilidade, liquidez e derivativos.
+- Planejador de saídas parciais: porcentagens da posição inicial OU do saldo restante, definidas explicitamente; permitir runner residual.
+- Acompanhar exposição, correlação, custos, funding, margem, liquidação, posição, operações manuais e resultados.
+- Execução manual das entradas e saídas pelo usuário nesta fase; o agente emite alertas e planos, mas não envia ordens reais.
+- Pesquisa reproduzível: candles fechados, trajetória intrabar, taxas, slippage, funding, manutenção e liquidação, walk-forward, benchmark e fora da amostra.
+- ML somente se melhorar desempenho validado. LLM e LangGraph opcionais para contexto e explicação, nunca fonte primária de compra.
+- Interface em PT-BR, simples no celular: oportunidades, posições/saídas, resultados e alertas.
+
+## Não objetivos iniciais
+Sem execução automática de ordens reais, sem dependência de serviços pagos ou credenciais de negociação. Retorno líquido ajustado ao risco da carteira é mais importante que taxa de acerto ou percentual isolado sobre a margem. 50x é parâmetro de pesquisa, não garantia de segurança.
