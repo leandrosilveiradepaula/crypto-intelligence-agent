@@ -204,6 +204,50 @@ def load_registry_json(raw_json: str | bytes) -> CryptoRegistrySnapshot:
     return CryptoRegistrySnapshot.from_manifest(payload)
 
 
+def _revalidate_snapshot_for_history(snapshot: CryptoRegistrySnapshot) -> None:
+    """Reject direct dataclass instances that bypassed manifest validation.
+
+    Rebuild the *same* v1 manifest from immutable records and run the single
+    existing from_manifest validator. Equality also detects falsified derived
+    publisher_root fields that were not stored in the hashed JSON. This is
+    integrity checking ONLY, not independent source authentication.
+    """
+    if (type(snapshot) is not CryptoRegistrySnapshot
+            or type(snapshot.assets) is not tuple
+            or not 1 <= len(snapshot.assets) <= MAX_ASSETS):
+        raise DataValidationError("history requires a validated immutable crypto registry snapshot")
+    records: list[dict[str, Any]] = []
+    for asset in snapshot.assets:
+        if (type(asset) is not VerifiedAsset or type(asset.evidence) is not tuple
+                or not 2 <= len(asset.evidence) <= 6
+                or any(type(item) is not IdentityEvidence for item in asset.evidence)):
+            raise DataValidationError("registry snapshot contains unvalidated identity record")
+        records.append({
+            "base": asset.base, "canonical_id": asset.canonical_id,
+            "reviewed_by": asset.reviewed_by,
+            "reviewed_at_ms": asset.reviewed_at_ms,
+            "evidence": [
+                {
+                    "publisher": item.publisher, "asset_ref": item.asset_ref,
+                    "url": item.url, "observed_at_ms": item.observed_at_ms,
+                }
+                for item in asset.evidence
+            ],
+        })
+    # No extra 'verified' flag can substitute a content hash. Use exactly the
+    # versioned schema already accepted by load_registry_json / from_manifest.
+    canonical = CryptoRegistrySnapshot.from_manifest({
+        "schema_version": 1,
+        "observed_at_ms": snapshot.observed_at_ms,
+        "label": snapshot.label,
+        "usage_policy": SOURCE_POLICY,
+        "assets": records,
+        "sha256": snapshot.sha256_digest,
+    })
+    if canonical != snapshot:
+        raise DataValidationError("registry snapshot differs from canonical validated evidence")
+
+
 class CryptoRegistryHistory:
     """Append-only observed snapshots. No retrospective identity injection."""
 
@@ -213,8 +257,9 @@ class CryptoRegistryHistory:
             self.append(snapshot)
 
     def append(self, snapshot: CryptoRegistrySnapshot) -> None:
-        if not isinstance(snapshot, CryptoRegistrySnapshot):
-            raise DataValidationError("invalid crypto registry snapshot")
+        # A public dataclass constructor must not bypass mandatory manifest
+        # SHA/evidence checks before a snapshot becomes historical truth.
+        _revalidate_snapshot_for_history(snapshot)
         if self._snapshots:
             previous = self._snapshots[-1]
             if snapshot.observed_at_ms < previous.observed_at_ms:
