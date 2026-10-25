@@ -26,3 +26,17 @@ CI pós-WU2: 42 testes Python offline, compilação e documentação aprovados. 
 Os dados de volume móvel 24h e contratos atuais não constituem histórico de universo ponto-no-tempo. SQLite local é referência, não decisão de banco de produção.
 
 **Custo operacional adicional autorizado:** R$0. Repositório público: não versionar segredos, credenciais ou bancos capturados.
+
+## Demonstração operacional J1/WU3 (sem acesso à rede)
+
+Por padrão, a CLI roda **apenas fixtures sintéticas**. Não utiliza APIs, credenciais, ordens ou serviços pagos.
+
+```bash
+python -m crypto_intelligence_agent
+python -m crypto_intelligence_agent --max-symbols 2 --interval 1h --candles 3
+python -m crypto_intelligence_agent --database /tmp/crypto-market-demo.sqlite3 --symbols BTCUSDT
+```
+
+A saída é um JSON com origens de endpoints, hora de captura, símbolos, cobertura e auditoria. Um banco não informado é temporário e removido ao fim do comando; bancos locais são ignorados pelo Git. O modo offline representa **dados sintéticos**, sem validade para pesquisas de rentabilidade.
+
+O modo de rede requer duas opções deliberadas: `--mode live --allow-public-network`, usa apenas GETs públicos da Binance USD-M e nunca é disparado em CI. Consulte `docs/DATA_CONTRACT.md` para limitações e não use isso como autorização de implantação ou negociação.
