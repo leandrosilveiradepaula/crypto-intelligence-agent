@@ -26,7 +26,7 @@ MAX_INSTRUMENTS = 1_000
 _INTERVALS = frozenset({
     "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d",
 })
-_SYMBOL = re.compile(r"[A-Z0-9]{2,20}")
+_SYMBOL = re.compile(r"(?:[A-Z0-9]{2,20}|k[A-Z0-9]{2,20})")
 _UNSIGNED = re.compile(r"(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?")
 _SIGNED = re.compile(r"-?(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?")
 
