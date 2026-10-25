@@ -121,8 +121,13 @@ def capture_private_research(
     started_at = _now(clock)
     if registry_bytes is not None and registry_variant != "btc-eth":
         raise LocalResearchError("injected_registry_revision_not_allowed")
-    registry = (load_reviewed_registry(registry_variant, as_of_ms=started_at)
-                if registry_bytes is None else load_registry_json(registry_bytes))
+    try:
+        registry = (load_reviewed_registry(registry_variant, as_of_ms=started_at)
+                    if registry_bytes is None else load_registry_json(registry_bytes))
+    except DataValidationError as error:
+        if "too old" in str(error):
+            raise LocalResearchError("crypto_registry_stale_no_auto_renewal") from None
+        raise LocalResearchError("crypto_registry_not_available_at_observation") from None
     if registry.observed_at_ms > started_at:
         raise LocalResearchError("crypto_registry_not_yet_observed")
     if started_at - registry.observed_at_ms > _MAX_REGISTRY_AGE_MS:
