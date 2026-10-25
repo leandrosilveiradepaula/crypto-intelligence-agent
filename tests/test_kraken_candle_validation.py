@@ -127,7 +127,6 @@ class KrakenCandleStagingTests(unittest.TestCase):
 
     def test_schema_incomplete_or_wrong_types_rejected(self):
         cases = (
-            None,
             {},
             {"candles": []},
             {"candles": [], "more_candles": "false"},
@@ -138,6 +137,12 @@ class KrakenCandleStagingTests(unittest.TestCase):
             with self.subTest(body=repr(body)[:80]):
                 with self.assertRaises((DataValidationError, DataGapError)):
                     parse(body)
+        with self.assertRaises(DataValidationError):
+            stage_kraken_trade_candles(
+                None, symbol="PF_XBTUSD", interval="1h",
+                start_open_ms=START, end_open_ms=END,
+                observed_at_ms=NOW,
+            )
         for field in ("open", "high", "low", "close", "volume", "time"):
             with self.subTest(field=field):
                 body = fixture_payload()
