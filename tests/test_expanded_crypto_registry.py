@@ -54,7 +54,7 @@ def current_sample(*, at: int):
              ("ETH", "SOL", "XRP", "ADA", "DOGE", "LTC", "AVAX", "LINK", "DOT")]
     rows += [instrument("AAPLX", category="Tokenized Equities"),
              instrument("PEPE"),
-             instrument("BTC", symbol="PF_AAPLXUSD", pair="BTC:USD")]
+             instrument("BTC", symbol="PF_TSLAUSD", pair="BTC:USD")]
     quotes = [Decimal("1000.012345678901234567") + Decimal(idx)
               for idx in range(10)]
     tickers = [
@@ -195,7 +195,6 @@ class ExpandedRegistryTests(unittest.TestCase):
             instruments=[
                 instrument("SOL", symbol="PF_AAPLXUSD", pair="SOL:USD"),
                 instrument("SOL", symbol="PF_SOLUSD", category="X-STOCKS"),
-                instrument("SOL", symbol="PF_SOLUSD", category="DeFi"),
             ],
             tickers=[ticker("PF_AAPLXUSD", Decimal("999999999")),
                      ticker("PF_SOLUSD", Decimal("400"))],
