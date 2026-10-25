@@ -134,7 +134,11 @@ def replay_synthetic_manual_exits(
         for event in events:
             old = seen.get(event.event_id)
             if old is not None:
-                if old != event:
+                # Decimal numeric equality (10.0 == 10) does not certify that
+                # a replayed payload is byte-for-byte/canonically identical.
+                if (old.event_at_ms != event.event_at_ms
+                        or old.tranche_step != event.tranche_step
+                        or old.filled_units.as_tuple() != event.filled_units.as_tuple()):
                     raise DataValidationError("synthetic event id has conflicting payload")
                 duplicate_count += 1
                 continue
