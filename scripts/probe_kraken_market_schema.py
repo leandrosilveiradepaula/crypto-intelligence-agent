@@ -150,7 +150,10 @@ def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object
     if candles_payload is None:
         return {**summary, "status": "partial", "routes": outcomes, "requests_attempted": len(outcomes)}
     candles = candles_payload.get("candles")
-    if not isinstance(candles, list):
+    required_candle_keys = {"time", "open", "high", "low", "close", "volume"}
+    if (not isinstance(candles, list)
+            or any(not isinstance(row, dict)
+                   or not required_candle_keys.issubset(row) for row in candles)):
         return {**summary, "status": "invalid_candles", "routes": outcomes, "requests_attempted": len(outcomes)}
     summary["candles"] = {
         "count": len(candles),
@@ -161,7 +164,14 @@ def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object
         "last_time_ms": candles[-1].get("time") if candles and isinstance(candles[-1], dict)
         and isinstance(candles[-1].get("time"), int) else None,
     }
-    summary["status"] = "ok" if len(candles) > 0 else "empty_candles"
+    if not candles:
+        summary["status"] = "empty_candles"
+    elif match is None:
+        summary["status"] = "missing_btc_ticker"
+    elif not isinstance(candles_payload.get("more_candles"), bool):
+        summary["status"] = "invalid_candles"
+    else:
+        summary["status"] = "ok"
     summary["routes"] = outcomes
     summary["requests_attempted"] = len(outcomes)
     summary["conformance_note"] = (
