@@ -30,3 +30,7 @@ Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como
 3. Antes de implementar novo adaptador, avaliar tipos de instrumentos, ativos tokenizados excluídos, volume cotado comparável e trajetória de fechamento dos candles, sem supor a lista Top50. Criar issue separada para adaptação somente após schema observado.
 4. Se resposta 403/418/451 ou erro não recuperável, não tentar contorno; registrar evidências e avançar nas tarefas offline independentes. Atualizar STATUS/OPERATIONAL_STATE e manter J1 aberta.
 5. Ao pedir "gere prompt para novo chat", produzir prompt completo de continuidade com repositório, regras, decisões, jornadas, evidências, issues/PRs/SHAs, testes, bloqueios e próxima ação autorizada.
+
+### Erro de empacotamento no primeiro smoke WU7
+- Run [40198556326](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40198556326) FALHOU antes de acesso externo: `ModuleNotFoundError: No module named 'scripts'` ao executar script por caminho. **Zero requisições Kraken e nenhuma evidência nova de mercado.**
+- Correção na branch `fix/j1-kraken-probe-module-entry`: executar `python3 -m scripts.probe_kraken_market_schema` a partir da raiz do repositório, com imports relativos à raiz disponíveis. Precisa PR/CI/merge antes de um único novo disparo owner-only. Não confundir falha de invocação com bloqueio de exchange.
