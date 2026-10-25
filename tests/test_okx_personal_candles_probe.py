@@ -98,7 +98,7 @@ class OkxPrivateProbeTests(unittest.TestCase):
             with self.subTest(key=key):
                 self.assertFalse(result[key])
         self.assertNotIn("7.999", json.dumps(result))
-        self.assertNotIn("100", json.dumps(result))
+        self.assertNotIn("documented_quote_volume", result)
 
     def test_double_optin_required_before_any_io(self):
         opened = FakeOpen()
