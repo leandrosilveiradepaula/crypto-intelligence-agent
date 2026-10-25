@@ -111,6 +111,26 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", s)
 
 
+    def test_public_kraken_volume_diagnostic_requires_owner_issue_and_two_flags(self):
+        s = self.source
+        for token in (
+            "kraken-volume-diagnostic:",
+            "github.event.issue.number == 36",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-volume-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "timeout-minutes: 2",
+            "python3 -m scripts.probe_kraken_volume_units",
+            "--allow-public-network --allow-volume-diagnostic",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+        self.assertNotRegex(s, r"(?m)^\s{2}(?:push|pull_request|schedule|workflow_dispatch|repository_dispatch):")
+
+
 
 if __name__ == "__main__":
     unittest.main()
