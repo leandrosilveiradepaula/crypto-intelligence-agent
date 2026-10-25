@@ -4,6 +4,8 @@ from __future__ import annotations
 from contextlib import redirect_stderr
 import io
 import json
+import subprocess
+import sys
 from urllib.error import HTTPError, URLError
 import unittest
 from unittest.mock import patch
@@ -63,6 +65,19 @@ CANDLES = {"candles": [
 
 
 class KrakenSchemaProbeTests(unittest.TestCase):
+    def test_module_entrypoint_runs_from_repo_root_and_refuses_network_by_default(self):
+        # This catches an entrypoint/import-path failure not visible when
+        # tests import the module directly.
+        from pathlib import Path
+        root = Path(__file__).resolve().parent.parent
+        result = subprocess.run(
+            [sys.executable, "-m", "scripts.probe_kraken_market_schema"],
+            cwd=root, capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("both explicit public-network", result.stderr)
+        self.assertNotIn("ModuleNotFoundError", result.stderr)
+
     def test_two_flags_required_without_any_network(self):
         for flags in ([], ["--allow-public-network"], ["--allow-kraken-schema-probe"]):
             with self.subTest(flags=flags):
