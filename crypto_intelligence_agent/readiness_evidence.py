@@ -63,7 +63,7 @@ def _public_source_url(value: Any) -> str:
             or len(labels[-1]) < 2 or hostname.endswith((".local", ".internal", ".localhost"))
             or parsed.username is not None or parsed.password is not None
             or port is not None or parsed.query or parsed.fragment
-            or "@" in parsed.netloc or "%" in parsed.netloc or "\" in value
+            or "@" in parsed.netloc or "%" in parsed.netloc or "\\" in value
             or any(c.isspace() for c in value)
             or hostname.replace(".", "").isdigit()):
         raise DataValidationError("source_url is not an uncredentialed public HTTPS reference")
