@@ -22,7 +22,7 @@ from urllib.request import (
 from crypto_intelligence_agent.hyperliquid_native_research import (
     _native_perp_context, stage_hyperliquid_native_perp_candles,
 )
-from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
 
 INFO_URL = "https://api.hyperliquid.xyz/info"
 HOUR_MS = 3_600_000
@@ -90,7 +90,23 @@ def _post_info(
 ) -> Any:
     # Never accept an arbitrary method, path, user, symbol or request body.
     kind = body.get("type")
-    if kind not in ("metaAndAssetCtxs", "candleSnapshot"):
+    if kind == "metaAndAssetCtxs":
+        permitted = body == {"type": "metaAndAssetCtxs", "dex": ""}
+    elif kind == "candleSnapshot":
+        req_obj = body.get("req")
+        permitted = (
+            set(body) == {"type", "req"}
+            and type(req_obj) is dict
+            and set(req_obj) == {"coin", "interval", "startTime", "endTime"}
+            and req_obj["coin"] == "BTC"
+            and req_obj["interval"] == "1h"
+            and type(req_obj["startTime"]) is int
+            and type(req_obj["endTime"]) is int
+            and 0 < req_obj["startTime"] <= req_obj["endTime"]
+        )
+    else:
+        permitted = False
+    if not permitted:
         raise InfoSmokeError("unapproved_info_request")
     data = json.dumps(body, separators=(",", ":"), sort_keys=True).encode("ascii")
     req = Request(INFO_URL, data=data, method="POST",
@@ -131,7 +147,7 @@ def inspect_once(
     if allow_public_network is not True or allow_hyperliquid_info is not True:
         raise InfoSmokeError("double_opt_in_required")
     now = int(time() * 1000) if clock_ms is None else clock_ms()
-    if type(now) is not int or now <= 5 * HOUR_MS:
+    if type(now) is not int or not 5 * HOUR_MS < now <= 253_402_300_799_999:
         raise InfoSmokeError("invalid_utc_clock")
     base = (now // HOUR_MS) * HOUR_MS
     # Exclude the most recently closed bar as an additional full-hour buffer.
@@ -181,7 +197,7 @@ def inspect_once(
         report["closed_candle_count"] = len(page.candles)
         report["observed_schema_conformance"] = "pass_metadata_and_three_closed_candles"
         report["status"] = "schema_observed_no_live_readiness"
-    except DataValidationError:
+    except (DataValidationError, DataGapError):
         report["status"] = "invalid_provider_schema"
     except InfoSmokeError as exc:
         report["status"] = exc.code
