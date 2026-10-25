@@ -176,3 +176,6 @@ O histórico `CryptoRegistryHistory.append` também revalida instâncias Python 
 
 
 J1/WU31: o seletor de pesquisa Kraken também exclui formas textuais comuns de `xStocks`, equities, forex, commodities, índices e pré-IPO, inclusive com separadores/espaços; isso apenas reforça o filtro negativo e não substitui a prova independente de crypto-only nem os direitos de dados.
+
+## J1/WU33 — Registro de identidade inicial de BTC/ETH (pesquisa interna)
+O manifesto `registries/crypto-btc-eth-20261025-v1.json` referencia duas páginas públicas independentes para cada base e limita a seleção `CryptoRegistryHistory.select_at` a BTC/ETH em coletas futuras. É o primeiro registro com referências reais em vez de fixtures de teste, revisão técnica assistida por IA e hash versionado, **não** prova de cobertura dos 50 ativos, licença, candles `ClosedCandle` ou aptidão para ordens. Não reproduz feeds de preço e não usa APIs pagas; detalhes em `docs/CRYPTO_REGISTRY.md` e D58.
