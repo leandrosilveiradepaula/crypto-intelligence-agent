@@ -20,7 +20,9 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU10 #32 parcialmente entregue:** PR #33 merged SHA `6be53f170edb81656d43d8ebf6e25c4ecdaaa9ed`, run CI pós-merge `40200232080` SUCCESS com **135 testes offline** e **11 docs**. Infraestrutura de registro/versionamento SHA256 e proteção point-in-time pronta, mas **issue #32 permanece aberta** porque falta validar fontes e licenças de ativos reais; não existe lista real aprovada.
 
-**WU11 #34 em implementação:** branch `feat/j1-kraken-candle-staging`, parser OHLC Kraken fechado UTC com volume bruto **não verificado**. PR/CI/merge ainda pendentes de confirmação. Não promover automaticamente os dados ao `ClosedCandle` nem usar volume artificial em backtest.
+**WU11 #34 concluída:** PR #35 merged SHA `a93f967cc4c5127e492f2878b62ccc9ce5f76428`, CI pós-merge run `40200619598` SUCCESS (**149 testes offline + 11 docs**). Parser estrito de OHLC Kraken fechado, sem volume/base/quote canônico fabricado. A issue #34 foi encerrada.
+
+**WU12 #36 em implementação:** branch `research/j1-kraken-volume-units`. Diagnóstico sanitizado no máximo 2 GETs owner-only para comparar agregados de 24 candles fechados com ticker rolling24h, sem inferir unidades de volumes. PR/CI/merge e execução real ainda não confirmados.
 
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
