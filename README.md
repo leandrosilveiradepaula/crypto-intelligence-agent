@@ -94,3 +94,7 @@ A [issue #44](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 ## Cliente de pesquisa Kraken público, sem ordens (WU16)
 A [issue #46](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/46) agrega as peças validadas em `KrakenPublicReadOnlyResearch`: modo sem rede por padrão, opt-in explícito para GET público de instruments/tickers e candles trade, JSON financeiro Decimal exato, sanitização allowlist e janela UTC de observação. O retorno de velas é apenas `KrakenStagedCandlePage` com volume bruto **sem unidade financeira atestada**, nunca `ClosedCandle`, sinal ou operação real. CI inteiramente offline com transporte simulado.
+
+
+## Direitos e licenças dos dados públicos Kraken (WU17)
+O [guia oficial da Kraken](https://docs-legacy.kraken.com/api/docs/guides/global-intro/#notices) informa que usos comerciais não pessoais de dados dos endpoints públicos podem exigir autorização prévia. A [issue #48](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/48) e [docs/PROVIDER_RIGHTS.md](docs/PROVIDER_RIGHTS.md) separam pesquisa/código público de redistribuição de dados e publicação comercial. O cliente Kraken continua rede-off por padrão; **nenhum direito comercial ou lançamento público foi aprovado**. Nenhuma despesa, autorização de trading ou mudança de finalidade foi inferida.
