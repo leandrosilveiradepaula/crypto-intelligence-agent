@@ -82,6 +82,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU31 #104 CONCLUÍDA apenas OFFLINE:** PR #105 merged squash SHA `7a97d5e239ab98fb61107dc60e3503a902146e98`, HEAD `f27d106edc0f7aa55148c6d245bad6f0d330975c`, CI PR #40233629730 SUCCESS (**613 testes offline, compileall, 12 docs**) e CI pós-merge #40233741828 SUCCESS. Issue #104 fechada; bloqueio de variantes textuais TradFi não valida identidades cripto. Sem feed real, unidade econômica de candle ou autorização comercial; J1 #2/#32/#36/#48 seguem abertas.
 
+**J1/WU32 #107 EM IMPLEMENTAÇÃO (não homologada):** script opt-in de conformidade real OKX BTC-USDT-SWAP + testes offline e workflow owner-only; só prosseguir com execução real após PR/revisão/CI e comando explícito. Dados de mercado de uso pessoal, não publicação; nenhuma prova de identidade, histórico Top50 ou permissão comercial. Docs D57; issues J1 #2/#32/#36/#48 abertas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
