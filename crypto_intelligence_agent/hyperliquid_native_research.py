@@ -189,7 +189,7 @@ def stage_hyperliquid_native_perp_candles(
     No REST request, USD conversion, base/quote volume interpretation,
     point-in-time identity check or license attestation is made.
     """
-    if type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None or dex_scope != "":
+    if type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None or type(dex_scope) is not str or dex_scope != "":
         raise DataValidationError("only explicitly named native perp dex symbols allowed")
     context_time = _ms(context_observed_at_ms, "context_observed_at_ms")
     capture_time = _ms(observed_at_ms, "observed_at_ms")
