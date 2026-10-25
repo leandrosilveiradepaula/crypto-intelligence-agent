@@ -44,3 +44,8 @@ O [run 40197499250](https://github.com/leandrosilveiradepaula/crypto-intelligenc
 
 A [issue #23](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/23) investiga a API pública de instrumentos da Kraken Futures, que é **outro fornecedor**, não um proxy para a Binance. O teste de viabilidade usa uma única requisição GET e retorna apenas um resumo sanitizado:
 `python3 scripts/probe_public_kraken.py --allow-public-network`. Sem essa flag, o script não acessa a rede. Resultado positivo de conectividade ainda não prova elegibilidade dos contratos, qualidade ou continuidade de histórico.
+
+
+## Kraken Futures: resultado de pesquisa independente
+- [WU6 #23](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/23) concluída: [run 40198042787](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40198042787) HTTP200, 231 instrumentos, 213 candidatos heurísticos PI_/PF_. A lista inclui ativo tokenizado (`PF_AAPLXUSD`): não é um universo validado de perpétuos de criptomoedas.
+- [WU7 #25](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/25) valida schema real de instrumentos, ticker e candles BTC sob até três GETs públicos fixos, sem contas, credenciais ou trades. Probe offline por padrão: `python3 scripts/probe_kraken_market_schema.py` **recusa rede**; flags duplas necessárias para o smoke owner-only. Sem troca automática de provedor.
