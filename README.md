@@ -169,3 +169,7 @@ O auditor OFFLINE `readiness_evidence.py` diferencia documentação Kraken Futur
 
 ## J1/WU29 — PF_ símbolo e base precisam representar o mesmo ativo
 A seleção de pesquisa Kraken agora recusa metadados contraditórios: o numerador de `PF_<base>USD` deve ser coerente com `instrument.base`, `instrument.pair` e `ticker.pair` se presente. O alias documentado `XBT`→`BTC` é explicitamente aceito para a API Futures; outros multiplicadores/aliases não são presumidos. Isso impede a fixture `PF_AAPLXUSD/base=BTC` de usar a identidade BTC caso sua categoria xStocks esteja ausente. O cheque NÃO comprova identidade crypto-only, licença, candlestick volume unit, Top50 real, risco ou autorização de ordens; veja D54 e `docs/CRYPTO_REGISTRY.md`.
+
+
+## J1/WU30 — Histórico cripto não aceita manifesto adulterado via construtor
+O histórico `CryptoRegistryHistory.append` também revalida instâncias Python de `CryptoRegistrySnapshot` construídas diretamente: SHA256 do manifesto v1, evidências independentes declaradas, tipos, timestamps e `publisher_root` derivado. Uma dataclass `frozen=True` não comprova integridade; sem essa defesa, um objeto com SHA inventado poderia alimentar o seletor offline. Revalidação de bytes/forma não autentica o publicador, a identidade do ativo, a licença ou dados reais. Questões J1 #32/#36/#48 seguem abertas; veja D55 e `docs/CRYPTO_REGISTRY.md`.
