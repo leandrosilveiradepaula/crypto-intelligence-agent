@@ -102,6 +102,205 @@ class ProvenanceTests(unittest.TestCase):
             self.audited(claim(capability="kraken_candle_volume_units",
                               provider="kraken_futures", quote_currency="USD"))
 
+    def test_kraken_futures_chart_docs_not_proof_of_volume_units(self):
+        record = claim(
+            capability="kraken_candle_volume_units", provider="kraken_futures",
+            dataset="candles", purpose="internal_research",
+            origin="documented_schema", quote_currency="unverified",
+            source_url="https://docs.kraken.com/api/docs/futures-api/charts/candles",
+        )
+        row = self.audited(record)["claims"][0]
+        self.assertEqual(row["source_applicability"],
+                         "chart_volume_field_documented_unit_not_defined")
+        self.assertFalse(self.audited(record)["live_evidence_authenticated"])
+        checkpoint = readiness_snapshot(evidence_json=payload(record),
+                                        decision_at_ms=NOW)
+        self.assertFalse(checkpoint["ready_for_canonical_ohlcv"])
+        self.assertFalse(checkpoint["ready_for_live_top50"])
+        self.assertFalse(checkpoint["ready_for_public_market_data_release"])
+
+    def test_kraken_chart_docs_only_support_offline_candle_shape(self):
+        record = claim(
+            capability="closed_candle_parser", provider="kraken_futures",
+            dataset="candles", origin="documented_schema",
+            quote_currency="unverified",
+            source_url="https://docs.kraken.com/api/docs/futures-api/charts/candles/",
+        )
+        row = self.audited(record)["claims"][0]
+        self.assertEqual(row["source_applicability"],
+                         "candle_schema_only_not_live_conformance")
+        self.assertFalse(self.audited(record)["independent_source_verified"])
+
+    def test_perpetual_contract_listing_not_positive_crypto_only_registry(self):
+        url = (
+            "https://support.kraken.com/articles/"
+            "4844359082772-linear-multi-collateral-derivatives-contract-specifications"
+        )
+        identity = claim(
+            capability="crypto_only_identity", provider="kraken_futures",
+            dataset="instruments", quote_currency="not_applicable",
+            origin="documented_schema", source_url=url,
+        )
+        self.assertEqual(
+            self.audited(identity)["claims"][0]["source_applicability"],
+            "instrument_list_includes_non_crypto_no_positive_registry_proof",
+        )
+        self.assertFalse(self.audited(identity)["independent_source_verified"])
+        # Current min lot / leverage class is not an attestation of
+        # chart.trade.volume's base/quote economic unit.
+        volume = claim(
+            capability="kraken_candle_volume_units", provider="kraken_futures",
+            dataset="candles", quote_currency="unverified",
+            origin="documented_schema", source_url=url,
+        )
+        self.assertEqual(
+            self.audited(volume)["claims"][0]["source_applicability"],
+            "current_contract_lot_not_historical_candle_volume_unit",
+        )
+
+    def test_official_usage_notice_is_warning_not_license_permission(self):
+        grant = claim(
+            capability="provider_external_rights",
+            provider="kraken_futures", dataset="candles",
+            purpose="commercial", quote_currency="unverified",
+            origin="documented_schema",
+            source_url="https://docs-legacy.kraken.com/api/docs/guides/global-intro/",
+        )
+        row = self.audited(grant)["claims"][0]
+        self.assertEqual(
+            row["source_applicability"],
+            "terms_notice_requires_permission_not_a_rights_grant",
+        )
+        report = readiness_snapshot(evidence_json=payload(grant), decision_at_ms=NOW)
+        self.assertFalse(report["provenance_review"]["external_rights_authorized"])
+        self.assertFalse(report["ready_for_public_market_data_release"])
+
+    def test_kraken_spot_ohlcvt_cannot_attest_kraken_futures(self):
+        for url in (
+            "https://support.kraken.com/br/articles/"
+            "360047124832-downloadable-historical-ohlcvt-open-high-low-close-volume-trades-data",
+            "https://support.kraken.com/in/articles/"
+            "360047124832-downloadable-historical-ohlcvt-open-high-low-close-volume-trades-data",
+        ):
+            for capability, dataset, currency in (
+                ("kraken_candle_volume_units", "candles", "unverified"),
+                ("crypto_only_identity", "instruments", "not_applicable"),
+                ("provider_external_rights", "candles", "unverified"),
+            ):
+                purpose = ("commercial" if capability == "provider_external_rights"
+                           else "internal_research")
+                with self.subTest(url=url, capability=capability), self.assertRaisesRegex(
+                    DataValidationError, "different product"
+                ):
+                    self.audited(claim(
+                        capability=capability, provider="kraken_futures",
+                        dataset=dataset, purpose=purpose,
+                        quote_currency=currency, source_url=url,
+                    ))
+
+    def test_kraken_derivatives_us_cme_bitnomial_docs_are_different_product(self):
+        for slug in ("market-data", "contract-specifications"):
+            for lang in ("", "pt/", "br/"):
+                url = f"https://support.kraken.com/{lang}articles/{slug}"
+                with self.subTest(url=url), self.assertRaisesRegex(
+                    DataValidationError, "different product"
+                ):
+                    self.audited(claim(
+                        capability="kraken_candle_volume_units",
+                        provider="kraken_futures", dataset="candles",
+                        quote_currency="unverified", source_url=url,
+                    ))
+        # A different website listing contract sizes must NOT be imported
+        # as the Kraken PF_ perpetual tick/lot/multiplier rule.
+
+    def test_known_kraken_docs_do_not_certify_other_providers(self):
+        for url in (
+            "https://docs.kraken.com/api/docs/futures-api/charts/candles",
+            "https://support.kraken.com/articles/contract-specifications",
+            "https://docs-legacy.kraken.com/api/docs/guides/global-intro",
+        ):
+            with self.subTest(url=url), self.assertRaisesRegex(
+                DataValidationError, "another provider"
+            ):
+                self.audited(claim(source_url=url))
+
+    def test_known_kraken_docs_cannot_claim_wrong_capability(self):
+        for fields in (
+            dict(capability="crypto_only_identity", dataset="instruments",
+                 quote_currency="not_applicable",
+                 source_url="https://docs.kraken.com/api/docs/futures-api/charts/candles"),
+            dict(capability="provider_external_rights", purpose="public_api",
+                 source_url="https://support.kraken.com/articles/4844359082772-linear-multi-collateral-derivatives-contract-specifications"),
+            dict(capability="kraken_candle_volume_units",
+                 source_url="https://docs-legacy.kraken.com/api/docs/guides/global-intro"),
+        ):
+            common = dict(provider="kraken_futures", quote_currency="unverified")
+            common.update(fields)
+            with self.subTest(fields=fields), self.assertRaises(DataValidationError):
+                self.audited(claim(**common))
+
+    def test_document_page_cannot_pretend_to_be_observed_market_summary(self):
+        with self.assertRaisesRegex(DataValidationError, "not an observed market run"):
+            self.audited(claim(
+                capability="kraken_candle_volume_units",
+                provider="kraken_futures", quote_currency="unverified",
+                origin="observed_summary",
+                source_url="https://docs.kraken.com/api/docs/futures-api/charts/candles",
+            ))
+
+    def test_encoded_kraken_paths_fail_closed_before_any_scope_assertion(self):
+        for url in (
+            "https://support.kraken.com/articles/%6darket-data",
+            "https://docs.kraken.com/api/docs/futures-api/charts/%63andles",
+            "https://docs-legacy.kraken.com/api/docs/guides/global%2dintro",
+        ):
+            with self.subTest(url=url), self.assertRaisesRegex(
+                DataValidationError, "encoded Kraken"
+            ):
+                self.audited(claim(
+                    capability="kraken_candle_volume_units",
+                    provider="kraken_futures", quote_currency="unverified",
+                    source_url=url,
+                ))
+
+    def test_unknown_hostname_is_not_mistaken_for_official_kraken_source(self):
+        for url in (
+            "https://support.kraken.com.attacker.test/articles/market-data",
+            "https://somewhere.example.org/kraken/futures",
+        ):
+            record = claim(
+                capability="kraken_candle_volume_units", provider="kraken_futures",
+                quote_currency="unverified", source_url=url,
+            )
+            output = self.audited(record)
+            self.assertEqual(output["claims"][0]["source_applicability"],
+                             "unknown_reference_requires_independent_review")
+            self.assertFalse(output["independent_source_verified"])
+            self.assertFalse(output["live_evidence_authenticated"])
+
+    def test_source_applicability_is_computed_not_trusted_as_claim(self):
+        row = claim(
+            capability="kraken_candle_volume_units",
+            provider="kraken_futures", quote_currency="unverified",
+            source_url="https://docs.kraken.com/api/docs/futures-api/charts/candles",
+        )
+        row["source_applicability"] = "verified"
+        with self.assertRaises(DataValidationError):
+            self.audited(row)
+
+    def test_source_scope_checks_need_no_network_or_source_download(self):
+        from unittest.mock import patch
+        record = claim(
+            capability="crypto_only_identity", provider="kraken_futures",
+            dataset="instruments", quote_currency="not_applicable",
+            source_url="https://support.kraken.com/articles/"
+                       "4844359082772-linear-multi-collateral-derivatives-contract-specifications",
+        )
+        with patch("urllib.request.urlopen", side_effect=AssertionError("No HTTP allowed")):
+            output = self.audited(record)
+        self.assertFalse(output["independent_source_verified"])
+        self.assertFalse(output["external_rights_authorized"])
+
     def test_okx_schema_evidence_cannot_claim_live_permissions(self):
         candidate = claim(capability="okx_quote_currency", provider="okx_v5")
         observed = self.audited(candidate)
