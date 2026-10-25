@@ -79,3 +79,5 @@ A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausên
 
 - J1/WU33 #110 — PR #111 merged squash SHA `9f364a244bedba42803ca9803585023777813bb1`, CI #40237458174 SUCCESS (**633 testes offline, compileall, 12 docs**); seed BTC/ETH real com duas referências por ativo, revisão documental assistida por IA, sem Top50/rights.
 - J1/WU34 #112 — extensão local SQLite price-only + coletor Kraken GET-one-shot owner-only de **preços reais**, sem inventar volumes; branch `feat/j1-wu34-kraken-price-only-sqlite`, PR/CI/live a confirmar, jamais inferir `ClosedCandle` canônico ou J1 pronta por uma janela BTC.
+
+- J1/WU34 #112: PR #113 integrada SHA `87b3f96653f97ef05798e918686b7fbe951622c2`, CI #40237817824 SUCCESS (**652 testes offline, compileall, 12 docs**); sonda #40237870818 fez 1 GET mas página foi rejeitada, 0 dados persistidos. Correção de limite `to` inclusivo em branch `fix/j1-wu34-kraken-exclusive-to`, PR/CI/run pendentes, sem volume canônico nem Top50.

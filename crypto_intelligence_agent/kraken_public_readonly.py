@@ -219,12 +219,17 @@ class KrakenPublicReadOnlyResearch:
             raise DataValidationError("invalid Kraken perpetual chart symbol")
         if interval not in KRAKEN_RESOLUTIONS:
             raise DataValidationError("unsupported Kraken chart resolution")
-        from_seconds, to_seconds = epoch_ms_window_to_kraken_seconds(
+        from_seconds, exclusive_to_seconds = epoch_ms_window_to_kraken_seconds(
             interval=interval, start_open_ms=start_open_ms,
             end_open_ms=end_open_ms,
         )
+        # Kraken Futures chart 'to' is inclusive in the documented REST SDK.
+        # Our contract uses [start_open_ms, end_open_ms), exclusive end.
+        # Subtract one second to exclude a candle opening at end_open_ms.
+        # Do not loosen stage_kraken_trade_candles' exact-window requirements.
+        last_included_second = exclusive_to_seconds - 1
         url = (_HOST + f"/api/charts/v1/trade/{symbol}/{interval}"
-               + f"?from={from_seconds}&to={to_seconds}")
+               + f"?from={from_seconds}&to={last_included_second}")
         chart = self._read_public(url)
         observed = self._now_ms()
         staging = stage_kraken_trade_candles(
