@@ -135,6 +135,65 @@ class ErrorConformanceTests(unittest.TestCase):
         self.assertNotIn("DO_NOT_PERSIST", repr(response.headers))
 
 
+class DamagedFixtureTransport(OfflineFixtureTransport):
+    def __init__(self, endpoint: str, replacement: object):
+        super().__init__()
+        self.endpoint = endpoint
+        self.replacement = replacement
+
+    def get(self, url, timeout_seconds):
+        if self.endpoint in url:
+            self.requests.append(url)
+            return HttpResponse(200, json.dumps(self.replacement))
+        return super().get(url, timeout_seconds)
+
+
+class PublicPayloadShapeTests(unittest.TestCase):
+    def test_public_contracts_universe_and_klines_match_typed_interfaces(self):
+        adapter = BinanceFuturesPublicAdapter(
+            OfflineFixtureTransport(), clock_ms=lambda: CLOCK_MS,
+            initial_backoff_seconds=0,
+        )
+        self.assertEqual(len(adapter.contracts(observed_at_ms=CLOCK_MS)), 2)
+        universe = adapter.universe(observed_at_ms=CLOCK_MS, max_symbols=2)
+        self.assertEqual([member.symbol for member in universe.eligible], ["ETHUSDT", "BTCUSDT"])
+        candles = adapter.closed_candles(
+            "BTCUSDT", "1h", observed_at_ms=CLOCK_MS,
+            start_time_ms=0, end_time_ms=3 * HOUR - 1,
+        )
+        self.assertEqual(len(candles), 3)
+        self.assertEqual(candles[0].open_time_ms, 0)
+        self.assertEqual(candles[-1].close_time_ms, 3 * HOUR - 1)
+
+    def test_malformed_exchange_info_is_not_accepted_as_contract_set(self):
+        adapter = BinanceFuturesPublicAdapter(
+            DamagedFixtureTransport("/exchangeInfo", {"symbols": "bad"}),
+            clock_ms=lambda: CLOCK_MS,
+        )
+        with self.assertRaises(DataValidationError):
+            adapter.contracts(observed_at_ms=CLOCK_MS)
+
+    def test_malformed_ticker_volume_is_not_ranked(self):
+        adapter = BinanceFuturesPublicAdapter(
+            DamagedFixtureTransport("/ticker/24hr", [{"symbol": "BTCUSDT"}]),
+            clock_ms=lambda: CLOCK_MS,
+        )
+        with self.assertRaises(DataValidationError):
+            adapter.universe(observed_at_ms=CLOCK_MS, max_symbols=1)
+
+    def test_malformed_candle_never_becomes_closed_market_data(self):
+        broken = [[0, "100", "102", "99", "101", "-1", HOUR - 1, "1000"]]
+        adapter = BinanceFuturesPublicAdapter(
+            DamagedFixtureTransport("/klines", broken),
+            clock_ms=lambda: CLOCK_MS,
+        )
+        with self.assertRaises(DataValidationError):
+            adapter.closed_candles(
+                "BTCUSDT", "1h", observed_at_ms=CLOCK_MS,
+                start_time_ms=0, end_time_ms=HOUR - 1,
+            )
+
+
 class ForbiddenFixtureTransport(OfflineFixtureTransport):
     def get(self, url, timeout_seconds):
         if "/fapi/v1/time" in url:
