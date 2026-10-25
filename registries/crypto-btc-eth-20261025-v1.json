@@ -1,0 +1,49 @@
+{
+  "assets": [
+    {
+      "base": "BTC",
+      "canonical_id": "bitcoin-mainnet",
+      "evidence": [
+        {
+          "asset_ref": "bitcoin-mainnet",
+          "observed_at_ms": 1792964997555,
+          "publisher": "bitcoin-org",
+          "url": "https://bitcoin.org/en/faq"
+        },
+        {
+          "asset_ref": "bitcoin",
+          "observed_at_ms": 1792964997555,
+          "publisher": "ecb",
+          "url": "https://www.ecb.europa.eu/ecb-and-you/explainers/tell-me/html/what-is-bitcoin.en.html"
+        }
+      ],
+      "reviewed_at_ms": 1792964997555,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ETH",
+      "canonical_id": "ethereum-native-ether",
+      "evidence": [
+        {
+          "asset_ref": "native-ether",
+          "observed_at_ms": 1792964997555,
+          "publisher": "ethereum-foundation",
+          "url": "https://ethereum.org/pt-br/what-is-ether/"
+        },
+        {
+          "asset_ref": "ethereum",
+          "observed_at_ms": 1792964997555,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/ethereum"
+        }
+      ],
+      "reviewed_at_ms": 1792964997555,
+      "reviewed_by": "assistant-technical-review"
+    }
+  ],
+  "label": "btc-eth-20261025-technical-v1",
+  "observed_at_ms": 1792964997555,
+  "schema_version": 1,
+  "sha256": "ad860bf8f69a76352a839f269f1337b33db20c51c2d1ff8750ec12c0fc05e301",
+  "usage_policy": "internal_research_only"
+}
