@@ -97,3 +97,25 @@ jobs:
         run: |
           set -eu
           python3 scripts/probe_public_kraken.py --allow-public-network --inspect-taxonomy
+
+  kraken-volume-diagnostic:
+    if: >-
+      github.event.issue.number == 36 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-kraken-volume-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted default branch without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect public Kraken volume aggregates without interpreting units
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_kraken_volume_units \
+            --allow-public-network --allow-volume-diagnostic
