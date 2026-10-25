@@ -10,7 +10,8 @@ APIs, reconstruct historical membership, trade, or authorize a provider swap.
 """
 from __future__ import annotations
 
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
+from .decimal_json import positive_market_decimal
 import re
 from typing import Any, Mapping, Sequence
 
@@ -26,15 +27,9 @@ _INSTRUMENT_NAME = re.compile(r"^PF_[A-Z0-9]{2,36}$")
 
 
 def _decimal_positive(value: Any, label: str) -> Decimal:
-    if value is None or isinstance(value, bool):
-        raise DataValidationError(f"{label} is absent or not a decimal")
-    try:
-        parsed = Decimal(str(value))
-    except (InvalidOperation, ValueError) as error:
-        raise DataValidationError(f"{label} is not a decimal") from error
-    if not parsed.is_finite() or parsed <= 0:
-        raise DataValidationError(f"{label} must be positive and finite")
-    return parsed
+    # Do not restore source digits with Decimal(str(binary_float)).
+    # Transport must call decode_public_market_json_exact first.
+    return positive_market_decimal(value, label)
 
 
 def _unique_by_symbol(rows: Sequence[Mapping[str, Any]], name: str) -> dict[str, Mapping[str, Any]]:

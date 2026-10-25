@@ -86,3 +86,7 @@ A [PR #40](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/p
 
 ## Gate conservador de alavancagem por instrumento (WU14)
 A [issue #42](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/42) rastreia um módulo **somente de pesquisa** que compara a alavancagem global solicitada (50x padrão) a uma tabela externa/versionada de limites Kraken conforme exposição agregada em USD. Se o contrato/tier permitir apenas 10x, 50x é **recusado**, não reduzido silenciosamente. Fixtures são sintéticas: não equivalem à margem real, liquidação ou permissão de operar. A fonte documental é a [tabela oficial de níveis e alavancagem](https://support.kraken.com/br/articles/360022632452-derivatives-margin-schedule-maximum-leverage). Sem ordens ou custo extra.
+
+
+## Precisão dos números JSON de mercado (WU15)
+A [issue #44](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/44) previne perda silenciosa de casas decimais: `decimal_json.py` decodifica frações numéricas diretamente em `Decimal` e rejeita floats Python já arredondados nos campos financeiros usados para ranquear Kraken. Inclui testes com volumes praticamente iguais, evitando erro de ordenação. A correção mantém `unit_proof=false`, não estabelece volume de candle em base/quote nem ativa negociação.

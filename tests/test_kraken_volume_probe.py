@@ -11,6 +11,8 @@ from urllib.error import HTTPError, URLError
 import unittest
 from unittest.mock import patch
 
+from crypto_intelligence_agent.decimal_json import decode_public_market_json_exact
+
 from scripts.probe_kraken_volume_units import (
     CANDLES_URL, HOUR_MS, SYMBOL, TICKERS_URL,
     main, make_report, describe_chart_structure,
@@ -155,12 +157,38 @@ class KrakenVolumeResearchTests(unittest.TestCase):
                     summarize_closed_chart(chart_payload(), observed_at_ms=timestamp)
 
     def test_ticker_only_outputs_public_volume_sample_not_raw_payload(self):
-        report = summarize_public_ticker(ticker_payload())
+        # The venue response must be decoded from JSON into exact Decimal
+        # BEFORE any financial field can be interpreted by the ticker summary.
+        report = summarize_public_ticker(
+            decode_public_market_json_exact(json.dumps(ticker_payload()))
+        )
         self.assertEqual(report["ticker_symbol"], "PF_XBTUSD")
         self.assertEqual(report["ticker_tag"], "perpetual")
         self.assertEqual(report["ticker_volume_unit_validation"], "not_established")
         self.assertNotIn("SHOULD_NOT_APPEAR", json.dumps(report))
         self.assertEqual(report["ticker_volumeQuote_as_reported"], "331016603.1374")
+
+    def test_precision_and_direct_float_fails_closed(self):
+        with self.assertRaises(ValueError):
+            summarize_public_ticker(ticker_payload())
+        ticker = Response({})
+        ticker.data = (
+            b'{"tickers":[{"symbol":"PF_XBTUSD","tag":"perpetual",'
+            b'"vol24h":3928.249900000000123456,'
+            b'"volumeQuote":314801204.566112345678901234}]}'
+        )
+        opener = Opener(Response(chart_payload()), ticker)
+        report = make_report(opener=opener, clock_ms=lambda: NOW)
+        self.assertEqual(report["status"], "observed_aggregates_not_unit_proof")
+        self.assertEqual(
+            report["ticker"]["ticker_vol24h_as_reported"],
+            "3928.249900000000123456",
+        )
+        self.assertEqual(
+            report["ticker"]["ticker_volumeQuote_as_reported"],
+            "314801204.566112345678901234",
+        )
+        self.assertFalse(report["unit_proof"])
 
     def test_no_ticker_or_nonfinite_volumes_fail(self):
         for ticket in (

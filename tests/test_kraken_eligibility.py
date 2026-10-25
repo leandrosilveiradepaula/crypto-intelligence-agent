@@ -96,6 +96,46 @@ class KrakenEligibilityTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.select(max_symbols=number)
 
+    def test_binary_floats_are_rejected_for_exact_financial_fields(self):
+        for field, value in (
+            ("volumeQuote", 123.4567890123456789),
+            ("volumeQuote", float("nan")),
+            ("volumeQuote", True),
+        ):
+            with self.subTest(field=field, value=value):
+                tickers = deepcopy(self.tickers)
+                tickers[0][field] = value
+                snapshot = self.select(tickers=tickers)
+                self.assertNotIn("PF_XBTUSD", [m.symbol for m in snapshot.eligible])
+                self.assertEqual(snapshot.excluded["PF_XBTUSD"],
+                                 "invalid_quote_volume")
+        for contract_field in ("tickSize", "contractSize"):
+            with self.subTest(contract_field=contract_field):
+                instruments = deepcopy(self.instruments)
+                instruments[0][contract_field] = 0.5
+                snapshot = self.select(contracts=instruments)
+                self.assertEqual(snapshot.excluded["PF_XBTUSD"],
+                                 "invalid_contract_precision")
+
+    def test_exact_decimal_volume_from_raw_json_outranks_without_rounding(self):
+        from crypto_intelligence_agent.decimal_json import decode_public_market_json_exact
+        raw = (
+            '{"tickers":['
+            '{"symbol":"PF_XBTUSD","tag":"perpetual","suspended":false,'
+            '"postOnly":false,"volumeQuote":1000.000000000000000002},'
+            '{"symbol":"PF_ETHUSD","tag":"perpetual","suspended":false,'
+            '"postOnly":false,"volumeQuote":1000.000000000000000001}'
+            ']}'
+        )
+        decoded = decode_public_market_json_exact(raw)
+        snapshot = self.select(tickers=decoded["tickers"])
+        self.assertEqual([m.symbol for m in snapshot.eligible],
+                         ["PF_XBTUSD", "PF_ETHUSD"])
+        self.assertEqual(snapshot.eligible[0].quote_volume,
+                         Decimal("1000.000000000000000002"))
+        self.assertEqual(snapshot.eligible[1].quote_volume,
+                         Decimal("1000.000000000000000001"))
+
     def test_missing_quote_volume_never_enters_ranking(self):
         tickers = [ticker("PF_XBTUSD", "Infinity"), ticker("PF_ETHUSD", "0")]
         snapshot = self.select(tickers=tickers)

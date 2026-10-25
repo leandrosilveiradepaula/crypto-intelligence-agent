@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 import json
 from time import monotonic, time
 from typing import Any, Callable, Mapping
@@ -19,6 +19,9 @@ from scripts.probe_public_kraken import (
     MAX_RESPONSE_BYTES, MAX_TIMEOUT_SECONDS, _default_open,
 )
 from crypto_intelligence_agent.kraken_candle_validation import _raw_trade_volume
+from crypto_intelligence_agent.decimal_json import (
+    decode_public_market_json_exact, positive_market_decimal,
+)
 from crypto_intelligence_agent.market_data import DataValidationError
 
 
@@ -32,15 +35,11 @@ MAX_ROWS = 27
 
 
 def _safe_positive_decimal(value: Any) -> str | None:
-    if type(value) is bool or value is None:
-        return None
     try:
-        parsed = Decimal(str(value))
-    except (InvalidOperation, ValueError):
+        # From exact JSON Decimal/int/string only; reject native binary float.
+        return str(positive_market_decimal(value, "Kraken public ticker volume"))
+    except DataValidationError:
         return None
-    if not parsed.is_finite() or parsed <= 0:
-        return None
-    return str(parsed)
 
 
 def _get_json(
@@ -57,8 +56,8 @@ def _get_json(
             if len(data) > MAX_RESPONSE_BYTES:
                 return {"route": route, "http_status": 200, "status": "response_too_large"}, None
             try:
-                payload = json.loads(data)
-            except (ValueError, UnicodeDecodeError):
+                payload = decode_public_market_json_exact(data, max_bytes=MAX_RESPONSE_BYTES)
+            except (DataValidationError, ValueError, UnicodeDecodeError):
                 return {"route": route, "http_status": 200, "status": "invalid_json"}, None
             if not isinstance(payload, dict):
                 return {"route": route, "http_status": 200, "status": "invalid_schema"}, None
