@@ -114,7 +114,8 @@ class ProvenanceTests(unittest.TestCase):
         for variant in ({"provider":"bybit_v5"}, {"quote_currency":"USD"},
                         {"quote_currency":"unverified"}, {"purpose":"public_display"}):
             with self.subTest(variant=variant), self.assertRaises(DataValidationError):
-                self.audited(claim(capability="okx_quote_currency", provider="okx_v5", **variant))
+                self.audited(claim(**dict({"capability": "okx_quote_currency",
+                                               "provider": "okx_v5"}, **variant)))
 
     def test_claimed_public_rights_never_authorize_distribution(self):
         rights = claim(
