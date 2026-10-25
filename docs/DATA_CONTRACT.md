@@ -45,3 +45,19 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - Candle aceito deve ter duração exata do intervalo, OHLC estritamente positivo e volumes não negativos. Metadados de contrato exigem filtros de preço/quantidade positivos. Tickers com duplicatas divergentes falham explicitamente.
 - O snapshot de universo é um retrato aproximado de coleta do ticker público de volume móvel de 24 horas; não equivale a reconstrução histórica ponto-no-tempo e não garante simultaneidade exata das duas chamadas REST. A J1 posterior deverá persistir snapshots e suas evidências de coleta.
 - CI deve executar `unittest`, compilação Python e validação documental com fixtures offline; nenhum teste aciona ordens ou depende de API externa.
+
+## Persistência e backfill implementados na WU2
+
+- `SQLiteMarketDataStore` é a referência local gratuita, isolada atrás de `MarketDataStore`; não é uma decisão de banco de produção. Preços, quantidades e volumes são gravados como texto decimal canônico, e nunca como `REAL`/`float`.
+- O backfill recebe uma janela explícita `[start_open_ms, end_open_ms)`, alinhada ao intervalo UTC, e só aceita cobertura exata de cada página. Falta, duplicata, candle fora da janela ou identidade divergente falham sem gerar candles sintéticos.
+- Cada página confirmada e seu `MarketDataCheckpoint` são gravados na mesma transação SQLite. Uma falha de API ou validação da página não avança o checkpoint; uma nova execução recomeça em `confirmed_end_ms + 1` e é idempotente.
+- Contratos e `UniverseSnapshot` persistem o timestamp e a fonte efetivamente recebidos. O armazenamento não fabrica snapshots históricos: a fonte pública atual continua sendo recusada pela WU1 quando rotulada como observação antiga.
+- `quality_report()` expõe cobertura esperada/persistida, timestamps ausentes e último checkpoint. Conflitos rejeitados não são registrados como eventos persistidos: `conflicting_duplicates=None` significa **não medido**, nunca zero comprovado. `complete` requer cobertura e checkpoint íntegro cobrindo a janela.
+
+
+## Proteções adicionais da revisão WU2
+- Checkpoint é uma afirmação de histórico **contínuo** desde o início original. Antes de reutilizá-lo, o backfill reconfere a presença e a ordem de todos os candles do prefixo, rejeitando lacunas/corrupção, fontes ou versões divergentes, retrodatação anterior ao início ou janelas não contíguas. Não pula automaticamente histórico ausente só porque existe um watermark mais recente.
+- Avanço de checkpoint só pode ser adjacente à última página válida. Gravação direta de páginas valida toda a sequência, identidade, intervalos, `Decimal` finitos, OHLC e volumes, e falha fechada com rollback.
+- Metadados de contratos de mesma identidade e timestamp são imutáveis. Um replay igual é idempotente; versão conflitante é rejeitada sem substituir valores e sem commits parciais de lotes.
+- Janelas semanais respeitam o calendário da exchange: abertura de candle `1w` na segunda-feira UTC, não no offset zero do Unix. `SQLiteMarketDataStore(":memory:")` é rejeitado porque o backend de referência usa conexões independentes por transação.
+- A revalidação integral do prefixo em cada retomada é conservadora e tem custo O(N); otimizações futuras exigem provas de integridade equivalentes. O store não é um serviço operacional de retenção/backup auditado. O modelo atual de checkpoint só suporta uma linhagem ativa por exchange/símbolo/intervalo, devendo rejeitar janelas históricas desconexas.

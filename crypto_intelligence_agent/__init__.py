@@ -7,6 +7,8 @@ from .market_data import (
     MarketDataCheckpoint,
     UniverseSnapshot,
 )
+from .backfill import HistoricalBackfill
+from .storage import SQLiteMarketDataStore
 
 __all__ = [
     "BinanceFuturesPublicAdapter",
@@ -14,4 +16,6 @@ __all__ = [
     "ContractSpec",
     "MarketDataCheckpoint",
     "UniverseSnapshot",
+    "HistoricalBackfill",
+    "SQLiteMarketDataStore",
 ]
