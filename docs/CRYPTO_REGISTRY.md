@@ -193,3 +193,18 @@ Arquivo imutável: `registries/crypto-btc-eth-20261025-v1.json`, digest SHA-256 
 Uso: carregar via `load_registry_json`, anexar a `CryptoRegistryHistory` e chamar `select_at` somente para capturas de mercado ocorridas após este registro; a filtragem WU29/WU31 segue excluindo tokens de ações, base/símbolo incoerente e inativos. No máximo 2 bases podem ser positivamente reconhecidas; o limite **N até 50 não significa 50 ativos disponíveis**. Nenhum dado de exchange foi consultado ou armazenado nesta entrega. Sem renovação temporal automática: um registro antigo deve expirar conforme idade definida pelo chamador.
 
 **Não aprova:** licenças de mercado, direitos comerciais, elegibilidade regional, nomenclatura real do contrato (especialmente XBT/BTC), unidade de volume Kraken #36, retroatividade de listagens ou cobertura de Top50. Issues #2/#32/#36/#48 abertas. Pesquisa interna somente, sem publicação de dados.
+
+## J1/WU37 — Manifesto v2 com dez identidades cripto, sem retroagir nem inferir Top50 (25/10/2026)
+A issue #120 cria `registries/crypto-bases-10-20261025-v2.json` com **10 bases documentadas**: BTC, ETH, SOL, XRP, ADA, DOGE, LTC, AVAX, LINK, DOT; digest SHA256 canônico `a95179a342289833f3b14f0c2442163acdcb32f1ca0c9569fa01adeaa3534746`; `observed_at_ms=1792968148000` (UTC, 2026-10-25T22:42:28Z). O manifesto v1 BTC/ETH permanece inalterado com suas evidências/tempos originais; v2 só é consultável a partir de sua própria data. `reviewed_by=assistant-technical-review` descreve **revisão documental por assistente**, não parecer jurídico, certificação humana ou atestado de listagem em perp.
+
+Fontes PRIMÁRIAS e referências INDEPENDENTES, apenas LINKS e identidade, sem copiar preço, dados de mercado ou consumir API:
+- SOL: [Solana — SOL nativo](https://solana.com/learn/introduction-to-solana-tokens) + [CoinGecko SOL](https://www.coingecko.com/en/coins/solana)
+- XRP: [Ripple — XRP nativo XRP Ledger](https://ripple.com/xrp/) + [CoinGecko XRP](https://www.coingecko.com/en/coins/xrp)
+- ADA: [Cardano — ADA moeda nativa](https://docs.cardano.org/about-cardano/new-to-cardano/what-is-a-cryptocurrency) + [CoinGecko ADA](https://www.coingecko.com/en/coins/cardano)
+- DOGE: [Dogecoin — criptomoeda](https://dogecoin.com/) + [CoinGecko DOGE](https://www.coingecko.com/en/coins/dogecoin)
+- LTC: [Litecoin — moeda digital](https://litecoin.org/) + [CoinGecko LTC](https://www.coingecko.com/en/coins/litecoin)
+- AVAX: [Avalanche — AVAX nativo](https://docs.avax.network/docs/primary-network/avax-token) + [CoinGecko AVAX](https://www.coingecko.com/en/coins/avalanche)
+- LINK: [Chainlink — token LINK](https://chain.link/economics) + [CoinGecko LINK](https://www.coingecko.com/en/coins/chainlink)
+- DOT: [Polkadot — DOT nativo](https://wiki.polkadot.com/learn/learn-dot/) + [CoinGecko DOT](https://www.coingecko.com/en/coins/polkadot)
+
+A versão é explicitamente escolhida no código/CLI por `--registry btc-eth` (v1, default reprodutível) ou `--registry expanded-10` (v2). O `CryptoRegistryHistory` revalida SHA/manifesto de ambas. Não usar identidade v2 para qualquer amostra anterior a `1792968148000`, nem carregar preço CoinGecko. Um ativo no registro **não garante** par Kraken PF_ existente, status tradeable, liquidez USD ou permissão de negociação; `select_at` aplica todos os filtros da venue e `max_symbols=min(50, len(registry.assets))`. Dez identidades não significam dez mercados, 50 contratos elegíveis ou os 50 maiores históricos; registrar a quantidade efetiva observada. Sem direitos comerciais/redistribuição de dados de exchange, sem `ClosedCandle` canônico, base/quote volume de candle ou trading. J1 #2/#32/#36/#48 ABERTAS.
