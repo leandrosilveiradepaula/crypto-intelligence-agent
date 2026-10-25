@@ -184,6 +184,23 @@ class PersistenceInvariantTests(unittest.TestCase):
         )
         self.assertTrue(report.complete)
 
+    def test_quality_report_does_not_fabricate_conflict_count(self):
+        self.run_backfill(WindowSource(self.rows), end=2 * HOUR)
+        report = self.store.quality_report(
+            exchange="binance", market="linear_perpetual", symbol="BTCUSDT",
+            interval="1h", start_open_ms=0, end_open_ms=2 * HOUR,
+        )
+        self.assertIsNone(report.conflicting_duplicates)
+        self.assertTrue(report.complete)
+
+    def test_identical_contract_snapshot_is_idempotent(self):
+        original = contract()
+        self.store.save_contracts([original])
+        self.store.save_contracts([original])
+        self.assertEqual(self.store.contracts(
+            exchange="binance", market="linear_perpetual", observed_at_ms=10 * HOUR,
+        ), (original,))
+
 
 if __name__ == "__main__":
     unittest.main()
