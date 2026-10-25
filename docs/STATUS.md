@@ -44,7 +44,7 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU19 #52 integrada:** PR #53 merged SHA `f19ce8b854bd024e22ccaf6bc6b0d276b70efec2`, CI PR run #40205837293 SUCCESS (240 testes offline segundo revisão). Gate de finalidade em código sem direitos externos autenticados.
 
-**WU20 #54 integrada:** PR #55 merged SHA `7c0642d2d2769a8d12f5651af3f7280fce06ed88`, CI #40209121605 SUCCESS (docs, syntax, unittest offline). Relatório estático conservador, sem Top50/candles canônicos live. **WU21 #56 aberta:** revisão de proveniência e validade temporal das evidências, sem novos feeds.
+**WU20 #54 integrada:** PR #55 merged SHA `7c0642d2d2769a8d12f5651af3f7280fce06ed88`, CI #40209121605 SUCCESS (docs, syntax, unittest offline). Relatório estático conservador, sem Top50/candles canônicos live. **WU21 #56 em implementação:** auditoria tipada de proveniência, digest, escopo e validade UTC-ms de alegações, sempre sem autorizar Top50/live/OHLCV/redistribuição; PR e CI pendentes de verificação.
 
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.

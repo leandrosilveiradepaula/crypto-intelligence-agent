@@ -34,6 +34,6 @@
 
 - WU19 #52 / PR #53: gate técnico de finalidade/provedor/dataset integrado, merge `f19ce8b854bd024e22ccaf6bc6b0d276b70efec2`; CI #40205837293 SUCCESS, 240 testes offline segundo revisão.
 - WU20 #54 / PR #55: relatório offline conservador de prontidão J1 integrado SHA `7c0642d2d2769a8d12f5651af3f7280fce06ed88`, CI #40209121605 SUCCESS; nenhum Top50 real ou OHLCV canônico aprovado.
-- WU21 #56: validação offline de proveniência e validade temporal de evidência; issue aberta.
+- WU21 #56: validador offline de alegações de proveniência, escopo/digest/tempo e quote distinto por provedor, em implementação; sem aprovação automática de evidência live ou direitos.
 
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
