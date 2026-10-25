@@ -54,3 +54,7 @@ Kraken `KrakenPublicReadOnlyResearch` permanece isolado de API/UI de distribuiç
 
 ## Candidato adicional OKX V5 SWAP (J1/WU22)
 O staging de histórico em `okx_swap_candle_research.py` é intencionalmente separado dos adaptadores operacionais e reutiliza somente os validadores de tempo/erro existentes. Não há mais um sistema de armazenamento, fonte principal ou processo de rede. O esquema documentado traz volume em contratos, base e quote separados, além do flag de fechamento. Isso permite **testes de conformidade offline**, não backtest real nem direitos sobre o feed. O registro de identidade positivo crypto-only e o gate de licença são dependências independentes. Nenhuma integração à UI ou `ClosedCandle` foi autorizada.
+
+
+## Pré-trabalho de features sintéticas sem J1 homologada — J2/PRE1 (#66)
+`synthetic_feature_engine.py` depende do contrato único `ClosedCandle` e das funções UTC já implementadas no J1. Não aceita staging dos fornecedores Kraken/Bybit/OKX nem qualidade não sintética, e não introduz outro banco ou engine de ordens. Seu resultado é apenas uma sequência imutável de números causais (EMA, ATR, máximos/mínimos passados, razão de volume e retornos); a política de trading e os sinais serão um componente separado depois da homologação de J1/J2, com a mesma semântica no J3. Nenhum indicador vira gatilho operacional pela existência do valor.

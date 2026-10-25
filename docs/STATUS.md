@@ -50,6 +50,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU23 #63 — código integrado, run externo não verificado:** PR #64 merged SHA `c4cb8b1e7f31c3bde917e78185aeceb0a6a6733c`, CI PR #40214978748 SUCCESS (**293 testes offline, compileall, 12 docs**). Manifesto Vike keyless documentado com CC BY 4.0 **alegada** pelo publicador; verificador e workflow owner-only integrados. Comentário #6400604063 disparado na issue, mas ID/log/conclusão do workflow issue_comment indisponíveis para verificação nesta sessão; não afirmar GET realizado nem Parquet inspecionado. Issue #63 permanece aberta para evidência real. Rights upstream, Top50, OHLCV e produção bloqueados.
 
+**J2/PRE1 #66 — em implementação, sem iniciar J2 operacional:** features causais em Decimal sobre candles somente sintéticos com EMA/ATR/extremos passados/volume e testes de anti-lookahead. J1 e a épica J2 #3 continuam abertas; nenhuma fonte de mercado, estratégia ou execução foi liberada.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
