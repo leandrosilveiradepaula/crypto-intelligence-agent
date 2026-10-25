@@ -30,7 +30,7 @@ class Dataset(str, Enum):
     DERIVED_ALERTS = "derived_alerts"
 
 
-_PROVIDERS = frozenset({"kraken_futures", "bybit_v5", "binance_usdm", "okx_v5"})
+_PROVIDERS = frozenset({"kraken_futures", "bybit_v5", "binance_usdm", "okx_v5", "hyperliquid_native"})
 _VERSION = re.compile(r"[A-Za-z0-9_.:-]{1,80}")
 _REVIEWER = re.compile(r"[A-Za-z0-9_.-]{2,64}")
 _MAX_GRANTS = 20

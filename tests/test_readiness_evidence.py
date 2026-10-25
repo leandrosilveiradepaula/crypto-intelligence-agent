@@ -117,6 +117,23 @@ class ProvenanceTests(unittest.TestCase):
                 self.audited(claim(**dict({"capability": "okx_quote_currency",
                                                "provider": "okx_v5"}, **variant)))
 
+    def test_hyperliquid_native_claims_cannot_authorize_live_or_cryptocurrency(self):
+        candidate = claim(capability="hyperliquid_native_candle_schema",
+                          provider="hyperliquid_native", quote_currency="unverified")
+        result = self.audited(candidate)
+        self.assertEqual(result["claims"][0]["issue"], 69)
+        self.assertFalse(result["live_evidence_authenticated"])
+        self.assertFalse(result["external_rights_authorized"])
+        report = readiness_snapshot(evidence_json=payload(candidate), decision_at_ms=NOW)
+        self.assertFalse(report["ready_for_live_top50"])
+        self.assertFalse(report["ready_for_canonical_ohlcv"])
+        for changes in ({"provider": "bybit_v5"}, {"quote_currency": "USDC"},
+                        {"purpose": "commercial"}, {"dataset": "instruments"}):
+            with self.subTest(changes=changes), self.assertRaises(DataValidationError):
+                self.audited(claim(**dict({"capability": "hyperliquid_native_candle_schema",
+                                           "provider": "hyperliquid_native",
+                                           "quote_currency": "unverified"}, **changes)))
+
     def test_claimed_public_rights_never_authorize_distribution(self):
         rights = claim(
             capability="provider_external_rights", provider="kraken_futures",

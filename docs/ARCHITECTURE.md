@@ -58,3 +58,7 @@ O staging de histórico em `okx_swap_candle_research.py` é intencionalmente sep
 
 ## Pré-trabalho de features sintéticas sem J1 homologada — J2/PRE1 (#66)
 `synthetic_feature_engine.py` depende do contrato único `ClosedCandle` e das funções UTC já implementadas no J1. Não aceita staging dos fornecedores Kraken/Bybit/OKX nem qualidade não sintética, e não introduz outro banco ou engine de ordens. Seu resultado é apenas uma sequência imutável de números causais (EMA, ATR, máximos/mínimos passados, razão de volume e retornos); a política de trading e os sinais serão um componente separado depois da homologação de J1/J2, com a mesma semântica no J3. Nenhum indicador vira gatilho operacional pela existência do valor.
+
+
+## Contrato de venue alternativo sem rede — Hyperliquid nativa (J1/WU24)
+A rota `hyperliquid_native_research.py` valida somente payloads injetados em memória do `/info` (POST informativo) e usa as funções de intervalo UTC/erros já existentes. Não acrescenta adaptador operacional, banco, cliente HTTP nem faz POST de ordens para `/exchange`. Metadados de mercado são reportados, não autenticados, e a série de candles conserva o volume `v` como unidade não verificada; nenhuma saída é convertida em `ClosedCandle` ou alimenta o `synthetic_feature_engine.py`. Sem chamada real, a disponibilidade e a licença permanecem desconhecidas. Se a opção avançar, a próxima unidade deverá revisar termos e coletar prova mínima autorizada, com validação de conteúdo/retention e sem burlar gates J1.

@@ -122,3 +122,7 @@ A Vike declara CC BY 4.0 com atribuição para os arquivos de dados e permite ma
 
 ## Pré-cálculo de indicadores J2 (exclusivamente offline e sintético)
 `synthetic_feature_engine.py` calcula EMA(close), TR/ATR Wilder, extremos N barras anteriores, razão de volume cotado contra média anterior e retorno simples, usando `Decimal`, períodos explícitos e apenas `ClosedCandle.quality=synthetic_fixture` contíguos e fechados antes da decisão. Nenhum sinal de compra, posição, resultado de backtest, API de mercado ou ordem é produzido. A J1 permanece não homologada; ver D42 e `docs/STRATEGY_SPEC.md`.
+
+
+## WU24 — Hyperliquid nativa apenas como esquema de pesquisa
+O endpoint público Hyperliquid `POST /info` é informativo, distinto do `/exchange` de execução de ordens. `hyperliquid_native_research.py` valida somente fixtures de metaAndAssetCtxs e candleSnapshot, sem enviar POST, acessar contas, armazenar dados ou aprovar licença. Candles incluem contagem real **alegada** de trades, preço exato Decimal e volume `v` sem unidade financeira homologada; nenhuma conversão USD/USDC ou geração de `ClosedCandle` ocorre. O histórico nativo informado é limitado aos 5.000 candles mais recentes por intervalo. Ver D43 e `docs/DATA_CONTRACT.md`; Top50 e direitos seguem pendentes.

@@ -98,6 +98,16 @@ class ProviderRightsGateTests(unittest.TestCase):
                 self.assertFalse(decision.publishes_data)
                 self.assertFalse(decision.releases_to_production)
 
+    def test_hyperliquid_native_access_is_not_permission_to_distribute(self):
+        evidence = grant(provider="hyperliquid_native")
+        for purpose in UsagePurpose:
+            with self.subTest(purpose=purpose):
+                result = assess(provider="hyperliquid_native", purpose=purpose,
+                                grants=(evidence,), release=True)
+                self.assertFalse(result.allowed)
+                self.assertFalse(result.releases_to_production)
+                self.assertFalse(result.publishes_data)
+
     def test_multiple_synthetic_claims_never_enable_release(self):
         rows = (grant(reviewed=T-100), grant(reviewed=T-20))
         a = assess(grants=rows, release=True)
