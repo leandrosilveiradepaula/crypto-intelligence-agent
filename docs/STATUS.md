@@ -78,6 +78,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU29 #99 — correção de integridade em implementação:** o seletor Kraken WU9 não confrontava `PF_<numerador>USD` com `instrument.base/pair`; uma fixture adversarial `PF_AAPLXUSD` rotulada erroneamente `BTC` poderia emprestar identidade e volume. WU29 acrescenta rejeição `symbol_base_mismatch`, alias explícito XBT→BTC, cheque `ticker.pair` e regressões no histórico, SEM usar feed real ou conceder identidade crypto-only. PR/CI/revisão pendentes; J1 #2/#32/#36/#48 abertas.
 
+**J1/WU30 #101 — correção de integridade do histórico em implementação:** `CryptoRegistryHistory.append` anteriormente aceitava dataclass `CryptoRegistrySnapshot` construída diretamente sem validar SHA/fonte/tempo; agora reconstitui manifesto e reutiliza `from_manifest`, confrontando inclusive `publisher_root` derivado. Testes offline de bypass e regressão, sem afirmar fontes reais autenticadas. PR/CI/review pendentes, #32/#36/#48 abertas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 

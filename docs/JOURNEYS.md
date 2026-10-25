@@ -66,4 +66,6 @@
 
 - J1/WU29 #99: correção fail-closed de inconsistência entre numerador do símbolo Kraken PF_ e base/pair do instrumento/ticker, incluindo alias API XBT→BTC; em implementação/testes/CI. Não prova registro crypto-only ou volume financeiro, e não habilita Top50 live. J1 #2/#32/#36/#48 abertas.
 
+- J1/WU30 #101: correção da fronteira `CryptoRegistryHistory.append` que aceitava dataclasses diretas com SHA inválido ou evidência incompleta, agora revalida manifesto v1 inteiro e `publisher_root` derivado. Em implementação/CI com testes offline; não aprova fontes externas/Top50. J1 #2/#32/#36/#48 abertas.
+
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
