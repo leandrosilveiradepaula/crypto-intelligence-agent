@@ -191,6 +191,51 @@ class HyperliquidInfoSmokeTests(unittest.TestCase):
                 self.assertEqual(out["status"], "invalid_provider_schema")
                 self.assertEqual(len(fake.calls), 1)
 
+    def test_non_target_delisted_context_may_be_null_without_blocking_btc_probe(self):
+        payload = meta()
+        payload[0]["universe"].insert(0, {
+            "name": "X", "szDecimals": 0, "maxLeverage": 1,
+            "isDelisted": True,
+        })
+        payload[1].insert(0, None)
+        fake = Responses(first=FakeReply(payload))
+        result = probe(fake)
+        self.assertEqual(result["status"], "schema_observed_no_live_readiness")
+        self.assertEqual(result["native_instrument_count"], 3)
+        self.assertEqual(result["requests_attempted"], 2)
+        self.assertNotIn("rejection_code", result)
+
+    def test_sanitized_metadata_rejection_codes_stop_candle_request(self):
+        examples = [
+            ("target_missing", lambda x: x[0]["universe"][0].update(name="ETH")),
+            ("target_delisted_or_context", lambda x: x[0]["universe"][0].update(isDelisted=True)),
+            ("target_mark_price", lambda x: x[1][0].update(markPx="0")),
+            ("target_funding", lambda x: x[1][0].update(funding="SECRET_RAW_QUOTE")),
+            ("universe_alignment", lambda x: x[1].pop()),
+            ("duplicate_native_name", lambda x: x[0]["universe"][1].update(name="BTC")),
+            ("native_name_or_namespace", lambda x: x[0]["universe"][1].update(name="xyz:STOCK")),
+        ]
+        for reason, mutate in examples:
+            payload = meta()
+            mutate(payload)
+            fake = Responses(first=FakeReply(payload))
+            with self.subTest(reason=reason):
+                result = probe(fake)
+                self.assertEqual(result["status"], "invalid_provider_schema")
+                self.assertEqual(result["rejection_stage"], "native_metadata")
+                self.assertEqual(result["rejection_code"], reason)
+                self.assertEqual(result["requests_attempted"], 1)
+                self.assertEqual(len(fake.calls), 1)
+                self.assertNotIn("SECRET_RAW_QUOTE", json.dumps(result))
+                self.assertFalse(result["ready_for_live_top50"])
+                self.assertFalse(result["external_data_rights_verified"])
+
+    def test_no_untrusted_schema_reason_for_malformed_meta_json(self):
+        out = probe(Responses(first=FakeReply(b'{"raw_secret":"anything"}')))
+        self.assertEqual(out["rejection_stage"], "native_metadata")
+        self.assertEqual(out["rejection_code"], "snapshot_shape")
+        self.assertNotIn("anything", json.dumps(out))
+
     def test_k_prefixed_native_universe_is_not_hip3(self):
         native = meta()
         out = stage_hyperliquid_native_perp_candles(
