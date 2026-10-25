@@ -8,6 +8,7 @@ REQUIRED = [
     "docs/ARCHITECTURE.md",
     "docs/DATA_CONTRACT.md",
     "docs/CRYPTO_REGISTRY.md",
+    "docs/PROVIDER_RIGHTS.md",
     "docs/STRATEGY_SPEC.md",
     "docs/VALIDATION_PLAN.md",
     "docs/DECISIONS.md",
@@ -34,6 +35,7 @@ decisions = texts.get("docs/DECISIONS.md", "")
 state = texts.get("docs/OPERATIONAL_STATE.md", "")
 data_contract = texts.get("docs/DATA_CONTRACT.md", "")
 registry_doc = texts.get("docs/CRYPTO_REGISTRY.md", "")
+rights_doc = texts.get("docs/PROVIDER_RIGHTS.md", "")
 product = texts.get("docs/PRODUCT_SPEC.md", "")
 for token in ["microtarefa", "prossiga", "Codex", "GitHub"]:
     if token.lower() not in agents.lower():
@@ -53,6 +55,10 @@ for token in ["J0", "#1", "Próxima ação"]:
 for token in ["SHA-256", "look-ahead", "internal_research_only", "CoinPaprika", "CoinGecko"]:
     if token.lower() not in registry_doc.lower():
         errors.append(f"missing crypto registry governance: {token}")
+
+for token in ["commercial_or_public_distribution_authorized = false", "marketdata@kraken.com", "não concede", "BLOQUEADO", "R$0,00"]:
+    if token.lower() not in rights_doc.lower():
+        errors.append(f"missing provider rights release gate: {token}")
 
 if errors:
     for error in errors:
