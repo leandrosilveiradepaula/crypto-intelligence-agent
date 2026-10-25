@@ -191,3 +191,6 @@ O fluxo `scripts.collect_private_kraken_research` reúne o seletor Kraken BTC/ET
 
 ## J1/WU37 — Registro real opt-in de 10 identidades
 O registro v2 `registries/crypto-bases-10-20261025-v2.json` documenta BTC/ETH/SOL/XRP/ADA/DOGE/LTC/AVAX/LINK/DOT com uma fonte oficial e outra independente por ativo, SHA256/UTC point-in-time e `internal_research_only`. O seletor Kraken de pesquisa WU35 e a CLI privada persistente WU36 aceitam `--registry expanded-10` (sem alterar o default `btc-eth`), mas só escolhem ativos que realmente passarem os filtros de contrato/ticker em cada captura. Isso não fornece Top50 histórico, licença comercial, volume econômico de candles, sinais ou negociação. Ver D63 e `docs/CRYPTO_REGISTRY.md`.
+
+## J1/WU38 — Pesquisa local de até 5 perps sem volume canônico
+A CLI já existente `python3 -m scripts.collect_private_kraken_research` oferece `--max-price-symbols 1..5` (default 1) e mantém `--registry expanded-10` como opt-in. O seletor Kraken corrente define os contratos elegíveis; o coletor captura BTC primeiro mais até N-1 perps crypto por ranking USD, com 3 barras 1h price-only cada, no máximo 2+N GETs e SQLite privado fora do Git. Não inventa contratos ou `base_volume/quote_volume`, nem atribui direito comercial, Top50 histórico, PnL ou execução. Ver `docs/J1_PRIVATE_RESEARCH.md` e D64.
