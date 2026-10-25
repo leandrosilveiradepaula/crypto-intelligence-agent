@@ -185,3 +185,6 @@ A extensão `SQLiteKrakenPriceOnlyArchive` reaproveita o SQLite local e o adapta
 
 ## J1/WU35 — UniverseSnapshot corrente com registro BTC/ETH
 Para testar a seleção real sem fabricar um Top50, a sonda privada WU35 usa o registro BTC/ETH datado, obtém instrumentos e tickers Kraken em duas chamadas públicas GET, aplica o seletor fail-closed e valida roundtrip em SQLite temporário. O limite é **até 2 ativos** e a conclusão não afeta `ClosedCandle`, licenças, histórico de ranking, 50x real ou ordens. A execução ao vivo depende de acionamento owner-only; detalhes D61 e `docs/DATA_CONTRACT.md`.
+
+## J1/WU36 — Coleta pessoal persistente, opcional e somente leitura
+O fluxo `scripts.collect_private_kraken_research` reúne o seletor Kraken BTC/ETH real e três candles fechados de **preço apenas** em um SQLite local, sem ordens nem execução automática. Exige dois opt-ins e caminho absoluto em diretório privado fora do GitHub; não faz rede na CI. A estratégia e os backtests financeiros não podem usar candles sem volume canônico comprovado; a licença comercial e o Top50 continuam bloqueados. Documentação de escopo e operação futura: `docs/J1_PRIVATE_RESEARCH.md`.
