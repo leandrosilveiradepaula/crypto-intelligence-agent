@@ -136,8 +136,14 @@ class ReadOnlyCollectionPipeline:
         symbol: str | None = None, interval: str | None = None,
         pages: int = 0, candles: int = 0,
     ) -> None:
+        observed_end = self._clock()
+        if observed_end < start_ms:
+            # The clock itself is unreliable. Preserve an audit event with an
+            # explicit warning instead of losing the original clock failure.
+            observed_end = start_ms
+            detail += ";local_clock_moved_backwards"
         self._store.record_collection_event(CollectionEvent(
-            observed_start_ms=start_ms, observed_end_ms=self._clock(),
+            observed_start_ms=start_ms, observed_end_ms=observed_end,
             mode=self._mode, source=self._source_name, exchange="binance",
             endpoint=endpoint, selection_rule_version=self._version,
             symbol=symbol, interval=interval, status=status, detail=detail,
