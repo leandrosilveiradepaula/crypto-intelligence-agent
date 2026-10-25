@@ -36,3 +36,7 @@ CI após WU4: **65 testes Python offline**, compilação e 10 documentos aprovad
 O volume móvel atual de 24h não permite reconstruir o universo histórico. O banco SQLite é uma implementação local de referência, não um requisito de banco de produção.
 
 **Custo adicional permitido:** R$0. Repositório público: nunca versionar segredos, credenciais, dados pessoais ou bancos capturados.
+
+## Conformidade pública (WU5, ainda sem homologação live)
+
+O adaptador rejeita HTTP 403/418 sem retentativa, limita HTTP 429 com `Retry-After` e trata payloads malformados como erro. A documentação em `docs/DATA_CONTRACT.md` explica os limites e a proveniência. A CLI live já requer `--mode live --allow-public-network`, mas não é executada automaticamente nem foi comprovada contra respostas reais nesta etapa. Testes CI usam fixtures sem acesso externo.
