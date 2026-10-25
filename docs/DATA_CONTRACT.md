@@ -262,3 +262,6 @@ Não basta validar `CryptoRegistrySnapshot.from_manifest` se uma aplicação pud
 
 ## J1/WU31 — Variantes de categorias não cripto
 `kraken_eligibility.py` rejeita variações textuais de `xStocks`, `Stock`, `Equity/Equities`, `tokenized stocks/equities`, `Forex`, `Commodity/Commodities`, `Index/Indices` e `Pre IPO` com separadores ASCII, espaços e case alternativos. Isso é filtro negativo adicional sobre dados de instrumento, não fonte externa de registro nem aprovação de `PF_`, `volumeQuote`, contratos ou uso comercial. Outros nomes exigem registry cripto independente, sempre. Nenhum feed live novo.
+
+## WU33 — Registro real mínimo separa identidade de volume de mercado
+`research/registry/research-btc-eth-20261025-v1.json` é snapshot de identidade assistida por IA com duas referências independentes por BTC/ETH, SHA256 e observação pontual em 2026-10-25. Não é snapshot histórico de contratos da Kraken, `UniverseSnapshot` observado, licença de redistribuição, dado de volume ou `ClosedCandle`. Toda seleção futura continua dependente de `CryptoRegistryHistory.select_at` e um snapshot real de instrumentos/tickers contemporâneo; não usar a data do arquivo para retrovalidar velas e mercados do passado. Testes de identificação incluem xStocks adversarial e ativos cripto não revisados excluídos.
