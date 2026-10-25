@@ -35,3 +35,7 @@ CI roda somente testes offline com fixtures e sem chaves. O volume atual de 24h 
 ## Verificação read-only via GitHub sob comando do proprietário
 
 A validação **live** não é executada em CI automática. O workflow `.github/workflows/public-feed-smoke.yml` aceita apenas um comando explícito `/run-readonly-smoke-v1` publicado pelo dono do repositório na [issue #19](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/19). É restrito a 1 símbolo, 3 candles, GET público e três minutos num runner padrão de repositório público; sem secrets, ordens, gastos adicionais, deploy ou agendamento. O job gera logs sanitizados, mas um sucesso pontual não substitui a homologação completa da J1.
+
+## Smoke real de GET público — restrição observada
+
+O [run 40197499250](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40197499250) foi acionado explicitamente na issue #19 em 25/10/2026 e recebeu HTTP **451** na primeira consulta ao serviço público USD-M da Binance. **Zero candles reais coletados.** Não repetir nem contornar a restrição. A causa geográfica/legal específica não foi comprovada, e a J1 continua aguardando uma fonte pública independente e verificável. Testes offline verdes não mudam esse status.

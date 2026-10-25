@@ -17,7 +17,7 @@ Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como
 - J2–J7: issues #3–#8 ainda dependem de J1, sem código de estratégia em produção.
 
 ### Limites e bloqueio verdadeiro
-- Nenhuma execução live controlada comprovada nesta sessão. Testes GitHub Actions intencionalmente **offline**; CLI live exige `--mode live --allow-public-network`.
+- Smoke GET live via GitHub Actions **tentado e bloqueado**: issue #19, comando exato `/run-readonly-smoke-v1` pelo proprietário, workflow run `40197499250` no commit `09617e0197c250e3b13c7486a60067791ed41a52`, 2026-10-25T13:24:57Z, HTTP **451** na primeira consulta pública. Sem candles, sem validação de preço/volume. Fluxo usual de testes GitHub Actions continua offline.
 - A máquina local desta conversa não consegue resolver github.com por DNS; isso não é evidência sobre disponibilidade da API da Binance. Sem Codex diretamente acionável via ferramenta.
 - Não declarar feed real, cobertura histórica extensa, snapshots ponto-no-tempo retrospectivos, ROI, VPS implantada ou J1 homologada.
 - Nenhum gasto extra, credencial, ordem de trade ou release de produção.

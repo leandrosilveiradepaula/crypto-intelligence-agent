@@ -12,7 +12,7 @@ Issue #1 fechada, PRs #10 e #11 integradas; requisitos, decisões, arquitetura, 
 | WU4 — relógio remoto/gate temporal | #17 / #18 | `8fc2f75460e93ef898ae14e3c48ef0348692c857` | run 40189235249 SUCCESS, 65 testes |
 | WU5 — conformance HTTP e Retry-After (PARCIAL) | #19 / #20 | `cddfc2535aac7c3b7ae9bc04fea160419344ee7f` | run 40189603458 SUCCESS, 78 testes |
 
-**WU5 / issue #19 permanece ABERTA**: código e regressões offline concluídos; smoke com dados reais da API pública, disponibilidade por ambiente/região e evidência de cobertura ainda não foram verificados. J1 **não está homologada**.
+**WU5 / issue #19 permanece ABERTA:** a PR #21 integrou o workflow owner-only de smoke GET (commit `09617e0197c250e3b13c7486a60067791ed41a52`, 81 testes offline). O único smoke real, run [40197499250](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40197499250), recebeu HTTP **451** na rota inicial de horário público da Binance. Zero candles reais capturados; causa exata não confirmada. A correção fail-closed HTTP451 segue em PR. J1 **não homologada**.
 
 ## Não implementado/não comprovado
 Estratégias validadas, backtest de retorno líquido, gestão de posições real, interface PT-BR, feed live homologado, histórico ponto-no-tempo profundo, serviço contínuo VPS, backup de dados ou operações reais.

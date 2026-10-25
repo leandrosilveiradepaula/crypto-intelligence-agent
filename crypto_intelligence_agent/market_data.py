@@ -332,10 +332,11 @@ class BinanceFuturesPublicAdapter:
         url = f"{self._base_url}{path}{suffix}"
         for attempt in range(self._max_rate_limit_retries + 1):
             response = self._transport.get(url, self._timeout_seconds)
-            if response.status in (403, 418):
+            if response.status in (403, 418, 451):
                 raise ExchangeAccessError(
                     f"public exchange access rejected with HTTP {response.status}; "
-                    "network, geographic policy or IP restrictions must be checked"
+                    "provider policy, legal, geographic or IP restrictions must be checked; "
+                    "no automatic retry or circumvention"
                 )
             if response.status == 429:
                 if attempt >= self._max_rate_limit_retries:

@@ -96,3 +96,10 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - Executa a CLI já validada, com dupla permissão explícita `--mode live --allow-public-network`, no máximo 1 símbolo, 3 candles 1h e uma página de 3 candles. Consulta exclusivamente endpoints públicos GET USD-M; sem execução de ordens ou armazenamento de banco persistente. Resultado e erros ficam nos logs do job, públicos e sem credenciais.
 - Um resultado GitHub Actions `success` comprova execução dessa amostra naquele runner, instante e IP — não comprova cobertura ampla, dados ponto-no-tempo históricos ou execução em VPS. `failure` por DNS, 403/418, 429, clock ou payload é evidência de bloqueio/incompatibilidade, não licença para contornar políticas regionais.
 - A única execução live autorizada por este caminho depende do comando explícito do proprietário (registrado na issue); testes normais `docs.yml` continuam **100% offline**. Os testes `tests/test_public_smoke_workflow.py` verificam a presença desse gate no workflow.
+
+## Evidência live pontual — HTTP 451
+
+- Run: https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40197499250, execução de 25/10/2026 às 13:24:57 UTC, commit `09617e0197c250e3b13c7486a60067791ed41a52`.
+- Workflow `issue_comment` iniciado explicitamente pelo proprietário na issue #19. A CLI começou em modo `live` e falhou na primeira rota GET pública de horário da Binance, retornando `HttpResponseError` HTTP **451**; saída sem dados.
+- **Resultado:** conectividade HTTP alcançou uma resposta de restrição, sem evidência de candles, elegibilidade ou dados reais válidos. Não presume indisponibilidade universal do provedor, não prova qual legislação/território causou o retorno e não autoriza contorno de bloqueios.
+- O adaptador agora considera HTTP 451 como `ExchangeAccessError` sem novas tentativas, junto com 403/418, com regressão offline. Nunca usar esse runner para repetidas consultas ao endpoint que rejeita acesso. A issue #19 continua aberta; avaliar outras fontes públicas independentes sob termos legais próprios.
