@@ -43,7 +43,7 @@ class PublicAdapterTests(unittest.TestCase):
         return BinanceFuturesPublicAdapter(FixtureTransport(routes), close_safety_ms=1_000, clock_ms=clock_ms)
 
     def test_contracts_are_typed_decimal_and_utc_milliseconds(self) -> None:
-        contracts = self.adapter({"exchangeInfo": fixture("exchange_info.json")}).contracts(observed_at_ms=10_000)
+        contracts = self.adapter({"exchangeInfo": fixture("exchange_info.json")}, clock_ms=lambda: 10_000).contracts(observed_at_ms=10_000)
         self.assertEqual(contracts[0].symbol, "BTCUSDT")
         self.assertEqual(str(contracts[0].tick_size), "0.10")
         self.assertEqual(contracts[0].observed_at_ms, 10_000)
