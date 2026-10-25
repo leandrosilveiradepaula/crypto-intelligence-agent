@@ -86,6 +86,10 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU33 #110 — registro positivo inicial BTC/ETH em implementação:** manifesto real `registries/crypto-btc-eth-20261025-v1.json`, SHA256 `ad860bf8f69a76352a839f269f1337b33db20c51c2d1ff8750ec12c0fc05e301`, `observed_at_ms=1792964997555`; Bitcoin.org+ECB e Ethereum.org+página pública CoinGecko, revisão documental por assistente para pesquisa interna. Testes offline verificam hash, base/identidade, dois publicadores e ausência de retroação. Não aumenta universo para 50 nem libera licença/volume/execução. PR/CI pendentes; J1 #2/#32/#36/#48 seguem abertas.
 
+**J1/WU33 #110 CONCLUÍDA no escopo BTC/ETH:** PR #111 merged SHA `9f364a244bedba42803ca9803585023777813bb1`, CI #40237458174 SUCCESS (**633 testes offline, compileall e 12 docs**); duas referências documentais independentes por ativo e proteção temporal. Uso interno; registro positivo real não é Top50.
+
+**J1/WU34 #112 EM IMPLEMENTAÇÃO:** `SQLiteKrakenPriceOnlyArchive` adiciona trilha local opt-in de preço OHLC da Kraken, com precisão Decimal, receipts, replay, as-of/qualidade e exclusão total de volume econômico; script privado owner-only de 1 GET com banco descartável. PR/CI/live pendentes nesta etapa. Sem converter em `ClosedCandle`, Top50, direito comercial ou negociação. J1 #2/#32/#36/#48 abertas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 

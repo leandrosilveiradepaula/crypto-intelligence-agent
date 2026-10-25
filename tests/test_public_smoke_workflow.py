@@ -198,5 +198,26 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", s)
         self.assertNotRegex(s, r"(?m)^\\s{2}(?:push|pull_request|schedule|workflow_dispatch|repository_dispatch):")
 
+
+    def test_private_kraken_price_only_uses_explicit_owner_issue(self):
+        s = self.source
+        for token in (
+            "kraken-price-only-private:",
+            "github.event.issue.number == 112",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-private-prices-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.probe_kraken_price_archive",
+            "--allow-public-network --allow-private-kraken-prices",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertIn("  contents: read", s)
+        self.assertNotIn("contents: write", s)
+        self.assertNotIn("secrets.", s)
+
 if __name__ == "__main__":
     unittest.main()
