@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 from io import BytesIO
+from pathlib import Path
+import subprocess
+import sys
 import json
 import unittest
 from urllib.error import HTTPError
@@ -80,6 +83,15 @@ def run(opened, *, timepoints=(NOW, NOW + 100, NOW + 200)):
 
 
 class OkxPrivateProbeTests(unittest.TestCase):
+    def test_actions_entrypoint_imports_offline_without_network(self):
+        repo_root = Path(__file__).resolve().parent.parent
+        proc = subprocess.run(
+            [sys.executable, "-m", "scripts.probe_okx_personal_candles", "--help"],
+            cwd=repo_root, capture_output=True, text=True, timeout=10, check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("--allow-okx-personal-probe", proc.stdout)
+
     def test_two_bounded_gets_conformance_but_no_readiness(self):
         opened = FakeOpen(Response(metadata()), Response(history()))
         result = run(opened)
