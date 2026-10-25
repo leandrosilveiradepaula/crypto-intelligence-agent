@@ -168,7 +168,7 @@ class OkxPrivateProbeTests(unittest.TestCase):
         shifted["data"][3][0] = str(TOP - 3 * HOUR_MS + 1)
         self.assertEqual(
             run(FakeOpen(Response(metadata()), Response(shifted)))["status"],
-            "closed_window_incomplete")
+            "staged_candle_contract_rejected")
         invalid = history()
         invalid["data"][3][7] = "NaN"
         self.assertEqual(
