@@ -262,5 +262,30 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", s)
 
 
+
+    def test_three_private_chart_pages_are_owner_only_and_ephemeral(self):
+        s = self.source
+        for token in (
+            "kraken-three-price-pages-private:",
+            "github.event.issue.number == 122",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-three-private-price-pages-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.collect_private_kraken_research",
+            '--database "$private_dir/research.sqlite"',
+            "trap 'rm -rf", "chmod 700", "mktemp -d",
+            "--allow-public-network --allow-private-persistence",
+            "--registry expanded-10 --max-price-symbols 3",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertIn("  contents: read", s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+
+
 if __name__ == "__main__":
     unittest.main()
