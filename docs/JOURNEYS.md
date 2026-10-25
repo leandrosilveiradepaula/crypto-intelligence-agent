@@ -44,6 +44,8 @@
 
 - WU25 #72 / PR #73: código de diagnóstico mínimo owner-only para meta + 3 candles BTC 1h na API informativa Hyperliquid integrado SHA `11e9d840f53701c1a8fb2bb38c5dae61098c0905`, CI #40218027418 SUCCESS (361 testes offline, 12 docs). Comando proprietário publicado #6401021095, run externo não verificável; issue #72 permanece aberta. Nenhum direito, unidade de volume ou Top50 validado.
 
+- WU26 #75: auditoria pontual e read-only de runs `issue_comment` já disparados para #63/#72, sem nova sondagem de mercado; PR/CI e evidências pendentes. Não comprova por si mesma HTTP ou direitos.
+
 ## Preparação independente de J2 (J1 permanece aberta)
 - J2/PRE1 #66 / PR #67: motor matemático offline de indicadores causais somente para `ClosedCandle` sintéticos, integrado SHA `cf1c4cacffa4f5b46475a73dcc6bc9f5631b2e5d`, CI #40216432146 SUCCESS (315 testes, 12 docs). Sem habilitar estratégias, backtest, negociação ou antecipar aceite J1/J2; issue encerrada.
 
