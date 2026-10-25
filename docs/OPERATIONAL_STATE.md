@@ -1,26 +1,30 @@
-# Estado operacional — checkpoint 2026-10-25 UTC
+# Estado operacional — checkpoint pós-WU5 offline (2026-10-25 UTC)
 
-- **Missão:** inteligência quantitativa para futuros perpétuos, entradas e gerenciamento de realizações parciais; Product Owner decide produto, ChatGPT coordena execução técnica e Codex é preferencial se disponível.
-- **Repositório:** `leandrosilveiradepaula/crypto-intelligence-agent`, PÚBLICO por decisão do usuário.
-- **Autonomia:** ler AGENTS.md; não pedir "prossiga" para tarefas seguras dentro da jornada, não encerrar por microtarefas, merges não produtivos apenas com SHA/CI/revisão conferidos.
-- **Gates:** gasto adicional R$0, sem ordens reais, release/migration de produção ou ampliação sensível de acesso.
-- **J0:** concluída documentalmente, issue #1 encerrada, PRs #10 e #11 integradas.
-- **Jornada atual:** J1 Dados, épica #2 ABERTA. Não declarar pronto só por CI verde.
-- **WU1:** issue #9 fechada, PR #12 merged `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
-- **WU2:** issue #13 fechada, PR #14 merged `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`, CI 42 offline.
-- **WU3:** issue #15 fechada, PR #16 merged `9631e4445678bc4c7067964b537da924b5b89a0b`, CI pós-merge run 40188838338 SUCCESS com 58 testes Python offline, compileall e 10 docs.
-- **WU4:** issue #17 fechada, PR #18 merged `8fc2f75460e93ef898ae14e3c48ef0348692c857`, CI pós-merge run 40189235249 SUCCESS com 65 testes Python offline, compileall e 10 docs.
-- **WU5:** issue #19 ABERTA, implementação offline em `feat/j1-wu5-public-api-conformance`; classificação de HTTP 403/418, retry conservador de 429, conformance de payload e testes. Não presumir PR/CI/merge completados até verificação. Nenhum smoke live comprovado.
-- **J2–J7:** issues #3–#8 aguardando dependências. Fonte de verdade: GitHub ao vivo e decisões versionadas.
+Projeto: Crypto Intelligence Agent
+Repo: `leandrosilveiradepaula/crypto-intelligence-agent` (público, decisão do PO).
+Missão: motor quantitativo de oportunidades e gerenciamento de realizações parciais em futuros perpétuos; sem negociação automática real.
+Gates: custo adicional R$0; sem trade/ordens reais, upgrades pagos, destruição, migrations ou releases de produção sujeitos a autorização.
+Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como fonte da verdade e registrar evidências/SHAs verdadeiros.
 
-## Evidências e limitações
-- WU3 e WU4 foram implementadas diretamente via GitHub + CI nesta sessão, sem Codex, gastos, deploy ou operações financeiras.
-- Offline usa fixtures sintéticas e não comprova dados de mercado atuais.
-- Tooling local nesta sessão não alcança github.com por DNS; este fato não prova indisponibilidade da API da exchange. Existe documentação pública do endpoint, mas não houve smoke GET live.
-- Persistência SQLite é referência local; backup, desempenho em VPS, cobertura histórica, universo ponto-no-tempo amplo e valoração financeira ainda não homologados.
+### Jornada e entregas
+- J0 concluída: issue #1 fechada, PRs #10/#11 integradas.
+- **J1 em andamento, épica #2 aberta**.
+- WU1 #9, PR #12 merged no SHA `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
+- WU2 #13, PR #14 merged no SHA `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`.
+- WU3 #15, PR #16 merged no SHA `9631e4445678bc4c7067964b537da924b5b89a0b`; CI pós-merge run 40188838338 SUCCESS (58 testes offline).
+- WU4 #17, PR #18 merged no SHA `8fc2f75460e93ef898ae14e3c48ef0348692c857`; CI pós-merge run 40189235249 SUCCESS (65 testes offline).
+- WU5 #19 permanece **ABERTA**; PR #20 merged no SHA `cddfc2535aac7c3b7ae9bc04fea160419344ee7f`; CI HEAD original `a616aa4161941c0cee57ed57883ded78cfed78e6` run 40189543705 SUCCESS; CI pós-merge run 40189603458 SUCCESS (78 unittest, compileall e 10 docs). Entregue somente conformance offline, HTTP 403/418, Retry-After limitado para 429, payloads públicos e auditoria de falhas.
+- J2–J7: issues #3–#8 ainda dependem de J1, sem código de estratégia em produção.
 
-## Próxima ação concreta autorizada
-1. Conferir HEAD, issues, PRs e CI no GitHub antes de agir; não duplicar #19.
-2. Validar e integrar as partes offline da WU5 via PR com testes, revisão e HEAD exato. Smoke live continua opcional e depende de executor explicitamente autorizado com rede; não declarar homologação sem essa evidência.
-3. Revisar a PR, corrigir regressões, integrar sem produção somente com CI/gates verdes e SHA exato; manter J1 aberta até cobertura/qualidade verificadas.
-4. Ao pedir "gere prompt para novo chat", entregar prontamente missão, regras, decisões, jornada, entregas, issues/PRs/SHAs, testes, bloqueios e ação seguinte para retomada autônoma.
+### Limites e bloqueio verdadeiro
+- Nenhuma execução live controlada comprovada nesta sessão. Testes GitHub Actions intencionalmente **offline**; CLI live exige `--mode live --allow-public-network`.
+- A máquina local desta conversa não consegue resolver github.com por DNS; isso não é evidência sobre disponibilidade da API da Binance. Sem Codex diretamente acionável via ferramenta.
+- Não declarar feed real, cobertura histórica extensa, snapshots ponto-no-tempo retrospectivos, ROI, VPS implantada ou J1 homologada.
+- Nenhum gasto extra, credencial, ordem de trade ou release de produção.
+
+### Próxima ação concreta
+1. Conferir HEAD real da main, issues/PRs, AGENTS.md e docs antes de qualquer alteração; não duplicar #19.
+2. Para concluir aceite de WU5, obter smoke read-only datado **somente** em executor autorizado com rede pública disponível e duas flags explícitas; iniciar com 1 símbolo e 3 candles e capturar JSON sanitizado, status/timestamps, cobertura, rate limits e eventuais restrições. Sem credenciais de trading e sem versões pagas.
+3. Se não houver executor com rede, registrar gate live pendente e concluir qualquer outra validação offline útil. Não inferir sucesso real de testes de fixture.
+4. Após evidências, revisar/ corrigir, integrar mudanças sem produção somente com CI/gates/SHA conferidos; atualizar STATUS e OPERATIONAL_STATE. Manter J1 aberta até aceite efetivo.
+5. Ao pedir "gere prompt para novo chat", produzir prompt completo de continuidade com repositório, regras, decisões, jornadas, evidências, issues/PRs/SHAs, testes, bloqueios e próxima ação autorizada.
