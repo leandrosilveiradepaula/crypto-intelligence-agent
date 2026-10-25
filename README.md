@@ -110,3 +110,7 @@ A [issue #52](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 ## Auditoria offline de proveniência — WU21
 A J1 ainda não tem registro real Top50, unidade financeira dos candles Kraken homologada nem direitos de distribuição. `python scripts/j1_readiness_report.py` mantém o snapshot conservador da WU20. Opcionalmente, `python scripts/j1_readiness_report.py --evidence-json caminho-local.json --decision-at-ms UTC_MS` analisa **apenas a sintaxe/integridade do envelope de alegações** (sem rede e sem dados privados no repositório). O hash é verificável contra os bytes do claim, não contra a autenticidade de terceiros; datas, revisão e licença afirmadas pelo chamador não são comprovação. O relatório nunca libera Top50 real, OHLCV canônico ou exposição externa. Contrato em `docs/DATA_CONTRACT.md` (WU21), testes offline em `tests/test_readiness_evidence.py`.
+
+
+## Pesquisa offline de esquema OKX V5 SWAP — WU22
+O módulo \`crypto_intelligence_agent/okx_swap_candle_research.py\` valida somente fixtures sintéticas de candles históricos de swaps lineares. Campos documentados \`vol\` (contratos), \`volCcy\` (moeda-base), \`volCcyQuote\` (USDT/USDC) e \`confirm=1\` são conservados com Decimal exato; não há conversão para USD, feed live, autorização de licença, mudança de fornecedor, armazenamento ou negociação. A API Agreement OKX 9.4 restringe usos de mercado a fins pessoais não comerciais, com direitos de redistribuição não demonstrados. Ver D40, DATA_CONTRACT e PROVIDER_RIGHTS.
