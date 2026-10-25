@@ -99,7 +99,9 @@ def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object
     instruments_result, instruments = _fetch("instruments", call)
     outcomes.append(instruments_result)
     if instruments is None:
-        return {**summary, "status": "blocked", "routes": outcomes, "requests_attempted": len(outcomes)}
+        reason = instruments_result["status"]
+        status = "invalid_instruments" if reason in ("invalid_json", "invalid_schema", "response_too_large") else "blocked"
+        return {**summary, "status": status, "routes": outcomes, "requests_attempted": len(outcomes)}
     rows = instruments.get("instruments")
     if instruments.get("result") != "success" or not isinstance(rows, list) or not rows:
         return {**summary, "status": "invalid_instruments", "routes": outcomes, "requests_attempted": len(outcomes)}
@@ -125,7 +127,8 @@ def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object
     ticker_result, tickers = _fetch("tickers", call)
     outcomes.append(ticker_result)
     if tickers is None:
-        return {**summary, "status": "partial", "routes": outcomes, "requests_attempted": len(outcomes)}
+        status = "invalid_tickers" if ticker_result["status"] in ("invalid_json", "invalid_schema", "response_too_large") else "partial"
+        return {**summary, "status": status, "routes": outcomes, "requests_attempted": len(outcomes)}
     ticker_rows = tickers.get("tickers")
     if not isinstance(ticker_rows, list):
         return {**summary, "status": "invalid_tickers", "routes": outcomes, "requests_attempted": len(outcomes)}
@@ -148,7 +151,8 @@ def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object
     candles_result, candles_payload = _fetch("candles", call)
     outcomes.append(candles_result)
     if candles_payload is None:
-        return {**summary, "status": "partial", "routes": outcomes, "requests_attempted": len(outcomes)}
+        status = "invalid_candles" if candles_result["status"] in ("invalid_json", "invalid_schema", "response_too_large") else "partial"
+        return {**summary, "status": status, "routes": outcomes, "requests_attempted": len(outcomes)}
     candles = candles_payload.get("candles")
     required_candle_keys = {"time", "open", "high", "low", "close", "volume"}
     if (not isinstance(candles, list)
