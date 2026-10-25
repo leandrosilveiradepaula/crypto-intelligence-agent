@@ -165,3 +165,7 @@ O auditor OFFLINE `readiness_evidence.py` diferencia documentação Kraken Futur
 
 ## J3/PRE2 — Custos assinados de cenário SINTÉTICO, não PnL
 `synthetic_cost_scenarios.py` calcula custos hipotéticos de taxa e slippage adverso por perna e funding com sinal LONG/SHORT sobre notionals em unidades **abstratas** fornecidas pelo teste, sem inferir preço, mercado, moeda, leverage real ou preenchimento de ordem. Usa `Decimal` preciso, eventos fictícios com IDs `fixture_funding_*` e idempotência **somente em memória**, recusa conflito ou cronologia suspeita. O total pode ser NEGATIVO por um crédito hipotético de funding — **isso não é lucro ou resultado financeiro comprovado**. J3 #4 e J1 #2 não estão homologadas, nenhuma ordem é enviada. Veja D53 e `docs/STRATEGY_SPEC.md`.
+
+
+## J1/WU29 — PF_ símbolo e base precisam representar o mesmo ativo
+A seleção de pesquisa Kraken agora recusa metadados contraditórios: o numerador de `PF_<base>USD` deve ser coerente com `instrument.base`, `instrument.pair` e `ticker.pair` se presente. O alias documentado `XBT`→`BTC` é explicitamente aceito para a API Futures; outros multiplicadores/aliases não são presumidos. Isso impede a fixture `PF_AAPLXUSD/base=BTC` de usar a identidade BTC caso sua categoria xStocks esteja ausente. O cheque NÃO comprova identidade crypto-only, licença, candlestick volume unit, Top50 real, risco ou autorização de ordens; veja D54 e `docs/CRYPTO_REGISTRY.md`.
