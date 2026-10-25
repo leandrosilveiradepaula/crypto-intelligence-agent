@@ -39,7 +39,6 @@ class LocalResearchError(ValueError):
 
 @dataclass(frozen=True)
 class LocalCaptureSummary:
-    database_path: str
     registry_sha256: str
     selected_bases_limit: int
     eligible_contracts: int
@@ -189,7 +188,7 @@ def capture_private_research(
         ):
             raise LocalResearchError("canonical_candle_table_must_remain_empty")
         return LocalCaptureSummary(
-            database_path=str(target), registry_sha256=registry.sha256_digest,
+            registry_sha256=registry.sha256_digest,
             selected_bases_limit=len(registry.assets),
             eligible_contracts=len(ranked.eligible),
             excluded_contracts=len(ranked.excluded),
