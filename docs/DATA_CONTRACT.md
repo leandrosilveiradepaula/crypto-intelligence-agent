@@ -88,3 +88,11 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - Respostas HTTP fora de 2xx não são aceitas como JSON de mercado; payloads incorretos de `serverTime`, `exchangeInfo`, `ticker/24hr` ou `klines` devem falhar explícita e seguramente.
 - A CLI já aceita `--mode live --allow-public-network` e limita a demonstração por `--max-symbols`, `--candles`, `--page-size`; sua execução real é **opcional e NÃO foi realizada** nesta WU5. CI permanece somente offline. Se o ambiente não acessar endpoints públicos, registrar bloqueio de execução e não declarar cobertura live homologada.
 - Documentação oficial: https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data .
+
+## Smoke público sob comando explícito (J1/WU5)
+
+- O workflow `.github/workflows/public-feed-smoke.yml` só aceita um evento `issue_comment.created` com texto literal `/run-readonly-smoke-v1` na issue #19, publicado pelo proprietário `leandrosilveiradepaula` e conferido também por `github.actor`. **Não** é executado em pushes, PRs, cron ou CI automática.
+- Runner padrão `ubuntu-latest`, limite de três minutos, somente `contents: read`; checkout sem credenciais persistidas. Repositório público: runner padrão não exige gasto adicional. O workflow não recebe segredos, chaves nem variáveis de ordem.
+- Executa a CLI já validada, com dupla permissão explícita `--mode live --allow-public-network`, no máximo 1 símbolo, 3 candles 1h e uma página de 3 candles. Consulta exclusivamente endpoints públicos GET USD-M; sem execução de ordens ou armazenamento de banco persistente. Resultado e erros ficam nos logs do job, públicos e sem credenciais.
+- Um resultado GitHub Actions `success` comprova execução dessa amostra naquele runner, instante e IP — não comprova cobertura ampla, dados ponto-no-tempo históricos ou execução em VPS. `failure` por DNS, 403/418, 429, clock ou payload é evidência de bloqueio/incompatibilidade, não licença para contornar políticas regionais.
+- A única execução live autorizada por este caminho depende do comando explícito do proprietário (registrado na issue); testes normais `docs.yml` continuam **100% offline**. Os testes `tests/test_public_smoke_workflow.py` verificam a presença desse gate no workflow.

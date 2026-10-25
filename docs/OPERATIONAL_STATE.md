@@ -24,7 +24,7 @@ Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como
 
 ### Próxima ação concreta
 1. Conferir HEAD real da main, issues/PRs, AGENTS.md e docs antes de qualquer alteração; não duplicar #19.
-2. Para concluir aceite de WU5, obter smoke read-only datado **somente** em executor autorizado com rede pública disponível e duas flags explícitas; iniciar com 1 símbolo e 3 candles e capturar JSON sanitizado, status/timestamps, cobertura, rate limits e eventuais restrições. Sem credenciais de trading e sem versões pagas.
+2. Validar e integrar a PR documental/operacional da branch `chore/j1-explicit-live-smoke` (issue #19), com workflow GET público restrito a comentário exato do proprietário, CI offline e revisão no SHA. Somente após o workflow estar no `main`, acionar explicitamente um único smoke pelo comentário `/run-readonly-smoke-v1` na issue #19. Registrar link do run, status/timestamps/cobertura e erro real ou sucesso. O GitHub Actions padrão para repositório público não exige custo adicional. Sem secrets/trades.
 3. Se não houver executor com rede, registrar gate live pendente e concluir qualquer outra validação offline útil. Não inferir sucesso real de testes de fixture.
 4. Após evidências, revisar/ corrigir, integrar mudanças sem produção somente com CI/gates/SHA conferidos; atualizar STATUS e OPERATIONAL_STATE. Manter J1 aberta até aceite efetivo.
 5. Ao pedir "gere prompt para novo chat", produzir prompt completo de continuidade com repositório, regras, decisões, jornadas, evidências, issues/PRs/SHAs, testes, bloqueios e próxima ação autorizada.

@@ -1,0 +1,35 @@
+name: J1 public-feed smoke (explicit owner command)
+# Intentionally not triggered by push, pull_request, cron, or deployment.
+# Only the repo owner's exact comment on issue #19 can run this one-shot GET.
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+concurrency:
+  group: j1-public-feed-smoke
+  cancel-in-progress: false
+jobs:
+  smoke:
+    if: >-
+      github.event.issue.number == 19 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/run-readonly-smoke-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout trusted default branch without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run bounded read-only public endpoint smoke
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m crypto_intelligence_agent \
+            --mode live --allow-public-network \
+            --max-symbols 1 --candles 3 --page-size 3 \
+            --interval 1h --max-clock-skew-ms 5000
