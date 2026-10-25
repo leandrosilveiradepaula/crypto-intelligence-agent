@@ -13,7 +13,8 @@ from unittest.mock import patch
 
 from scripts.probe_kraken_volume_units import (
     CANDLES_URL, HOUR_MS, SYMBOL, TICKERS_URL,
-    main, make_report, summarize_closed_chart, summarize_public_ticker,
+    main, make_report, describe_chart_structure,
+    summarize_closed_chart, summarize_public_ticker,
 )
 
 
@@ -180,6 +181,46 @@ class KrakenVolumeResearchTests(unittest.TestCase):
         result = make_report(opener=opener, clock_ms=lambda: NOW)
         self.assertEqual(result["status"], "invalid_chart_or_insufficient_data")
         self.assertEqual(len(opener.requests), 1)
+
+    def test_sanitized_invalid_chart_structure_discloses_only_types_and_counts(self):
+        body = chart_payload()
+        body["candles"][0]["volume"] = "831.2345000"
+        body["candles"][1]["volume"] = {"secret": "DO_NOT_LOG"}
+        opener = Opener(Response(body))
+        report = make_report(opener=opener, clock_ms=lambda: NOW)
+        self.assertEqual(report["status"], "invalid_chart_or_insufficient_data")
+        self.assertEqual(report["requests_attempted"], 1)
+        self.assertEqual(len(opener.requests), 1)
+        shape = report["chart_structure"]
+        self.assertEqual(shape["chart_row_count"], 27)
+        self.assertEqual(shape["raw_volume_field_types"]["decimal_string"], 1)
+        self.assertEqual(shape["raw_volume_field_types"]["missing_or_other"], 1)
+        self.assertEqual(shape["valid_utc_hour_grid_count_in_sample"], 27)
+        self.assertEqual(shape["closed_hour_grid_count_in_sample"], 27)
+        self.assertEqual(shape["first_valid_hour_open_ms"], 0)
+        self.assertEqual(shape["last_valid_hour_open_ms"], 26 * HOUR)
+        self.assertFalse(shape["unit_proof"])
+        self.assertNotIn("DO_NOT_LOG", json.dumps(report))
+        self.assertNotIn("831.2345000", json.dumps(report))
+
+    def test_structural_inspection_limits_enumeration_and_invalid_timestamps(self):
+        payload = chart_payload(count=100)
+        payload["candles"][0]["time"] = -10
+        payload["candles"][1]["time"] = "UNTRUSTED"
+        payload["candles"][2]["volume"] = True
+        shape = describe_chart_structure(payload, observed_at_ms=NOW)
+        self.assertEqual(shape["chart_row_count"], 100)
+        self.assertEqual(shape["inspected_row_limit"], 28)
+        self.assertEqual(shape["invalid_hour_grid_count_in_sample"], 2)
+        self.assertEqual(shape["raw_volume_field_types"]["boolean"], 1)
+        self.assertFalse(shape["unit_proof"])
+
+    def test_sanitized_structural_diagnostic_without_candles(self):
+        result = describe_chart_structure({"unexpected": [{"private": 1}]},
+                                          observed_at_ms=NOW)
+        self.assertEqual(result["candles_shape"], "not_list")
+        self.assertFalse(result["more_candles_is_boolean"])
+        self.assertNotIn("private", json.dumps(result))
 
     def test_no_network_on_invalid_utc_clock(self):
         opener = Opener()
