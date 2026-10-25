@@ -58,6 +58,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU26 #75 — AUDITORIA CONCLUÍDA:** PR #76 merged SHA `9d20a34404146f3ee7a8290542cd46d519dfb7c7`, CI #40219481048 SUCCESS (**378 testes offline**, compileall, 12 docs), auditoria GitHub Actions read-only #40219481021 SUCCESS. IDs e logs originais das sondagens anteriores recuperados sem repetição de chamadas de mercado, permissões write ou novos gastos. Issue #75 fechada.
 
+**WU27 #78 — implementação em revisão:** parser `metaAndAssetCtxs` target-scoped para BTC, aceitando símbolos e contextos opcionais de instrumentos nativos não-alvo sem promovê-los, recusando spot/HIP-3 e validando BTC estritamente; códigos fixos de erro seguros adicionados ao diagnóstico. Investigação offline motivada pelo run #40218132668, cujo campo exato da recusa não é identificável pelo hash. Nenhum novo POST, licença ou Top50 liberado.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
