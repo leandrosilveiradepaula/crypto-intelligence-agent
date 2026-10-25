@@ -42,7 +42,9 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotRegex(s, r"(?m)^\s+uses:\s+(?:docker|peter-evans/create-pull-request)")
 
     def test_smoke_is_bounded_and_explicitly_read_only(self):
-        s = self.source
+        # The legacy Binance smoke has no DB. A separate, explicitly guarded
+        # Kraken research job may use only a disposable private SQLite file.
+        s = self.source.split("\n  independent-provider-probe:", 1)[0]
         for token in (
             "python3 -m crypto_intelligence_agent",
             "--mode live --allow-public-network",
