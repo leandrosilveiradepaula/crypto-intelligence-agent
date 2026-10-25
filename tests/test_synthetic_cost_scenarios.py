@@ -210,17 +210,21 @@ class SyntheticCostTests(unittest.TestCase):
 
     def test_fee_and_slippage_rates_require_nonnegative_exact_decimal(self):
         for value in (D("-1"), D("NaN"), D("Infinity"), D("10001"), D("1e-7"),
-                      1, 1.0, True, None, "1"):
+                      1, 1.0, True, None):
             for name in ("entry_fee", "exit_fee", "entry_slip", "exit_slip"):
                 with self.subTest(name=name, value=str(value)), self.assertRaises(DataValidationError):
                     scenario(**{name: value})
+        with self.assertRaises(DataValidationError):
+            replace(scenario(), entry_fee_bps="1")
         self.assertEqual(evaluate(entry_fee="0.000001").entry_fee_units, D("0.0000001"))
 
     def test_funding_bps_are_signed_and_bounded(self):
         for value in (D("10001"), D("-10001"), D("NaN"), D("Infinity"),
-                      D("-Infinity"), D("1e-7"), 1, 1.0, True, None, "1"):
+                      D("-Infinity"), D("1e-7"), 1, 1.0, True, None):
             with self.subTest(value=str(value)), self.assertRaises(DataValidationError):
                 funding(rate=value)
+        with self.assertRaises(DataValidationError):
+            SyntheticFundingEvent("fixture_funding_a", START+1000, D(1000), "1")
         self.assertEqual(funding(rate="-10000").signed_funding_rate_bps, D(-10000))
         self.assertEqual(funding(rate="10000").signed_funding_rate_bps, D(10000))
 
