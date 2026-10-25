@@ -1,23 +1,26 @@
-# Estado operacional — checkpoint pós-WU2, 2026-10-25 UTC
+# Estado operacional — checkpoint 2026-10-25 UTC
 
-- Missão: inteligência quantitativa para futuros perpétuos, oportunidades, backtesting realista e gerenciamento de realizações parciais. Ver PRODUCT_SPEC.md/DECISIONS.md.
-- Repositório: leandrosilveiradepaula/crypto-intelligence-agent, PÚBLICO por decisão do Product Owner.
-- Autonomia: ler AGENTS.md. Não pedir "prossiga", não interromper após microtarefas. Merges seguros sem produção com checks/revisão/SHA verificados.
-- Custos: R$0 adicional; sem APIs pagas, ordens reais ou releases de produção.
-- J0: fundação concluída, issue #1 fechada e PRs #10/#11 integradas.
-- Jornada atual: J1 Dados, épica #2 aberta.
-- WU1: issue #9 fechada, PR #12 merged, SHA c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193.
-- WU2: issue #13 fechada, PR #14 merged, HEAD revisado 9ac750ff3f92d56189ce55a670391292d3716ec2, SHA de merge f3567eb063f0b7cfeffe40169ba0b8e9fce1da96.
-- Validação WU2: CI na PR run 40168249829 SUCCESS no HEAD exato, 42 testes offline, compileall e 10 docs; CI pós-merge run 40168285079 SUCCESS no SHA de integração.
-- Correções revisadas WU2: checkpoints não pulam lacunas, linhagem de fonte/versão, transações atômicas, contrato histórico imutável, alinhamento semanal UTC e contagem de conflitos não medida sem falsos zeros.
-- J1/WU3: issue #15 concluída, PR #16 integrada no SHA `9631e4445678bc4c7067964b537da924b5b89a0b`; CI pós-merge run 40188838338 SUCCESS (58 testes Python, compileall, 10 docs). CLI offline por padrão e auditabilidade local SQLite comprovadas por testes.
-- J2–J7: issues #3–#8, dependências ainda não satisfeitas. Não declarar J1 ou produto prontos.
-- Entregas NÃO comprovadas: feed live homologado, histórico ponto-no-tempo amplo, implantação VPS, serviço contínuo, estratégias lucrativas e ordens reais.
-- J1/WU4: issue #17 em implementação direta na branch `feat/j1-wu4-exchange-clock`, check de relógio Binance USD-M público, gate de skew e regressões offline. Não presumir PR ou CI concluídas antes da verificação. Sem disparador Codex direto; trabalho GitHub segue permitido. Sem gasto adicional, deploy, ordem real ou validação live.
+- **Missão:** inteligência quantitativa para futuros perpétuos, entradas e gerenciamento de realizações parciais; Product Owner decide produto, ChatGPT coordena execução técnica e Codex é preferencial se disponível.
+- **Repositório:** `leandrosilveiradepaula/crypto-intelligence-agent`, PÚBLICO por decisão do usuário.
+- **Autonomia:** ler AGENTS.md; não pedir "prossiga" para tarefas seguras dentro da jornada, não encerrar por microtarefas, merges não produtivos apenas com SHA/CI/revisão conferidos.
+- **Gates:** gasto adicional R$0, sem ordens reais, release/migration de produção ou ampliação sensível de acesso.
+- **J0:** concluída documentalmente, issue #1 encerrada, PRs #10 e #11 integradas.
+- **Jornada atual:** J1 Dados, épica #2 ABERTA. Não declarar pronto só por CI verde.
+- **WU1:** issue #9 fechada, PR #12 merged `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
+- **WU2:** issue #13 fechada, PR #14 merged `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`, CI 42 offline.
+- **WU3:** issue #15 fechada, PR #16 merged `9631e4445678bc4c7067964b537da924b5b89a0b`, CI pós-merge run 40188838338 SUCCESS com 58 testes Python offline, compileall e 10 docs.
+- **WU4:** issue #17 fechada, PR #18 merged `8fc2f75460e93ef898ae14e3c48ef0348692c857`, CI pós-merge run 40189235249 SUCCESS com 65 testes Python offline, compileall e 10 docs.
+- **WU5:** issue #19 ABERTA, nenhuma PR de implementação ou sessão Codex comprovada. Objetivo: conformidade pública USD-M, diagnóstico de payload/relógio/limites/qualidade e smoke live estritamente opt-in, sem CI online.
+- **J2–J7:** issues #3–#8 aguardando dependências. Fonte de verdade: GitHub ao vivo e decisões versionadas.
 
-## Próxima ação concreta
-1. Confirmar main, a issue #15, docs e PRs em GitHub; não duplicar trabalho.
-2. Concluir e revisar PR da WU4, com CI Python/documental no SHA exato e merge seguro sem publicação em produção.
-3. Registrar merge/checks reais, fechar a issue #17 e preparar próximo trabalho J1 de conformidade do feed live controlada, sem assumir prontidão da jornada.
-4. Registrar evidências e preparar a próxima work unit da J1 sem pedir "prossiga".
-5. Se o usuário disser "gere prompt para novo chat", produzir PROMPT DE CONTINUIDADE OPERACIONAL com missão, repo, regras, decisões, jornada, SHAs, issues/PRs, testes, bloqueios e próxima ação.
+## Evidências e limitações
+- WU3 e WU4 foram implementadas diretamente via GitHub + CI nesta sessão, sem Codex, gastos, deploy ou operações financeiras.
+- Offline usa fixtures sintéticas e não comprova dados de mercado atuais.
+- Tooling local nesta sessão não alcança github.com por DNS; este fato não prova indisponibilidade da API da exchange. Existe documentação pública do endpoint, mas não houve smoke GET live.
+- Persistência SQLite é referência local; backup, desempenho em VPS, cobertura histórica, universo ponto-no-tempo amplo e valoração financeira ainda não homologados.
+
+## Próxima ação concreta autorizada
+1. Conferir HEAD, issues, PRs e CI no GitHub antes de agir; não duplicar #19.
+2. Desenvolver as partes offline e revisáveis da WU5 com fixtures de conformidade, documentação e testes; obter prova de smoke live somente em executor com acesso público explícito e dentro dos limites gratuitos. Se rede bloqueada, registrar e prosseguir nas tarefas independentes.
+3. Revisar a PR, corrigir regressões, integrar sem produção somente com CI/gates verdes e SHA exato; manter J1 aberta até cobertura/qualidade verificadas.
+4. Ao pedir "gere prompt para novo chat", entregar prontamente missão, regras, decisões, jornada, entregas, issues/PRs/SHAs, testes, bloqueios e ação seguinte para retomada autônoma.
