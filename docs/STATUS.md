@@ -96,6 +96,10 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU35 #115 EM IMPLEMENTAÇÃO:** registro BTC/ETH positivo + `current_market_snapshot` Kraken + `CryptoRegistryHistory.select_at` + `SQLiteMarketDataStore.save_universe_snapshot` com prova de roundtrip atual; máximo 2 ativos, não Top50. CI/PR e sonda ainda pendentes; direitos e unidade de candles não mudam.
 
+**J1/WU35 #115 CONCLUÍDA como universo corrente REAL de até 2 bases:** PR #116 merged `7d54f5b13a1430d94cc9344781d8a63035bafbce`, CI PR #40238326403 SUCCESS (**663 testes offline, compileall, 12 docs**) e pós-merge #40238366580 SUCCESS. Owner-run #40238374774/job #121304703192 SUCCESS em 2026-10-25T22:03:34Z: 2 GETs instruments/tickers Kraken, **231 instrumentos observados, 2 elegíveis e 229 excluídos** sob registro BTC/ETH real, roundtrip SQLite TEMP; zero volume publicado ou armazenado permanentemente, sem ordens. Não equivale a Top50 histórico. Issue #115 fechada.
+
+**J1/WU36 #117 ATIVA — CLI local persistente de pesquisa privada:** integração GET-only de universo BTC/ETH e 3 candles BTC de preço em mesmo SQLite `SQLiteKrakenPriceOnlyArchive` escolhido fora do checkout, flags explícitas, permissões POSIX 0700/0600, sem cron/VPS/trade, com testes offline de segurança/as-of. PR/CI pendentes; código integrado não significa serviço implantado. J1 #2/#32/#36/#48 continuam abertas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 

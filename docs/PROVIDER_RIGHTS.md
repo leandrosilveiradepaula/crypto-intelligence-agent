@@ -103,3 +103,6 @@ A extensão price-only usa SQLite **local/descartável de pesquisa privada** e n
 
 ## J1/WU35 — Snapshot Kraken e dados de ticker só transitam em pesquisa privada
 O snapshot de universo corrente usa `volumeQuote` obtido de API pública, mas esse número NÃO é logado, servido por API, commitado nem publicado. O SQLite do runner é temporário e excluído ao término; a saída sanitizada fornece apenas contagens/flags, sem dump de instrumentos. Isso não confere direitos comerciais de redistribuição nem licenças de agregados/alertas derivados; release público continua BLOQUEADO em #48 e exige autorização aplicável.
+
+## J1/WU36 — Proibição explícita de persistência no checkout público
+A coleta local opcional WU36 exige `--database` absoluto fora da árvore do GitHub, diretório privado POSIX 0700 e arquivo 0600, além de flags independentes para permitir network GET e persistir dados. Não há agendamento nem credenciais; os dados correntes de ticker podem existir só no SQLite do titular. A saída de CLI não expõe caminho completo do banco, preços, volumes ou respostas. **Isso não autoriza compartilhamento, licença comercial ou publicação da interface**; quaisquer condições de uso Kraken continuam aplicáveis, direitos #48 permanecem false. O código foi testado offline, mas nenhum ambiente VPS/produção foi alterado como parte dessa decisão.
