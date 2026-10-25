@@ -23,3 +23,5 @@ Custo adicional autorizado R$ 0, repositório PÚBLICO sem segredos; nenhuma API
 
 - **WU6 — issue #23, concluída:** PR #24 integrada, SHA `76490ac8790138642f34de710c5f2e4bb2cf3d09`; GitHub run [40198042787](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40198042787) em 25/10/2026 13:32:08Z retornou **HTTP 200**, 231 instrumentos, 213 candidatos PI_/PF_ por heurística; há ativos tokenizados não cripto (ex. PF_AAPLXUSD), portanto nenhum Top50 cripto foi confirmado.
 - **WU7 — issue #25, EM DESENVOLVIMENTO:** branch `research/j1-kraken-market-conformance`, até três GET públicos independentes para esquema de instrumentos, tickers/volume e candles de BTC. Não presumir PR/CI/run ou elegibilidade final antes das respectivas evidências.
+
+- WU7 primeira execução de conformance: [run 40198556326](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40198556326) falhou na importação do script `ModuleNotFoundError`, antes de qualquer GET. Correção de entrypoint preparada em branch `fix/j1-kraken-probe-module-entry`, sem presumir CI/merge ainda.
