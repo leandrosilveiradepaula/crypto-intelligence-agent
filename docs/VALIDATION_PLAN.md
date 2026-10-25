@@ -48,3 +48,5 @@ CI verde e retorno histórico alto nunca comprovam lucratividade futura ou pront
 
 
 - J1/WU31 #104 — regressões offline de categorias: ` xStocks `, `X-STOCKS`, `x_stocks`, `Tokenized Equities`, `Pre IPO`, `Equity`, `Stock`, `Commodities`, `Index` excluídas mesmo com base presente em registry hipotético e volume alto. Categorias como DeFi não implicam aprovação crypto-only; bases ausentes no registro permanecem excluídas. Tipos não string recusados, integração WU29 XBT/BTC preservada. Sem autenticar market data, licença ou ordens.
+
+- **J1/WU32 #107:** testar offline transporte HTTP estritamente GET, host/URL fixos, sem proxy/redirect, sem credencial, body/JSON bounded, duplicatas JSON recusadas, falha 451/429 sem retry e parser WU22 exigindo metadados reais `SWAP/linear/live/USDT`, três candles 1H confirmados contíguos, volumes Decimal base/quote distintos. CI não faz chamadas externas. Após merge CI/revisão, um único owner-only comentário exato na issue #107 aciona o experimento real, com resultado sanitizado. Mesmo sucesso não habilita direitos comerciais, identidade positiva nem Top50.
