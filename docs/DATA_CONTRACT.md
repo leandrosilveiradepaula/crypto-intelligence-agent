@@ -258,3 +258,7 @@ Exclusão fail-closed `symbol_base_mismatch`: `PF_AAPLXUSD` atribuído a base `B
 
 ## J1/WU30 — Integridade de registros na fronteira de histórico
 Não basta validar `CryptoRegistrySnapshot.from_manifest` se uma aplicação puder instanciar a dataclass diretamente e chamar `CryptoRegistryHistory.append`. O histórico revalida todo objeto recebido reconstruindo a mesma forma de manifesto SHA-256 v1, usando os valores originais de `assets/evidence` e verificando os campos derivados na igualdade da versão canônica. Recusa SHA arbitrário, publishers duplicados, um único evidence, URLs inseguras, `publisher_root` falsificado, instante/revisor inválido e listas mutáveis. O histórico point-in-time e `select_at` continuam sem retroativar registros; `PF_XBTUSD`/BTC com alias explicitado em WU29 permanece apto somente em fixture de registro. Não há autenticidade de fontes, moeda de volume ou direitos inferidos da integridade; J1 #32/#36/#48 abertas.
+
+
+## J1/WU31 — Variantes de categorias não cripto
+`kraken_eligibility.py` rejeita variações textuais de `xStocks`, `Stock`, `Equity/Equities`, `tokenized stocks/equities`, `Forex`, `Commodity/Commodities`, `Index/Indices` e `Pre IPO` com separadores ASCII, espaços e case alternativos. Isso é filtro negativo adicional sobre dados de instrumento, não fonte externa de registro nem aprovação de `PF_`, `volumeQuote`, contratos ou uso comercial. Outros nomes exigem registry cripto independente, sempre. Nenhum feed live novo.

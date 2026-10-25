@@ -173,3 +173,6 @@ A seleção de pesquisa Kraken agora recusa metadados contraditórios: o numerad
 
 ## J1/WU30 — Histórico cripto não aceita manifesto adulterado via construtor
 O histórico `CryptoRegistryHistory.append` também revalida instâncias Python de `CryptoRegistrySnapshot` construídas diretamente: SHA256 do manifesto v1, evidências independentes declaradas, tipos, timestamps e `publisher_root` derivado. Uma dataclass `frozen=True` não comprova integridade; sem essa defesa, um objeto com SHA inventado poderia alimentar o seletor offline. Revalidação de bytes/forma não autentica o publicador, a identidade do ativo, a licença ou dados reais. Questões J1 #32/#36/#48 seguem abertas; veja D55 e `docs/CRYPTO_REGISTRY.md`.
+
+
+J1/WU31: o seletor de pesquisa Kraken também exclui formas textuais comuns de `xStocks`, equities, forex, commodities, índices e pré-IPO, inclusive com separadores/espaços; isso apenas reforça o filtro negativo e não substitui a prova independente de crypto-only nem os direitos de dados.

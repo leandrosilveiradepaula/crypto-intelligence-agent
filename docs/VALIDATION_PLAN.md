@@ -45,3 +45,6 @@ Toda entrega deve vincular issue, PR, SHA, testes reais e limitações. Implemen
 - J7: experimentos de ablação comparando baseline, derivativos, ML e contexto. Aceitar somente melhorias fora da amostra.
 
 CI verde e retorno histórico alto nunca comprovam lucratividade futura ou prontidão completa do produto. Mudanças financeiras exigem testes de regressão e análise de segurança.
+
+
+- J1/WU31 #104 — regressões offline de categorias: ` xStocks `, `X-STOCKS`, `x_stocks`, `Tokenized Equities`, `Pre IPO`, `Equity`, `Stock`, `Commodities`, `Index` excluídas mesmo com base presente em registry hipotético e volume alto. Categorias como DeFi não implicam aprovação crypto-only; bases ausentes no registro permanecem excluídas. Tipos não string recusados, integração WU29 XBT/BTC preservada. Sem autenticar market data, licença ou ordens.

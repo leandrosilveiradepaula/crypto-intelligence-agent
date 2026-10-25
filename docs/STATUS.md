@@ -80,6 +80,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU30 #101 — CONCLUÍDA como proteção de integridade do histórico crypto-only:** PR #102 merged SHA `e7f62a5fd56d1cc30ee84238cb313d18a029d9d1`, CI #40231467471 SUCCESS (**610 testes offline, compileall, 12 docs**); issue encerrada. Inserção no histórico revalida manifesto/sha/fonte/tempo inclusive dataclass direta, mas **não autentica a verdade de fontes externas**. Issues J1 #2/#32/#36/#48 ainda abertas.
 
+**J1/WU31 #104 em validação:** filtro Kraken bloqueia variações textuais de categorias TradFi, evitando empréstimo indevido de identidade de registro cripto em fixture adversarial. Nenhuma fonte externa/crédito de licença/unidade de candle aprovada; J1 #2/#32/#36/#48 continuam abertas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 

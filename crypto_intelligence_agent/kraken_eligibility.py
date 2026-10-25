@@ -22,6 +22,23 @@ RESEARCH_SOURCE = "kraken_futures_public_research"
 _BLOCKED_CATEGORIES = frozenset({
     "xstocks", "equities", "forex", "commodities", "pre-ipo", "indices",
 })
+_BLOCKED_CATEGORY_TOKENS = frozenset({
+    "xstocks", "stock", "stocks", "equity", "equities", "forex",
+    "commodity", "commodities", "index", "indices", "preipo",
+})
+
+
+def _is_non_crypto_category(value: str) -> bool:
+    # Match only known TradFi descriptors, not every nonempty category.
+    # ASCII word segmentation avoids whitespace/hyphen/underscore variants.
+    tokens = re.findall(r"[a-z0-9]+", value.casefold())
+    compact = "".join(tokens)
+    return (compact in _BLOCKED_CATEGORY_TOKENS
+            or any(token in _BLOCKED_CATEGORY_TOKENS for token in tokens)
+            or (len(tokens) >= 2 and tokens[0] == "tokenized"
+                and tokens[1] in {"stock", "stocks", "equity", "equities"}))
+
+
 _BASE_NAME = re.compile(r"^[A-Z0-9]{2,24}$")
 _INSTRUMENT_NAME = re.compile(r"^PF_[A-Z0-9]{2,36}$")
 
@@ -86,7 +103,7 @@ def _why_ineligible(
     category = instrument.get("category")
     if category is not None and not isinstance(category, str):
         return "invalid_category", None
-    if isinstance(category, str) and category.casefold() in _BLOCKED_CATEGORIES:
+    if isinstance(category, str) and _is_non_crypto_category(category):
         return "non_crypto_category", None
 
     base = instrument.get("base")
