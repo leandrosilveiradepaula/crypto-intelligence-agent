@@ -183,6 +183,11 @@ class BinanceFuturesPublicAdapter:
         self._clock_ms = clock_ms or (lambda: int(time() * 1000))
         self._max_snapshot_age_ms = max_snapshot_age_ms
 
+    @property
+    def transport(self) -> HttpTransport:
+        """Expose transport type for collection-mode safety validation."""
+        return self._transport
+
     def _validate_live_observation(self, observed_at_ms: int) -> int:
         # Both exchangeInfo and rolling 24h tickers are LIVE views. Neither
         # may be labelled as if retrieved from a prior historical timestamp.
