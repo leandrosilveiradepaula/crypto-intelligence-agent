@@ -279,3 +279,25 @@ jobs:
             --database "$private_dir/research.sqlite" \
             --allow-public-network --allow-private-persistence \
             --registry expanded-10 --max-price-symbols 3
+
+  dydx-private-btc-base-usd:
+    if: >-
+      github.event.issue.number == 128 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-dydx-private-btc-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout reviewed default branch with no persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Probe dYdX v4 BTC base and USD candle fields (max two keyless GETs)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_dydx_private_base_usd \
+            --allow-public-network --allow-private-dydx-probe
