@@ -49,8 +49,17 @@ def inspect_once(
         raise UniverseProbeError("invalid_utc_clock")
     if registry_data is not None and registry_variant != "btc-eth":
         raise UniverseProbeError("injected_registry_revision_not_allowed")
-    registry = (load_reviewed_registry(registry_variant, as_of_ms=now)
-                if registry_data is None else load_registry_json(registry_data))
+    try:
+        registry = (load_reviewed_registry(registry_variant, as_of_ms=now)
+                    if registry_data is None else load_registry_json(registry_data))
+    except DataValidationError as error:
+        if "too old" in str(error):
+            # Before I/O: preserve the previous sanitized stale-registry status.
+            return {"status": "market_metadata_or_registry_validation_rejected",
+                    "requests_attempted_exact": 0, "max_gets": 2,
+                    "orders_sent": False, "historical_top50_approved": False,
+                    "canonical_ohlcv_approved": False, "ready_for_trading": False}
+        raise UniverseProbeError("registry_revision_not_available_at_observation") from None
     if registry.observed_at_ms > now:
         raise UniverseProbeError("reviewed_registry_not_yet_observed")
     history = CryptoRegistryHistory((registry,))
