@@ -41,7 +41,12 @@ def run(rows=None, *, config=None, decision=None, safety=1_000):
     rows = [candle(i) for i in range(5)] if rows is None else rows
     conf = FeatureConfig(ema_period=3, atr_period=2, extrema_period=2,
                          quote_volume_period=2) if config is None else config
-    cutoff = rows[-1].close_time_ms + 1000 if decision is None else decision
+    if decision is not None:
+        cutoff = decision
+    elif type(rows) in (tuple, list) and rows and type(rows[-1]) is ClosedCandle:
+        cutoff = rows[-1].close_time_ms + 1000
+    else:
+        cutoff = START + 100 * HOUR
     return compute_synthetic_features(
         rows, config=conf, decision_at_ms=cutoff, close_safety_ms=safety,
     )
