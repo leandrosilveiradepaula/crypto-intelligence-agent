@@ -10,9 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import json
-import re
-from time import sleep
-from typing import Any, Mapping, Protocol, Sequence
+from time import sleep, time
+from typing import Any, Callable, Mapping, Protocol, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -20,7 +19,15 @@ from urllib.request import urlopen
 
 MARKET = "linear_perpetual"
 SOURCE = "binance_usdm_public"
-_INTERVAL_RE = re.compile(r"^(?P<count>[1-9][0-9]*)(?P<unit>[mhdw])$")
+# Binance USD-M intervals with fixed UTC durations. Calendar month is deliberately
+# excluded until its variable length can be represented correctly.
+_INTERVAL_DURATION_MS: dict[str, int] = {
+    "1m": 60_000, "3m": 180_000, "5m": 300_000, "15m": 900_000,
+    "30m": 1_800_000, "1h": 3_600_000, "2h": 7_200_000,
+    "4h": 14_400_000, "6h": 21_600_000, "8h": 28_800_000,
+    "12h": 43_200_000, "1d": 86_400_000, "3d": 259_200_000,
+    "1w": 604_800_000,
+}
 
 
 class MarketDataError(Exception):
@@ -160,15 +167,21 @@ class BinanceFuturesPublicAdapter:
         close_safety_ms: int = 1_000,
         max_rate_limit_retries: int = 2,
         initial_backoff_seconds: float = 0.25,
+        clock_ms: Callable[[], int] | None = None,
+        max_snapshot_age_ms: int = 300_000,
     ) -> None:
-        if timeout_seconds <= 0 or close_safety_ms < 0 or max_rate_limit_retries < 0 or initial_backoff_seconds < 0:
-            raise ValueError("invalid timeout, candle-safety, retry, or backoff configuration")
+        if (timeout_seconds <= 0 or close_safety_ms < 0
+                or max_rate_limit_retries < 0 or initial_backoff_seconds < 0
+                or max_snapshot_age_ms < 0):
+            raise ValueError("invalid timeout, candle-safety, retry, backoff, or snapshot-age configuration")
         self._transport = transport or UrllibTransport()
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._close_safety_ms = close_safety_ms
         self._max_rate_limit_retries = max_rate_limit_retries
         self._initial_backoff_seconds = initial_backoff_seconds
+        self._clock_ms = clock_ms or (lambda: int(time() * 1000))
+        self._max_snapshot_age_ms = max_snapshot_age_ms
 
     def contracts(self, *, observed_at_ms: int) -> tuple[ContractSpec, ...]:
         payload = self._get_json("/fapi/v1/exchangeInfo")
@@ -187,11 +200,29 @@ class BinanceFuturesPublicAdapter:
     ) -> UniverseSnapshot:
         if max_symbols <= 0 or min_onboard_age_ms < 0:
             raise ValueError("max_symbols must be positive and min_onboard_age_ms cannot be negative")
-        contracts = self.contracts(observed_at_ms=observed_at_ms)
+        # The public 24h ticker is a LIVE rolling window, not a historical
+        # point-in-time endpoint. Reject arbitrary backdating of snapshots:
+        # replay must use universe snapshots actually captured at the time.
+        observed = _integer_value(observed_at_ms, "observed_at_ms")
+        now = _integer_value(self._clock_ms(), "clock_ms")
+        if observed > now or now - observed > self._max_snapshot_age_ms:
+            raise DataValidationError(
+                "live 24h ticker cannot reconstruct a historical universe; "
+                "persist snapshots at observation time for replay"
+            )
+        contracts = self.contracts(observed_at_ms=observed)
         ticker_payload = self._get_json("/fapi/v1/ticker/24hr")
         if not isinstance(ticker_payload, list):
             raise DataValidationError("24hr ticker response must be a list")
-        volumes = {str(row.get("symbol")): _decimal(row.get("quoteVolume"), "quoteVolume") for row in ticker_payload if isinstance(row, Mapping)}
+        volumes: dict[str, Decimal] = {}
+        for row in ticker_payload:
+            if not isinstance(row, Mapping):
+                raise DataValidationError("ticker row must be an object")
+            symbol = _string(row, "symbol")
+            volume = _decimal(row.get("quoteVolume"), "quoteVolume")
+            if symbol in volumes and volumes[symbol] != volume:
+                raise DataValidationError(f"conflicting duplicate ticker for {symbol}")
+            volumes[symbol] = volume
         excluded: dict[str, str] = {}
         candidates: list[tuple[str, Decimal]] = []
         for contract in contracts:
@@ -229,6 +260,11 @@ class BinanceFuturesPublicAdapter:
             raise IneligibleSymbolError(f"{symbol} is not in the supplied eligible universe")
         if limit < 1 or limit > 1_500:
             raise ValueError("limit must be between 1 and 1500")
+        for name, timestamp in (("start_time_ms", start_time_ms), ("end_time_ms", end_time_ms)):
+            if timestamp is not None:
+                _integer_value(timestamp, name)
+        if start_time_ms is not None and end_time_ms is not None and start_time_ms > end_time_ms:
+            raise ValueError("start_time_ms must not exceed end_time_ms")
         query: dict[str, int | str] = {"symbol": symbol, "interval": interval, "limit": limit}
         if start_time_ms is not None:
             query["startTime"] = start_time_ms
@@ -263,12 +299,15 @@ class BinanceFuturesPublicAdapter:
     def _parse_contract(raw: Any, observed_at_ms: int) -> ContractSpec:
         if not isinstance(raw, Mapping):
             raise DataValidationError("contract entry must be an object")
-        filters = {str(item.get("filterType")): item for item in raw.get("filters", []) if isinstance(item, Mapping)}
+        raw_filters = raw.get("filters")
+        if not isinstance(raw_filters, list):
+            raise DataValidationError("contract filters must be a list")
+        filters = {str(item.get("filterType")): item for item in raw_filters if isinstance(item, Mapping)}
         price_filter, lot_filter = filters.get("PRICE_FILTER"), filters.get("LOT_SIZE")
         if price_filter is None or lot_filter is None:
             raise DataValidationError(f"{raw.get('symbol', '<unknown>')} lacks required trading filters")
         notional_filter = filters.get("MIN_NOTIONAL") or filters.get("NOTIONAL")
-        return ContractSpec(
+        contract = ContractSpec(
             exchange="binance", market=MARKET, symbol=_string(raw, "symbol"), base_asset=_string(raw, "baseAsset"),
             quote_asset=_string(raw, "quoteAsset"), contract_type=_string(raw, "contractType"), status=_string(raw, "status"),
             onboard_time_ms=_integer(raw, "onboardDate"), tick_size=_decimal(price_filter.get("tickSize"), "tickSize"),
@@ -276,6 +315,11 @@ class BinanceFuturesPublicAdapter:
             min_notional=_decimal(notional_filter.get("notional") or notional_filter.get("minNotional"), "minNotional") if notional_filter else None,
             observed_at_ms=observed_at_ms, source=SOURCE,
         )
+        if contract.tick_size <= 0 or contract.step_size <= 0 or contract.min_qty <= 0:
+            raise DataValidationError(f"invalid contract price or quantity filter for {contract.symbol}")
+        if contract.min_notional is not None and contract.min_notional <= 0:
+            raise DataValidationError(f"invalid min notional for {contract.symbol}")
+        return contract
 
     @staticmethod
     def _parse_candle(symbol: str, interval: str, raw: Any) -> ClosedCandle:
@@ -287,8 +331,13 @@ class BinanceFuturesPublicAdapter:
             open=_decimal(raw[1], "open"), high=_decimal(raw[2], "high"), low=_decimal(raw[3], "low"), close=_decimal(raw[4], "close"),
             base_volume=_decimal(raw[5], "base_volume"), quote_volume=_decimal(raw[7], "quote_volume"), quality="source_closed",
         )
-        if candle.close_time_ms <= candle.open_time_ms or candle.high < max(candle.open, candle.close) or candle.low > min(candle.open, candle.close):
-            raise DataValidationError(f"invalid OHLC chronology for {symbol} at {candle.open_time_ms}")
+        if candle.close_time_ms != candle.open_time_ms + _interval_ms(interval) - 1:
+            raise DataValidationError(f"invalid candle duration for {symbol} at {candle.open_time_ms}")
+        if (min(candle.open, candle.high, candle.low, candle.close) <= 0
+                or candle.high < max(candle.open, candle.close)
+                or candle.low > min(candle.open, candle.close)
+                or candle.base_volume < 0 or candle.quote_volume < 0):
+            raise DataValidationError(f"invalid OHLC or volume for {symbol} at {candle.open_time_ms}")
         return candle
 
 
@@ -319,11 +368,10 @@ def _eligibility_reason(contract: ContractSpec, observed_at_ms: int, min_onboard
 
 
 def _interval_ms(interval: str) -> int:
-    match = _INTERVAL_RE.fullmatch(interval)
-    if not match:
-        raise DataValidationError(f"unsupported interval: {interval}")
-    multiplier = {"m": 60_000, "h": 3_600_000, "d": 86_400_000, "w": 604_800_000}[match["unit"]]
-    return int(match["count"]) * multiplier
+    try:
+        return _INTERVAL_DURATION_MS[interval]
+    except (KeyError, TypeError) as error:
+        raise DataValidationError(f"unsupported interval: {interval}") from error
 
 
 def _string(raw: Mapping[str, Any], field: str) -> str:
@@ -342,12 +390,15 @@ def _integer_at(raw: Sequence[Any], index: int, field: str) -> int:
 
 
 def _integer_value(value: Any, field: str) -> int:
-    if isinstance(value, bool):
-        raise DataValidationError(f"{field} must be an integer")
-    try:
+    # int(0.75) silently truncates; never accept that in timestamp fields.
+    if type(value) is int:
+        parsed = value
+    elif isinstance(value, str) and value.isascii() and value.isdecimal():
         parsed = int(value)
-    except (TypeError, ValueError) as error:
-        raise DataValidationError(f"{field} must be an integer") from error
+    else:
+        raise DataValidationError(f"{field} must be a non-negative integer")
+    if parsed < 0:
+        raise DataValidationError(f"{field} must be a non-negative integer")
     return parsed
 
 
