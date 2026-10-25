@@ -2,28 +2,25 @@
 
 Plataforma de inteligência quantitativa para futuros perpétuos de criptomoedas: pesquisa de entradas, backtesting realista e gerenciamento de realizações parciais de posições vencedoras.
 
-**Estado:** fundação documental J0 integrada; J1 em planejamento para Codex. Nenhum motor de trading ou estratégia lucrativa validada nesta etapa. Não executa ordens reais.
+**Estado:** J0 documental concluída e J1 em desenvolvimento. A WU1 de dados foi integrada; ainda não há histórico persistente, motor de sinais, estratégia de trading validada ou ordens reais.
 
 ## Documentação
 - [Regras para agentes](AGENTS.md)
 - [Produto](docs/PRODUCT_SPEC.md) e [decisões aprovadas](docs/DECISIONS.md)
-- [Arquitetura candidata](docs/ARCHITECTURE.md), [contrato de dados J1](docs/DATA_CONTRACT.md) e [estratégias](docs/STRATEGY_SPEC.md)
+- [Arquitetura](docs/ARCHITECTURE.md), [contrato de dados](docs/DATA_CONTRACT.md) e [estratégias](docs/STRATEGY_SPEC.md)
 - [Validação](docs/VALIDATION_PLAN.md) e [jornadas](docs/JOURNEYS.md)
 - [Status](docs/STATUS.md) e [estado operacional](docs/OPERATIONAL_STATE.md)
 
 ## Desenvolvimento
-O desenvolvimento começa com Codex para work units complexas; ChatGPT coordena GitHub, revisão, integração e continuidade, mantendo a autonomia definida em AGENTS.md.
+ChatGPT coordena GitHub, revisão, integração e continuidade; Codex executa work units. A J1/WU1 (#9) foi integrada pela [PR #12](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/12); a próxima work unit é a [issue #13](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/13).
 
-Custo operacional adicional autorizado: R$0. Repositório público: jamais versionar segredos, credenciais ou dados privados da infraestrutura.
-
-### WU1 de dados (offline)
-
-O primeiro bloco da J1 oferece contratos tipados e um adaptador público, estritamente read-only, para futuros perpétuos lineares USDT. A CI usa somente fixtures gravadas: nenhum teste exige credencial, faz trade ou chama uma API externa.
-
-```powershell
+## Testes locais, offline
+```bash
 python -m unittest discover -s tests -v
 python scripts/check_docs.py
 python -m compileall -q crypto_intelligence_agent tests
 ```
 
-O GitHub Actions valida também todos os testes Python offline. Os endpoints de volume móvel 24h e metadados de contratos são atuais: não os utilize para gerar retrospectivamente um universo histórico; ver [contrato de dados](docs/DATA_CONTRACT.md).
+O GitHub Actions executa esses checks. Todos os testes usam fixtures, sem chamadas externas nem credenciais. Endpoints de 24h volume/contratos são atuais e NÃO autorizam reconstrução retroativa de universo histórico.
+
+Custo operacional adicional autorizado: R$0. Repositório público: nunca publicar segredos, credenciais ou informações privadas de VPS.

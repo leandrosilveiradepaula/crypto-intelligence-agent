@@ -1,12 +1,22 @@
-# Estado operacional — checkpoint da PR #12
+# Estado operacional — checkpoint pós-WU1 (2026-10-25 UTC)
 
-- Projeto: Crypto Intelligence Agent; repositório público `leandrosilveiradepaula/crypto-intelligence-agent`.
-- J0 concluída documentalmente: PR #10 integrada; contrato J1: PR #11 integrada no commit `c10ddeeffc4a90f768f28d643ea4da95d1314874`.
-- Jornada atual: J1 dados, épica #2.
-- WU1 Codex: issue #9; implementação recebida na PR #12, branch `codex/issue-9-j1-wu1-read-only-data`.
-- Review ChatGPT: na própria PR #12 foram incorporadas regressões para validação de preços/volumes, tempo, integridade de ticker/contratos e uma CI que executa Python offline, não apenas documentação.
-- Estado na elaboração deste checkpoint: PR #12 sob revisão; validar o HEAD real e a CI do GitHub, não presumir merge. Commit inicial entregue pelo Codex: `63876af5de76f305b817a2145b8b2c75c8663628`; HEAD posterior deve ser consultado diretamente.
-- CI: verificar o último job no HEAD exato. Os testes iniciais relatados pelo Codex eram 7 locais e não bastavam como gate CI.
-- Escopo implementado: contratos tipados, adaptador público read-only, universo e candles fechados; sem persistência de histórico nem operação real.
-- Limites: R$0 adicional, nenhum deploy VPS/ordem de negociação/credencial de trade.
-- Próxima ação: revisar diff, confirmar testes Python/documentos/compileall no SHA exato, integrar PR #12 sem produção se gates elegíveis; atualizar issue #9 e a épica #2 com evidências, preparar WU2 de histórico e qualidade de dados sem duplicar trabalho. Não pedir "prossiga" para tarefas GitHub permitidas.
+- Projeto: Crypto Intelligence Agent; repo público `leandrosilveiradepaula/crypto-intelligence-agent`.
+- Decisões de produto: consultar docs/DECISIONS.md; zero custo adicional, sem ordens reais.
+- J0: concluída documentalmente; issue #1 fechada, PRs #10 e #11 integradas.
+- Jornada ativa: J1, épica #2.
+- WU1: issue #9 concluída/fechada. PR #12 merged; SHA de integração `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
+- CI pré-merge WU1: run 40159360299 SUCCESS no SHA `d477388d26a9859544f1e7c24206855b23c95b04` (17 unittest, compilação, 10 documentos).
+- CI pós-merge WU1: run 40159403768 SUCCESS em `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
+- Revisão da PR #12 registrada; correções temporais, de integridade financeira e CI Python executável.
+- WU2: issue #13 aberta e pronta para Codex; backfill histórico paginado, persistência de referência, snapshots legítimos, qualidade, replay e testes. **NÃO iniciada**.
+- J2–J7: issues #3–#8 aguardando dependências.
+- Sem implantação VPS, trading real, estratégias validadas, backtests, lucro comprovado ou custos extras.
+- Bloqueio operacional: esta sessão ChatGPT não possui acionador Codex direto; disparo humano apenas para iniciar a issue #13 na conta existente.
+
+## Próxima ação
+1. Confirmar `main` e situação da issue #13 no GitHub; não duplicar trabalho.
+2. Iniciar a work unit #13 com Codex autorizado, respeitando AGENTS.md e docs.
+3. Após PR Codex, revisar contratos/CI/tests e corrigir regressões; fazer merges seguros sem publicação em produção e sem solicitar "prossiga".
+4. Atualizar SHA, testes, bloqueios e próxima ação em docs/STATUS e OPERATIONAL_STATE.
+
+O SHA de implementação acima identifica o merge WU1, não necessariamente o HEAD futuro da main; sempre conferir o HEAD atual.
