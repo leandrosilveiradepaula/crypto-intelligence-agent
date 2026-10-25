@@ -53,7 +53,7 @@
 
 ## Preparação independente de J3 (J1/J2/J3 operacionais ainda não homologadas)
 - J3/PRE1 #94 / PR #95: detector de toques de barreiras em OHLC SINTÉTICO, com gaps/ambiguidade e liquidação hipotética, integrada SHA `3a30150268d6ead7daabe16884827b655b5b1e7c`, CI #40229271296 SUCCESS (**548 testes offline**, 12 docs); issue encerrada, J3 #4 segue sem aceite.
-- J3/PRE2 #96: contabilidade PURA de taxas/slippage e funding assinado em quote abstrata com eventos fictícios; em implementação/CI, sem preço, PnL, contas reais, fees reais, liberação de live ou ordem.
+- J3/PRE2 #96 / PR #97: custo hipotético de fees, slippage e funding assinado em quote ABSTRATA, integrada SHA `ea13ea60c617eb57973a6b6e708b06fc325afc96`, CI #40229681278 SUCCESS (**577 testes offline, compileall, 12 docs**), issue encerrada. Resultado NÃO é PnL, taxas reais ou backtest validado; J3 #4 permanece aberta.
 
 ## Preparação matemática independente de J4 (J1/J2/J3 e J4 operacional permanecem abertos)
 - J4/PRE1 #81 / PR #82: percentuais INITIAL_POSITION/REMAINING_BALANCE e runner em unidades sintéticas, código integrado SHA `c4f6b94fd5a89724185b9a486818a6c8fa84adf0`, CI #40223997038 SUCCESS (**414 testes offline, 12 docs**). Issue encerrada; sem ledger, PnL ou ordens.
