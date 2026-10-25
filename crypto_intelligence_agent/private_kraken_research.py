@@ -180,6 +180,7 @@ def capture_private_research(
             symbol=symbol, interval=_INTERVAL,
             start_open_ms=start, end_open_ms=end,
         )
+        _validated_rows(captured)  # type and candle contract before field access
         if (captured.staged.symbol != symbol
                 or captured.staged.interval != _INTERVAL
                 or captured.staged.start_open_ms != start
@@ -187,7 +188,6 @@ def capture_private_research(
                 or captured.observed_at_ms < last_observed_at
                 or captured.observed_at_ms - started_at > _MAX_CAPTURE_AGE_MS):
             raise LocalResearchError("invalid_private_chart_capture_timing")
-        _validated_rows(captured)
         validated_pages.append((symbol, captured))
         last_observed_at = captured.observed_at_ms
 
