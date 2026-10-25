@@ -6,12 +6,25 @@ change backed by tests, rather than arbitrary untrusted fixture flags.
 """
 from __future__ import annotations
 
+import argparse
 import json
+from pathlib import Path
+import sys
 from typing import Any
 
+# Keep the original "python scripts/j1_readiness_report.py" invocation usable.
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-def readiness_snapshot() -> dict[str, Any]:
-    """Return the conservative, versioned J1 research-readiness assessment."""
+from crypto_intelligence_agent.readiness_evidence import (  # noqa: E402
+    MAX_EVIDENCE_BYTES, audit_evidence_json,
+)
+
+
+def readiness_snapshot(*, evidence_json: str | bytes | None = None,
+                       decision_at_ms: int | None = None) -> dict[str, Any]:
+    """Return an offline checkpoint; optional claims never change its live gates."""
     gates = [
         {
             "capability": "crypto_only_identity",
@@ -70,7 +83,7 @@ def readiness_snapshot() -> dict[str, Any]:
             "reason": "Documented quote USDT/USDC; neither USD conversion nor live proof",
         },
     ]
-    return {
+    result = {
         "schema_version": "j1-readiness-v1",
         "assessment_kind": "reviewed_repository_checkpoint_not_live",
         "ready_for_live_top50": False,
@@ -79,10 +92,33 @@ def readiness_snapshot() -> dict[str, Any]:
         "gates": gates,
     }
 
+    if evidence_json is not None:
+        if decision_at_ms is None:
+            raise ValueError("decision_at_ms is required for an evidence audit")
+        result["provenance_review"] = audit_evidence_json(
+            evidence_json, decision_at_ms=decision_at_ms,
+        )
+    elif decision_at_ms is not None:
+        raise ValueError("decision_at_ms requires evidence_json")
+    return result
 
-def main() -> None:
-    print(json.dumps(readiness_snapshot(), ensure_ascii=False, sort_keys=True, indent=2))
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Deterministic offline J1 readiness report")
+    parser.add_argument("--evidence-json", type=Path,
+                        help="Optional small local JSON of untrusted provenance claims")
+    parser.add_argument("--decision-at-ms", type=int,
+                        help="UTC-ms decision time required with --evidence-json")
+    args = parser.parse_args([] if argv is None else argv)
+    if (args.evidence_json is None) != (args.decision_at_ms is None):
+        parser.error("--evidence-json and --decision-at-ms must be supplied together")
+    evidence = None
+    if args.evidence_json is not None:
+        with args.evidence_json.open("rb") as infile:
+            evidence = infile.read(MAX_EVIDENCE_BYTES + 1)
+    report = readiness_snapshot(evidence_json=evidence, decision_at_ms=args.decision_at_ms)
+    print(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2))
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
