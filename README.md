@@ -126,3 +126,7 @@ A Vike declara CC BY 4.0 com atribuição para os arquivos de dados e permite ma
 
 ## WU24 — Hyperliquid nativa apenas como esquema de pesquisa
 O endpoint público Hyperliquid `POST /info` é informativo, distinto do `/exchange` de execução de ordens. `hyperliquid_native_research.py` valida somente fixtures de metaAndAssetCtxs e candleSnapshot, sem enviar POST, acessar contas, armazenar dados ou aprovar licença. Candles incluem contagem real **alegada** de trades, preço exato Decimal e volume `v` sem unidade financeira homologada; nenhuma conversão USD/USDC ou geração de `ClosedCandle` ocorre. O histórico nativo informado é limitado aos 5.000 candles mais recentes por intervalo. Ver D43 e `docs/DATA_CONTRACT.md`; Top50 e direitos seguem pendentes.
+
+
+## WU25 — Diagnóstico pontual Hyperliquid nativa
+`python3 -m scripts.probe_hyperliquid_native_info` é offline por padrão. Mesmo com flags explícitas, só pode fazer dois POSTs informativos ao endpoint público `https://api.hyperliquid.xyz/info`: metadata perp nativa BTC e três candles BTC 1h fechados. No CI comum, todas as respostas são mockadas. O comando owner-only exige comentário exato na issue #72, após merge, e nunca chama o endpoint `/exchange`, cria ordens, grava preços/candles ou transforma volume sem unidade em `ClosedCandle`. Relatórios expõem apenas contagens, hashes e status, deixando `ready_for_*` false e direitos externos não verificados. Instruções de segurança e evidências em D44 e `docs/VALIDATION_PLAN.md`.
