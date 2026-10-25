@@ -23,6 +23,7 @@ from .kraken_public_readonly import (
     KrakenPublicReadOnlyResearch, SOURCE as KRAKEN_CAPTURE_SOURCE,
 )
 from .market_data import DataValidationError
+from .research_registry_catalog import load_reviewed_registry
 
 _HOUR_MS = 3_600_000
 _MAX_CAPTURE_AGE_MS = 30_000
@@ -103,6 +104,7 @@ def capture_private_research(
     client: Any | None = None,
     clock_ms: Callable[[], int] | None = None,
     registry_bytes: bytes | None = None,
+    registry_variant: str = "btc-eth",
 ) -> LocalCaptureSummary:
     """Collect one bounded CURRENT BTC universe and 3 closed BTC 1h prices.
 
@@ -117,8 +119,10 @@ def capture_private_research(
     target = _private_db_path(db_path)
     clock = clock_ms or (lambda: int(time() * 1000))
     started_at = _now(clock)
-    registry = load_registry_json(
-        _REGISTRY_PATH.read_bytes() if registry_bytes is None else registry_bytes)
+    if registry_bytes is not None and registry_variant != "btc-eth":
+        raise LocalResearchError("injected_registry_revision_not_allowed")
+    registry = (load_reviewed_registry(registry_variant, as_of_ms=started_at)
+                if registry_bytes is None else load_registry_json(registry_bytes))
     if registry.observed_at_ms > started_at:
         raise LocalResearchError("crypto_registry_not_yet_observed")
     if started_at - registry.observed_at_ms > _MAX_REGISTRY_AGE_MS:
