@@ -190,7 +190,7 @@ class PrivateLocalResearchTests(unittest.TestCase):
 
     def test_expanded_registry_revision_rejects_unrecognized_choice_pre_network(self):
         reader = Reader()
-        with self.assertRaises(DataValidationError):
+        with self.assertRaises(LocalResearchError):
             collect(self.db, reader, registry_variant="arbitrary-external.json")
         self.assertEqual(reader.calls, [])
         self.assertFalse(self.db.exists())
