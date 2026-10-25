@@ -205,5 +205,152 @@ class KrakenEligibilityTests(unittest.TestCase):
         self.assertEqual(snapshot1, snapshot2)
 
 
+    def test_mislabeled_equity_with_btc_base_is_excluded_without_category(self):
+        # Former bug: PF_AAPLXUSD advertised base BTC, valid BTC registry
+        # and a very large USD ticker could rank as Bitcoin without a
+        # category tag. Symbol numerator is independent corroboration.
+        spoof = instrument("PF_AAPLXUSD", "BTC", category=None, tradfi=False)
+        t = [ticker("PF_AAPLXUSD", "999999999999999999")]
+        out = self.select(contracts=[spoof], tickers=t,
+                          bases=frozenset({"BTC"}))
+        self.assertEqual(out.eligible, ())
+        self.assertEqual(out.excluded["PF_AAPLXUSD"], "symbol_base_mismatch")
+
+    def test_false_crypto_numerator_cannot_borrow_another_verified_base(self):
+        for contract_symbol, alleged_base, register in (
+            ("PF_XBTUSD", "ETH", frozenset({"BTC", "ETH"})),
+            ("PF_ETHUSD", "BTC", frozenset({"BTC", "ETH"})),
+            ("PF_SOLUSD", "ETH", frozenset({"ETH"})),
+            ("PF_BTCXUSD", "BTC", frozenset({"BTC"})),
+        ):
+            with self.subTest(symbol=contract_symbol, base=alleged_base):
+                row = instrument(contract_symbol, alleged_base, category=None)
+                result = self.select(
+                    contracts=[row], tickers=[ticker(contract_symbol, "1e20")],
+                    bases=register,
+                )
+                self.assertEqual(result.eligible, ())
+                self.assertEqual(result.excluded[contract_symbol],
+                                 "symbol_base_mismatch")
+
+    def test_documented_xbt_symbol_and_btc_metadata_stay_eligible(self):
+        got = self.select(
+            bases=frozenset({"BTC"}),
+            contracts=[instrument("PF_XBTUSD", "BTC")],
+            tickers=[ticker("PF_XBTUSD", "100")],
+        )
+        self.assertEqual([m.symbol for m in got.eligible], ["PF_XBTUSD"])
+        self.assertEqual(got.eligible[0].quote_volume, Decimal(100))
+
+    def test_documented_xbt_symbol_and_xbt_metadata_reuse_btc_registry(self):
+        got = self.select(
+            bases=frozenset({"BTC"}),
+            contracts=[instrument("PF_XBTUSD", "XBT")],
+            tickers=[ticker("PF_XBTUSD", "100", pair="BTC:USD")],
+        )
+        self.assertEqual([m.symbol for m in got.eligible], ["PF_XBTUSD"])
+        self.assertEqual(got.eligible[0].quote_volume, Decimal(100))
+
+    def test_xbt_alias_is_not_a_new_unreviewed_registry_entry(self):
+        got = self.select(
+            bases=frozenset({"XBT"}),
+            contracts=[instrument("PF_XBTUSD", "XBT")],
+            tickers=[ticker("PF_XBTUSD", "100")],
+        )
+        self.assertEqual(got.eligible, ())
+        self.assertEqual(got.excluded["PF_XBTUSD"], "base_not_verified_crypto")
+
+    def test_pair_with_documented_xbt_or_btc_base_is_same_identity(self):
+        for instrument_base, pair_base, ticker_pair_base in (
+            ("BTC", "BTC", "XBT"),
+            ("BTC", "XBT", "BTC"),
+            ("XBT", "BTC", "XBT"),
+            ("XBT", "XBT", "BTC"),
+        ):
+            with self.subTest(metadata=instrument_base, pair=pair_base,
+                              ticker=ticker_pair_base):
+                row = instrument("PF_XBTUSD", instrument_base)
+                row["pair"] = f"{pair_base}:USD"
+                got = self.select(
+                    bases=frozenset({"BTC"}), contracts=[row],
+                    tickers=[ticker("PF_XBTUSD", "100", pair=f"{ticker_pair_base}:USD")],
+                )
+                self.assertEqual([m.symbol for m in got.eligible], ["PF_XBTUSD"])
+
+    def test_instrument_pair_must_match_canonical_numerator_and_usd_quote(self):
+        for pair, quote in (
+            ("ETH:USD", "USD"), ("BTC:USDT", "USD"),
+            ("BTC/USD", "USD"), ("XBT:EUR", "USD"),
+            ("BTC:USD", "USDT"), ("BTC:USD:USD", "USD"),
+            ("XBT:USD ", "USD"),
+        ):
+            with self.subTest(pair=pair, quote=quote):
+                row = instrument("PF_XBTUSD", "BTC")
+                row["pair"] = pair
+                row["quote"] = quote
+                got = self.select(
+                    contracts=[row], tickers=[ticker("PF_XBTUSD", "100")],
+                    bases=frozenset({"BTC"}),
+                )
+                self.assertEqual(got.eligible, ())
+                self.assertEqual(got.excluded["PF_XBTUSD"], "not_comparable_usd_quote")
+
+    def test_ticker_pair_cannot_relabel_verified_symbol(self):
+        for pair in ("ETH:USD", "BTC:USDT", "BTC/USD", "USD:BTC",
+                     "XBT:EUR", "BTC:USD:USD", "", 12, False):
+            with self.subTest(ticker_pair=pair):
+                got = self.select(
+                    contracts=[instrument("PF_XBTUSD", "BTC")],
+                    tickers=[ticker("PF_XBTUSD", "100", pair=pair)],
+                    bases=frozenset({"BTC"}),
+                )
+                self.assertEqual(got.eligible, ())
+                self.assertEqual(got.excluded["PF_XBTUSD"], "ticker_pair_mismatch")
+
+    def test_contract_multiplier_symbol_cannot_be_silently_stripped(self):
+        # Some derivatives can encode package/unit prefixes in symbols.
+        # PEPE is not the same metadata numerator as 1000PEPE unless a
+        # future independently audited contract mapping proves it.
+        row = instrument("PF_1000PEPEUSD", "PEPE")
+        got = self.select(
+            contracts=[row], tickers=[ticker("PF_1000PEPEUSD", "800000")],
+            bases=frozenset({"PEPE"}),
+        )
+        self.assertEqual(got.eligible, ())
+        self.assertEqual(got.excluded["PF_1000PEPEUSD"], "symbol_base_mismatch")
+
+    def test_usdt_symbol_or_empty_base_section_does_not_become_usd_perp(self):
+        for symbol in ("PF_BTCUSDT", "PF_USD", "PF_XUSD", "PF_BTC",
+                       "PF_BTCUSD_261231", "PI_XBTUSD"):
+            with self.subTest(symbol=symbol):
+                got = self.select(
+                    contracts=[instrument(symbol, "BTC")],
+                    tickers=[ticker(symbol, "100")],
+                    bases=frozenset({"BTC"}),
+                )
+                self.assertEqual(got.eligible, ())
+                self.assertEqual(got.excluded[symbol],
+                                 "not_linear_usd_perpetual_symbol")
+
+    def test_existing_eth_contract_still_ranks_in_usd(self):
+        result = self.select(
+            contracts=[instrument("PF_ETHUSD", "ETH")],
+            tickers=[ticker("PF_ETHUSD", "123.456")],
+            bases=frozenset({"ETH"}),
+        )
+        self.assertEqual([m.symbol for m in result.eligible], ["PF_ETHUSD"])
+        self.assertEqual(result.eligible[0].quote_volume, Decimal("123.456"))
+
+    def test_category_blocks_equities_even_when_base_symbol_consistent(self):
+        row = instrument("PF_AAPLXUSD", "AAPLX", category="xStocks")
+        result = self.select(
+            contracts=[row], tickers=[ticker("PF_AAPLXUSD", "1e15")],
+            bases=frozenset({"AAPLX", "BTC"}),
+        )
+        self.assertEqual(result.eligible, ())
+        self.assertEqual(result.excluded["PF_AAPLXUSD"], "non_crypto_category")
+
+
+
 if __name__ == "__main__":
     unittest.main()
