@@ -84,6 +84,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU32 #107 — PR #108 integrada, prova live pendente:** merge `9b66a359d1fa1d7a3ce83f66e1e002aa825de354`, CI PR #40236541641 SUCCESS (626 testes), CI pós-merge #40236593184 SUCCESS. Primeiro owner-run #40236605217 FALHOU antes de qualquer GET com `ModuleNotFoundError` no entrypoint. Correção com execução como módulo e teste subprocess em `fix/j1-wu32-okx-entrypoint`; sem observação real OKX até reexecução controlada. Dados de mercado de uso pessoal, não publicação; nenhuma prova de identidade, histórico Top50 ou permissão comercial. Docs D57; issues J1 #2/#32/#36/#48 abertas.
 
+**J1/WU33 #110 — registro positivo inicial BTC/ETH em implementação:** manifesto real `registries/crypto-btc-eth-20261025-v1.json`, SHA256 `ad860bf8f69a76352a839f269f1337b33db20c51c2d1ff8750ec12c0fc05e301`, `observed_at_ms=1792964997555`; Bitcoin.org+ECB e Ethereum.org+página pública CoinGecko, revisão documental por assistente para pesquisa interna. Testes offline verificam hash, base/identidade, dois publicadores e ausência de retroação. Não aumenta universo para 50 nem libera licença/volume/execução. PR/CI pendentes; J1 #2/#32/#36/#48 seguem abertas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
