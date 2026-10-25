@@ -352,5 +352,41 @@ class KrakenEligibilityTests(unittest.TestCase):
 
 
 
+    def test_tradfi_category_aliases_do_not_borrow_crypto_registry_identity(self):
+        for category in (" xStocks ", "X-STOCKS", "x_stocks", "Stock",
+                         "Stocks", "Equity", "EQUITIES", "Tokenized Equities",
+                         "tokenized-stocks", "FOREX ", "Commodities ",
+                         "Commodity", "Index", "Indices", "Pre IPO", "pre_ipo"):
+            with self.subTest(category=category):
+                row = instrument("PF_AAPLXUSD", "AAPLX", category=category)
+                snap = self.select(
+                    contracts=[row], tickers=[ticker("PF_AAPLXUSD", "999999999999")],
+                    bases=frozenset({"AAPLX"}),
+                )
+                self.assertEqual(snap.eligible, ())
+                self.assertEqual(snap.excluded["PF_AAPLXUSD"], "non_crypto_category")
+
+    def test_crypto_like_category_is_not_positive_identity_proof(self):
+        for category in ("DeFi", "cryptocurrency", "layer-1", None):
+            with self.subTest(category=category):
+                row = instrument("PF_NEWUSD", "NEW", category=category)
+                snap = self.select(
+                    contracts=[row], tickers=[ticker("PF_NEWUSD", "999999999")],
+                    bases=frozenset({"BTC"}),
+                )
+                self.assertEqual(snap.eligible, ())
+                self.assertEqual(snap.excluded["PF_NEWUSD"], "base_not_verified_crypto")
+
+    def test_non_string_categories_still_fail_closed(self):
+        for category in (123, False, [], {}):
+            with self.subTest(category=category):
+                row = instrument("PF_ETHUSD", "ETH", category=category)
+                snap = self.select(
+                    contracts=[row], tickers=[ticker("PF_ETHUSD", "100")],
+                    bases=frozenset({"ETH"}),
+                )
+                self.assertEqual(snap.excluded["PF_ETHUSD"], "invalid_category")
+
+
 if __name__ == "__main__":
     unittest.main()
