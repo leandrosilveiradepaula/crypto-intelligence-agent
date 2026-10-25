@@ -23,7 +23,7 @@ _VERSION = re.compile(r"[A-Za-z0-9_.:-]{1,80}")
 _REVIEWER = re.compile(r"[A-Za-z0-9_.-]{2,64}")
 _HEX = re.compile(r"[0-9a-f]{64}")
 _DNS_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?")
-_PROVIDERS = frozenset({"kraken_futures", "bybit_v5", "binance_usdm"})
+_PROVIDERS = frozenset({"kraken_futures", "bybit_v5", "binance_usdm", "okx_v5"})
 _ORIGINS = frozenset({"synthetic_fixture", "documented_schema", "observed_summary"})
 _ISSUE_BY_CAPABILITY = {
     "crypto_only_identity": 32,
@@ -33,6 +33,7 @@ _ISSUE_BY_CAPABILITY = {
     "historical_coverage": 2,
     "closed_candle_parser": 34,
     "bybit_quote_currency": 50,
+    "okx_quote_currency": 60,
 }
 _CLAIM_KEYS = frozenset({
     "capability", "provider", "dataset", "purpose", "origin",
@@ -107,6 +108,9 @@ def _validate_scope(
                  and purpose is UsagePurpose.INTERNAL_RESEARCH)
     elif capability == "bybit_quote_currency":
         valid = (provider == "bybit_v5" and dataset is Dataset.CANDLES
+                 and purpose is UsagePurpose.INTERNAL_RESEARCH)
+    elif capability == "okx_quote_currency":
+        valid = (provider == "okx_v5" and dataset is Dataset.CANDLES
                  and purpose is UsagePurpose.INTERNAL_RESEARCH)
     elif capability == "binance_network_access":
         valid = (provider == "binance_usdm" and dataset is Dataset.INSTRUMENTS

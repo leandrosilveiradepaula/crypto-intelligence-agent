@@ -86,6 +86,18 @@ class ProviderRightsGateTests(unittest.TestCase):
                 self.assertFalse(a.allowed)
                 self.assertIsNone(a.review_version)
 
+    def test_okx_v5_fixtures_never_grant_data_rights(self):
+        okx_claim = grant(provider="okx_v5")
+        for purpose in (UsagePurpose.INTERNAL_RESEARCH, UsagePurpose.PRIVATE_DASHBOARD,
+                        UsagePurpose.PUBLIC_DISPLAY, UsagePurpose.PUBLIC_API,
+                        UsagePurpose.COMMERCIAL):
+            with self.subTest(purpose=purpose):
+                decision = assess(provider="okx_v5", purpose=purpose,
+                                  grants=(okx_claim,), release=True)
+                self.assertFalse(decision.allowed)
+                self.assertFalse(decision.publishes_data)
+                self.assertFalse(decision.releases_to_production)
+
     def test_multiple_synthetic_claims_never_enable_release(self):
         rows = (grant(reviewed=T-100), grant(reviewed=T-20))
         a = assess(grants=rows, release=True)

@@ -149,3 +149,7 @@ de um registro concreto nem homologação de qualidade do feed.
 Jornada J1 (#2), WU10 (#32). A próxima entrega é a avaliação real
 e versionada de fontes de identidade e o adaptador Kraken read-only, sempre
 com reutilização dos contratos e storage existentes e sem ordens reais.
+
+
+## Observação de taxonomia de instrumento publicada pela Kraken (WU22)
+A página regulatória https://support.mtf.kraken.com/hc/en-us/articles/25499987607837-Linear-Contract-Specifications separa seções "Perpetual Contract Specifications - Crypto" e "- xStocks", mas a seção nominal "Crypto" também apresenta identificadores como `PF_COINXUSD` (Coinbase/COINx) e `PF_METAXUSD` (Meta/METAx). Além disso, o artigo é específico de Kraken MTF, **não prova equivalência de todos os símbolos** à API de Kraken Futures pesquisada. Portanto, não converter suas listas nem prefixos em registro positivo de identidade, não importar os dados na árvore pública do projeto sem revisar direitos. Taxonomia do fornecedor é uma pista, não duas referências independentes nem prova de ativo crypto-only. Issue #32 segue aberta.
