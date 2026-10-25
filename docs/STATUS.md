@@ -66,7 +66,7 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J4/PRE3 #86 — CONCLUÍDA como domínio sintético:** PR #87 merged SHA `afb034d3435162402af673a8946bb2d747950326`, CI #40225049332 SUCCESS (**473 testes offline**, compileall, 12 docs). Configuração 50x para novas posições e leverage_at_open capturado, margem abstrata, vínculo de eventos PRE2 ao ID da posição fictícia; issue #86 encerrada. Não existe moeda, trade real, lot/step, PnL ou idempotência cross-session.
 
-**J4/PRE4 #88 — implementação OFFLINE:** verificador aritmético de passos, mínimos e residual em quantidades sintéticas com regras não verificadas de venue, sem tolerância ou arredondamento. Mesmo resultado compatível não habilita ordem, direitos, lote real ou J4 #5. J1 #2/J3 #4 continuam bloqueadas.
+**J4/PRE4 #88 — CONCLUÍDA somente em aritmética SINTÉTICA:** PR #89 merged SHA `677f0c299cbfc1b0dc772f6d5d110a63c277dea9`, CI #40225440872 SUCCESS (**502 testes offline**, compileall, 12 docs). Passo Decimal/mínimo de tranche, fill individual e residual com regra hipotética e sem arredondamento. Issue #88 fechada; J4 #5, J3 #4 e J1 #2 não homologadas. Nada de lot/step real, USD/notional, order/trade ou idempotência persistente.
 
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
