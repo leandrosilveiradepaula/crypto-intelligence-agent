@@ -78,3 +78,7 @@ O primeiro run real da WU12, [40201172859](https://github.com/leandrosilveiradep
 
 ## Compatibilidade real do volume Kraken (WU13)
 O run [40201488833](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40201488833) provou que 27 candles retornaram `volume` como **string decimal**, divergindo do tipo int64 descrito em documentação. A [issue #39](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/39) normaliza esse número como `Decimal` bruto, sem afirmar unidade financeira, sem criar `ClosedCandle` ou converter para volume cotado. Os testes offline continuam sendo o gate obrigatório.
+
+
+## WU13 concluída — volume Kraken preservado sem inferência
+A [PR #40](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/40) corrigiu o formato decimal-string observado dos candles Kraken. O [run #40201868577](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40201868577) confirmou 2 GET HTTP200 e 24 candles fechados com `volume` bruto acumulado; ainda `unit_proof=false`. O número de volume bruto do chart **não** é volume financeiro comparável sem conhecer unidade/multiplicadores e sem alinhar janelas. A [issue #36](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/36) continua aberta; nenhuma negociação real foi executada.
