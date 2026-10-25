@@ -179,3 +179,6 @@ J1/WU31: o seletor de pesquisa Kraken também exclui formas textuais comuns de `
 
 ## J1/WU33 — Registro de identidade inicial de BTC/ETH (pesquisa interna)
 O manifesto `registries/crypto-btc-eth-20261025-v1.json` referencia duas páginas públicas independentes para cada base e limita a seleção `CryptoRegistryHistory.select_at` a BTC/ETH em coletas futuras. É o primeiro registro com referências reais em vez de fixtures de teste, revisão técnica assistida por IA e hash versionado, **não** prova de cobertura dos 50 ativos, licença, candles `ClosedCandle` ou aptidão para ordens. Não reproduz feeds de preço e não usa APIs pagas; detalhes em `docs/CRYPTO_REGISTRY.md` e D58.
+
+## J1/WU34 — Preços históricos de pesquisa, sem inventar volume
+A extensão `SQLiteKrakenPriceOnlyArchive` reaproveita o SQLite local e o adaptador público Kraken existente para guardar páginas exatas de OHLC fechado como **price-only**, com Decimal, as-of/replay/qualidade e sem base/quote volume ou checkpoint `ClosedCandle`. O script `scripts.probe_kraken_price_archive` é um diagnóstico opcional e owner-only de um GET, banco temporário e sem dados financeiros no log. Não prova Top50, elegibilidade real dos 50 ativos, permissão comercial, sinais, execução ou rentabilidade. Ver `docs/DATA_CONTRACT.md` e D59.
