@@ -1,0 +1,8 @@
+{
+  "symbols": [
+    {"symbol":"BTCUSDT","baseAsset":"BTC","quoteAsset":"USDT","contractType":"PERPETUAL","status":"TRADING","onboardDate":1000,"filters":[{"filterType":"PRICE_FILTER","tickSize":"0.10"},{"filterType":"LOT_SIZE","stepSize":"0.001","minQty":"0.001"},{"filterType":"MIN_NOTIONAL","notional":"5"}]},
+    {"symbol":"ETHUSDT","baseAsset":"ETH","quoteAsset":"USDT","contractType":"PERPETUAL","status":"TRADING","onboardDate":9500,"filters":[{"filterType":"PRICE_FILTER","tickSize":"0.01"},{"filterType":"LOT_SIZE","stepSize":"0.001","minQty":"0.001"}]},
+    {"symbol":"OLDUSDT","baseAsset":"OLD","quoteAsset":"USDT","contractType":"CURRENT_QUARTER","status":"TRADING","onboardDate":1000,"filters":[{"filterType":"PRICE_FILTER","tickSize":"0.01"},{"filterType":"LOT_SIZE","stepSize":"1","minQty":"1"}]},
+    {"symbol":"PAUSEDUSDT","baseAsset":"PAUSED","quoteAsset":"USDT","contractType":"PERPETUAL","status":"BREAK","onboardDate":1000,"filters":[{"filterType":"PRICE_FILTER","tickSize":"0.01"},{"filterType":"LOT_SIZE","stepSize":"1","minQty":"1"}]}
+  ]
+}
