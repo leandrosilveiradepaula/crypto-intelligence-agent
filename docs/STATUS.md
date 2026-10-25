@@ -52,6 +52,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J2/PRE1 #66 — concluída como pré-trabalho offline, sem iniciar J2 operacional:** PR #67 merged SHA `cf1c4cacffa4f5b46475a73dcc6bc9f5631b2e5d`, CI #40216432146 SUCCESS (315 testes offline, compileall e 12 documentos). EMA/ATR/extremos prévios/volume/retorno calculados com Decimal somente em candles sintéticos; saída não sinalizadora e temporalidade verificada. J1 #2 e J2 #3 seguem abertas, sem fonte live, estratégia validada ou execução.
 
+**WU24 #69 — em implementação:** parser offline de mercado perp nativo Hyperliquid (POST /info somente documental) com OHLC/contagem de trades e contexto de margem/volume/funding; sem envio de rede, sem feed live, unidade v atestada, licença de redistribuição ou Top50. CoinGecko/CoinPaprika Free não cobrem uso comercial a R$0; Vike ainda sem resultado verificável de run #63.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
