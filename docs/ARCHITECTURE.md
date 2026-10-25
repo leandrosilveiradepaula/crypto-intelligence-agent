@@ -42,3 +42,7 @@ A arquitetura conserva um seletor de Kraken isolado, **sem alterar** adaptador B
 
 ## Gate de licenciamento de dados de mercado (J1/WU17)
 Kraken `KrakenPublicReadOnlyResearch` permanece isolado de API/UI de distribuição e desligado por padrão. A licença dos dados de mercado **não decorre** da licença do código-fonte; o guia oficial Kraken requer permissão prévia para certos usos comerciais não pessoais de dados públicos. `docs/PROVIDER_RIGHTS.md` estabelece matriz de uso e gate humano de release. Até que finalidade concreta e direitos aplicáveis sejam registrados, **não integrar os candles/tickers da Kraken em serviço público, exportação aberta ou monetização**. Testes offline/sintéticos continuam independentes do licenciador, sem gastos ou ordens.
+
+
+## Estudo de schema Bybit com unidades documentadas (J1/WU18)
+`bybit_linear_candle_research.py` é isolado e **puramente offline**, sem endpoint ou autenticação, para analisar o schema do candidato Bybit V5 linear: OHLC em ordem descendente, `volume` moeda-base e `turnover` na moeda de cotação USDT/USDC conforme API oficial. Exige metadados injetados de `LinearPerpetual`/`Trading`, validação temporal, string Decimal e candles fechados. Não migra storage, não cria contratos `ClosedCandle` canônicos nem libera seleção Top50 ou estratégia. Mudança de provedor ou licença comercial exigiria evidência e gate separado; `docs/PROVIDER_RIGHTS.md` inclui Bybit.

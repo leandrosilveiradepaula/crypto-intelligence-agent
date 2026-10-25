@@ -26,6 +26,7 @@ A tabela diferencia **código público** de **dados de mercado públicos**: disp
 ## Estado específico dos fornecedores
 
 - **Kraken Futures:** contrato de cliente somente GET no módulo `KrakenPublicReadOnlyResearch`, rede desligada por padrão; a fonte de direitos para publicação/uso comercial não foi validada. Não publicar market data em UI pública nem exportar feeds comerciais sem autorização.
+- **Bybit V5 (candidato puramente OFFLINE):** documentos oficiais distinguem `volume` base coin e `turnover` quote coin para linear USDT/USDC: https://bybit-exchange.github.io/docs/v5/market/kline . Os termos da API restringem exploração comercial/revenda de dados: https://www.bybit.com/en/help-center/article/API-Terms . Até avaliação de direitos/geografia/uso e fonte real, não consultar a exchange nesta work unit, não integrar para serviço público, nem supor licença geral.
 - **Binance Futures:** a primeira consulta pública foi bloqueada HTTP451 no runner (issue #19). Não contornar a restrição, nem confundir acesso físico com direitos de uso.
 - **CoinGecko Demo e CoinPaprika Free:** avaliações na `docs/CRYPTO_REGISTRY.md` indicaram limites para uso comercial gratuito; não incorporar feeds/asset registry ao produto sob a premissa de direitos ilimitados.
 - **Trust Wallet Assets / Uniswap Token Lists:** bibliotecas ou listas abertas não certificam identidade do ativo futuro Kraken nem direitos de redistribuição de todos os dados e imagens. Não derivar licença de um logo ou licença MIT apenas do repositório de código.
