@@ -64,6 +64,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J4/PRE2 #83 — CONCLUÍDA como replay exclusivamente sintético:** PR #84 merged SHA `f051ab5c681bb9b4bd15e0384fb779a142330475`, CI #40224464764 SUCCESS (**443 testes offline, compileall, 12 docs**). Eventos de preenchimento fictício por tranche, deduplicação de ID/payload somente em memória, validação temporal, controle de overfill e conservação Decimal; nenhuma idempotência persistente, PnL, contratos reais ou ordem. Issue #83 fechada; J1 #2, J3 #4 e J4 #5 permanecem abertas. Unidade Kraken #36 e licenças #48 ainda não homologadas.
 
+**J4/PRE3 #86 — em implementação exclusivamente sintética:** estado imutável da posição fictícia, alavancagem global 50x capturada só na abertura, margem abstrata independente e vínculos de fills PRE2 por ID de fixture. Sem moeda financeira comprovada, lote/step de corretora, posição real, PnL, idempotência durável ou qualquer ordem. J4 #5, J3 #4 e J1 #2 não homologadas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
