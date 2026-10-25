@@ -119,3 +119,25 @@ jobs:
           set -eu
           python3 -m scripts.probe_kraken_volume_units \
             --allow-public-network --allow-volume-diagnostic
+
+  vike-keyless-manifest:
+    if: >-
+      github.event.issue.number == 63 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-vike-keyless-manifest-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted default branch without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect one keyless public Vike metadata manifest
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 scripts/probe_vike_public_manifest.py \
+            --allow-public-network --allow-vike-manifest-research
