@@ -130,3 +130,7 @@ O endpoint público Hyperliquid `POST /info` é informativo, distinto do `/excha
 
 ## WU25 — Diagnóstico pontual Hyperliquid nativa
 `python3 -m scripts.probe_hyperliquid_native_info` é offline por padrão. Mesmo com flags explícitas, só pode fazer dois POSTs informativos ao endpoint público `https://api.hyperliquid.xyz/info`: metadata perp nativa BTC e três candles BTC 1h fechados. No CI comum, todas as respostas são mockadas. O comando owner-only exige comentário exato na issue #72, após merge, e nunca chama o endpoint `/exchange`, cria ordens, grava preços/candles ou transforma volume sem unidade em `ClosedCandle`. Relatórios expõem apenas contagens, hashes e status, deixando `ready_for_*` false e direitos externos não verificados. Instruções de segurança e evidências em D44 e `docs/VALIDATION_PLAN.md`.
+
+
+## Auditoria pontual de runs GitHub Actions — WU26
+A rotina `scripts/audit_j1_issue_comment_runs.py` permite consultar *somente* os metadados do próprio GitHub (sem mercado) para descobrir os IDs dos jobs das sondagens já acionadas nas issues #63 e #72. O workflow `.github/workflows/j1-evidence-run-audit.yml` roda excepcionalmente em uma PR do titular, branch exata `audit/j1-run-evidence`, com leitura `actions:read` e `contents:read`. Não pede permissão write ou tokens privados, não dispara novas sondagens, não lê corpos de logs brutos e não confere licenças ou qualidade live; os IDs são usados para inspeção posterior de logs. Testes desta rotina são offline, e flags de Top50/aceite permanecem false.
