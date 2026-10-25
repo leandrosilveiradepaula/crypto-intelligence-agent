@@ -193,7 +193,7 @@ class HyperliquidNativeResearchTests(unittest.TestCase):
         row = candle_fixture()[0]
         row["t"], row["T"], row["i"] = start, start+DAY-1, "1d"
         page = stage(rows=[row], interval="1d", start=start, end=start+DAY,
-                     ctx_observed=start, observed=start+DAY+1000, max_ctx_age=2*DAY)
+                     ctx_observed=start+1000, observed=start+DAY+1000, max_ctx_age=DAY)
         self.assertEqual(page.candles[0].close_time_ms, start+DAY-1)
 
     def test_metadata_universe_contexts_must_be_one_to_one(self):
