@@ -224,10 +224,11 @@ class HyperliquidInfoSmokeTests(unittest.TestCase):
         for reply in (FakeReply({}, status=429), FakeReply({}, mime="text/html"),
                       FakeReply(b"not valid JSON"), FakeReply([])):
             fake = Responses(second=reply)
-            with self.subTest(reply=reply), self.assertNotEqual(
-                probe(fake)["status"], "schema_observed_no_live_readiness"
-            )
-            self.assertEqual(len(fake.calls), 2)
+            with self.subTest(reply=reply):
+                self.assertNotEqual(
+                    probe(fake)["status"], "schema_observed_no_live_readiness"
+                )
+                self.assertEqual(len(fake.calls), 2)
 
     def test_candle_no_trades_or_gap_is_not_approved(self):
         one = candles()
