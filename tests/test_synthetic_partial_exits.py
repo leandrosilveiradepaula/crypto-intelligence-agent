@@ -102,18 +102,20 @@ class SyntheticPartialExitsTests(unittest.TestCase):
         rows = [tranche("0.000001", R)]*MAX_TRANCHES
         result = schedule(*rows, initial="987654321.123456789", floor="0")
         prev = result.initial_units
-        cumulative = D(0)
-        for i, allocation in enumerate(result.allocations, start=1):
-            self.assertEqual(allocation.step_number, i)
-            self.assertEqual(allocation.remaining_before_units, prev)
-            self.assertGreater(allocation.exit_units, 0)
-            self.assertGreater(allocation.remaining_after_units, 0)
-            self.assertLess(allocation.remaining_after_units, prev)
-            cumulative += allocation.exit_units
-            self.assertEqual(cumulative, allocation.exited_cumulative_units)
-            self.assertEqual(allocation.remaining_after_units + cumulative,
-                             result.initial_units)
-            prev = allocation.remaining_after_units
+        with localcontext() as ctx:
+            ctx.prec = 640
+            cumulative = D(0)
+            for i, allocation in enumerate(result.allocations, start=1):
+                self.assertEqual(allocation.step_number, i)
+                self.assertEqual(allocation.remaining_before_units, prev)
+                self.assertGreater(allocation.exit_units, 0)
+                self.assertGreater(allocation.remaining_after_units, 0)
+                self.assertLess(allocation.remaining_after_units, prev)
+                cumulative += allocation.exit_units
+                self.assertEqual(cumulative, allocation.exited_cumulative_units)
+                self.assertEqual(allocation.remaining_after_units + cumulative,
+                                 result.initial_units)
+                prev = allocation.remaining_after_units
         self.assertEqual(result.remaining_units, prev)
 
     def test_no_early_roundoff_changes_conservation_or_runner(self):
