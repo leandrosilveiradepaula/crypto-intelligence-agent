@@ -117,6 +117,29 @@ class ServerClockTests(unittest.TestCase):
                 pipeline.run(interval="1h", start_open_ms=0, end_open_ms=3 * HOUR)
             self.assertEqual(store.collection_events()[0].status, "failure")
 
+    def test_backward_local_clock_still_creates_failure_audit(self):
+        values = iter([CLOCK_MS, CLOCK_MS, CLOCK_MS - 1, CLOCK_MS - 2])
+
+        def unstable_clock():
+            return next(values, CLOCK_MS - 2)
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = SQLiteMarketDataStore(Path(directory) / "data.sqlite")
+            pipeline = ReadOnlyCollectionPipeline(
+                BinanceFuturesPublicAdapter(
+                    OfflineFixtureTransport(), clock_ms=unstable_clock,
+                ),
+                store, clock_ms=unstable_clock, mode="offline",
+                source_name="synthetic_fixture",
+            )
+            with self.assertRaises(DataValidationError):
+                pipeline.run(interval="1h", start_open_ms=0, end_open_ms=3 * HOUR)
+            audit = store.collection_events()
+            self.assertEqual(len(audit), 1)
+            self.assertEqual(audit[0].status, "failure")
+            self.assertIn("local_clock_moved_backwards", audit[0].detail)
+            self.assertEqual(audit[0].observed_start_ms, audit[0].observed_end_ms)
+
     def test_clock_sample_is_exposed_in_successful_report_and_event(self):
         with tempfile.TemporaryDirectory() as directory:
             store = SQLiteMarketDataStore(Path(directory) / "data.sqlite")
