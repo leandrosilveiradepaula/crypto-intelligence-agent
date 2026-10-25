@@ -25,3 +25,7 @@ A interface inicialmente serve pesquisa/alertas/execução manual; o modo final 
 
 ## Fronteira do protótipo matemático de saídas (J4/PRE1)
 Existe um cálculo determinístico e sintético de fatias sobre quantidade inicial/saldo remanescente e piso residual. Isso não constitui conta, posição financeira, capacidade de ordem, trailing, execução nem corretagem homologada: as quantidades são abstratas e podem ser menores que o mínimo da exchange real. A regra geral de margem, alavancagem gravada na abertura e saídas **manuais** não foi alterada, nem o objetivo de capturar tendências. Nenhuma promessa de resultado ou J4 operacional aceita por essa entrega.
+
+
+## Eventos manuais de saída: limite do protótipo de replay J4/PRE2
+O replay de eventos atualmente é **apenas sintético e em memória**: contabiliza parcial de tranche somente quando há evento explícito, deduplica event_id idêntico em uma única execução e não simula preço de execução. Não identifica eventos duplicados com IDs diferentes ou falhas entre sessões; logo **não** constitui histórico auditável de posições reais, PnL, acompanhamento do usuário nem ordem manual enviada. Tais funções exigem transações, IDs confiáveis, preço, taxa, lotes, funding e risco aprovados. O produto continua com operações reais manuais e sem automação.
