@@ -23,7 +23,7 @@ _VERSION = re.compile(r"[A-Za-z0-9_.:-]{1,80}")
 _REVIEWER = re.compile(r"[A-Za-z0-9_.-]{2,64}")
 _HEX = re.compile(r"[0-9a-f]{64}")
 _DNS_LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?")
-_PROVIDERS = frozenset({"kraken_futures", "bybit_v5", "binance_usdm", "okx_v5"})
+_PROVIDERS = frozenset({"kraken_futures", "bybit_v5", "binance_usdm", "okx_v5", "hyperliquid_native"})
 _ORIGINS = frozenset({"synthetic_fixture", "documented_schema", "observed_summary"})
 _ISSUE_BY_CAPABILITY = {
     "crypto_only_identity": 32,
@@ -34,6 +34,7 @@ _ISSUE_BY_CAPABILITY = {
     "closed_candle_parser": 34,
     "bybit_quote_currency": 50,
     "okx_quote_currency": 60,
+    "hyperliquid_native_candle_schema": 69,
 }
 _CLAIM_KEYS = frozenset({
     "capability", "provider", "dataset", "purpose", "origin",
@@ -93,7 +94,7 @@ def _validate_scope(
         raise DataValidationError("unknown capability or provider")
     if dataset is Dataset.CANDLES:
         allowed_quote = (
-            {"unverified"} if provider == "kraken_futures" else {"USDT", "USDC"}
+            {"unverified"} if provider in ("kraken_futures", "hyperliquid_native") else {"USDT", "USDC"}
         )
         if quote_currency not in allowed_quote:
             raise DataValidationError("candle quote cannot be inferred or converted across providers")
@@ -111,6 +112,9 @@ def _validate_scope(
                  and purpose is UsagePurpose.INTERNAL_RESEARCH)
     elif capability == "okx_quote_currency":
         valid = (provider == "okx_v5" and dataset is Dataset.CANDLES
+                 and purpose is UsagePurpose.INTERNAL_RESEARCH)
+    elif capability == "hyperliquid_native_candle_schema":
+        valid = (provider == "hyperliquid_native" and dataset is Dataset.CANDLES
                  and purpose is UsagePurpose.INTERNAL_RESEARCH)
     elif capability == "binance_network_access":
         valid = (provider == "binance_usdm" and dataset is Dataset.INSTRUMENTS
