@@ -78,6 +78,50 @@ class KrakenProbeTests(unittest.TestCase):
         self.assertEqual(request.get_method(), "GET")
         self.assertLessEqual(timeout, 8)
 
+    def test_taxonomy_mode_uses_one_get_and_never_promotes_prefix_to_crypto_label(self):
+        payload = {
+            "result": "success",
+            "instruments": [
+                {"symbol": "PF_XBTUSD", "category": "crypto", "tradfi": False,
+                 "base": "BTC", "quote": "USD", "pair": "BTC:USD",
+                 "tags": ["perpetual", "crypto"], "type": "flexible_futures",
+                 "tradeable": True},
+                {"symbol": "PF_ETHUSD", "category": "crypto", "tradfi": False,
+                 "tags": ["perpetual"], "type": "flexible_futures"},
+                {"symbol": "PF_AAPLXUSD", "category": "equity", "tradfi": True,
+                 "base": "AAPLx", "quote": "USD", "tags": ["tokenized", "equity"],
+                 "type": "flexible_futures", "secret": "DO-NOT-EXPORT"},
+            ],
+        }
+        opener = FakeOpener(FakeResponse(json.dumps(payload).encode()))
+        report = make_report(opener=opener, include_taxonomy=True)
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(len(opener.calls), 1)
+        taxonomy = report["taxonomy"]
+        self.assertEqual(taxonomy["category_counts"], {"crypto": 2, "equity": 1})
+        self.assertEqual(taxonomy["tradfi_boolean_counts"], {"true": 1, "false": 2, "unknown": 0})
+        self.assertTrue(taxonomy["examples"]["PF_AAPLXUSD"]["found"])
+        self.assertEqual(taxonomy["examples"]["PF_AAPLXUSD"]["selected"]["tradfi"], True)
+        self.assertEqual(taxonomy["taxonomy_validation_status"],
+                         "observed_values_only_no_crypto_only_filter_yet")
+        self.assertNotIn("DO-NOT-EXPORT", json.dumps(report))
+
+    def test_taxonomy_ignores_unsafe_category_and_tag_values(self):
+        payload = {
+            "result": "success",
+            "instruments": [
+                {"symbol": "PF_XBTUSD", "category": "unsafe\\nvalue",
+                 "tradfi": "false", "tags": ["ok", "bad\\nINJECT"], "base": "BTC"},
+            ],
+        }
+        opener = FakeOpener(FakeResponse(json.dumps(payload).encode()))
+        result = make_report(opener=opener, include_taxonomy=True)
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(len(opener.calls), 1)
+        self.assertEqual(result["taxonomy"]["category_counts"], {"missing_or_invalid": 1})
+        self.assertEqual(result["taxonomy"]["tradfi_boolean_counts"]["unknown"], 1)
+        self.assertNotIn("bad\\nINJECT", json.dumps(result["taxonomy"]))
+
     def test_http451_is_a_policy_gate_not_an_invitation_to_retry(self):
         error = HTTPError(PUBLIC_URL, 451, "restricted", None, None)
         opener = FakeOpener(error)
