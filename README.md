@@ -59,3 +59,7 @@ A taxonomia real da [WU8](https://github.com/leandrosilveiradepaula/crypto-intel
 
 ## Estado da triagem Kraken (WU9/WU10)
 A [PR #31](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/31) integrou seletor puro que evita incluir ações tokenizadas por prefixo/flag, exigindo um **registro externo e versionado de bases criptográficas verificadas**. CI pós-merge: 115 testes offline. A [issue #32](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/32) trata de estabelecer esse registro com evidência ponto-no-tempo. Ainda não foi gerado um Top50 real, não houve alteração de fornecedor principal nem operação financeira.
+
+
+## Registro cripto com histórico verificável — WU10
+O módulo `crypto_intelligence_agent/crypto_asset_registry.py` valida manifestos **internos de pesquisa** (SHA256, revisão identificada, duas fontes independentes, tempos UTC), rejeita revisões posteriores à observação e inclui a versão integral do registro no `UniverseSnapshot`. A [issue #32](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/32) rastreia a WU10. O esquema, direitos de uso e riscos ficam em [docs/CRYPTO_REGISTRY.md](docs/CRYPTO_REGISTRY.md). Não há lista real homologada de moedas nem integração comercial com APIs pagas; todos os testes usam fixtures sintéticas e não enviam ordens.
