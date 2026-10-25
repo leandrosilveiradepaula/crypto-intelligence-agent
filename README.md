@@ -153,3 +153,7 @@ A rotina offline de `metaAndAssetCtxs` valida a posição de BTC nos arrays, mas
 
 ## J4/PRE4 — Lotes hipotéticos, sem arrendondamento ou autorização de ordens
 `synthetic_lot_feasibility.py` avalia aritmeticamente tranches PRE1 e fills PRE2 de posições PRE3 usando apenas limites `Decimal` **de fixture** (passo de tamanho, mínimo por saída e mínimo de saldo residual). Cada fill individual deve ser múltiplo exato e atingir seu mínimo; não basta que a soma dos fills passe no step. Duplicatas de ID verificadas pelo replay contam uma vez, mas idempotência persistente não é comprovada. Nenhuma quantização, real venue lot-size, min notional, preço, PnL, conta, ordem ou aprovação live é produzida. Veja D50 e `docs/STRATEGY_SPEC.md`.
+
+
+## J1/WU28 — Fontes oficiais precisam pertencer ao MESMO produto
+O auditor OFFLINE `readiness_evidence.py` diferencia documentação Kraken Futures (`PF_`, candles `/api/charts/v1/`) dos arquivos OHLCVT Spot/Kraken Pro e dos contratos Kraken Derivatives US CME/Bitnomial. Citar uma URL oficial de outro produto NÃO comprova a unidade de volume, identidade de criptoativos, lot/step ou direitos dos nossos perpétuos. A tabela PF_ da Kraken inclui Apple/AAPLx e alavancagens diversas: 50x global é configuração de pesquisa, não executabilidade. O auditor registra `source_applicability` insuficiente, mantém gates live e release falsos e não consulta sites durante os testes. Veja D51, `docs/DATA_CONTRACT.md`, `CRYPTO_REGISTRY.md` e `PROVIDER_RIGHTS.md`.
