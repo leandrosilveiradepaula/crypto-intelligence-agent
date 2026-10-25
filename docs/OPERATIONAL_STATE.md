@@ -14,7 +14,8 @@ Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como
 - WU3 #15, PR #16 merged no SHA `9631e4445678bc4c7067964b537da924b5b89a0b`; CI pós-merge run 40188838338 SUCCESS (58 testes offline).
 - WU4 #17, PR #18 merged no SHA `8fc2f75460e93ef898ae14e3c48ef0348692c857`; CI pós-merge run 40189235249 SUCCESS (65 testes offline).
 - WU5 #19 permanece **ABERTA**; PRs #20/#21/#22 integradas. #20: `cddfc2535aac7c3b7ae9bc04fea160419344ee7f` (78 testes offline). #21: `09617e0197c250e3b13c7486a60067791ed41a52` (81 testes offline, workflow owner-only). #22: `32c63d0beccdf4734cf06d0f37d04f9ae833fc1f` (CI pós-merge verde com 81 testes), erro 451 classificado fail-closed e evidência real versionada.
-- WU6 #23: pesquisa de fonte independente Kraken Futures, branch `research/j1-kraken-public-feasibility`; probe de 1 GET de instrumentos, sem autenticação, testes offline, disparo por comentário owner-only. Ainda não executar nem afirmar resultado antes de PR/checks/merge.
+- WU6 #23 **concluída**: PR #24 merged, SHA `76490ac8790138642f34de710c5f2e4bb2cf3d09`; GitHub Actions run `40198042787` SUCCESS: GET independente Kraken Futures `/derivatives/api/v3/instruments` HTTP200 em 641ms, UTC `2026-10-25T13:32:08Z`, 231 instrumentos, 213 prefixos PI_/PF_ heurísticos, SEM comprovação de elegibilidade crypto-only. Inclui PF_AAPLXUSD tokenizado. 90 testes offline no merge.
+- WU7 #25 **em desenvolvimento**: branch `research/j1-kraken-market-conformance`, pesquisa de schema `instruments` / `tickers` / `trade candles` em máximo 3 GETs, sem autenticação. Até PR/checks/merge e run owner-only, não marcar schema real validado.
 - J2–J7: issues #3–#8 ainda dependem de J1, sem código de estratégia em produção.
 
 ### Limites e bloqueio verdadeiro
@@ -24,8 +25,8 @@ Autonomia: AGENTS.md; não pedir "prossiga" por microtarefas, manter GitHub como
 - Nenhum gasto extra, credencial, ordem de trade ou release de produção.
 
 ### Próxima ação concreta
-1. Conferir HEAD/PRs/issues antes de agir, inclusive #19 (bloqueada por 451 no GitHub runner) e #23 (fonte independente em avaliação). Não recriar trabalhos.
-2. Concluir teste offline, revisão, CI e integração segura da work unit #23. Somente depois do merge, acionar uma única sondagem GET de `futures.kraken.com` via comentário exato do proprietário na issue #23; registrar status e run. O workflow não é parte da CI de push/PR.
-3. Se a fonte responder com sucesso, validar quantidade/tipo de contratos e metadados e planejar adaptador desacoplado como issue nova. Se responder 403/418/451, falhar sem retry/contorno e pesquisar outros provedores independentes permitidos.
-4. Atualizar STATUS e OPERATIONAL_STATE com evidências, e manter J1 aberta até aceite efetivo de dados live/históricos.
+1. Conferir HEAD/PRs/issues antes de agir; não duplicar #19 (Binance bloqueada HTTP451), #23 (Kraken instrumentos GET200, encerrada) ou #25 (conformance em implementação).
+2. Validar PR/CI/revisão da WU7 #25 no SHA exato e integrar apenas sem produção. Depois iniciar UMA sondagem da fonte independente com comentário owner-only `/probe-kraken-market-v1` na #25 e registrar GitHub Actions run, status, nomes de campos seguros e datas.
+3. Antes de implementar novo adaptador, avaliar tipos de instrumentos, ativos tokenizados excluídos, volume cotado comparável e trajetória de fechamento dos candles, sem supor a lista Top50. Criar issue separada para adaptação somente após schema observado.
+4. Se resposta 403/418/451 ou erro não recuperável, não tentar contorno; registrar evidências e avançar nas tarefas offline independentes. Atualizar STATUS/OPERATIONAL_STATE e manter J1 aberta.
 5. Ao pedir "gere prompt para novo chat", produzir prompt completo de continuidade com repositório, regras, decisões, jornadas, evidências, issues/PRs/SHAs, testes, bloqueios e próxima ação autorizada.

@@ -73,6 +73,26 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", s)
 
 
+    def test_third_provider_schema_probe_requires_owner_and_exact_issue(self):
+        s = self.source
+        for token in (
+            "kraken-market-schema:",
+            "github.event.issue.number == 25",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-market-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 scripts/probe_kraken_market_schema.py",
+            "--allow-public-network --allow-kraken-schema-probe",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+        self.assertNotRegex(s, r"(?m)^\s{2}(?:push|pull_request|schedule|workflow_dispatch):")
+
+
 
 if __name__ == "__main__":
     unittest.main()
