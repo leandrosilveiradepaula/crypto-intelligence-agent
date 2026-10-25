@@ -76,6 +76,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1 #32/#36/#48 — diligência complementar registrada em issues:** padrão CAIP-19 identifica ativos por chain+namespace+reference, mas não atesta crypto-only/venue; SLIP-0044 é lista de derivação de wallets, não registro de perpétuos; CoinGecko Demo não inclui direitos comerciais; chart/analytics Kraken não provam unidade de volume. Sem feed real e mantendo gates abertos.
 
+**J1/WU29 #99 — correção de integridade em implementação:** o seletor Kraken WU9 não confrontava `PF_<numerador>USD` com `instrument.base/pair`; uma fixture adversarial `PF_AAPLXUSD` rotulada erroneamente `BTC` poderia emprestar identidade e volume. WU29 acrescenta rejeição `symbol_base_mismatch`, alias explícito XBT→BTC, cheque `ticker.pair` e regressões no histórico, SEM usar feed real ou conceder identidade crypto-only. PR/CI/revisão pendentes; J1 #2/#32/#36/#48 abertas.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
