@@ -46,6 +46,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU20 #54 integrada:** PR #55 merged SHA `7c0642d2d2769a8d12f5651af3f7280fce06ed88`, CI #40209121605 SUCCESS (docs, syntax, unittest offline). Relatório estático conservador, sem Top50/candles canônicos live. **WU21 #56 integrada:** PR #58 merged SHA `c73817ddda007355696ed0649b43c6ca59da9fcf`, CI #40212786207 SUCCESS (docs, sintaxe, unittest offline). Validador e CLI de proveniência aprovam apenas forma/digest/tempo dos claims, jamais direitos ou feed real. Issue #56 encerrada. WU12 #36 segue aberta: a especificação Kraken Market Candles não define a unidade financeira de `volume`.
 
+**WU22 #60 em implementação:** pesquisa de contrato OKX V5 SWAP com volumes contratos/base/quote e candle fechado explícitos, somente sintético/offline. Nenhum GET OKX, licença externa, Top50 real, mudança de provedor, trade, deploy ou custo.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
