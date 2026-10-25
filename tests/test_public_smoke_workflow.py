@@ -93,6 +93,24 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotRegex(s, r"(?m)^\s{2}(?:push|pull_request|schedule|workflow_dispatch):")
 
 
+    def test_kraken_taxonomy_probe_needs_owner_exact_issue_and_one_get(self):
+        s = self.source
+        for token in (
+            "kraken-asset-taxonomy:",
+            "github.event.issue.number == 28",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-taxonomy-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 scripts/probe_public_kraken.py --allow-public-network --inspect-taxonomy",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+
+
 
 if __name__ == "__main__":
     unittest.main()

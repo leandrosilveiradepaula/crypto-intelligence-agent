@@ -76,3 +76,24 @@ jobs:
           set -eu
           python3 -m scripts.probe_kraken_market_schema \
             --allow-public-network --allow-kraken-schema-probe
+
+  kraken-asset-taxonomy:
+    if: >-
+      github.event.issue.number == 28 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-kraken-taxonomy-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted default branch without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Read one independent Kraken public instrument taxonomy sample
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 scripts/probe_public_kraken.py --allow-public-network --inspect-taxonomy

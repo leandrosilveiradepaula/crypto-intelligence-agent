@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import math
 import re
 import sys
 from time import monotonic
@@ -20,6 +21,8 @@ PUBLIC_URL = "https://futures.kraken.com/derivatives/api/v3/instruments"
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 MAX_TIMEOUT_SECONDS = 8
 _SYMBOL = re.compile(r"^[A-Z0-9_]{1,64}$")
+_SAFE_TOKEN = re.compile(r"^[A-Za-z0-9_.:-]{1,40}$")
+_TAXONOMY_EXAMPLES = ("PF_XBTUSD", "PF_ETHUSD", "PF_AAPLXUSD")
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -33,7 +36,56 @@ def _default_open(request: Request, *, timeout: int):
     return build_opener(_NoRedirect()).open(request, timeout=timeout)
 
 
-def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object]:
+def _safe_taxonomy_scalar(value: Any) -> str | bool | int | float | None:
+    if isinstance(value, str) and _SAFE_TOKEN.fullmatch(value) is not None:
+        return value
+    if type(value) in (bool, int):
+        return value
+    if isinstance(value, float) and math.isfinite(value):
+        return value
+    return None
+
+
+def _taxonomy_summary(instruments: list[dict[str, Any]]) -> dict[str, object]:
+    categories: dict[str, int] = {}
+    tradfi: dict[str, int] = {"true": 0, "false": 0, "unknown": 0}
+    for row in instruments:
+        category = _safe_taxonomy_scalar(row.get("category"))
+        label = category if isinstance(category, str) else "missing_or_invalid"
+        categories[label] = categories.get(label, 0) + 1
+        value = row.get("tradfi")
+        tradfi["true" if value is True else "false" if value is False else "unknown"] += 1
+    examples: dict[str, object] = {}
+    lookup = {row["symbol"]: row for row in instruments}
+    for symbol in _TAXONOMY_EXAMPLES:
+        row = lookup.get(symbol)
+        if row is None:
+            examples[symbol] = {"found": False}
+            continue
+        safe: dict[str, object] = {}
+        for name in ("symbol", "base", "quote", "pair", "category", "tradfi",
+                     "tradeable", "suspended", "type", "contractSize", "tickSize"):
+            value = _safe_taxonomy_scalar(row.get(name))
+            if value is not None:
+                safe[name] = value
+        tags = row.get("tags")
+        if isinstance(tags, list):
+            safe["tags"] = [
+                tag for tag in tags
+                if isinstance(tag, str) and _SAFE_TOKEN.fullmatch(tag) is not None
+            ][:10]
+        examples[symbol] = {"found": True, "selected": safe}
+    return {
+        "category_counts": dict(sorted(categories.items())[:30]),
+        "tradfi_boolean_counts": tradfi,
+        "examples": examples,
+        "taxonomy_validation_status": "observed_values_only_no_crypto_only_filter_yet",
+    }
+
+
+def make_report(
+    *, opener: Callable[..., Any] | None = None, include_taxonomy: bool = False
+) -> dict[str, object]:
     """Make exactly one allowed GET; return a sanitized public metadata report."""
     opened = opener or _default_open
     began = monotonic()
@@ -80,7 +132,7 @@ def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object
                 name for name in symbols if name.startswith(("PI_", "PF_"))
             ]
             elapsed_ms = int((monotonic() - began) * 1000)
-            return {
+            result = {
                 **common,
                 "status": "ok",
                 "http_status": code,
@@ -93,6 +145,9 @@ def make_report(*, opener: Callable[..., Any] | None = None) -> dict[str, object
                     "contract eligibility, volume comparability or historical coverage"
                 ),
             }
+            if include_taxonomy:
+                result["taxonomy"] = _taxonomy_summary(instruments)
+            return result
     except HTTPError as exc:
         return {
             **common, "http_status": exc.code,
@@ -115,10 +170,14 @@ def main(argv: list[str] | None = None) -> int:
         "--allow-public-network", action="store_true",
         help="Required to authorize one public read-only instruments request.",
     )
+    parser.add_argument(
+        "--inspect-taxonomy", action="store_true",
+        help="Include a small allowlisted public taxonomy summary; no extra requests.",
+    )
     args = parser.parse_args(argv)
     if not args.allow_public_network:
         parser.error("no network permitted by default; require --allow-public-network")
-    outcome = make_report()
+    outcome = make_report(include_taxonomy=args.inspect_taxonomy)
     print(json.dumps(outcome, indent=2, sort_keys=True, ensure_ascii=False))
     return 0 if outcome["status"] == "ok" else 2
 
