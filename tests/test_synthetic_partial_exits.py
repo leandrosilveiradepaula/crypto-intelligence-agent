@@ -163,6 +163,10 @@ class SyntheticPartialExitsTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(TypeError):
                 replace(res, **{field: True})
         with self.assertRaises(TypeError):
+            replace(res, quality="live_approved")
+        with self.assertRaises(FrozenInstanceError):
+            res.quality = "live_approved"
+        with self.assertRaises(TypeError):
             replace(res.allocations[0], order_capable=True)
 
     def test_bad_basis_is_never_implicitly_interpreted(self):
