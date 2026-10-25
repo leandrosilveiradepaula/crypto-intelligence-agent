@@ -1,0 +1,5 @@
+[
+  {"symbol":"ETHUSDT","quoteVolume":"250"},
+  {"symbol":"BTCUSDT","quoteVolume":"100"},
+  {"symbol":"PAUSEDUSDT","quoteVolume":"999"}
+]

@@ -17,3 +17,7 @@ Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas 
 - D13: repositório público, por decisão expressa do Product Owner em 25/10/2026. Jamais publicar credenciais ou informações privadas.
 
 Hipóteses ainda não aprovadas: parâmetros dos sinais, seleção final de tecnologia, percentuais ótimos de realização, gatilhos de trailing e modelos de ML. Cada decisão nova deve receber justificativa e evidência.
+
+## D14 — Adaptador público read-only e testes por fixture (J1/WU1)
+
+O primeiro adaptador implementado atende apenas endpoints públicos de futuros USD-M e não possui qualquer capacidade de autenticação ou envio de ordens. O domínio conserva `Decimal` e UTC em milissegundos; o transporte HTTP é injetável para que CI e regressões usem fixtures offline. Throttling recebe no máximo duas novas tentativas, com backoff exponencial configurável, antes de falhar explicitamente. O provedor é uma implementação inicial substituível, não uma escolha definitiva de fonte histórica nem uma validação de disponibilidade/cobertura gratuita.

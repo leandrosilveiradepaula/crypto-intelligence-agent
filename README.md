@@ -15,3 +15,12 @@ Plataforma de inteligência quantitativa para futuros perpétuos de criptomoedas
 O desenvolvimento começa com Codex para work units complexas; ChatGPT coordena GitHub, revisão, integração e continuidade, mantendo a autonomia definida em AGENTS.md.
 
 Custo operacional adicional autorizado: R$0. Repositório público: jamais versionar segredos, credenciais ou dados privados da infraestrutura.
+
+### WU1 de dados (offline)
+
+O primeiro bloco da J1 oferece contratos tipados e um adaptador público, estritamente read-only, para futuros perpétuos lineares USDT. A CI usa somente fixtures gravadas: nenhum teste exige credencial, faz trade ou chama uma API externa.
+
+```powershell
+python -m unittest discover -s tests -v
+python scripts/check_docs.py
+```

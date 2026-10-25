@@ -14,3 +14,5 @@ PR/CI/merge dessa branch: consultar GitHub, não presumir aprovação ou conclus
 Custos adicionais: R$0. Sem ordens reais, chaves de negociação, deploy ou backtest lucrativo.
 
 Próxima ação: validar e integrar a PR do contrato J1 quando elegível; entregar handoff Codex #9 para executor autorizado; acompanhar implementação, CI e revisão sem pedir "prossiga". Se não houver acionador Codex autenticado neste chat, registrar um único gate operacional de disparo humano em vez de delegar GitHub ou merges.
+
+Atualização de execução: a issue #9 está em implementação na branch `codex/issue-9-j1-wu1-read-only-data`. Esta work unit cobre somente contratos, adaptação pública read-only e testes offline; não declara J1 concluída, nem comprova cobertura histórica, qualidade de dados em produção ou rentabilidade.
