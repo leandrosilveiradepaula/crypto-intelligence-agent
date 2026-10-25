@@ -214,7 +214,7 @@ class VikeManifestTests(unittest.TestCase):
         self.assertEqual(req.full_url, MANIFEST_URL)
         self.assertEqual(req.get_method(), "GET")
         self.assertNotIn("Authorization", req.headers)
-        self.assertNotIn("X-api-key", {x.lower() for x in req.headers})
+        self.assertNotIn("x-api-key", {x.lower() for x in req.headers})
 
     def test_redirect_wrong_mime_or_bad_http_fails_closed(self):
         raw = json.dumps(fixture()).encode()
