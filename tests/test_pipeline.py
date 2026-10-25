@@ -12,7 +12,7 @@ from unittest.mock import patch
 from crypto_intelligence_agent.cli import main
 from crypto_intelligence_agent.market_data import (
     BinanceFuturesPublicAdapter, DataGapError, DataTimeoutError,
-    DataValidationError, HttpResponse,
+    DataValidationError, HttpResponse, RateLimitError,
 )
 from crypto_intelligence_agent.offline_fixtures import OfflineFixtureTransport
 from crypto_intelligence_agent.pipeline import ReadOnlyCollectionPipeline
@@ -158,7 +158,8 @@ class PipelineTests(unittest.TestCase):
                     adapter, store, clock_ms=clock,
                     mode="offline", source_name="synthetic_fixture",
                 )
-                with self.assertRaises((DataTimeoutError, DataValidationError)) if transport_class is TimeoutTransport else self.assertRaises(Exception):
+                expected_error = DataTimeoutError if transport_class is TimeoutTransport else RateLimitError
+                with self.assertRaises(expected_error):
                     self.run_pipeline(pipeline, required_symbols=("BTCUSDT",))
                 self.assertEqual(store.collection_events()[-1].status, "failure")
                 self.assertIsNone(store.latest_checkpoint(
@@ -204,7 +205,7 @@ class PipelineTests(unittest.TestCase):
             self.run_pipeline(pipeline)
         self.assertEqual(
             self.store.collection_events()[-1].status,
-            "success",
+            "failure",
         )
         self.assertFalse(any("klines" in url for url in transport.requests))
 
