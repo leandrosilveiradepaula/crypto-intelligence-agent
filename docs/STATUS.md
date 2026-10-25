@@ -12,10 +12,13 @@ Issue #1 fechada, PRs #10 e #11 integradas; requisitos, decisões, arquitetura, 
 | WU4 — relógio remoto/gate temporal | #17 / #18 | `8fc2f75460e93ef898ae14e3c48ef0348692c857` | run 40189235249 SUCCESS, 65 testes |
 | WU5 — conformance HTTP e Retry-After (PARCIAL) | #19 / #20 | `cddfc2535aac7c3b7ae9bc04fea160419344ee7f` | run 40189603458 SUCCESS, 78 testes |
 
-**WU5 / issue #19 permanece ABERTA:** a PR #21 integrou o workflow owner-only de smoke GET (commit `09617e0197c250e3b13c7486a60067791ed41a52`, 81 testes offline). O único smoke real, run [40197499250](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40197499250), recebeu HTTP **451** na rota inicial de horário público da Binance. Zero candles reais capturados; causa exata não confirmada. A correção fail-closed HTTP451 segue em PR. J1 **não homologada**.
+**WU5 / issue #19 permanece ABERTA:** a PR #21 integrou o workflow owner-only de smoke GET (commit `09617e0197c250e3b13c7486a60067791ed41a52`, 81 testes offline). O único smoke real, run [40197499250](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40197499250), recebeu HTTP **451** na rota inicial de horário público da Binance. Zero candles reais capturados; causa exata não confirmada. A correção HTTP 451 foi integrada pela PR #22 no commit `32c63d0beccdf4734cf06d0f37d04f9ae833fc1f`, CI pós-merge SUCCESS com 81 testes offline. J1 **não homologada**.
 
 ## Não implementado/não comprovado
 Estratégias validadas, backtest de retorno líquido, gestão de posições real, interface PT-BR, feed live homologado, histórico ponto-no-tempo profundo, serviço contínuo VPS, backup de dados ou operações reais.
 
 ## Limites
 Custo adicional autorizado R$ 0, repositório PÚBLICO sem segredos; nenhuma API paga, ordem real, release ou migration sensível. Consultar docs/OPERATIONAL_STATE.md e GitHub ao vivo antes da próxima ação.
+
+
+- **WU6 — issue #23:** pesquisa de viabilidade da Kraken Futures como fonte pública independente. Branch `research/j1-kraken-public-feasibility`: probe GET único, offline por padrão, sem dados brutos ou credenciais; ainda não declarar API acessível, PR integrada ou mercado elegível sem evidência do run correspondente.
