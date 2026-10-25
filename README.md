@@ -182,3 +182,6 @@ O manifesto `registries/crypto-btc-eth-20261025-v1.json` referencia duas página
 
 ## J1/WU34 — Preços históricos de pesquisa, sem inventar volume
 A extensão `SQLiteKrakenPriceOnlyArchive` reaproveita o SQLite local e o adaptador público Kraken existente para guardar páginas exatas de OHLC fechado como **price-only**, com Decimal, as-of/replay/qualidade e sem base/quote volume ou checkpoint `ClosedCandle`. O script `scripts.probe_kraken_price_archive` é um diagnóstico opcional e owner-only de um GET, banco temporário e sem dados financeiros no log. Não prova Top50, elegibilidade real dos 50 ativos, permissão comercial, sinais, execução ou rentabilidade. Ver `docs/DATA_CONTRACT.md` e D59.
+
+## J1/WU35 — UniverseSnapshot corrente com registro BTC/ETH
+Para testar a seleção real sem fabricar um Top50, a sonda privada WU35 usa o registro BTC/ETH datado, obtém instrumentos e tickers Kraken em duas chamadas públicas GET, aplica o seletor fail-closed e valida roundtrip em SQLite temporário. O limite é **até 2 ativos** e a conclusão não afeta `ClosedCandle`, licenças, histórico de ranking, 50x real ou ordens. A execução ao vivo depende de acionamento owner-only; detalhes D61 e `docs/DATA_CONTRACT.md`.
