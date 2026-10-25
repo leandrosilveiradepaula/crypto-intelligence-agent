@@ -8,7 +8,7 @@
 - WU2, issue #13: PR #14 integrada, commit `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`. Backfill paginado, SQLite local transacional, checkpoints contínuos verificáveis, imutabilidade de contratos, replays, snapshots, qualidade, testes de falha e documentação.
 - CI da PR #14: run 40168249829 SUCCESS, HEAD `9ac750ff3f92d56189ce55a670391292d3716ec2`, com 42 testes offline, compileall e 10 documentos.
 - CI pós-merge PR #14: run 40168285079 SUCCESS no commit `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`; 42 testes offline.
-- Próxima work unit preparada: issue #15, J1/WU3 — orquestração read-only, capturas auditáveis de universo, fluxo offline ponta a ponta e avaliação de qualidade. **Codex ainda não disparado para #15.**
+- J1/WU3, issue #15: implementação de orquestração read-only iniciada diretamente pelo ChatGPT na branch `feat/j1-wu3-readonly-pipeline`. Inclui CLI offline por padrão, fixtures sintéticas, auditoria SQLite e testes ponta a ponta; CI/PR/merge permanecem pendentes de verificação. Codex não foi disparado para esta work unit.
 - J1 ainda NÃO validada em operação contínua. Cobertura histórica externa/ponto-no-tempo, retenção, monitoramento, riscos de exchange e desempenho de sistema continuam pendentes.
 
 ## Restrições permanentes
