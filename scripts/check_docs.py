@@ -6,6 +6,7 @@ REQUIRED = [
     "AGENTS.md",
     "docs/PRODUCT_SPEC.md",
     "docs/ARCHITECTURE.md",
+    "docs/DATA_CONTRACT.md",
     "docs/STRATEGY_SPEC.md",
     "docs/VALIDATION_PLAN.md",
     "docs/DECISIONS.md",
@@ -30,6 +31,7 @@ for name in REQUIRED:
 agents = texts.get("AGENTS.md", "")
 decisions = texts.get("docs/DECISIONS.md", "")
 state = texts.get("docs/OPERATIONAL_STATE.md", "")
+data_contract = texts.get("docs/DATA_CONTRACT.md", "")
 product = texts.get("docs/PRODUCT_SPEC.md", "")
 for token in ["microtarefa", "prossiga", "Codex", "GitHub"]:
     if token.lower() not in agents.lower():
@@ -40,6 +42,9 @@ for token in ["D01", "D02", "D03", "D05", "D07", "D13"]:
 for token in ["50x", "futuros", "parciais", "manual"]:
     if token.lower() not in product.lower():
         errors.append(f"missing product invariant: {token}")
+for token in ["UTC", "ClosedCandle", "idempotente", "read-only"]:
+    if token.lower() not in data_contract.lower():
+        errors.append(f"missing J1 data contract: {token}")
 for token in ["J0", "#1", "Próxima ação"]:
     if token.lower() not in state.lower():
         errors.append(f"missing operational checkpoint: {token}")
