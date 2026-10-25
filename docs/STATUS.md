@@ -42,7 +42,9 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU18 #50 concluída em pesquisa offline:** PR #51 integrada SHA `6f147844a514f2b83b29084fb3bc5d4b2377355d`, CI pós-merge **229 testes offline, 12 docs**; parser Bybit linear com base volume e quote turnover documentados em USDT/USDC, sem rede ou licença de uso homologada.
 
-**WU19 #52 em implementação:** branch `feat/j1-provider-usage-rights-gate`. Gate tipado de finalidade por provedor/dataset, sempre fail-closed para distribuição externa, sem permissões reais. PR/CI/merge ainda não confirmados.
+**WU19 #52 integrada:** PR #53 merged SHA `f19ce8b854bd024e22ccaf6bc6b0d276b70efec2`, CI PR run #40205837293 SUCCESS (240 testes offline segundo revisão). Gate de finalidade em código sem direitos externos autenticados.
+
+**WU20 #54 em implementação:** relatório offline determinístico de bloqueios J1, sem promover fixtures a evidência live nem liberar Top50/candles canônicos.
 
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
