@@ -39,8 +39,8 @@ def fixture(name: str) -> HttpResponse:
 
 
 class PublicAdapterTests(unittest.TestCase):
-    def adapter(self, routes: dict[str, HttpResponse | Exception]) -> BinanceFuturesPublicAdapter:
-        return BinanceFuturesPublicAdapter(FixtureTransport(routes), close_safety_ms=1_000, clock_ms=lambda: 10_000)
+    def adapter(self, routes: dict[str, HttpResponse | Exception], *, clock_ms=None) -> BinanceFuturesPublicAdapter:
+        return BinanceFuturesPublicAdapter(FixtureTransport(routes), close_safety_ms=1_000, clock_ms=clock_ms)
 
     def test_contracts_are_typed_decimal_and_utc_milliseconds(self) -> None:
         contracts = self.adapter({"exchangeInfo": fixture("exchange_info.json")}).contracts(observed_at_ms=10_000)
@@ -56,7 +56,7 @@ class PublicAdapterTests(unittest.TestCase):
         self.assertEqual(checkpoint.confirmed_end_ms, 3_599_999)
 
     def test_universe_filters_and_ranks_quote_volume_at_observation_time(self) -> None:
-        universe = self.adapter({"exchangeInfo": fixture("exchange_info.json"), "ticker/24hr": fixture("ticker_24h.json")}).universe(
+        universe = self.adapter({"exchangeInfo": fixture("exchange_info.json"), "ticker/24hr": fixture("ticker_24h.json")}, clock_ms=lambda: 10_000).universe(
             observed_at_ms=10_000, min_onboard_age_ms=1_000
         )
         self.assertEqual([member.symbol for member in universe.eligible], ["BTCUSDT"])
