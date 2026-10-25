@@ -106,3 +106,7 @@ A [issue #50](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 ## Gate técnico de direitos por finalidade (WU19)
 A [issue #52](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/52) acrescenta avaliação puramente offline de origem, finalidade e versão de alegações de licença. Um campo `grant_confirmed=true` **não** autoriza publicação/revenda de dados: todos os usos externos continuam recusados e sujeitos a verificação contratual e gate humano. O módulo não publica dados, não envia mensagens e não negocia.
+
+
+## Auditoria offline de proveniência — WU21
+A J1 ainda não tem registro real Top50, unidade financeira dos candles Kraken homologada nem direitos de distribuição. `python scripts/j1_readiness_report.py` mantém o snapshot conservador da WU20. Opcionalmente, `python scripts/j1_readiness_report.py --evidence-json caminho-local.json --decision-at-ms UTC_MS` analisa **apenas a sintaxe/integridade do envelope de alegações** (sem rede e sem dados privados no repositório). O hash é verificável contra os bytes do claim, não contra a autenticidade de terceiros; datas, revisão e licença afirmadas pelo chamador não são comprovação. O relatório nunca libera Top50 real, OHLCV canônico ou exposição externa. Contrato em `docs/DATA_CONTRACT.md` (WU21), testes offline em `tests/test_readiness_evidence.py`.
