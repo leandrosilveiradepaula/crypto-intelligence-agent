@@ -166,6 +166,24 @@ class PersistenceInvariantTests(unittest.TestCase):
         replay = self.run_backfill(WindowSource(self.rows), start=0, end=4 * HOUR)
         self.assertEqual(replay.pages_committed, 0)
 
+    def test_monday_weekly_candles_backfill_and_quality(self):
+        week = 7 * 86_400_000
+        monday = 4 * 86_400_000
+        rows = [replace(candle(monday + index * week), interval="1w",
+                        close_time_ms=monday + (index + 1) * week - 1)
+                for index in range(2)]
+        result = HistoricalBackfill(WindowSource(rows), self.store, page_size=1).run(
+            exchange="binance", market="linear_perpetual", symbol="BTCUSDT",
+            interval="1w", start_open_ms=monday, end_open_ms=monday + 2 * week,
+            observed_at_ms=monday + 3 * week, source_name="fixture",
+        )
+        self.assertEqual(result.candles_committed, 2)
+        report = self.store.quality_report(
+            exchange="binance", market="linear_perpetual", symbol="BTCUSDT",
+            interval="1w", start_open_ms=monday, end_open_ms=monday + 2 * week,
+        )
+        self.assertTrue(report.complete)
+
 
 if __name__ == "__main__":
     unittest.main()
