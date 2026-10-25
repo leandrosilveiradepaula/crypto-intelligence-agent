@@ -139,6 +139,11 @@ def _checked_candles(
     return tuple(candles)
 
 
+def validate_synthetic_research_price(value: Decimal, name: str) -> None:
+    """Apply the same bounded Decimal price policy as J2 synthetic candles."""
+    _numeric(value, name, strictly_positive=True)
+
+
 def validate_synthetic_closed_candles(
     candles: Sequence[ClosedCandle], *,
     decision_at_ms: int,
