@@ -52,3 +52,7 @@ A [issue #23](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 ## WU8 — Segurança na seleção do universo
 Um GET real de Kraken mostrou que BTC e ações tokenizadas podem compartilhar `type=flexible_futures`. A [issue #28](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/28) investiga `category`, `tradfi` e `tags` usando `python3 scripts/probe_public_kraken.py --allow-public-network --inspect-taxonomy` (exige autorização explícita e usa apenas GET público). O resultado será um resumo sanitizado, não universo de negociação nem prova de retorno. O teste inicial de três endpoints (run 40198745112) passou com HTTP200.
+
+
+## Triagem conservadora de instrumentos Kraken (WU9)
+A taxonomia real da [WU8](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/28), run [40199111677](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40199111677), provou que xStocks podem ter `tradfi=false`. O módulo de pesquisa `crypto_intelligence_agent/kraken_eligibility.py` só ranqueia contratos Kraken quando recebe um **registro externo/versionado de bases cripto verificadas**, além de critérios ativos de quote USD, ticker perpetual e volumeQuote Decimal. Sem tal registro, falha em vez de incluir instrumentos não cripto; ainda não integra sinais ou operações, nem comprova Top50.
