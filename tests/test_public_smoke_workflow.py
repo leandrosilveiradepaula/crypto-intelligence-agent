@@ -177,5 +177,26 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         )
 
 
+
+    def test_okx_private_probe_requires_exact_owner_issue_and_two_optins(self):
+        s = self.source
+        for token in (
+            "okx-private-btc-conformance:",
+            "github.event.issue.number == 107",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-okx-private-btc-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 scripts/probe_okx_personal_candles.py",
+            "--allow-public-network --allow-okx-personal-probe",
+            "timeout-minutes: 2",
+            "persist-credentials: false",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+        self.assertNotRegex(s, r"(?m)^\\s{2}(?:push|pull_request|schedule|workflow_dispatch|repository_dispatch):")
+
 if __name__ == "__main__":
     unittest.main()
