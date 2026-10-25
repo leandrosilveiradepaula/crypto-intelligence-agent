@@ -153,5 +153,29 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotRegex(s, r"(?m)^\s{2}(?:push|pull_request|schedule|workflow_dispatch):")
 
 
+    def test_hyperliquid_info_probe_only_owner_issue_and_opt_in(self):
+        s = self.source
+        for token in (
+            "hyperliquid-native-btc-info:",
+            "github.event.issue.number == 72",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-hyperliquid-info-btc-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.probe_hyperliquid_native_info",
+            "--allow-public-network --allow-hyperliquid-info-probe",
+            "timeout-minutes: 2",
+            "persist-credentials: false",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertIn("  contents: read", s)
+        self.assertNotIn("issues: write", s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotRegex(
+            s, r"(?m)^\s{2}(?:push|pull_request|schedule|workflow_dispatch|repository_dispatch):"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

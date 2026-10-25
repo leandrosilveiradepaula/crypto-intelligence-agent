@@ -141,3 +141,25 @@ jobs:
           set -eu
           python3 scripts/probe_vike_public_manifest.py \
             --allow-public-network --allow-vike-manifest-research
+
+  hyperliquid-native-btc-info:
+    if: >-
+      github.event.issue.number == 72 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-hyperliquid-info-btc-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout trusted default branch without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Bounded BTC native info schema diagnostic
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_hyperliquid_native_info \
+            --allow-public-network --allow-hyperliquid-info-probe

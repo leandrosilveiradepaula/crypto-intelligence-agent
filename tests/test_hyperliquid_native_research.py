@@ -222,6 +222,20 @@ class HyperliquidNativeResearchTests(unittest.TestCase):
             with self.subTest(name=name), self.assertRaises(DataValidationError):
                 stage(ctx=ctx)
 
+    def test_unrelated_native_k_prefix_does_not_disqualify_btc_context(self):
+        context = market_metadata()
+        context[0]["universe"].append({
+            "name": "kBONK", "maxLeverage": 10, "szDecimals": 0,
+        })
+        context[1].append({
+            "dayNtlVlm": "5", "markPx": "0.001",
+            "openInterest": "3", "funding": "0",
+        })
+        result = stage(ctx=context)
+        self.assertEqual(result.symbol, "BTC")
+        self.assertFalse(result.metadata.crypto_identity_verified)
+        self.assertFalse(result.ready_for_canonical_ohlcv)
+
     def test_native_scope_only_not_hip3(self):
         for val in ("xyz", "HIP3", "native", 0, None, False):
             with self.subTest(scope=val), self.assertRaises(DataValidationError):
