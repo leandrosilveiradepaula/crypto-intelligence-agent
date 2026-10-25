@@ -265,6 +265,21 @@ class KrakenPublicReadOnlyTests(unittest.TestCase):
             )
         self.assertEqual(len(opener.calls), 0)
 
+    def test_private_get_helper_refuses_unapproved_paths_and_query_extensions(self):
+        for url in (
+            "http://futures.kraken.com/derivatives/api/v3/instruments",
+            "https://other.example.com/api/charts/v1/trade/PF_XBTUSD/1h?from=1&to=2",
+            "https://futures.kraken.com/derivatives/api/v3/orders",
+            "https://futures.kraken.com/api/charts/v1/trade/PF_XBTUSD/1h?from=1&to=2&secret=1",
+            "https://futures.kraken.com/api/charts/v1/trade/PF_XBTUSD/1h?from=1&to=2/../private",
+            "https://futures.kraken.com/api/charts/v1/trade/PF_XBTUSD/30s?from=1&to=2",
+        ):
+            with self.subTest(url=url):
+                opener = FakeOpener()
+                with self.assertRaises(ExchangeAccessError):
+                    client(opener=opener)._read_public(url)
+                self.assertEqual(len(opener.calls), 0)
+
     def test_policy_http_451_is_single_terminal_error(self):
         opener = FakeOpener(HTTPError("https://futures.kraken.com", 451,
                                       "Unavailable For Legal Reasons", None, None))
