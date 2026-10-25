@@ -6,6 +6,7 @@ asserted or independently licensed by these tests.
 from __future__ import annotations
 
 from copy import deepcopy
+from decimal import Decimal
 import json
 import unittest
 from unittest.mock import patch
@@ -313,6 +314,37 @@ class RegistrySelectionTests(unittest.TestCase):
         self.assertEqual(self.registry.assets[0].reviewed_by,
                          "internal-reviewer-fixture")
         self.assertNotIn("api_key", json.dumps(signed_fixture()))
+
+
+    def test_historical_registry_cannot_approve_mislabeled_contract_numerator(self):
+        # Even when the BTC identity registry is point-in-time valid,
+        # a BTC-labelled PF_AAPLXUSD observation is a metadata mismatch,
+        # never "Bitcoin" volume. No category flag is required to catch it.
+        misleading = contract("PF_AAPLXUSD", "BTC", category=None)
+        out = self.history.select_at(
+            instruments=[misleading],
+            tickers=[ticker("PF_AAPLXUSD", "999999999999")],
+            market_observed_at_ms=T0 + 100, decision_at_ms=T0 + 200,
+            max_market_age_ms=300000, max_registry_age_ms=HOUR,
+        )
+        self.assertEqual(out.eligible, ())
+        self.assertEqual(out.excluded["PF_AAPLXUSD"], "symbol_base_mismatch")
+        self.assertTrue(out.selection_rule_version.endswith(
+            self.registry.sha256_digest
+        ))
+
+    def test_historical_registry_maps_observed_xbt_alias_to_reviewed_btc(self):
+        # XBT/BTC is a documented Kraken API alias, not a second claim
+        # of independent crypto identity. Approval still needs BTC registry.
+        observed = contract("PF_XBTUSD", "XBT")
+        out = self.history.select_at(
+            instruments=[observed],
+            tickers=[ticker("PF_XBTUSD", "101.001")],
+            market_observed_at_ms=T0 + 100, decision_at_ms=T0 + 200,
+            max_market_age_ms=300000, max_registry_age_ms=HOUR,
+        )
+        self.assertEqual([m.symbol for m in out.eligible], ["PF_XBTUSD"])
+        self.assertEqual(out.eligible[0].quote_volume, Decimal("101.001"))
 
 
 if __name__ == "__main__":

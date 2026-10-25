@@ -64,4 +64,6 @@
 
 - J1/WU28 #91 / PR #92: auditoria fail-closed do escopo documental Kraken Futures PF_ versus Kraken Spot OHLCVT e Derivatives US CME/Bitnomial, integrada SHA `d3af3088088c7e7f638cb745ca5848ddbb2b9a43`, CI #40227134838 SUCCESS (515 testes offline/12 docs). Issue encerrada, sem resolver fonte independente crypto-only, unidade de volume ou licença. J1 #2 e #32/#36/#48 permanecem abertas.
 
+- J1/WU29 #99: correção fail-closed de inconsistência entre numerador do símbolo Kraken PF_ e base/pair do instrumento/ticker, incluindo alias API XBT→BTC; em implementação/testes/CI. Não prova registro crypto-only ou volume financeiro, e não habilita Top50 live. J1 #2/#32/#36/#48 abertas.
+
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.

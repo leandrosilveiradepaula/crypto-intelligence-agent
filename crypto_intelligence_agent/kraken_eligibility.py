@@ -25,6 +25,23 @@ _BLOCKED_CATEGORIES = frozenset({
 _BASE_NAME = re.compile(r"^[A-Z0-9]{2,24}$")
 _INSTRUMENT_NAME = re.compile(r"^PF_[A-Z0-9]{2,36}$")
 
+# Explicitly documented Kraken Futures API alias (XBT = Bitcoin/BTC).
+# This is a code mapping, NOT evidence that a given instrument is crypto-only.
+_KRAKEN_FUTURES_BASE_ALIASES = {"XBT": "BTC"}
+
+
+def _canonical_kraken_base(base: str) -> str:
+    return _KRAKEN_FUTURES_BASE_ALIASES.get(base, base)
+
+
+def _canonical_usd_pair_base(pair: Any) -> str | None:
+    if type(pair) is not str or not pair.endswith(":USD"):
+        return None
+    base = pair[:-4]
+    if _BASE_NAME.fullmatch(base) is None:
+        return None
+    return _canonical_kraken_base(base)
+
 
 def _decimal_positive(value: Any, label: str) -> Decimal:
     # Do not restore source digits with Decimal(str(binary_float)).
@@ -54,7 +71,8 @@ def _why_ineligible(
     trusted_bases: frozenset[str],
 ) -> tuple[str | None, Decimal | None]:
     symbol = instrument["symbol"]
-    if _INSTRUMENT_NAME.fullmatch(symbol) is None:
+    if (_INSTRUMENT_NAME.fullmatch(symbol) is None or not symbol.endswith("USD")
+            or _BASE_NAME.fullmatch(symbol[3:-3]) is None):
         return "not_linear_usd_perpetual_symbol", None
     # The exact exchange type and ticker tag were observed independently.
     if instrument.get("type") != "flexible_futures":
@@ -74,11 +92,17 @@ def _why_ineligible(
     base = instrument.get("base")
     quote = instrument.get("quote")
     pair = instrument.get("pair")
-    if not isinstance(base, str) or not _BASE_NAME.fullmatch(base):
+    if type(base) is not str or _BASE_NAME.fullmatch(base) is None:
         return "invalid_base_asset", None
-    if base not in trusted_bases:
+    canonical_base = _canonical_kraken_base(base)
+    # The API symbol encodes the numerator currency. Without this check a
+    # mislabeled PF_AAPLXUSD row could claim base=BTC and borrow its registry
+    # approval and USD volume even if the category field is absent.
+    if _canonical_kraken_base(symbol[3:-3]) != canonical_base:
+        return "symbol_base_mismatch", None
+    if canonical_base not in trusted_bases:
         return "base_not_verified_crypto", None
-    if quote != "USD" or pair != f"{base}:USD":
+    if quote != "USD" or _canonical_usd_pair_base(pair) != canonical_base:
         return "not_comparable_usd_quote", None
     try:
         _decimal_positive(instrument.get("tickSize"), "tickSize")
@@ -91,7 +115,9 @@ def _why_ineligible(
         return "ticker_not_perpetual", None
     if ticker.get("suspended") is not False or ticker.get("postOnly") is True:
         return "ticker_not_actively_tradeable", None
-    if ticker.get("pair") is not None and ticker.get("pair") != pair:
+    # Optional ticker pair may use a documented API alias, but cannot
+    # contradict the symbol/instrument's canonical base and USD quote.
+    if ticker.get("pair") is not None and _canonical_usd_pair_base(ticker.get("pair")) != canonical_base:
         return "ticker_pair_mismatch", None
     try:
         volume = _decimal_positive(ticker.get("volumeQuote"), "volumeQuote")
