@@ -250,10 +250,12 @@ class SyntheticLotFeasibilityTests(unittest.TestCase):
     def test_extremely_small_decimal_step_is_exact_not_float(self):
         pos = fixture_position(initial="0.000000000000000001", floor="0",
                                steps=[(R, "50")])
-        out = assess(pos=pos, rule=lot(step="0.0000000000000000005",
-                                      min_exit="0.0000000000000000005"))
-        # Fixture rules intentionally limit step scale to 18 decimals.
+        out = assess(pos=pos, rule=lot(step="0.000000000000000001",
+                                      min_exit="0.000000000000000001"))
+        # The planned half is 5e-19, not an executable multiple of 1e-18;
+        # no quantization or invented dust fill is permitted.
         self.assertFalse(out.arithmetically_compatible)
+        self.assertEqual(out.tranche_checks[0].planned_units, D("5E-19"))
 
     def test_reject_more_than_eighteen_decimal_places_in_fixture_rule(self):
         with self.assertRaises(DataValidationError):
