@@ -157,3 +157,7 @@ A rotina offline de `metaAndAssetCtxs` valida a posição de BTC nos arrays, mas
 
 ## J1/WU28 — Fontes oficiais precisam pertencer ao MESMO produto
 O auditor OFFLINE `readiness_evidence.py` diferencia documentação Kraken Futures (`PF_`, candles `/api/charts/v1/`) dos arquivos OHLCVT Spot/Kraken Pro e dos contratos Kraken Derivatives US CME/Bitnomial. Citar uma URL oficial de outro produto NÃO comprova a unidade de volume, identidade de criptoativos, lot/step ou direitos dos nossos perpétuos. A tabela PF_ da Kraken inclui Apple/AAPLx e alavancagens diversas: 50x global é configuração de pesquisa, não executabilidade. O auditor registra `source_applicability` insuficiente, mantém gates live e release falsos e não consulta sites durante os testes. Veja D51, `docs/DATA_CONTRACT.md`, `CRYPTO_REGISTRY.md` e `PROVIDER_RIGHTS.md`.
+
+
+## J3/PRE1 — Toque intrabar em OHLC sintético, sem afirmar vitória
+`synthetic_intrabar_barriers.py` recebe candles fechados **sintéticos** e um plano de referência LONG/SHORT com stop, target e liquidação HIPOTÉTICA opcional. Reutiliza a validação temporal J2. Reporta o primeiro candle com níveis observados, distinguindo aberturas já além do limite de toques na faixa high/low; **dois ou mais toques no mesmo candle têm ordem desconhecida**, mesmo se o fechamento favorece o alvo. Não calcula fill, execução ao limite, retorno, taxa, funding, slippage, liquidação real ou PnL e mantém flags live/backtest false. J1 #2, J2 #3 e J3 #4 continuam sem homologação; veja D52 e `docs/STRATEGY_SPEC.md`.
