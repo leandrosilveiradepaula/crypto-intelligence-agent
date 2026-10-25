@@ -45,6 +45,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-symbols", type=int, default=2)
     parser.add_argument("--page-size", type=int, default=2)
     parser.add_argument("--min-age-ms", type=int, default=0)
+    parser.add_argument("--max-clock-skew-ms", type=int, default=5_000,
+                        help="Fail closed if server/local offset plus RTT uncertainty exceeds this limit")
     parser.add_argument("--symbols", default="", help="Comma-separated subset of the ranked eligible universe")
     parser.add_argument("--start-ms", type=int)
     parser.add_argument("--end-ms", type=int)
@@ -58,7 +60,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--fixture-dir is only valid for offline mode")
     if (args.start_ms is None) != (args.end_ms is None):
         parser.error("--start-ms and --end-ms must be supplied together")
-    if args.candles < 1 or not 1 <= args.max_symbols <= 50 or not 1 <= args.page_size <= 1_500 or args.min_age_ms < 0:
+    if (args.candles < 1 or not 1 <= args.max_symbols <= 50 or not 1 <= args.page_size <= 1_500
+            or args.min_age_ms < 0 or args.max_clock_skew_ms < 0):
         parser.error("candles must be positive, symbols 1-50, page size 1-1500, minimum age >= 0")
 
     now = (lambda: OFFLINE_CLOCK_MS) if args.mode == "offline" else (lambda: int(time() * 1000))
@@ -99,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
             pipeline = ReadOnlyCollectionPipeline(
                 adapter, store, clock_ms=now,
                 mode=args.mode, source_name=source_name,
+                max_clock_skew_ms=args.max_clock_skew_ms,
             )
             summary = pipeline.run(
                 interval=args.interval, start_open_ms=start,
