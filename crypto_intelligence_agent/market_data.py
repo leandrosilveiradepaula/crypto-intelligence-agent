@@ -188,6 +188,13 @@ class BinanceFuturesPublicAdapter:
         """Expose transport type for collection-mode safety validation."""
         return self._transport
 
+    def server_time_ms(self) -> int:
+        """Read the public exchange server UTC clock, without authentication."""
+        payload = self._get_json("/fapi/v1/time")
+        if not isinstance(payload, Mapping):
+            raise DataValidationError("server time must be an object")
+        return _integer_value(payload.get("serverTime"), "serverTime")
+
     def _validate_live_observation(self, observed_at_ms: int) -> int:
         # Both exchangeInfo and rolling 24h tickers are LIVE views. Neither
         # may be labelled as if retrieved from a prior historical timestamp.
