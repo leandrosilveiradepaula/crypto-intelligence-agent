@@ -230,7 +230,8 @@ class KrakenPublicReadOnlyTests(unittest.TestCase):
         self.assertFalse(hasattr(result.staged.candles[0], "quote_volume"))
         self.assertEqual(len(opener.calls), 1)
         self.assertEqual(opener.calls[0][1], "GET")
-        self.assertIn("?from=36000&to=46800", opener.calls[0][0])
+        self.assertIn("?from=36000&to=46799", opener.calls[0][0])
+        self.assertNotIn("to=46800", opener.calls[0][0])
 
     def test_gaps_and_open_candles_fail_without_second_request(self):
         for state in ({"incomplete": True}, {"open_candle": True}):
