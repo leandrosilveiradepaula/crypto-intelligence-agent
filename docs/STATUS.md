@@ -56,6 +56,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **WU25 #72 — código integrado; probe remoto sem resultado comprovado:** PR #73 merged SHA `11e9d840f53701c1a8fb2bb38c5dae61098c0905`, revisão HEAD `d9a21e16d7fd77ec597fe90090918ec762aceec9`, CI #40218027418 SUCCESS (361 testes offline, compileall, 12 docs). Comando owner-only na issue #72 comentário #6401021095 publicado uma vez; run ID/conclusão/log não acessíveis no conector, não afirmar HTTP200. Somente dois POSTs informativos /info possíveis e nenhum dado bruto publicado, ordem, licença ou Top50 habilitado. Correção de k-prefixados nativos integrada; issue #72 segue aberta para evidência externa.
 
+**WU26 #75 — auditoria de evidências em implementação:** consulta somente à API REST do próprio GitHub Actions, via workflow de PR owner-only com `actions:read` e `contents:read`, para recuperar IDs de runs e jobs das sondagens #63/#72 existentes. Não requer chamadas à Vike/Hyperliquid nem permissões de escrita. IDs são pistas verificáveis para inspeção dos logs, não comprovantes automáticos de sucesso de mercado ou direitos.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
