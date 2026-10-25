@@ -8,7 +8,7 @@
 - CI pré-merge WU1: run 40159360299 SUCCESS no SHA `d477388d26a9859544f1e7c24206855b23c95b04` (17 unittest, compilação, 10 documentos).
 - CI pós-merge WU1: run 40159403768 SUCCESS em `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
 - Revisão da PR #12 registrada; correções temporais, de integridade financeira e CI Python executável.
-- WU2: issue #13 aberta e pronta para Codex; backfill histórico paginado, persistência de referência, snapshots legítimos, qualidade, replay e testes. **NÃO iniciada**.
+- WU2: issue #13 em implementação na branch `codex/issue-13-j1-wu2-backfill-storage`; backfill histórico paginado, SQLite de referência, snapshots legítimos, qualidade, replay e testes offline. Não está integrada e não conclui a J1.
 - J2–J7: issues #3–#8 aguardando dependências.
 - Sem implantação VPS, trading real, estratégias validadas, backtests, lucro comprovado ou custos extras.
 - Bloqueio operacional: esta sessão ChatGPT não possui acionador Codex direto; disparo humano apenas para iniciar a issue #13 na conta existente.

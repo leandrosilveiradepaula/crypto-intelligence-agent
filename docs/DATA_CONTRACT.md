@@ -45,3 +45,11 @@ Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLA
 - Candle aceito deve ter duração exata do intervalo, OHLC estritamente positivo e volumes não negativos. Metadados de contrato exigem filtros de preço/quantidade positivos. Tickers com duplicatas divergentes falham explicitamente.
 - O snapshot de universo é um retrato aproximado de coleta do ticker público de volume móvel de 24 horas; não equivale a reconstrução histórica ponto-no-tempo e não garante simultaneidade exata das duas chamadas REST. A J1 posterior deverá persistir snapshots e suas evidências de coleta.
 - CI deve executar `unittest`, compilação Python e validação documental com fixtures offline; nenhum teste aciona ordens ou depende de API externa.
+
+## Persistência e backfill implementados na WU2
+
+- `SQLiteMarketDataStore` é a referência local gratuita, isolada atrás de `MarketDataStore`; não é uma decisão de banco de produção. Preços, quantidades e volumes são gravados como texto decimal canônico, e nunca como `REAL`/`float`.
+- O backfill recebe uma janela explícita `[start_open_ms, end_open_ms)`, alinhada ao intervalo UTC, e só aceita cobertura exata de cada página. Falta, duplicata, candle fora da janela ou identidade divergente falham sem gerar candles sintéticos.
+- Cada página confirmada e seu `MarketDataCheckpoint` são gravados na mesma transação SQLite. Uma falha de API ou validação da página não avança o checkpoint; uma nova execução recomeça em `confirmed_end_ms + 1` e é idempotente.
+- Contratos e `UniverseSnapshot` persistem o timestamp e a fonte efetivamente recebidos. O armazenamento não fabrica snapshots históricos: a fonte pública atual continua sendo recusada pela WU1 quando rotulada como observação antiga.
+- `quality_report()` expõe cobertura esperada/persistida, timestamps ausentes, conflitos persistidos e o último checkpoint. Cobertura incompleta é informação explícita, não dado preenchido.

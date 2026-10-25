@@ -2,7 +2,7 @@
 
 Plataforma de inteligência quantitativa para futuros perpétuos de criptomoedas: pesquisa de entradas, backtesting realista e gerenciamento de realizações parciais de posições vencedoras.
 
-**Estado:** J0 documental concluída e J1 em desenvolvimento. A WU1 de dados foi integrada; ainda não há histórico persistente, motor de sinais, estratégia de trading validada ou ordens reais.
+**Estado:** J0 documental concluída e J1 em desenvolvimento. A WU1 de dados foi integrada; a WU2 de persistência/backfill está em revisão. Ainda não há motor de sinais, estratégia de trading validada ou ordens reais.
 
 ## Documentação
 - [Regras para agentes](AGENTS.md)
@@ -12,7 +12,7 @@ Plataforma de inteligência quantitativa para futuros perpétuos de criptomoedas
 - [Status](docs/STATUS.md) e [estado operacional](docs/OPERATIONAL_STATE.md)
 
 ## Desenvolvimento
-ChatGPT coordena GitHub, revisão, integração e continuidade; Codex executa work units. A J1/WU1 (#9) foi integrada pela [PR #12](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/12); a próxima work unit é a [issue #13](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/13).
+ChatGPT coordena GitHub, revisão, integração e continuidade; Codex executa work units. A J1/WU1 (#9) foi integrada pela [PR #12](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/pull/12); a WU2 está na [issue #13](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/13) e adiciona SQLite local, replay e backfill offline. Isso não comprova cobertura histórica de produção nem conclui a J1.
 
 ## Testes locais, offline
 ```bash

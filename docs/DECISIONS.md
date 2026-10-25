@@ -24,3 +24,7 @@ O primeiro adaptador implementado atende apenas endpoints públicos de futuros U
 
 ## D15 — Integridade temporal e validação Python na CI (J1/WU1)
 Decisão técnica: rejeitar OHLC/volume inválidos, timestamps truncados, durações incoerentes, duplicatas de ticker divergentes e horários de observação impossíveis. Não permitir rotular dados atuais de metadados ou volume móvel de 24 horas como snapshots históricos. Testes Python offline passam a integrar o gate obrigatório da CI para PRs que modificarem código Python. Limitação: histórico genuíno ponto-no-tempo ainda depende de persistência futura.
+
+## D16 — SQLite transacional de referência para J1/WU2
+
+SQLite da biblioteca padrão é o backend local de referência, encapsulado por `MarketDataStore`, sem compromisso de adoção em produção. Candles, contratos e snapshots preservam `Decimal` como texto e UTC em milissegundos. Cada página de candles e seu checkpoint são uma transação indivisível; replay igual é idempotente e conflito ou lacuna falha fechado. A janela histórica é `[start_open_ms, end_open_ms)` para evitar ambiguidade de limite. Limitação: este backend não cria disponibilidade histórica, nem substitui a necessidade posterior de retenção, backup, concorrência operacional e fonte ponto-no-tempo validada.

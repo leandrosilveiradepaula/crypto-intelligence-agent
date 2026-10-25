@@ -10,7 +10,8 @@
 - CI pós-merge: SUCCESS, run 40159403768 no SHA integrado.
 - Entregue: adaptador de futuros público somente leitura, contratos tipados, validação temporal, OHLC, volume e fixtures.
 - Ainda NÃO entregue: histórico persistido, backfill paginado, qualidade em funcionamento contínuo, sinais, pesquisa financeira ou implantação.
-- Próxima work unit: #13 (J1/WU2), persistência e replay, checkpoints e histórico; execução Codex ainda não disparada.
+- WU2 (#13) em implementação para revisão: SQLite local desacoplado, backfill paginado/reiniciável, checkpoints transacionais, replay e relatório de qualidade offline.
+- Ainda NÃO entregue: operação contínua, fonte histórica ponto-no-tempo independente, sinais, pesquisa financeira ou implantação. A J1 não está concluída.
 
 ## Restrições
 Custo adicional R$0. Repositório público por decisão do Product Owner. Sem negociação real, credenciais de ordens, APIs pagas ou deploy nesta fase.
