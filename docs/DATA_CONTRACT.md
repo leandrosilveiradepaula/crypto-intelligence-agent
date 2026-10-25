@@ -36,3 +36,12 @@ Este documento delimita a primeira work unit do Codex (issue #9), sob a jornada 
 5. Não declarar a jornada J1 concluída apenas pela primeira work unit.
 
 Referência: issues #2 e #9, docs/PRODUCT_SPEC.md, DECISIONS.md e VALIDATION_PLAN.md.
+
+## Integridade de dados implementada na WU1
+
+- `contracts()` e `universe()` consultam endpoints **atuais**, não séries históricas. A hora declarada de observação precisa ser recente em relação ao relógio injetável (`max_snapshot_age_ms`, padrão 300000); snapshots históricos exigem registros realmente persistidos na época e não podem ser sintetizados por uma consulta atual.
+- `closed_candles()` recusa uma observação futura em relação ao relógio do adaptador. Apenas candles com `close_time_ms + close_safety_ms <= observed_at_ms` são admitidos.
+- Timestamps devem ser inteiros não negativos sem truncamento implícito; intervalos fixos aceitos são enumerados no adaptador. `1M` é propositalmente não suportado nesta work unit, por ter duração variável.
+- Candle aceito deve ter duração exata do intervalo, OHLC estritamente positivo e volumes não negativos. Metadados de contrato exigem filtros de preço/quantidade positivos. Tickers com duplicatas divergentes falham explicitamente.
+- O snapshot de universo é um retrato aproximado de coleta do ticker público de volume móvel de 24 horas; não equivale a reconstrução histórica ponto-no-tempo e não garante simultaneidade exata das duas chamadas REST. A J1 posterior deverá persistir snapshots e suas evidências de coleta.
+- CI deve executar `unittest`, compilação Python e validação documental com fixtures offline; nenhum teste aciona ordens ou depende de API externa.
