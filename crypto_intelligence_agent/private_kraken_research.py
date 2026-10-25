@@ -48,6 +48,8 @@ class LocalCaptureSummary:
     private_price_candles_added: int
     price_candles_in_window: int
     price_window_complete: bool
+    price_symbols_validated: int
+    public_gets_on_success: int
     canonical_ohlcv_approved: bool = False
     historical_top50_approved: bool = False
     public_or_commercial_rights_approved: bool = False
@@ -105,10 +107,11 @@ def capture_private_research(
     clock_ms: Callable[[], int] | None = None,
     registry_bytes: bytes | None = None,
     registry_variant: str = "btc-eth",
+    max_price_symbols: int = 1,
 ) -> LocalCaptureSummary:
-    """Collect one bounded CURRENT BTC universe and 3 closed BTC 1h prices.
+    """Collect bounded CURRENT crypto universe and closed price-only 1h pages.
 
-    At most three GET calls (instruments/tickers/chart) when opted in.
+    At most 2 + max_price_symbols GET calls (2 metadata and <=5 charts).
     Validate provider responses before opening or writing the local database.
     The store's two record families are individually transactional; a crash
     between them can leave a valid partial capture, not a completed session.
@@ -116,6 +119,8 @@ def capture_private_research(
     """
     if allow_public_network is not True or allow_private_persistence is not True:
         raise LocalResearchError("double_opt_in_required")
+    if type(max_price_symbols) is not int or not 1 <= max_price_symbols <= 5:
+        raise LocalResearchError("max_price_symbols_must_be_between_1_and_5")
     target = _private_db_path(db_path)
     clock = clock_ms or (lambda: int(time() * 1000))
     started_at = _now(clock)
@@ -157,45 +162,64 @@ def capture_private_research(
     if _SYMBOL not in {row.symbol for row in ranked.eligible}:
         raise LocalResearchError("btc_perpetual_not_eligible_in_current_snapshot")
 
-    # The window is the three bars before the most recent fully closed hour.
-    # A buffer of one full hour protects against the still-open newest bar.
+    # One shared UTC window, with a full-hour buffer beyond the last closed
+    # bar. BTC is the mandatory anchor; only verified and live-ranked contracts
+    # may fill up to N-1 additional slots. No fixed list of invented perps.
     aligned = (started_at // _HOUR_MS) * _HOUR_MS
     start, end = aligned - 4 * _HOUR_MS, aligned - _HOUR_MS
-    staged = reader.staged_closed_candles(
-        symbol=_SYMBOL, interval=_INTERVAL,
-        start_open_ms=start, end_open_ms=end,
-    )  # third and last GET
-    if (staged.staged.symbol != _SYMBOL or staged.staged.interval != _INTERVAL
-            or staged.staged.start_open_ms != start
-            or staged.staged.end_open_ms != end
-            or staged.observed_at_ms < decision_at
-            or staged.observed_at_ms - started_at > _MAX_CAPTURE_AGE_MS):
-        raise LocalResearchError("invalid_private_chart_capture_timing")
-    _validated_rows(staged)  # explicitly validate before disk I/O
+    selected = (_SYMBOL,) + tuple(
+        row.symbol for row in ranked.eligible if row.symbol != _SYMBOL
+    )[:max_price_symbols - 1]
+
+    # Validate ALL sources before touching the database. A blocked/invalid
+    # later chart must not create a new DB or partially archive earlier charts.
+    validated_pages = []
+    last_observed_at = decision_at
+    for symbol in selected:
+        captured = reader.staged_closed_candles(
+            symbol=symbol, interval=_INTERVAL,
+            start_open_ms=start, end_open_ms=end,
+        )
+        if (captured.staged.symbol != symbol
+                or captured.staged.interval != _INTERVAL
+                or captured.staged.start_open_ms != start
+                or captured.staged.end_open_ms != end
+                or captured.observed_at_ms < last_observed_at
+                or captured.observed_at_ms - started_at > _MAX_CAPTURE_AGE_MS):
+            raise LocalResearchError("invalid_private_chart_capture_timing")
+        _validated_rows(captured)
+        validated_pages.append((symbol, captured))
+        last_observed_at = captured.observed_at_ms
 
     created = _create_private_file(target)
     try:
         archive = SQLiteKrakenPriceOnlyArchive(target)
         archive.save_universe_snapshot(ranked)
-        added = archive.commit_price_only(staged)
+        added = 0
+        covered = 0
+        for symbol, captured in validated_pages:
+            added += archive.commit_price_only(captured)
+            quality = archive.price_quality(
+                symbol=symbol, interval=_INTERVAL,
+                start_open_ms=start, end_open_ms=end,
+                as_of_ms=captured.observed_at_ms,
+            )
+            if not quality.complete or quality.captured != 3:
+                raise LocalResearchError("private_sqlite_price_coverage_failed")
+            covered += quality.captured
+            if archive.candles(
+                exchange="kraken_futures", market="linear_perpetual",
+                symbol=symbol, interval=_INTERVAL,
+                start_open_ms=start, end_open_ms=end,
+            ):
+                raise LocalResearchError("canonical_candle_table_must_remain_empty")
         restored = archive.universe_snapshot(
             observed_at_ms=ranked.observed_at_ms,
             selection_rule_version=ranked.selection_rule_version,
             source=ranked.source,
         )
-        quality = archive.price_quality(
-            symbol=_SYMBOL, interval=_INTERVAL,
-            start_open_ms=start, end_open_ms=end,
-            as_of_ms=staged.observed_at_ms,
-        )
-        if restored != ranked or not quality.complete:
-            raise LocalResearchError("private_sqlite_roundtrip_or_coverage_failed")
-        if archive.candles(
-            exchange="kraken_futures", market="linear_perpetual",
-            symbol=_SYMBOL, interval=_INTERVAL,
-            start_open_ms=start, end_open_ms=end,
-        ):
-            raise LocalResearchError("canonical_candle_table_must_remain_empty")
+        if restored != ranked:
+            raise LocalResearchError("private_sqlite_roundtrip_failed")
         return LocalCaptureSummary(
             registry_sha256=registry.sha256_digest,
             selected_bases_limit=len(registry.assets),
@@ -203,8 +227,10 @@ def capture_private_research(
             excluded_contracts=len(ranked.excluded),
             observed_at_ms=ranked.observed_at_ms,
             private_price_candles_added=added,
-            price_candles_in_window=quality.captured,
-            price_window_complete=quality.complete,
+            price_candles_in_window=covered,
+            price_window_complete=True,
+            price_symbols_validated=len(validated_pages),
+            public_gets_on_success=2 + len(validated_pages),
         )
     except Exception:
         # If newly created and the session fails, never silently leave a DB
