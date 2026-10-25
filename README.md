@@ -149,3 +149,7 @@ A rotina offline de `metaAndAssetCtxs` valida a posição de BTC nos arrays, mas
 
 ## J4/PRE3 — Estado imutável de posição SINTÉTICA
 `synthetic_position_state.py` define uma posição de fixture, não financeira: ID `fixture_*`, LONG/SHORT, plano PRE1, margem Decimal abstrata e `leverage_at_open` capturado de uma configuração imutável de pesquisa (50x inicial, configurável apenas para **novas** posições). Eventos PRE2 são vinculados ao ID antes do replay, sem cross-position fill. Não existe exchange, moeda de margem comprovada, preço, multiplicador, lot/step de contrato, liquidação, taxas, PnL, sinal, ledger persistente ou ordem; todos os gates de uso live permanecem falsos. Veja D49 e `docs/STRATEGY_SPEC.md`.
+
+
+## J4/PRE4 — Lotes hipotéticos, sem arrendondamento ou autorização de ordens
+`synthetic_lot_feasibility.py` avalia aritmeticamente tranches PRE1 e fills PRE2 de posições PRE3 usando apenas limites `Decimal` **de fixture** (passo de tamanho, mínimo por saída e mínimo de saldo residual). Cada fill individual deve ser múltiplo exato e atingir seu mínimo; não basta que a soma dos fills passe no step. Duplicatas de ID verificadas pelo replay contam uma vez, mas idempotência persistente não é comprovada. Nenhuma quantização, real venue lot-size, min notional, preço, PnL, conta, ordem ou aprovação live é produzida. Veja D50 e `docs/STRATEGY_SPEC.md`.
