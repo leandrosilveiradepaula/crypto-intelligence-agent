@@ -3,7 +3,7 @@
 Toda entrega deve vincular issue, PR, SHA, testes reais e limitações. Implementação não é evidência de retorno financeiro.
 
 - J0: documentos e decisões coerentes, testes de integridade documental e backlog rastreável.
-- J1: fixtures de APIs, UTC, fechamento de vela, limites de requests, símbolos elegíveis, falhas, backfill, lacunas, duplicatas e histórico ponto-no-tempo.
+- J1: fixtures de APIs, UTC, fechamento de vela, limites de requests, símbolos elegíveis, falhas, backfill, lacunas, duplicatas e histórico ponto-no-tempo. CI deve permanecer offline. Smoke live exclusivamente GET público, sob comando explícito restrito ao proprietário na issue #19, 1 símbolo/3 candles/3 min, sem credenciais e fora do gate automático. Registrar URI do run, horário, resultado, erros de acesso/DNS/região/429, parâmetros e limitações; não aceitar J1 integralmente só por teste pontual.
 - J2: cálculos de indicadores conferidos por referência independente, sinais sem look-ahead, equivalência entre histórico e tempo real, deduplicação.
 - J3: testes numéricos de margem, taxas, slippage, funding e liquidação. Se o caminho intrabar for incerto, usar dados mais finos ou hipótese conservadora; uma posição liquidada antes do alvo não é vitória. Walk-forward, fora da amostra, benchmarks, reprodutibilidade e avaliação da carteira.
 - J4: percentuais sobre inicial e restante, sequência 50% / 60% / 70% deixando 6%, idempotência, arredondamento, runner, trailing e reconciliação financeira.
