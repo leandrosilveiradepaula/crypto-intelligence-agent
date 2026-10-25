@@ -90,3 +90,7 @@ A [issue #42](https://github.com/leandrosilveiradepaula/crypto-intelligence-agen
 
 ## Precisão dos números JSON de mercado (WU15)
 A [issue #44](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/44) previne perda silenciosa de casas decimais: `decimal_json.py` decodifica frações numéricas diretamente em `Decimal` e rejeita floats Python já arredondados nos campos financeiros usados para ranquear Kraken. Inclui testes com volumes praticamente iguais, evitando erro de ordenação. A correção mantém `unit_proof=false`, não estabelece volume de candle em base/quote nem ativa negociação.
+
+
+## Cliente de pesquisa Kraken público, sem ordens (WU16)
+A [issue #46](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/46) agrega as peças validadas em `KrakenPublicReadOnlyResearch`: modo sem rede por padrão, opt-in explícito para GET público de instruments/tickers e candles trade, JSON financeiro Decimal exato, sanitização allowlist e janela UTC de observação. O retorno de velas é apenas `KrakenStagedCandlePage` com volume bruto **sem unidade financeira atestada**, nunca `ClosedCandle`, sinal ou operação real. CI inteiramente offline com transporte simulado.
