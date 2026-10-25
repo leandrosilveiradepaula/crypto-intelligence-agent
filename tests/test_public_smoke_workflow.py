@@ -187,7 +187,7 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
             "github.event.comment.body == '/probe-okx-private-btc-v1'",
             "github.event.comment.user.login == 'leandrosilveiradepaula'",
             "github.actor == 'leandrosilveiradepaula'",
-            "python3 scripts/probe_okx_personal_candles.py",
+            "python3 -m scripts.probe_okx_personal_candles",
             "--allow-public-network --allow-okx-personal-probe",
             "timeout-minutes: 2",
             "persist-credentials: false",

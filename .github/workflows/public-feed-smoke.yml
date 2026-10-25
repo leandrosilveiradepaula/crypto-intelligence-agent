@@ -183,5 +183,5 @@ jobs:
           PYTHONDONTWRITEBYTECODE: "1"
         run: |
           set -eu
-          python3 scripts/probe_okx_personal_candles.py \
+          python3 -m scripts.probe_okx_personal_candles \
             --allow-public-network --allow-okx-personal-probe
