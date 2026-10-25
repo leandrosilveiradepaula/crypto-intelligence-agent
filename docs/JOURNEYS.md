@@ -40,4 +40,7 @@
 
 - WU23 #63 / PR #64: diligência Vike Hyperliquid, manifesto keyless e CC BY declarada, código offline integrado SHA `c4cb8b1e7f31c3bde917e78185aeceb0a6a6733c` (CI #40214978748 SUCCESS: 293 testes offline/12 docs). Comando owner-only publicado na issue, run externo ainda não verificado; sem licença upstream, inspeção Parquet ou release. Issue segue aberta.
 
+## Preparação independente de J2 (J1 permanece aberta)
+- J2/PRE1 #66: motor offline de indicadores causais sobre somente `ClosedCandle` sintéticos, sem ativar estratégias nem antecipar aceite de J1/J2; em implementação, PR/CI pendentes.
+
 A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausência de erros de código não comprovam dados live confiáveis nem lucro. Seguir AGENTS.md: avançar sem pedir "prossiga" por microtarefas.
