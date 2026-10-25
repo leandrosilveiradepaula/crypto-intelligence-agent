@@ -2,12 +2,12 @@
 
 Plataforma de inteligência quantitativa para futuros perpétuos de criptomoedas: pesquisa de entradas, backtesting realista e gerenciamento de realizações parciais de posições vencedoras.
 
-**Estado:** fundação documental J0 em desenvolvimento. Nenhum motor de trading ou estratégia lucrativa validada nesta etapa. Não executa ordens reais.
+**Estado:** fundação documental J0 integrada; J1 em planejamento para Codex. Nenhum motor de trading ou estratégia lucrativa validada nesta etapa. Não executa ordens reais.
 
 ## Documentação
 - [Regras para agentes](AGENTS.md)
 - [Produto](docs/PRODUCT_SPEC.md) e [decisões aprovadas](docs/DECISIONS.md)
-- [Arquitetura candidata](docs/ARCHITECTURE.md) e [estratégias](docs/STRATEGY_SPEC.md)
+- [Arquitetura candidata](docs/ARCHITECTURE.md), [contrato de dados J1](docs/DATA_CONTRACT.md) e [estratégias](docs/STRATEGY_SPEC.md)
 - [Validação](docs/VALIDATION_PLAN.md) e [jornadas](docs/JOURNEYS.md)
 - [Status](docs/STATUS.md) e [estado operacional](docs/OPERATIONAL_STATE.md)
 
