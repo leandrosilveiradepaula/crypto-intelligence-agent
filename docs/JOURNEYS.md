@@ -105,3 +105,7 @@ O requisito final é **trading automatizado** com entradas e saídas (stops/parc
 
 ## Checkpoint de implementação — 26/10/2026 UTC
 J4 tem AUTO1–AUTO6 como **componentes de simulação** (incluindo posições/ordens/fills/risco transacional PAPER); não é negociação real nem aceite da jornada #5. J5 recebeu apenas PRE1 #161/PR #162, tela `web/paper-demo.html` estática PT-BR para o roteiro fictício; não é UI operacional nem aceite #6. J1 segue bloqueada e não homologada; J2/J3/J6 sem validação necessária para produção. CI pós-J5/PRE1 #40300735438 SUCCESS (848 testes offline, 14 docs), sem evidência de lucro, direitos de mercado ou permissão de ordens.
+
+
+## J5/PRE2 — exportação do replay fictício (26/10/2026 UTC)
+Após PRE1 com página estática, J5/PRE2 #164 cria uma interface local em HTML obtida de snapshots `paper_dashboard_snapshot_v1` **gerados e validados em processo** de fixtures J4/AUTO5. Sem rede, sem live e sem sobrescrita de arquivos de usuário; entrega em validação. J5 permanece **não homologada** até ter UI operacional, provas visuais/acessibilidade e dados/ordens legítimos. J1/J2/J3/J4/J6 seguem com seus gates independentes, sem qualquer autorização de dinheiro real.
