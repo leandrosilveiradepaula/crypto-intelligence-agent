@@ -138,3 +138,7 @@ Após J3/PRE1 (barreiras intrabar hipotéticas) e PRE2 (custos assinados hipoté
 ## J4/AUTO7 #188 — conexão causal J2 e PAPER (26/10/2026)
 
 Ao lado dos módulos J4/AUTO1–AUTO6, introduz-se uma ligação de **pesquisa sintética** entre hipótese LONG/SHORT recém-calculada pela J2 e a reserva `PENDING` de abertura PAPER atômica. Não existe circuito que use os outcomes ex-post de PRE5/PRE7 para abrir posição, e nenhum fill é criado automaticamente. Sem sinal/risco, não há registro de OPEN. A janela de decisão exige último candle fechado, idade e limites explícitos; ID estável impede reprocessamento da mesma hipótese em venue candidata diferente. Entrega isolada não conclui J2 #3, J3 #4 ou J4 #5; evolução posterior para PAPER prospectivo dependerá de seleção de fonte e segurança, e testnet/live permanecem sujeitos a gates distintos.
+
+## J4/AUTO8 #190 — travar OPEN após FILL não reconciliado
+
+AUTO8 fecha uma lacuna entre o diário de ordens e a reserva de posições PAPER: qualquer FILL OPEN requer vínculo local íntegro com uma posição antes de uma nova entrada. O único plano hoje disponível é sintético, portanto recebe estado `PROTECTED_HYPOTHETICAL_ONLY`, nunca a alegação de stop real; novas OPEN continuam travadas até existir capacidade de proteção/reconciliação própria, enquanto REDUCE_ONLY simulado não é removido. A entrega não conclui J4 #5, não promove PAPER a prospectivo e não altera os gates de testnet/live.

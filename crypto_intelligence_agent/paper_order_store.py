@@ -188,6 +188,11 @@ class SQLitePaperOrderJournal:
             raise ValueError("paper journal requires a dedicated ordinary SQLite file path")
         self._initialize()
 
+    @property
+    def path(self) -> Path:
+        """Dedicated local fixture path, exposed for read-only health checks."""
+        return Path(self._path)
+
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(self._path, timeout=5)
