@@ -25,6 +25,9 @@ jobs:
       - name: Audit saved PAPER position in read-only SQLite
         run: |
           /tmp/crypto-paper-qa-venv/bin/python -m scripts.audit_paper_position_browser --out-dir paper-position-qa
+      - name: Audit selected multi-position PAPER dashboard in Chrome
+        run: |
+          /tmp/crypto-paper-qa-venv/bin/python -m scripts.audit_multi_paper_positions_browser --out-dir paper-multi-qa
       - name: Attach synthetic offline screenshots and JSON evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -33,5 +36,6 @@ jobs:
           path: |
             paper-mobile-qa
             paper-position-qa
+            paper-multi-qa
           if-no-files-found: warn
           retention-days: 7
