@@ -7,6 +7,7 @@ standalone HTML page is generated without scripts or remote dependencies.
 from __future__ import annotations
 
 import argparse
+import json
 from decimal import Decimal
 from html import escape
 from pathlib import Path
@@ -27,7 +28,7 @@ VENUES = (PaperVenue.BINANCE_USDM, PaperVenue.BYBIT_V5)
 RULE_PERCENTAGES = (Decimal("50"), Decimal("60"), Decimal("70"))
 _INTEGER_DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,11})(?:\.[0-9]{1,8})?\Z")
 _ROOT_FIELDS = frozenset({
-    "demo", "mode", "live_trading_authorized", "orders_sent", "results",
+    "schema_version", "demo", "mode", "live_trading_authorized", "orders_sent", "results",
 })
 _RESULT_FIELDS = frozenset({
     "mode", "quality", "signal_source", "market_data_source",
@@ -69,6 +70,7 @@ def _fmt(value: Decimal) -> str:
 def make_paper_snapshot() -> dict[str, object]:
     """Re-run ONLY the J4/AUTO5 trusted synthetic scenarios, never load JSON."""
     return {
+        "schema_version": "paper_dashboard_snapshot_v1",
         "demo": "two_independent_synthetic_candidate_venues",
         "mode": "offline_paper",
         "live_trading_authorized": False,
@@ -82,6 +84,9 @@ def validate_paper_snapshot(snapshot: object) -> tuple[dict[str, object], ...]:
     _require(type(snapshot) is dict and set(snapshot) == _ROOT_FIELDS,
              "unexpected PAPER snapshot envelope")
     assert isinstance(snapshot, dict)
+    _require(snapshot["schema_version"] == "paper_dashboard_snapshot_v1"
+             and type(snapshot["schema_version"]) is str,
+             "unsupported PAPER snapshot schema version")
     _require(snapshot["demo"] == "two_independent_synthetic_candidate_venues"
              and type(snapshot["demo"]) is str, "unrecognized fixture origin")
     _require(snapshot["mode"] == "offline_paper"
@@ -273,17 +278,22 @@ def main(argv: list[str] | None = None) -> None:
     cli = argparse.ArgumentParser(
         description="Exporta HTML local de replay inteiramente fictício; sem trading."
     )
+    cli.add_argument("--format", choices=("html", "json"), default="html",
+                     help="HTML local (padrão) ou snapshot JSON estritamente fictício.")
     cli.add_argument("--output", type=Path,
-                     help="Novo arquivo HTML; nunca sobrescreve destino existente.")
+                     help="Novo arquivo HTML/JSON; nunca sobrescreve destino existente.")
     args = cli.parse_args(argv)
-    html = render_paper_dashboard(make_paper_snapshot(),
-                                  TEMPLATE.read_text(encoding="utf-8"))
+    snapshot = make_paper_snapshot()
+    validate_paper_snapshot(snapshot)
+    payload = (render_paper_dashboard(snapshot, TEMPLATE.read_text(encoding="utf-8"))
+               if args.format == "html" else
+               json.dumps(snapshot, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
     if args.output is None:
-        sys.stdout.write(html)
+        sys.stdout.write(payload)
     else:
         # Exclusive creation prevents accidental overwrite of user's files.
         with args.output.open("x", encoding="utf-8") as output:
-            output.write(html)
+            output.write(payload)
 
 
 if __name__ == "__main__":
