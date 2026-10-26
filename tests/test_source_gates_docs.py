@@ -21,6 +21,7 @@ DOCS = (
     "docs/STATUS.md",
     "docs/OPERATIONAL_STATE.md",
     "docs/J1_SOURCE_GATES.md",
+    "docs/AUTOMATED_EXECUTION_SPEC.md",
 )
 
 
@@ -43,13 +44,32 @@ class SourceGateDocsTests(unittest.TestCase):
     def test_current_matrix_passes(self):
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("13 documentos validados", result.stdout)
+        self.assertIn("14 documentos validados", result.stdout)
 
     def test_missing_matrix_fails(self):
         (self.root / "docs/J1_SOURCE_GATES.md").unlink()
         result = self.check()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("missing: docs/J1_SOURCE_GATES.md", result.stdout)
+
+    def test_automated_execution_spec_is_mandatory(self):
+        (self.root / "docs/AUTOMATED_EXECUTION_SPEC.md").unlink()
+        result = self.check()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing: docs/AUTOMATED_EXECUTION_SPEC.md", result.stdout)
+
+    def test_critical_auto_trading_controls_cannot_disappear(self):
+        spec = self.root / "docs/AUTOMATED_EXECUTION_SPEC.md"
+        original = spec.read_text(encoding="utf-8")
+        for marker in ("offline_paper", "testnet", "kill-switch",
+                       "reduce-only", "live_trading_enabled=false",
+                       "order_submission_enabled=false"):
+            with self.subTest(marker=marker):
+                spec.write_text(original.replace(marker, "DELETED"), encoding="utf-8")
+                result = self.check()
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertIn("missing automated execution invariant", result.stdout)
+        spec.write_text(original, encoding="utf-8")
 
     def test_removing_critical_invariants_fails(self):
         matrix = self.root / "docs/J1_SOURCE_GATES.md"
