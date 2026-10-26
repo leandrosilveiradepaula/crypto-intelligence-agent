@@ -43,3 +43,23 @@ A Hostinger documenta acesso pelo **hPanel → VPS → Gerenciar → Web Console
 O consentimento concedido é **read-only nas duas contas**, não aprovação de software para dar ordens, nem teste com capital real, nem autorização de gastos ou mudanças administrativas da VPS. **Nenhuma instalação ou prova de acesso real à Hostinger ocorreu até este checkpoint.**
 
 **Dependência operacional:** esta conversa dispõe de GitHub e de acesso de leitura a abas conectadas, mas não de ferramenta para controlar o Web Console da Hostinger. Para executar sem que o usuário transcreva comandos, abrir uma jornada em **ChatGPT Work**, com a sessão Hostinger devidamente autenticada e as permissões adequadas; o operador deve preservar a confidencialidade dos segredos e solicitar confirmação apenas nos gates sensíveis. Não afirmar que a Work já executou algo.
+
+
+### Checkpoint AUTH1 offline validado na Hostinger — 26/10/2026 UTC
+
+O Product Owner instalou a revisão `3dd2980eb8d1ddb93c8d8928a3336f8aac53c00b` do repositório na pasta isolada sob `cia-probe`. A execução sem flags retornou exatamente `offline_network_disabled` para **Binance e Bybit**, com `orders_sent=false` e `trading_enabled=false`. Evidência fornecida pelo titular; a equipe não controlou a sessão SSH nem viu credenciais. Isso demonstra somente o caminho offline instalado, **não acesso autenticado**, volume, licenças ou homologação J1/J6.
+
+### AUTH1/TYY1 — captura efêmera e privada por terminal
+
+O entrypoint `python3 -m scripts.run_private_exchange_readonly_tty` acrescenta entrada oculta `getpass` de **uma chave HMAC dedicada estritamente read-only e seu secret**, com ambas as flags explícitas `--allow-private-read --confirm-read-only-key`. O programa exige terminal interativo, falha se o terminal não permitir ocultar a digitação, rejeita parâmetros CLI desconhecidos sem reproduzir seu valor e entrega o par diretamente ao `diagnose` através de dicionário **somente em memória** (não por argv, variável de ambiente global, `.env`, shell history ou disco). A memória do processo não é eliminada criptograficamente; como em qualquer execução local, root/depuradores ainda podem acessá-la. Não usar terminal com gravação de sessão, `set -x`, streaming, clipboard compartilhado ou extensões que capturem entrada.
+
+A chave da **Bybit** deve ser de HMAC gerada pelo sistema, marcada na interface como **Read Only** e sem permissão de saque/transferência/ordem. A API oficial `GET /v5/user/query-api` atesta `readOnly=1` (https://bybit-exchange.github.io/docs/v5/user/apikey-info). A chave da **Binance USD-M** deve ter `Enable Reading` e **nenhuma** permissão de trading/futures trading, transferência ou saque habilitada; a consulta autenticada `GET /fapi/v1/positionSide/dual` não informa esse escopo. Ver configuração efetiva na interface da conta antes de executar (https://www.binance.com/en/support/faq/detail/360002502072). Não reutilizar credenciais com permissão de trading nem insistir após HTTP 403/451. Chaves RSA/Ed25519 NÃO são suportadas por este diagnóstico HMAC; não converter manualmente.
+
+Após CI e merge de revisão verificada, atualizar o checkout isolado sob o dono `cia-probe` usando `git fetch --no-tags origin main` e `git checkout --detach <SHA-aceito>`, sem mudanças de serviços. Iniciar uma consulta por vez, em SSH privado, sem mostrar qualquer credencial:
+
+```bash
+runuser -u cia-probe -- sh -c 'cd /home/cia-probe/agent/repo && python3 -m scripts.run_private_exchange_readonly_tty --venue bybit --allow-private-read --confirm-read-only-key'
+runuser -u cia-probe -- sh -c 'cd /home/cia-probe/agent/repo && python3 -m scripts.run_private_exchange_readonly_tty --venue binance --allow-private-read --confirm-read-only-key'
+```
+
+As duas entradas são solicitadas invisivelmente em cada execução. Somente o JSON com status sanitizado pode ser comunicado. **Jamais** copiar key, secret, UID, cabeçalhos, respostas brutas, IP/hostname ou captura do terminal. Autenticar não valida dados de mercado nem habilita ordens ou deploy de trading.
