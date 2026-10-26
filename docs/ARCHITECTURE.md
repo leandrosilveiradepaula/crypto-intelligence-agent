@@ -139,3 +139,7 @@ O usuário **não precisa confirmar cada operação**: após futura autorizaçã
 
 ## J4/AUTO6 — gate PAPER dentro do journal
 `reserve_open_if_paper_risk` reutiliza `_reserve_on_connection` (mesma inserção que `reserve` legado), `_checked_entry` e `evaluate_paper_risk` dentro de **uma única transação SQLite**. Lê todas as ordens locais, valida inclusive REDUCE_ONLY para detectar índice adulterado, conta apenas OPEN não terminais, combina suas pendências com alegações externas por máximo/OR e aplica os limites antes de gravar nova OPEN. Isto elimina a janela de corrida entre calcular pendências e inserir a ordem PAPER; não confundir com atomicidade de exchanges ou dos dois bancos temporários do demo. Script AUTO5 foi atualizado para consumir o novo recibo de preflight/reserva.
+
+
+## J5/PRE1 #161 — UI isolada e segura para demonstração PAPER
+`web/paper-demo.html` é um arquivo local independente, com HTML semântico, CSS embutido e layout responsivo, `lang=pt-BR` e CSP que desabilita rede, scripts, formulários e iframes. Não carrega market data ou dados privados, não tem endpoint/botão para ordens, nem conecta a stores SQLite. Os valores visíveis são uma fotografia estática **do cenário fictício** de `scripts/demo_automated_paper_cycle.py`; `tests/test_paper_dashboard_contract.py` compara esses números com a execução de ambos os candidatos em cada CI. A futura interface J5 terá contrato de dados/autenticação/estado próprio, após gates J1/J4/J6; esta página não substitui essa integração.

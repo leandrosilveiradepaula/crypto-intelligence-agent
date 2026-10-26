@@ -224,3 +224,7 @@ A sonda `python3 -m scripts.probe_bybit_private_ohlcv`, sem rede por padrão, re
 python3 -m scripts.demo_automated_paper_cycle
 ```
 Executa duas sessões **independentes e inventadas** (candidatas Binance USD-M e Bybit V5) sobre eventos artificiais, em bancos SQLite temporários descartados automaticamente. Encadeia avaliação de risco PAPER, intenção OPEN, ACK/FILL fictícios, posição com saldo confirmado, três exits em 50/60/70% do remanescente e runner de 6%, incluindo UNKNOWN reconciliado por fill hipotético. Imprime JSON determinístico com `mode=offline_paper`, `orders_sent=false`, `live_trading_authorized=false`. **Não é backtest financeiro, estratégia aprovada, leitura de preços reais, conexão às suas contas, sinal para operar ou promessa de retorno.** O mark de exemplo é inventado e não representa a cotação do BTC.
+
+
+## Prévia do painel para celular — totalmente offline
+Abra `web/paper-demo.html` diretamente no navegador (arquivo local; não precisa de servidor, instalação, login ou rede). É a **primeira tela demonstrativa**, somente HTML/CSS acessível e responsivo em português, sem JavaScript, botões de negociação, dados de conta ou API. Mostra o mesmo cenário artificial da CLI de AUTO5: 100 unidades fictícias, saídas 50/30/14, runner 6%, duas venues candidatas não conectadas. **Não representa painel do robô em produção**, nem estratégia, lucro ou mercado em tempo real; `SIMULADO` aparece em destaque.

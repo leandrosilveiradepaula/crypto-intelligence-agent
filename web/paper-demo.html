@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'">
+  <meta name="description" content="Protótipo offline e fictício do Crypto Intelligence Agent. Nenhum dado de mercado nem ordem real.">
+  <title>Crypto Intelligence Agent — Demonstração PAPER</title>
+  <!-- J5/PRE1. STATIC FIXTURE ONLY. Values must match scripts/demo_automated_paper_cycle.py.
+       No account, exchange connection, scripts, requests, forms, controls or PnL. -->
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #0b141e;
+      --panel: #142231;
+      --panel-light: #1b2c3e;
+      --border: #384c5e;
+      --text: #f0f6fc;
+      --muted: #b8c8d7;
+      --accent: #94e1cb;
+      --amber: #ffda87;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; min-width: 280px; background: var(--bg); color: var(--text); line-height: 1.55; }
+    a { color: var(--accent); }
+    :focus-visible { outline: 3px solid var(--amber); outline-offset: 4px; }
+    .page { width: min(100% - 32px, 1100px); margin-inline: auto; }
+    .site-header { border-bottom: 1px solid var(--border); background: #101c29; }
+    .header-content { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 18px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: .01em; }
+    .mark { display: inline-grid; place-items: center; width: 37px; height: 37px; border: 1px solid #679e96; border-radius: 11px; color: var(--accent); font-size: .9rem; }
+    .header-label { border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-size: .78rem; color: var(--muted); white-space: nowrap; }
+    main { padding-block: 35px 64px; }
+    .eyebrow { color: var(--accent); letter-spacing: .14em; text-transform: uppercase; font-weight: 750; font-size: .72rem; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 780px; font-size: clamp(2rem, 5vw, 3.45rem); letter-spacing: -.04em; line-height: 1.1; margin-bottom: 16px; }
+    h2 { font-size: 1.35rem; letter-spacing: -.02em; margin-bottom: 8px; }
+    h3 { font-size: 1.03rem; margin-bottom: 5px; }
+    .lead { max-width: 760px; color: var(--muted); font-size: clamp(.96rem, 1.8vw, 1.09rem); margin-bottom: 24px; }
+    .warning { display: flex; align-items: flex-start; gap: 16px; border: 2px solid #a88336; background: #2b2519; color: #ffe9b1; border-radius: 16px; padding: 18px 19px; margin: 18px 0 29px; }
+    .warning strong { flex-shrink: 0; font-size: .95rem; letter-spacing: .07em; }
+    .warning p { margin: 0; font-size: .92rem; }
+    .section { margin-block: 36px; }
+    .section-subtitle { color: var(--muted); max-width: 750px; margin-bottom: 18px; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 0; }
+    .stat { border: 1px solid var(--border); border-radius: 17px; background: var(--panel); padding: 22px; min-width: 0; }
+    .stat dt { color: var(--muted); font-size: .83rem; margin-bottom: 8px; }
+    .stat dd { font-size: clamp(1.8rem, 3.6vw, 2.6rem); line-height: 1.05; font-weight: 750; margin: 0; font-variant-numeric: tabular-nums; }
+    .stat small { color: var(--muted); display: block; font-size: .75rem; margin-top: 10px; }
+    .tone-accent { color: var(--accent); }
+    .card { border: 1px solid var(--border); border-radius: 16px; background: var(--panel); padding: 22px; }
+    .flow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .flow-step { min-width: 0; border: 1px solid var(--border); background: var(--panel); border-radius: 14px; padding: 18px; }
+    .flow-num { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: #25483f; color: var(--accent); font-size: .84rem; font-weight: 750; margin-bottom: 13px; }
+    .flow-step p { color: var(--muted); font-size: .84rem; margin: 0; }
+    .venues { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .venue-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 13px; }
+    .venue-header p { margin: 0; color: var(--muted); font-size: .83rem; }
+    .tag { display: inline-block; border: 1px solid var(--border); border-radius: 999px; padding: 4px 9px; color: var(--muted); font-size: .68rem; font-weight: 700; white-space: nowrap; }
+    .venue-metric { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding: 10px 0; font-size: .9rem; }
+    .venue-metric:last-child { padding-bottom: 0; }
+    .venue-metric span:first-child { color: var(--muted); }
+    .venue-metric strong { font-variant-numeric: tabular-nums; text-align: right; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); }
+    table { width: 100%; border-collapse: collapse; min-width: 440px; text-align: left; }
+    th, td { padding: 14px 17px; vertical-align: top; }
+    th { color: var(--muted); font-size: .77rem; font-weight: 650; background: var(--panel-light); }
+    td { border-top: 1px solid var(--border); font-size: .89rem; }
+    td strong { font-variant-numeric: tabular-nums; }
+    .small { color: var(--muted); font-size: .81rem; }
+    .note { color: var(--muted); font-size: .86rem; margin-top: 13px; }
+    details { border: 1px solid var(--border); border-radius: 14px; background: var(--panel); padding: 0 18px; }
+    summary { cursor: pointer; padding: 16px 0; font-weight: 650; }
+    details p { color: var(--muted); font-size: .88rem; padding-bottom: 12px; }
+    .pending { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .pending > div { border: 1px solid var(--border); border-radius: 12px; padding: 15px; background: var(--panel); }
+    .pending p { color: var(--muted); font-size: .8rem; margin-bottom: 0; }
+    footer { border-top: 1px solid var(--border); color: var(--muted); font-size: .79rem; padding: 20px 0 32px; }
+    @media (max-width: 790px) {
+      .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pending { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .page { width: min(100% - 26px, 1100px); }
+      .header-content { padding-block: 13px; }
+      .brand { font-size: .82rem; }
+      .header-label { font-size: .69rem; }
+      .warning { flex-direction: column; gap: 7px; }
+      .stats { grid-template-columns: 1fr; gap: 10px; }
+      .stat { display: flex; justify-content: space-between; align-items: center; padding: 17px; gap: 15px; }
+      .stat dt { margin-bottom: 0; }
+      .stat dd { flex-shrink: 0; font-size: 2rem; text-align: right; }
+      .stat small { display: none; }
+      .venues { grid-template-columns: 1fr; }
+      .flow-step { padding: 14px; }
+      .section { margin-block: 29px; }
+      .card { padding: 18px; }
+    }
+    @media (max-width: 360px) {
+      .flow { grid-template-columns: 1fr; }
+      .header-label { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="page header-content">
+      <div class="brand"><span class="mark" aria-hidden="true">CI</span><span>Crypto Intelligence Agent</span></div>
+      <span class="header-label">Protótipo local · J5/PRE1</span>
+    </div>
+  </header>
+  <main class="page" data-mode="offline_paper" data-demo-only="true">
+    <p class="eyebrow">Laboratório de execução automática</p>
+    <h1>Um ciclo completo. Nenhuma operação real.</h1>
+    <p class="lead">Uma prévia de como o robô poderá abrir posições, acompanhar os preenchimentos e realizar saídas parciais sozinho. Tudo nesta tela é uma <strong>simulação com valores fictícios</strong>, sem sinal de mercado ou conta conectada.</p>
+
+    <aside class="warning" aria-label="Aviso obrigatório de simulação">
+      <strong>SIMULADO</strong>
+      <p>Negociação real desativada. Nenhuma ordem foi enviada, nenhuma conta Binance ou Bybit foi acessada e os números abaixo não representam dinheiro, preço atual, lucro ou recomendação de investimento.</p>
+    </aside>
+
+    <section class="section" aria-labelledby="overview-title">
+      <h2 id="overview-title">Resumo do cenário</h2>
+      <p class="section-subtitle">Exemplo determinístico com 100 unidades abstratas de uma posição hipotética. O sistema confirma fills fictícios antes de reduzir o saldo.</p>
+      <dl class="stats">
+        <div class="stat"><dt>Quantidade inicial confirmada</dt><dd data-metric="initial_units">100</dd><small>Unidades fictícias, não US$</small></div>
+        <div class="stat"><dt>Saídas preenchidas</dt><dd data-metric="filled_exit_units">94</dd><small>50 + 30 + 14 unidades</small></div>
+        <div class="stat"><dt>Parcela residual (runner)</dt><dd class="tone-accent" data-metric="residual_units">6</dd><small>6% da posição inicial</small></div>
+      </dl>
+    </section>
+
+    <section class="section" aria-labelledby="flow-title">
+      <h2 id="flow-title">Como o ciclo PAPER funciona</h2>
+      <p class="section-subtitle">É uma sequência de laboratório pré-definida, não uma estratégia quantitativa já aprovada.</p>
+      <div class="flow">
+        <div class="flow-step"><span class="flow-num">1</span><h3>Verificar risco</h3><p>Limites, pendências e trava de novas entradas são checados apenas no diário local simulado.</p></div>
+        <div class="flow-step"><span class="flow-num">2</span><h3>Confirmar entrada</h3><p>ACK não cria posição. Somente um FILL explicitamente fictício confirma as 100 unidades.</p></div>
+        <div class="flow-step"><span class="flow-num">3</span><h3>Realizar parciais</h3><p>O motor simula três saídas sobre o saldo remanescente, sem ultrapassar as reservas agregadas.</p></div>
+        <div class="flow-step"><span class="flow-num">4</span><h3>Conciliar o restante</h3><p>UNKNOWN segura a reserva até FILL fictício; o saldo final sobrevive à reabertura do SQLite.</p></div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="venues-title">
+      <h2 id="venues-title">Corretoras candidatas</h2>
+      <p class="section-subtitle">Duas execuções independentes do <strong>mesmo roteiro inventado</strong>. Nenhuma corretora foi selecionada para negociação real.</p>
+      <div class="venues">
+        <article class="card" data-venue="binance_usdm">
+          <div class="venue-header"><div><h3>Binance USDⓈ-M</h3><p>Fixture BTCUSDT · cotação inventada</p></div><span class="tag">Candidata · não conectada</span></div>
+          <div class="venue-metric"><span>Modo</span><strong>offline_paper</strong></div>
+          <div class="venue-metric"><span>Entrada fictícia</span><strong>100 unidades</strong></div>
+          <div class="venue-metric"><span>Saídas concluídas</span><strong>50 / 30 / 14</strong></div>
+          <div class="venue-metric"><span>Saldo fictício</span><strong class="tone-accent">6 unidades</strong></div>
+        </article>
+        <article class="card" data-venue="bybit_v5">
+          <div class="venue-header"><div><h3>Bybit V5 linear</h3><p>Fixture BTCUSDT · cotação inventada</p></div><span class="tag">Candidata · não conectada</span></div>
+          <div class="venue-metric"><span>Modo</span><strong>offline_paper</strong></div>
+          <div class="venue-metric"><span>Entrada fictícia</span><strong>100 unidades</strong></div>
+          <div class="venue-metric"><span>Saídas concluídas</span><strong>50 / 30 / 14</strong></div>
+          <div class="venue-metric"><span>Saldo fictício</span><strong class="tone-accent">6 unidades</strong></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="exits-title">
+      <h2 id="exits-title">Plano de saídas automáticas simulado</h2>
+      <p class="section-subtitle">Cada porcentagem incide sobre a quantidade restante antes daquela etapa, não sobre a posição inicial.</p>
+      <div class="table-wrap">
+        <table>
+          <caption class="small" style="text-align:left;padding:13px 17px">Sequência sintética · unidades sem valor financeiro</caption>
+          <thead><tr><th scope="col">Etapa</th><th scope="col">Regra</th><th scope="col">Fill fictício</th><th scope="col">Saldo após</th></tr></thead>
+          <tbody>
+            <tr data-step="1" data-qty="50"><td>1ª parcial</td><td>50% do restante</td><td><strong>50</strong> unidades</td><td>50</td></tr>
+            <tr data-step="2" data-qty="30"><td>2ª parcial</td><td>60% do restante</td><td><strong>30</strong> unidades</td><td>20</td></tr>
+            <tr data-step="3" data-qty="14"><td>3ª parcial</td><td>70% do restante</td><td><strong>14</strong> unidades</td><td>6</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Resta uma parcela residual de <strong>6 unidades (6%)</strong>. Neste protótipo não há stop nativo, trailing operacional, PnL financeiro nem proteção instalada em corretora.</p>
+    </section>
+
+    <section class="section" aria-labelledby="details-title">
+      <h2 id="details-title">Conciliação e segurança</h2>
+      <details>
+        <summary>O que acontece quando uma ordem fica UNKNOWN?</summary>
+        <p>No segundo alvo, o evento UNKNOWN significa apenas que a resposta hipotética não confirmou o resultado. O diário mantém a quantidade reservada e não repete uma abertura. A sequência só considera a saída concluída após um evento FILL fictício explícito. Isso não comprova reconciliação de ordens reais.</p>
+      </details>
+    </section>
+
+    <section class="section" aria-labelledby="blockers-title">
+      <h2 id="blockers-title">O que falta para um robô utilizável?</h2>
+      <div class="pending">
+        <div><h3>Dados financeiros</h3><p>Fonte autorizada, histórico crypto-only Top 50, preços e volumes canônicos, funding e metadados de contrato.</p></div>
+        <div><h3>Estratégia validada</h3><p>Regras de entrada e saída testadas fora da amostra, custos, slippage, risco de liquidação e retorno líquido.</p></div>
+        <div><h3>Operação segura</h3><p>Conectores da venue escolhida, reconciliação real de ordens, risco, proteção, observabilidade e autorização específica para live.</p></div>
+      </div>
+    </section>
+  </main>
+  <footer><div class="page">Crypto Intelligence Agent · Demonstração local PAPER · Sem scripts, sem rede, sem ordens e sem dados de mercado real. O produto final de negociação automática ainda não está homologado.</div></footer>
+</body>
+</html>
