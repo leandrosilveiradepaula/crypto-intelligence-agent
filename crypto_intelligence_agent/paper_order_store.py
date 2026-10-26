@@ -449,6 +449,7 @@ class SQLitePaperOrderJournal:
         with self._transaction() as conn:
             health = _audit_paper_open_health_locked(
                 conn, self.path, position_journal_path,
+                decision_at_ms=decision_at_ms,
             )
             if not health.new_open_allowed:
                 return health, None
