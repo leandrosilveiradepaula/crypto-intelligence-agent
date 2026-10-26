@@ -144,3 +144,7 @@ A implementação proposta adiciona `synthetic_order_lifecycle.py` e testes offl
 
 ## J4/AUTO2 #151 — diário SQLite de ordens simuladas (em validação)
 Incremento PAPER: intenções fictícias reservadas de forma durável, eventos hipotéticos de ACK/UNKNOWN/FILL/cancel e checkpoints reconstruíveis em transação SQLite atômica. Replays no mesmo arquivo não duplicam OPEN por sinal nem fills por IDs idênticos; corrupção e conflito interrompem o processamento. Ainda não há executor, integração privada Binance/Bybit, orçamento de risco, saldo agregado real, parciais coordenadas por posição, stops no livro da exchange ou PnL homologado. Nenhuma credencial/POST/ordem real, sem testnet, sem produção, sem seleção final de venue. A J4 #5 permanece aberta, além da J1 #2 e bloqueios de dados #19/#32/#36/#48.
+
+
+## J4/AUTO2 concluída / AUTO3 em revisão (26/10/2026 UTC)
+AUTO2 #151/PR #152 integrada SHA `47d51ac33142bcbd9672fbbe041f922948adca70`, CI pós-merge [#40279479428](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40279479428) SUCCESS: **797 testes offline**, compileall e 14 docs; ordens continuam simuladas. AUTO3 #153 propõe preflight de risco para PAPER: cap de ordem, exposição, perdas, ordens incertas e kill-switch; não possui verdade de conta/venue, stops reais, estratégia validada nem habilitação de trading. J1/J4/J6 abertas, `live` desativado e R$0 adicional.
