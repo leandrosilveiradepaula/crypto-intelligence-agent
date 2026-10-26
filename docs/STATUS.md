@@ -284,3 +284,8 @@ Adicionada cobertura offline para encerramento real de processo **após commit**
 J6/PRE2 #200 encerrada como engenharia PAPER sintética: PRs #201/#202/#203 integradas, último merge SHA `5ee3312b362387a37bc3f403914741a5a33676ea`, CI pós-merge #40392712218 (Linux/Windows + 14 docs) e #40392711941 (Chrome) SUCCESS. J6 épica #7 e negociação real seguem bloqueadas.
 
 Prioridade ativa: **J1 #2**. Matriz WU51 em `J1_SOURCE_GATES.md` diferencia provas e bloqueios por fonte e determina próximas ações sem burlar acesso: Kraken price-only/unidade chart #36 + direitos #48, Bybit acesso negado + ticker #196, Binance HTTP451 #19, registro crypto #32. Não foi homologado OHLCV financeiro, Top50, estratégia lucrativa ou venue real. R$0 extra.
+
+
+## J1/AUTH1 #205 — autorização read-only do Product Owner (26/10/2026 UTC)
+
+O usuário autorizou **somente conexão de leitura** de suas contas Binance e Bybit na VPS existente. Contrato e procedimento em `docs/PRIVATE_EXCHANGE_READONLY.md`; scripts e testes mockados na branch `work/issue-205-readonly-exchange-probe`, sem requisição autenticada real. Consulta ao plugin DigitalOcean retornou **zero droplets visíveis**; acesso à VPS/chaves não comprovado. Próximo gate é revisar CI Linux/Windows/QA, confirmar infraestrutura existente sem gasto, e executar diagnóstico somente em ambiente privado permitido com credenciais read-only. Nenhuma ordem, saldo divulgado, credential em chat, proxy, deploy ou alteração produtiva. J1 #2 e J6 #7 permanecem abertas.
