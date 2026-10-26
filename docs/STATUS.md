@@ -136,3 +136,7 @@ Binance USD-M já tem adaptador/fixtures offline, mas o run real anterior foi bl
 
 ## D77 / issue #147 — mudança no alvo do produto, 26/10/2026 UTC
 **Requisito vigente:** entradas e saídas automáticas, incluindo parciais/trailing/runner, com Binance USD-M e Bybit V5 linear candidatas. A interpretação 'trading final manual' de WU47 foi substituída expressamente pelo Product Owner. O robô ainda **não foi implementado nem homologado**: estratégias J2, risco/backtest J3, ledger de execução J4, UI J5 e simulação contínua J6 dependem de integração e gates. A J1 segue com acesso Binance HTTP451, Bybit bloqueada no primeiro GET, Kraken price-only e sem Top50 histórico nem direitos públicos homologados. Nova `docs/AUTOMATED_EXECUTION_SPEC.md` descreve modo `offline_paper`, testnet condicionada e live proibido até autorização separada. A WU48 atualiza documentação e readiness; nenhuma operação/credencial/deploy.
+
+
+## J4/AUTO1 #149 — base de ordens simuladas, não robô pronto
+A implementação proposta adiciona `synthetic_order_lifecycle.py` e testes offline de estados e fills fictícios, como pré-requisito para controle automático de ordens. O estado nunca envia ordens nem cria PnL; lida com ACK vs FILL, timeout UNKNOWN, duplicações, parciais e REDUCE_ONLY puramente hipotético. Ausentes: estratégia J2 homologada, venue de execução selecionada, estado persistente/reconciliação REST+WS reais, stops, RiskGate global, licença de dados, controle regional e liberação live. #5 e #7 continuam abertos; nenhuma ordem real.
