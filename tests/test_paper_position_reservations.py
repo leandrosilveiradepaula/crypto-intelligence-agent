@@ -82,13 +82,15 @@ class PaperPositionReservationTests(unittest.TestCase):
         self.path = Path(tmp.name) / "position-paper.sqlite"
         self.store = SQLitePaperPositionJournal(self.path)
 
-    def open(self, *, position_id="fixture_position_A", exit_plan=None):
+    def open(self, *, position_id="fixture_position_A", exit_plan=None,
+             synthetic_lot_step_units=D(1)):
         return self.store.create_position(
             position_id=position_id,
             opening_intent=opened_order(),
             opening_events=(e("open", PaperOrderEventKind.FILL, 1, "100"),),
             exit_plan=plan() if exit_plan is None else exit_plan,
-            plan_version="paper-plan-v1", synthetic_lot_step_units=D(1), as_of_ms=T + 1,
+            plan_version="paper-plan-v1",
+            synthetic_lot_step_units=synthetic_lot_step_units, as_of_ms=T + 1,
         )
 
     def test_opening_is_derived_from_fills_not_ack_or_unknown(self):
@@ -294,6 +296,28 @@ class PaperPositionReservationTests(unittest.TestCase):
                                            as_of_ms=T + 1)
         self.assertEqual(successful.reserved_unfilled_units, D(20))
 
+
+    def test_explicit_fixture_lot_step_blocks_fractional_order_and_fill(self):
+        with self.assertRaises(DataValidationError):
+            self.open(synthetic_lot_step_units=D("0.3"))
+        position = self.open(synthetic_lot_step_units=D("2"))
+        self.assertEqual(position.synthetic_lot_step_units, D(2))
+        with self.assertRaises(DataValidationError):
+            self.store.reserve_exit("fixture_position_A", 1,
+                exit_order("wrongstep", "5.5", 1), as_of_ms=T + 1)
+        allowed = exit_order("rightstep", "6", 1)
+        self.store.reserve_exit("fixture_position_A", 1, allowed, as_of_ms=T + 1)
+        previous = self.store.load("fixture_position_A")
+        with self.assertRaises(DataValidationError):
+            self.store.append_exit_events("fixture_position_A", allowed.intent_id,
+                (e("fractional_fill", PaperOrderEventKind.FILL, 2, "1"),),
+                as_of_ms=T + 2)
+        self.assertEqual(self.store.load("fixture_position_A"), previous)
+        after = self.store.append_exit_events("fixture_position_A", allowed.intent_id,
+            (e("whole_step_fill", PaperOrderEventKind.FILL, 2, "2"),),
+            as_of_ms=T + 2)
+        self.assertEqual(after.filled_exit_units, D(2))
+        self.assertEqual(after.reserved_unfilled_units, D(4))
 
     def test_concurrent_reservations_share_single_balance(self):
         self.open(exit_plan=entire_plan())
