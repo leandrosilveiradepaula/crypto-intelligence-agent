@@ -185,6 +185,16 @@ class RenderPaperDashboardTests(unittest.TestCase):
         unsafe = self.template.replace("</body>", "<script>alert(1)</script></body>")
         with self.assertRaises(InvalidPaperSnapshot):
             render_paper_dashboard(self.snapshot, unsafe)
+        for injection in (
+            '<a href="https://example.invalid">externo</a>',
+            '<img src="https://example.invalid/pixel.png">',
+            '<span onclick="alert(1)">handler</span>',
+            '<style>@import url(https://example.invalid/remote.css);</style>',
+        ):
+            with self.subTest(injection=injection), self.assertRaises(InvalidPaperSnapshot):
+                render_paper_dashboard(
+                    self.snapshot, self.template.replace("</body>", injection + "</body>"),
+                )
 
     def test_standalone_page_preserves_accessibility_and_blocks_network(self):
         parsed = SnapshotHTMLAudit()
@@ -203,9 +213,21 @@ class RenderPaperDashboardTests(unittest.TestCase):
         for forbidden in ("script", "form", "button", "input", "iframe",
                           "img", "link", "object", "embed"):
             self.assertNotIn(forbidden, parsed.tags)
+        links = []
         for tag, attrs in parsed.attrs:
             self.assertFalse(any(k.lower().startswith("on") for k in attrs))
-            self.assertFalse(any(k in attrs for k in ("src", "href", "action")))
+            self.assertFalse(any(k in attrs for k in ("src", "srcset", "action")))
+            if "href" in attrs:
+                links.append((tag, attrs["href"]))
+        self.assertEqual(links, [("a", "#conteudo-principal")])
+        self.assertEqual(main.get("id"), "conteudo-principal")
+        self.assertEqual(main.get("tabindex"), "-1")
+        self.assertIn(".skip-link:focus-visible", self.rendered)
+        scroll = next(a for tag, a in parsed.attrs
+                      if tag == "div" and a.get("class") == "table-wrap")
+        self.assertEqual(scroll.get("tabindex"), "0")
+        self.assertEqual(scroll.get("role"), "region")
+        self.assertEqual(scroll.get("aria-describedby"), "table-scroll-instructions")
         self.assertNotIn("http://", self.rendered)
         self.assertNotIn("https://", self.rendered)
         self.assertIn("default-src 'none'", self.rendered)
