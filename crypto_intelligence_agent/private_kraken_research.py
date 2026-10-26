@@ -50,6 +50,7 @@ class LocalCaptureSummary:
     price_window_complete: bool
     price_symbols_validated: int
     public_gets_on_success: int
+    price_hours_requested: int
     canonical_ohlcv_approved: bool = False
     historical_top50_approved: bool = False
     public_or_commercial_rights_approved: bool = False
@@ -108,10 +109,11 @@ def capture_private_research(
     registry_bytes: bytes | None = None,
     registry_variant: str = "btc-eth",
     max_price_symbols: int = 1,
+    price_hours: int = 3,
 ) -> LocalCaptureSummary:
     """Collect bounded CURRENT crypto universe and closed price-only 1h pages.
 
-    At most 2 + max_price_symbols GET calls (2 metadata and <=5 charts).
+    At most 2 + max_price_symbols GET calls, at most 72 1H price-only bars per chart.
     Validate provider responses before opening or writing the local database.
     The store's two record families are individually transactional; a crash
     between them can leave a valid partial capture, not a completed session.
@@ -121,6 +123,9 @@ def capture_private_research(
         raise LocalResearchError("double_opt_in_required")
     if type(max_price_symbols) is not int or not 1 <= max_price_symbols <= 5:
         raise LocalResearchError("max_price_symbols_must_be_between_1_and_5")
+    # Bounded single-page historical research. Keep the WU36 default unchanged.
+    if type(price_hours) is not int or not 3 <= price_hours <= 72:
+        raise LocalResearchError("price_hours_must_be_between_3_and_72")
     target = _private_db_path(db_path)
     clock = clock_ms or (lambda: int(time() * 1000))
     started_at = _now(clock)
@@ -166,7 +171,7 @@ def capture_private_research(
     # bar. BTC is the mandatory anchor; only verified and live-ranked contracts
     # may fill up to N-1 additional slots. No fixed list of invented perps.
     aligned = (started_at // _HOUR_MS) * _HOUR_MS
-    start, end = aligned - 4 * _HOUR_MS, aligned - _HOUR_MS
+    start, end = aligned - (price_hours + 1) * _HOUR_MS, aligned - _HOUR_MS
     selected = (_SYMBOL,) + tuple(
         row.symbol for row in ranked.eligible if row.symbol != _SYMBOL
     )[:max_price_symbols - 1]
@@ -204,7 +209,7 @@ def capture_private_research(
                 start_open_ms=start, end_open_ms=end,
                 as_of_ms=captured.observed_at_ms,
             )
-            if not quality.complete or quality.captured != 3:
+            if not quality.complete or quality.captured != price_hours:
                 raise LocalResearchError("private_sqlite_price_coverage_failed")
             covered += quality.captured
             if archive.candles(
@@ -231,6 +236,7 @@ def capture_private_research(
             price_window_complete=True,
             price_symbols_validated=len(validated_pages),
             public_gets_on_success=2 + len(validated_pages),
+            price_hours_requested=price_hours,
         )
     except Exception:
         # If newly created and the session fails, never silently leave a DB

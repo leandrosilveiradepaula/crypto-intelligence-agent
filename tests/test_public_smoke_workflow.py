@@ -310,5 +310,28 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("secrets.", s)
 
 
+
+    def test_kraken_btc_24h_private_probe_owner_only_no_default_ci(self):
+        s = self.source
+        for token in (
+            "kraken-btc-private-24h-history:",
+            "github.event.issue.number == 130",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-kraken-btc-24h-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.collect_private_kraken_research",
+            "--allow-public-network --allow-private-persistence",
+            "--registry expanded-10 --max-price-symbols 1 --price-hours 24",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+            "trap 'rm -rf \"$private_dir\"' EXIT",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("secrets.", s)
+        self.assertNotIn("contents: write", s)
+
+
 if __name__ == "__main__":
     unittest.main()
