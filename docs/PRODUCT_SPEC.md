@@ -62,3 +62,7 @@ Uma prévia mobile-first em `web/paper-demo.html`, PT-BR e inteiramente offline,
 
 ## J5/PRE2 #164 — HTML de leitura derivado de resultados PAPER, sem trading
 O usuário poderá gerar um documento local pelo comando `python3 -m scripts.render_paper_dashboard --output /tmp/crypto-paper-view.html`. Ele lê **somente** o replay sintético em processo para as candidatas Binance USD-M/Bybit V5 e preenche os números da tela mobile PT-BR existente. Não consome mercado real, não recebe JSON externo, não possui ações/ordens, login, JavaScript, servidor ou rede. Um contrato versão `paper_dashboard_snapshot_v1` rejeita `live`/testnet, exposição de PnL, fonte que alegue mercado real, flags de envio de ordem, mudança de venue e totais inconsistentes. O arquivo exportado não é o dashboard operacional final nem prova de rentabilidade; J5 só poderá ser aceita após integração de dados financeiros e execução segura homologada.
+
+
+## J5/PRE3 #166 — navegação por teclado no painel fictício
+O protótipo de leitura `web/paper-demo.html` e a exportação HTML de PRE2 adicionam link de salto para conteúdo principal, tabela de saídas com foco por teclado, nome acessível e instruções de rolagem horizontal para telas estreitas. Conteúdo, cores, numeração fictícia e banner SIMULADO não representam sinais, saldos, lucro nem decisões reais. Melhorias de acessibilidade **não conferem** integração operacional a Binance/Bybit nem aceite J5; testes futuros em celulares e leitores de tela ainda são necessários.
