@@ -258,3 +258,8 @@ Foi acrescentado contrato puro de selo determinístico SHA-256 para prefixos sin
 ### J6/PRE2-B #200 — cursor transacional de fixture em AUTO2 (26/10/2026 UTC)
 
 O módulo `offline_paper_durable_cursor.py` acrescenta API offline explícita com cursor SHA-256 e inventário de OPENs em metadado opcional do próprio banco AUTO2, sem migração de schema ou produção. Um único `BEGIN IMMEDIATE` verifica prefixo/versão, saúde AUTO8/AUTO9 e risco AUTO6, reserva intenção PENDING e atualiza cursor; no-signal e risco negado também registram progresso. A recuperação compara integralmente prefixo e contexto e rejeita replay, saltos, mudança de venue/quantidade/limites e OPEN legada sem cursor. AUTO4 continua arquivo independente, sem snapshot comum. `OfflinePaperForwardSession` PRE1 permanece in-memory. Nenhuma fonte de mercado real, rede, credencial, execução, deploy ou gasto. PR/CI e fault injection de processo ainda precisam ser validados; não declarar J6 homologada.
+
+
+### J6/PRE2-C #200 — fechamento de lacunas de teste de recuperação (26/10/2026 UTC)
+
+Adicionada cobertura offline para encerramento real de processo **após commit** com OPEN e cursor persistidos, reenvio da mesma barra recusado, avanço para próxima barra sem nova OPEN, SQLite ocupado sem progresso, inventário de OPEN adulterado, metadado inesperado e arquivo SQLite corrompido. A cobertura anterior já testava interrupção real **antes do commit**. Estes testes são regressões de engenharia PAPER, não prova de durabilidade perante falha de hardware, corretora real ou snapshot AUTO2/AUTO4. PR e CI do SHA final ainda precisam de verificação; issue #200 permanece aberta até aceite. Próxima prioridade após aceite: J1, conforme docs/EXECUTION_ROADMAP.md.
