@@ -64,6 +64,8 @@ def _get(url: str, *, opened: Callable[..., Any],
                 raise PrivateProbeError("unexpected_http_status")
             if response.geturl() != url:
                 raise PrivateProbeError("redirect_or_changed_origin_rejected")
+            if response.headers.get("geo-origin-status", "").lower() in ("restricted", "blocked"):
+                raise PrivateProbeError("access_or_geographic_restriction")
             if response.headers.get("Content-Type", "").split(";")[0].lower() != "application/json":
                 raise PrivateProbeError("unexpected_content_type")
             raw = response.read(MAX_BYTES + 1)
