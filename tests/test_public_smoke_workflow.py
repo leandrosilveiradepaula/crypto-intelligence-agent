@@ -333,5 +333,26 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", s)
 
 
+
+    def test_bybit_private_btc_volume_probe_requires_owner_exact_comment(self):
+        source = self.source
+        for token in (
+            "bybit-private-btc-base-quote:",
+            "github.event.issue.number == 138",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-bybit-btc-volume-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.probe_bybit_private_ohlcv",
+            "--allow-public-network --allow-private-bybit-probe",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+        self.assertNotIn("secrets.", source)
+        self.assertNotIn("contents: write", source)
+
+
 if __name__ == "__main__":
     unittest.main()
