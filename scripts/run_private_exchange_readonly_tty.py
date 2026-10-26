@@ -32,7 +32,7 @@ class _SanitizedParser(argparse.ArgumentParser):
     def error(self, message: str) -> None:
         # argparse normally echoes unrecognized CLI values. Never print an
         # accidentally pasted API secret in errors or usage.
-        self.exit(2, "invalid arguments; use --help for options\\n")
+        self.exit(2, "invalid arguments; use --help for options\n")
 
 
 def main(argv: list[str] | None = None) -> int:
