@@ -67,7 +67,7 @@ class CausalPaperOpenTests(unittest.TestCase):
         with closing(sqlite3.connect(self.db)) as conn, conn:
             return conn.execute("SELECT COUNT(*) FROM paper_order_intents").fetchone()[0]
 
-    def run(self, *, rows=None, venue=PaperVenue.BINANCE_USDM,
+    def admit(self, *, rows=None, venue=PaperVenue.BINANCE_USDM,
             qty=D(2), safety=1_000, now=None, rules=None,
             snapshot=None, strategy=None, journal=None):
         source = self.rows if rows is None else rows
@@ -82,7 +82,7 @@ class CausalPaperOpenTests(unittest.TestCase):
         )
 
     def test_long_latest_signal_reserves_pending_without_fills(self):
-        result = self.run()
+        result = self.admit()
         self.assertEqual(result.reason, "paper_open_intent_reserved_only")
         self.assertTrue(result.paper_intent_reserved)
         self.assertEqual(result.paper_intent_count, 1)
@@ -104,7 +104,7 @@ class CausalPaperOpenTests(unittest.TestCase):
             self.assertFalse(getattr(result, key), key)
 
     def test_short_latest_creates_sell_not_reduce_only(self):
-        result = self.run(rows=candles(source=SHORT_ROWS)[:6])
+        result = self.admit(rows=candles(source=SHORT_ROWS)[:6])
         self.assertEqual(result.candidate.close, D(95))
         self.assertEqual(result.candidate.side, SyntheticSide.SHORT)
         self.assertEqual(result.intent.position_side, SyntheticSide.SHORT)
@@ -113,7 +113,7 @@ class CausalPaperOpenTests(unittest.TestCase):
         self.assertEqual(result.reservation.entry.snapshot.filled_total_units, D(0))
 
     def test_only_latest_bar_can_trigger_a_paper_intent(self):
-        result = self.run(rows=candles()[:8])
+        result = self.admit(rows=candles()[:8])
         self.assertEqual(result.reason, "no_fresh_synthetic_hypothesis")
         self.assertIsNone(result.intent)
         self.assertIsNone(result.candidate)
@@ -123,39 +123,39 @@ class CausalPaperOpenTests(unittest.TestCase):
 
     def test_future_candle_must_not_be_included_as_of_old_signal(self):
         with self.assertRaisesRegex(DataValidationError, "exact availability"):
-            self.run(rows=candles()[:8], now=self.now)
+            self.admit(rows=candles()[:8], now=self.now)
         self.assertEqual(self.count_intents(), 0)
-        self.assertTrue(self.run().paper_intent_reserved)
+        self.assertTrue(self.admit().paper_intent_reserved)
 
     def test_safety_zero_and_millisecond_boundary(self):
         early = self.rows[-1].close_time_ms
-        good = self.run(safety=0, now=early)
+        good = self.admit(safety=0, now=early)
         self.assertEqual(good.intent.created_at_ms, early)
         self.assertEqual(good.candidate.earliest_research_at_ms, early)
         with self.assertRaisesRegex(DataValidationError, "exact availability"):
-            self.run(now=self.now - 1)
+            self.admit(now=self.now - 1)
         with self.assertRaisesRegex(DataValidationError, "exact availability"):
-            self.run(now=self.now + 1)
+            self.admit(now=self.now + 1)
         with self.assertRaises(DataValidationError):
-            self.run(safety=True)
+            self.admit(safety=True)
         with self.assertRaises(DataValidationError):
-            self.run(safety=86_400_001)
+            self.admit(safety=86_400_001)
 
     def test_repeated_signal_and_threshold_change_cannot_double_open(self):
-        first = self.run()
+        first = self.admit()
         with self.assertRaisesRegex(DataValidationError, "already reserved"):
-            self.run()
+            self.admit()
         alt = replace(self.strategy, max_atr_ratio=D("0.7"))
         with self.assertRaises(DataValidationError):
-            self.run(strategy=alt)
+            self.admit(strategy=alt)
         self.assertEqual(self.count_intents(), 1)
         self.assertEqual(self.journal.load(first.intent.intent_id),
                          first.reservation.entry)
 
     def test_cross_venue_same_causal_signal_cannot_open_twice(self):
-        first = self.run()
+        first = self.admit()
         with self.assertRaises(DataValidationError):
-            self.run(venue=PaperVenue.BYBIT_V5)
+            self.admit(venue=PaperVenue.BYBIT_V5)
         self.assertEqual(self.count_intents(), 1)
         self.assertEqual(first.intent.venue, PaperVenue.BINANCE_USDM)
 
@@ -172,14 +172,14 @@ class CausalPaperOpenTests(unittest.TestCase):
         )
         for snap, rule, reason in cases:
             with self.subTest(reason=reason):
-                result = self.run(snapshot=snap, rules=rule)
+                result = self.admit(snapshot=snap, rules=rule)
                 self.assertEqual(result.reservation.decision.reason, reason)
                 self.assertFalse(result.paper_intent_reserved)
                 self.assertIsNone(result.reservation.entry)
                 self.assertEqual(self.count_intents(), 0)
 
     def test_mark_is_explicit_not_copied_from_candidate_close(self):
-        result = self.run(snapshot=observation(self.now, mark_price_quote=D(120)))
+        result = self.admit(snapshot=observation(self.now, mark_price_quote=D(120)))
         self.assertEqual(result.candidate.close, D(105))
         self.assertEqual(result.reservation.decision.hypothetical_notional_quote, D(240))
         self.assertEqual(result.reservation.entry.intent.requested_units, D(2))
@@ -194,7 +194,7 @@ class CausalPaperOpenTests(unittest.TestCase):
             other, limits(), observation(self.now), decision_at_ms=self.now,
         )
         self.assertIsNotNone(old.entry)
-        denied = self.run()
+        denied = self.admit()
         self.assertEqual(denied.reservation.decision.reason, PaperRiskReason.PENDING_LIMIT)
         self.assertIsNone(denied.reservation.entry)
         self.journal.append_events(
@@ -204,7 +204,7 @@ class CausalPaperOpenTests(unittest.TestCase):
             as_of_ms=self.now - 1,
         )
         restarted = SQLitePaperOrderJournal(self.db)
-        blocked = self.run(journal=restarted)
+        blocked = self.admit(journal=restarted)
         self.assertEqual(blocked.reservation.decision.reason, PaperRiskReason.UNRESOLVED_OPEN)
         self.assertFalse(blocked.paper_intent_reserved)
         self.assertEqual(self.count_intents(), 1)
@@ -212,24 +212,24 @@ class CausalPaperOpenTests(unittest.TestCase):
     def test_invalid_types_identity_future_snapshot_and_quantity_refuse(self):
         for bad in (None, "2", 2, D("NaN"), D(-1), D("1e99"), D(0)):
             with self.subTest(qty=repr(bad)), self.assertRaises(DataValidationError):
-                self.run(qty=bad)
+                self.admit(qty=bad)
         for invalid in ("live", "testnet", None, 5, True):
             with self.subTest(venue=invalid), self.assertRaises(DataValidationError):
-                self.run(venue=invalid)
+                self.admit(venue=invalid)
         with self.assertRaises(DataValidationError):
-            self.run(snapshot=observation(self.now + 1))
+            self.admit(snapshot=observation(self.now + 1))
         with self.assertRaises(DataValidationError):
-            self.run(snapshot=observation(self.now, symbol="ETHUSDT"))
+            self.admit(snapshot=observation(self.now, symbol="ETHUSDT"))
         with self.assertRaises(DataValidationError):
-            self.run(snapshot=observation(self.now, venue=PaperVenue.BYBIT_V5))
+            self.admit(snapshot=observation(self.now, venue=PaperVenue.BYBIT_V5))
         with self.assertRaises(DataValidationError):
-            self.run(journal={})
+            self.admit(journal={})
         self.assertEqual(self.count_intents(), 0)
 
     def test_no_network_or_broker_and_stable_fixture_source(self):
         with patch("urllib.request.urlopen", side_effect=AssertionError("network")):
             with patch("socket.create_connection", side_effect=AssertionError("network")):
-                result = self.run()
+                result = self.admit()
         self.assertEqual(result.quality, "synthetic_fixture_only")
         self.assertFalse(result.orders_sent)
         self.assertFalse(hasattr(result, "api_key"))
