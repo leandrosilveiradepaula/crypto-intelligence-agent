@@ -44,3 +44,20 @@ A CLI aceita a opção adicional `--price-hours 24` para coletar, com o mesmo GE
 
 ## J1/WU43 — Atomicidade da sessão local (sem alterar mercado)
 A API `SQLiteKrakenPriceOnlyArchive.commit_research_session(snapshot,pages)` exige 1..5 páginas previamente validadas, símbolos distintos presentes no universo, mesmo intervalo/janela UTC e observação em ordem, e executa `UniverseSnapshot`, cada page de preço e seus recibos em um `BEGIN IMMEDIATE` único. Qualquer `DuplicateCandleError`, erro de input ou SQL provoca `ROLLBACK` de toda a sessão; a operação antiga por página `commit_price_only` e a gravação avulsa `save_universe_snapshot` preservam seus contratos. Banco existente também é protegido de snapshots e primeiras páginas órfãs após conflito em outro contrato. Capturas HTTP GET ainda são realizadas ANTES da transação, sem ordens nem market data bruto nos logs. Não há migration, rede extra ou permissão de publicação. Isso melhora integridade PRICE-ONLY; volume financeiro, Top50 histórico e direitos Kraken #36/#32/#48 continuam não homologados.
+
+
+## J1/WU48 — auditoria local opcional Bybit sem rede, sem credenciais
+
+O projeto agora possui `scripts/audit_private_bybit_json.py`, mas **nenhuma amostra real do usuário foi recebida**. Não confundir este método com o coletor Kraken. Ele aceita três arquivos privados no computador POSIX do titular: `manifest.json`, `instrument.json`, `kline.json`. Os dois últimos, quando disponíveis de origem e uso legitimamente permitidos, devem preservar a resposta V5 original de instrumento linear exato e kline 1h, sem incluir chaves, conta, headers de autenticação, histórico privado, carteiras nem ordens. O primeiro contém exatamente: `symbol`, `interval` (somente `1h`), `registry_variant`, `start_open_ms`, `end_open_ms`, `capture_started_ms`, `instrument_received_ms`, `kline_received_ms`, `capture_finished_ms`. Esses horários são **alegados pelo titular**, não certificados. Janela 3..72h, captura alegada <=30s, registro point-in-time; não alterar as datas para forçar aprovação.
+
+Somente leitura, exemplo de uso FUTURO no diretório POSIX privado com arquivos 0600 e pasta 0700 **fora do checkout público**:
+
+```sh
+python3 -m scripts.audit_private_bybit_json \
+  --manifest /caminho/privado/manifest.json \
+  --instrument /caminho/privado/instrument.json \
+  --kline /caminho/privado/kline.json \
+  --allow-private-offline-input
+```
+
+Não executar este exemplo no GitHub Actions, VPS pública ou chat; nunca enviar material bruto ao GitHub ou compartilhar credenciais. O resumo JSON mostra apenas status de conformidade, IDs de crypto e intervalo, unidades documentadas, contagem e SHA-256, sem preços/volumes/contas. `offline_schema_conformance_passed_origin_unverified` não demonstra origem real, 24h completo, Top50, direitos, feed operacional ou autorização de trading. A modalidade local POSIX e a restrição de não persistir a saída foram escolhidas para prevenir vazamento acidental; Windows requer revisão de ACL específica antes de usar arquivos privados.
