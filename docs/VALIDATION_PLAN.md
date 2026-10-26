@@ -263,3 +263,8 @@ O módulo `offline_paper_durable_cursor.py` acrescenta API offline explícita co
 ### J6/PRE2-C #200 — fechamento de lacunas de teste de recuperação (26/10/2026 UTC)
 
 Adicionada cobertura offline para encerramento real de processo **após commit** com OPEN e cursor persistidos, reenvio da mesma barra recusado, avanço para próxima barra sem nova OPEN, SQLite ocupado sem progresso, inventário de OPEN adulterado, metadado inesperado e arquivo SQLite corrompido. A cobertura anterior já testava interrupção real **antes do commit**. Estes testes são regressões de engenharia PAPER, não prova de durabilidade perante falha de hardware, corretora real ou snapshot AUTO2/AUTO4. PR e CI do SHA final ainda precisam de verificação; issue #200 permanece aberta até aceite. Próxima prioridade após aceite: J1, conforme docs/EXECUTION_ROADMAP.md.
+
+
+### J3/OFFLINE #208 — regressões metamórficas de custos (26/10/2026 UTC)
+
+Em `tests/test_synthetic_cost_scenarios.py`, novas invariantes sintéticas verificam que aumentar qualquer taxa ou slippage adverso não reduz custos, funding LONG/SHORT é antissimétrico, eventos idênticos duplicados não são cobrados duas vezes e intervalo sem funding não gera custo de funding. Sem cálculo de PnL, preço de liquidação, aprovação financeira, rede ou corretora. As lacunas de intrabar/liquidação/residual ainda exigem inventário separado; não alegar cobertura de #208 completa. Dependência #205 suspensa enquanto PO está somente no celular por aproximadamente 2–3 horas a partir de 26/10/2026 22:04 UTC; não pedir SSH/chaves. Branch `work/issue-208-j3-cost-metamorphic`; CI/PR pendentes de confirmação.
