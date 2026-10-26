@@ -48,3 +48,11 @@
 6. **J7:** ML/LLM só quando agregar valor validado; não controla diretamente envio de ordens.
 
 Nenhum trabalho anterior de execução MANUAL é apagado: as PRs J4 são **protótipos sintéticos que podem ser reutilizados** para o novo destino. O contrato atual prevalece sobre rótulos históricos de `manual`, não sobre regras de segurança e comprovação financeira.
+
+
+## J4/AUTO2 — diário SQLite PAPER (issue #151)
+A infraestrutura de desenvolvimento adiciona `SQLitePaperOrderJournal` em `crypto_intelligence_agent/paper_order_store.py`, **somente `offline_paper`**. Ela reserva uma intenção fictícia (`intent_id`) antes de qualquer evento, grava eventos hipotéticos e seu checkpoint em **uma transação `BEGIN IMMEDIATE`**, e reconstrói snapshots verificando SHA-256 do payload, sequência e replay via `synthetic_order_lifecycle.py`. Banco dedicado, schema versionado, sem compatibilidade automática com SQLite de mercado J1 nem migrações de produção.
+
+Uma intenção OPEN para o mesmo `fixture_signal_id` é única no arquivo, inclusive após restart e mesmo com `UNKNOWN`; IDs de eventos repetidos com payload exatamente igual não contabilizam fills duas vezes. Identificador repetido com payload distinto, evento retrodatado, overfill ou um segundo evento inválido **não confirmam qualquer escrita do batch**. Um ACK não demonstra fill; `UNKNOWN` não aciona reenvio. Como o catálogo não possui contas/estratégias reais, o filtro de unicidade de sinal é propositalmente **mais restritivo**, inclusive entre venues candidatas.
+
+**Limites críticos:** hashes detectam corrupção acidental, não autenticação contra adulteração intencional do arquivo; deduplicação é **local PAPER**, não exactly-once contra exchanges. `REDUCE_ONLY` valida somente a quantidade declarada no fixture de **cada intenção**, sem reservas consolidadas entre várias ordens de saída sobre a mesma posição; não existe ledger de posição/funding/fees, validação de lot/tick ou proteção instalada na corretora. Ainda faltam reconciliação de posições e ordens entre processos/venues, semântica de stops nativos, backtest/intrabar realista e kill-switch operacional. `orders_sent=false`, `approved_for_live_use=false`, `persistent_idempotency_verified=false` (para execução real) permanecem invariantes. Não ativar testnet/live, criar chave ou apontar este SQLite para dados financeiros de produção.
