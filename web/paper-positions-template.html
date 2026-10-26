@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; connect-src 'none'; form-action 'none'; frame-src 'none'; object-src 'none'">
+  <meta name="description" content="Exibição local de posições exclusivamente PAPER e fictícias. Nenhum dado de conta ou ordem real.">
+  <title>Crypto Intelligence Agent — Posições PAPER selecionadas</title>
+  <!-- J5/PRE5: read-only, in-process RO SQLite selection; no market data or trading. -->
+  <style>
+    :root { color-scheme:dark; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --bg:#0b141e; --panel:#142231; --lighter:#1b2c3e; --border:#384c5e;
+      --text:#f0f6fc; --muted:#b8c8d7; --accent:#94e1cb; --amber:#ffda87; }
+    *,*::before,*::after { box-sizing:border-box; }
+    body { margin:0; min-width:280px; line-height:1.55; background:var(--bg); color:var(--text); }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:clamp(1.8rem,5vw,3rem); line-height:1.12; letter-spacing:-.035em; }
+    h2 { font-size:1.28rem; }
+    a { color:var(--accent); }
+    :focus-visible { outline:3px solid var(--amber); outline-offset:4px; }
+    .skip-link { position:fixed; top:10px; left:10px; z-index:5; padding:12px 15px;
+      border-radius:10px; background:var(--amber); color:#17232d; transform:translateY(-180%); }
+    .skip-link:focus-visible { transform:translateY(0); }
+    .page { width:min(100% - 30px,1100px); margin-inline:auto; }
+    .site-header { background:#101c29; border-bottom:1px solid var(--border); }
+    .header-content { padding:17px 0; font-weight:750; overflow-wrap:anywhere; }
+    main { padding:32px 0 60px; }
+    .eyebrow { font-size:.75rem; font-weight:750; color:var(--accent); text-transform:uppercase; letter-spacing:.14em; }
+    .lead { max-width:800px; color:var(--muted); }
+    .warning { border:2px solid #a88336; border-radius:15px; background:#2b2519;
+      color:#ffe9b1; padding:18px 19px; margin:20px 0 28px; }
+    .warning p { margin:8px 0 0; }
+    section { margin:32px 0; }
+    .positions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+    .position-card { min-width:0; border:1px solid var(--border); border-radius:15px; padding:20px; background:var(--panel); }
+    .position-card h3 { font-size:1.02rem; overflow-wrap:anywhere; margin-bottom:7px; }
+    .meta { color:var(--muted); font-size:.84rem; overflow-wrap:anywhere; }
+    .balances { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin:16px 0 0; }
+    .balances div { background:var(--lighter); border-radius:10px; padding:12px; min-width:0; }
+    .balances dt { font-size:.75rem; color:var(--muted); }
+    .balances dd { font-weight:750; font-variant-numeric:tabular-nums; font-size:1.3rem; overflow-wrap:anywhere; margin:5px 0 0; }
+    .accent { color:var(--accent); }
+    .unknown { color:var(--amber); font-weight:750; }
+    .details { font-size:.84rem; color:var(--muted); margin:15px 0 0; }
+    .note { font-size:.88rem; color:var(--muted); }
+    .table-wrap { overflow-x:auto; background:var(--panel); border:1px solid var(--border); border-radius:15px;
+      scrollbar-color:var(--accent) var(--panel); scrollbar-width:auto; }
+    table { width:100%; min-width:800px; border-collapse:collapse; text-align:left; }
+    caption { text-align:left; padding:13px 16px; font-size:.8rem; color:var(--muted); }
+    th,td { padding:12px 14px; vertical-align:top; }
+    th { font-size:.76rem; font-weight:700; color:var(--muted); background:var(--lighter); }
+    td { border-top:1px solid var(--border); font-size:.88rem; overflow-wrap:anywhere; }
+    footer { border-top:1px solid var(--border); padding:23px 0; color:var(--muted); font-size:.8rem; }
+    @media(max-width:700px) { .positions { grid-template-columns:1fr; } }
+    @media(max-width:360px) { .balances { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+  <header class="site-header"><div class="page header-content">Crypto Intelligence Agent · Visão PAPER</div></header>
+  <main id="conteudo-principal" tabindex="-1" class="page" data-mode="offline_paper" data-snapshot-schema="paper_positions_snapshot_v1">
+    <p class="eyebrow">Posições escolhidas · leitura local</p>
+    <h1>Visão de posições fictícias</h1>
+    <p class="lead">Cada cartão reflete eventos validados em um mesmo snapshot SQLite PAPER. São seleções explícitas do diário local, não posições de uma conta Binance ou Bybit.</p>
+    <aside class="warning" aria-label="Aviso obrigatório de simulação">
+      <strong>SIMULADO — NENHUMA NEGOCIAÇÃO REAL</strong>
+      <p>Nenhuma conta, API, posição financeira ou preço de exchange foi consultado. A tela não calcula ganhos, exposição monetária, correlação nem soma unidades de ativos diferentes. O modo live permanece desativado.</p>
+    </aside>
+    <section aria-labelledby="cartoes-title">
+      <h2 id="cartoes-title">Posições PAPER selecionadas</h2>
+      <p class="note">Não existe total consolidado: cada posição tem instrumento, lado, reservas e piso residual próprios. Pedidos incertos não são preenchimentos.</p>
+      <div class="positions" data-selected-positions="{{count}}">
+        {{position_cards}}
+      </div>
+    </section>
+    <section aria-labelledby="tabela-title">
+      <h2 id="tabela-title">Comparação por posição, sem soma financeira</h2>
+      <p class="note" id="table-scroll-instructions">Em telas pequenas, deslize a tabela para ver as colunas. Pelo teclado, pressione Tab até a região e use as setas horizontais.</p>
+      <div class="table-wrap" role="region" tabindex="0" aria-label="Posições PAPER independentes, quantidades preenchidas e pendentes" aria-describedby="table-scroll-instructions">
+        <table>
+          <caption>Quantidades apenas de cada posição. Não combinar unidades entre instrumentos.</caption>
+          <thead><tr><th scope="col">Posição</th><th scope="col">Contrato fictício</th><th scope="col">Inicial</th><th scope="col">Preenchido</th><th scope="col">Reservado</th><th scope="col">Disponível</th><th scope="col">UNKNOWN</th></tr></thead>
+          <tbody>
+            {{position_rows}}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section aria-labelledby="limites-title">
+      <h2 id="limites-title">Limites da leitura</h2>
+      <p class="lead">Verificação de hash é integridade local, não prova de ordens reais. Não há carteira financeira, liquidação, mark price, funding, API, stop operacional, preço, PnL ou margem. Dados, estratégia e negociação automática dependem de homologações separadas J1/J2/J3/J4/J6.</p>
+    </section>
+  </main>
+  <footer><div class="page">Crypto Intelligence Agent · paper_positions_snapshot_v1 · somente leitura · R$ 0,00 adicional · nenhuma operação real.</div></footer>
+</body>
+</html>
