@@ -185,7 +185,7 @@ class DydxV4UnitContractTests(unittest.TestCase):
         payload = candle_payload()
         payload["candles"][3]["startedAt"] = payload["candles"][3]["startedAt"].replace(
             ":00.000Z", ":01.000Z")
-        with self.assertRaises(DataGapError):
+        with self.assertRaises(DataValidationError):
             stage(candles=payload)
         payload = candle_payload()
         payload["candles"][3]["ticker"] = "ETH-USD"
