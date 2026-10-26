@@ -135,3 +135,7 @@ O usuário **não precisa confirmar cada operação**: após futura autorizaçã
 
 ## J4/AUTO5 — fluxo de integração demonstrativo sem conectores
 `scripts/demo_automated_paper_cycle.py` demonstra um único percurso com funções e SQLite PAPER preexistentes; não cria nova engine, provedor ou gerador de sinais. A integração entre `SQLitePaperOrderJournal` e `SQLitePaperPositionJournal` usa **dois bancos temporários sem transação entre arquivos**: a abertura confirmada no primeiro é materializada de forma idempotente no segundo por eventos explicitamente simulados. Isso não garante exactly-once de rede nem reconciliação real; são necessários contratos e infraestrutura próprios antes de testnet/live. A apresentação JSON foi desenhada para permitir inspeção do ciclo sem alegar mercado financeiro ou resultados verdadeiros.
+
+
+## J4/AUTO6 — gate PAPER dentro do journal
+`reserve_open_if_paper_risk` reutiliza `_reserve_on_connection` (mesma inserção que `reserve` legado), `_checked_entry` e `evaluate_paper_risk` dentro de **uma única transação SQLite**. Lê todas as ordens locais, valida inclusive REDUCE_ONLY para detectar índice adulterado, conta apenas OPEN não terminais, combina suas pendências com alegações externas por máximo/OR e aplica os limites antes de gravar nova OPEN. Isto elimina a janela de corrida entre calcular pendências e inserir a ordem PAPER; não confundir com atomicidade de exchanges ou dos dois bancos temporários do demo. Script AUTO5 foi atualizado para consumir o novo recibo de preflight/reserva.
