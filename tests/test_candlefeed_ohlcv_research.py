@@ -292,6 +292,14 @@ class CandleFeedPrivateProbeTests(unittest.TestCase):
         opener = FakeOpen(Response(exact_json_bytes(), url="https://attacker.invalid/"))
         self.assertEqual(run(opener)["status"], "redirect_or_origin_change_rejected")
 
+    def test_unexpected_provider_exception_cannot_exfiltrate_key_to_log(self):
+        opener = FakeOpen(RuntimeError("remote failed for " + KEY))
+        result = run(opener)
+        self.assertEqual(result["status"], "unexpected_provider_failure_sanitized")
+        self.assertEqual(result["requests_attempted"], 1)
+        self.assertNotIn(KEY, json.dumps(result))
+        self.assertEqual(len(opener.calls), 1)
+
     def test_wrong_content_type_oversized_and_duplicate_json_rejected(self):
         self.assertEqual(
             run(FakeOpen(Response(exact_json_bytes(), content_type="text/html")))["status"],
