@@ -14,7 +14,7 @@ from typing import Sequence
 
 from .market_data import ClosedCandle, DataValidationError
 from .paper_order_store import PaperOpenRiskReservation, SQLitePaperOrderJournal
-from .paper_open_health import PaperOpenHealth, audit_paper_open_health
+from .paper_open_health import PaperOpenHealth
 from .paper_risk_gate import PaperRiskLimits, PaperRiskObservation, PaperRiskReason
 from .synthetic_entry_hypotheses import (
     CompressionBreakoutConfig, SyntheticEntryCandidate,
@@ -159,13 +159,6 @@ def reserve_causal_paper_open(
             or candidate.side not in (SyntheticSide.LONG, SyntheticSide.SHORT)):
         raise DataValidationError("causal candidate differs from latest PAPER decision")
 
-    health = audit_paper_open_health(journal.path, position_journal_path)
-    if not health.new_open_allowed:
-        return CausalPaperOpening(
-            now, candidate, None, None, health,
-            "paper_open_health_denied_" + health.reason,
-        )
-
     token = _fixture_signal_key(candidate)
     intent = PaperOrderIntent(
         intent_id=f"fixture_open_{venue.value}_{token}",
@@ -177,9 +170,21 @@ def reserve_causal_paper_open(
         requested_units=requested_units,
         created_at_ms=now,
     )
-    receipt = journal.reserve_open_if_paper_risk(
+    # AUTO8 must audit under the SAME order-file write lock that reserves
+    # the next OPEN, so a concurrent FILL cannot bypass the health gate.
+    health, receipt = journal.reserve_open_if_paper_risk_with_health(
         intent, limits, observation, decision_at_ms=now,
+        position_journal_path=position_journal_path,
     )
+    if not health.new_open_allowed:
+        if receipt is not None:
+            raise DataValidationError("health-denied PAPER OPEN must not reserve")
+        return CausalPaperOpening(
+            now, candidate, None, None, health,
+            "paper_open_health_denied_" + health.reason,
+        )
+    if receipt is None:
+        raise DataValidationError("health allowed without PAPER risk decision")
     if not receipt.decision.allowed_for_paper_only:
         if receipt.entry is not None:
             raise DataValidationError("risk denied but PAPER journal reserved OPEN")
