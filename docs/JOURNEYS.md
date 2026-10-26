@@ -133,3 +133,8 @@ Após J2/PRE1 #66 / PR #67 (features matemáticas), J2/PRE2 introduz avaliação
 ## J3/PRE3 #174 — planejamento walk-forward, não aceite J3
 
 Após J3/PRE1 (barreiras intrabar hipotéticas) e PRE2 (custos assinados hipotéticos), PRE3 prepara janelas train/gap/teste em candles fechados **sintéticos** com disponibilidade causal, sem testes OOS duplicados. Isso não é resultado de backtest nem comprova generalização estatística. J3 #4 continua exigindo histórico de J1, custo/liquidação e validação prospectiva/fora da amostra. A arquitetura D77 de operação automática continua sujeita a gates.
+
+
+## J4/AUTO7 #188 — conexão causal J2 e PAPER (26/10/2026)
+
+Ao lado dos módulos J4/AUTO1–AUTO6, introduz-se uma ligação de **pesquisa sintética** entre hipótese LONG/SHORT recém-calculada pela J2 e a reserva `PENDING` de abertura PAPER atômica. Não existe circuito que use os outcomes ex-post de PRE5/PRE7 para abrir posição, e nenhum fill é criado automaticamente. Sem sinal/risco, não há registro de OPEN. A janela de decisão exige último candle fechado, idade e limites explícitos; ID estável impede reprocessamento da mesma hipótese em venue candidata diferente. Entrega isolada não conclui J2 #3, J3 #4 ou J4 #5; evolução posterior para PAPER prospectivo dependerá de seleção de fonte e segurança, e testnet/live permanecem sujeitos a gates distintos.
