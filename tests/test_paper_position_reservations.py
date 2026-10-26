@@ -244,6 +244,26 @@ class PaperPositionReservationTests(unittest.TestCase):
         self.assertEqual(b.filled_exit_units, D(10))
         self.assertEqual(b.reserved_unfilled_units, D(40))
 
+    def test_restart_reregister_opening_does_not_erase_confirmed_exits(self):
+        self.open()
+        order = exit_order("persisted", "20", 1)
+        self.store.reserve_exit("fixture_position_A", 1, order, as_of_ms=T + 1)
+        after = self.store.append_exit_events(
+            "fixture_position_A", order.intent_id,
+            (e("persisted", PaperOrderEventKind.FILL, 2, "20"),),
+            as_of_ms=T + 2,
+        )
+        reopened = SQLitePaperPositionJournal(self.path)
+        same_open = reopened.create_position(
+            position_id="fixture_position_A",
+            opening_intent=opened_order(),
+            opening_events=(e("open", PaperOrderEventKind.FILL, 1, "100"),),
+            exit_plan=plan(), plan_version="paper-plan-v1", as_of_ms=T + 1,
+        )
+        self.assertEqual(same_open, after)
+        self.assertEqual(same_open.filled_exit_units, D(20))
+        self.assertEqual(same_open.as_of_ms, T + 2)
+
     def test_batch_with_invalid_second_event_has_no_partial_commit(self):
         self.open()
         order = exit_order("batch", "50", 1)
