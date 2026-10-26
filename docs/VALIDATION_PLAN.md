@@ -228,3 +228,8 @@ Validar journals vazios independentes; OPEN FILL sem posição; posição sem FI
 
 
 **Regressão de concorrência AUTO8 adicionada após review:** injetar, deterministicamente, um evento FILL por outro escritor do journal **imediatamente antes de a tentativa de reserva obter o lock**. A antiga sequência auditoria RO→transação de reserva considerava saudável o estado anterior e podia admitir uma segunda OPEN; a versão corrigida avalia saúde **dentro** da transação, deve responder `paper_open_health_denied_paper_open_unprotected`, criar zero novas OPEN e manter os hashes/eventos intactos. Também cobrir FILL parcial, par de abertura/posição com eventos diferentes, índice de posição órfão, esquema/versão adulterados, sem ampliar suporte live nem esconder falha com skip Windows. Preservar 14 docs, CI Linux/Windows/Chrome no SHA final.
+
+
+## J4/AUTO9 #192 — regressões de encerramento seguro
+
+Testar OPEN FILL e saída REDUCE_ONLY terminal com fill integral, saldo `Decimal` zero, relatório FLAT e nova intenção PAPER sob risco; reprocessamento/restart sem dupla reserva. Testar uma unidade residual, runner >0, pending/UNKNOWN de saída, uma posição flat e outra ainda ativa, REDUCE_ONLY independente não resolvido, alteração de evento/índice, timestamp e checkpoint futuros, kill-switch mesmo após flat, replay determinístico e ausência de chamadas de rede/ordens. O auditor em separado é apenas diagnóstico; no runner AUTO7, usar a versão sob lock AUTO2. Verificar `closed_flat_paper_only` sem expor real PnL ou native stop, CI Linux/Windows e Chrome, compileall e 14 documentos no SHA final.

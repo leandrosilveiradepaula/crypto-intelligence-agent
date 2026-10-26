@@ -102,3 +102,8 @@ O identificador de sinal é determinístico entre duas venues candidatas e param
 
 
 **Segurança de concorrência revisada:** não reutilizar um relatório de auditoria RO gerado antes da tentativa de abertura. Para abertura causal, a leitura do estado AUTO2 e a reserva precisam estar no **mesmo `BEGIN IMMEDIATE`**, preservando as verificações do AUTO6. A leitura AUTO4 ocorre dentro dessa janela de lock AUTO2, mas sem snapshot atômico cross-file; qualquer posição/OPEN já preenchida continua bloqueando, inclusive `PROTECTED_HYPOTHETICAL_ONLY`. Nenhuma API/ordem STOP de venue é acionada e a operação de auditoria RO isolada não serve como autorização.
+
+
+## J4/AUTO9 #192 — permitir próxima intenção apenas quando PAPER FLAT
+
+Uma posição com saídas explicitamente preenchidas e `confirmed_remaining_units=0`, `reserved_unfilled_units=0`, `unreserved_units=0` e `runner_floor_units=0`, com todos os exit snapshots terminais, pode ser marcada `CLOSED_FLAT_HYPOTHETICAL_ONLY`. Com múltiplas posições, TODAS as OPENs preenchidas devem estar nesse estado; o risco AUTO6, kill-switch e deduplicação continuam obrigatórios para a próxima reserva. `UNKNOWN`, pendência, saída parcial, residual ou futuro no checkpoint bloqueiam. Não equivale a STOP nativo, proteção de venue, posição real, ordem real ou evidência de estratégia lucrativa.

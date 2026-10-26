@@ -21,6 +21,7 @@ from crypto_intelligence_agent.synthetic_order_lifecycle import (
     PaperOrderEffect, PaperOrderEvent, PaperOrderEventKind, PaperOrderIntent,
     PaperOrderSide, PaperOrderStatus, PaperVenue,
 )
+from crypto_intelligence_agent.synthetic_partial_exits import (ExitBasis, SyntheticExitPlan, SyntheticExitTranche)
 from crypto_intelligence_agent.synthetic_position_state import SyntheticSide
 from test_synthetic_research_cycle import (
     SHORT_ROWS, candles, config,
@@ -278,6 +279,72 @@ class CausalPaperOpenTests(unittest.TestCase):
         self.assertIsNone(result.reservation)
         self.assertEqual(self.count_intents(), 1)
         self.assertFalse(result.orders_sent)
+
+    def _previous_flat_position(self, *, exit_at=None):
+        """Separate PAPER opening finished via explicit REDUCE_ONLY events."""
+        when = self.now - 6 if exit_at is None else exit_at
+        old = PaperOrderIntent(
+            "fixture_prior_flat_open", "fixture_prior_flat_signal",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.BUY, PaperOrderEffect.OPEN, D(1), self.now - 9,
+        )
+        entry_fill = PaperOrderEvent(
+            "fixture_prior_flat_fill", PaperOrderEventKind.FILL,
+            self.now - 8, D(1),
+        )
+        self.journal.reserve(old)
+        self.journal.append_events(old.intent_id, (entry_fill,), as_of_ms=self.now - 8)
+        exit_plan = SyntheticExitPlan(
+            D(1), (SyntheticExitTranche(ExitBasis.INITIAL_POSITION, D(100)),), D(0),
+        )
+        self.positions.create_position(
+            position_id="fixture_prior_flat_position", opening_intent=old,
+            opening_events=(entry_fill,), exit_plan=exit_plan,
+            plan_version="fixture-flat-v1", synthetic_lot_step_units=D(1),
+            as_of_ms=self.now - 8,
+        )
+        close = PaperOrderIntent(
+            "fixture_prior_flat_reduce", "fixture_prior_flat_reduce_signal",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.SELL, PaperOrderEffect.REDUCE_ONLY, D(1),
+            self.now - 7, D(1),
+        )
+        self.positions.reserve_exit(
+            "fixture_prior_flat_position", 1, close, as_of_ms=self.now - 7,
+        )
+        self.positions.append_exit_events(
+            "fixture_prior_flat_position", close.intent_id,
+            (PaperOrderEvent(
+                "fixture_prior_flat_reduce_fill", PaperOrderEventKind.FILL,
+                when, D(1),
+            ),),
+            as_of_ms=when,
+        )
+
+    def test_new_causal_open_after_explicit_flat_and_restart(self):
+        self._previous_flat_position()
+        result = self.admit()
+        self.assertTrue(result.paper_intent_reserved)
+        self.assertTrue(result.health.closed_flat_paper_only)
+        self.assertFalse(result.health.native_stop_verified)
+        self.assertEqual(self.count_intents(), 2)
+        with self.assertRaisesRegex(DataValidationError, "already reserved"):
+            self.admit(journal=SQLitePaperOrderJournal(self.db))
+
+    def test_new_open_still_respects_kill_switch_after_flat(self):
+        self._previous_flat_position()
+        result = self.admit(
+            snapshot=observation(self.now, kill_switch_active=True),
+        )
+        self.assertEqual(result.reservation.decision.reason, PaperRiskReason.KILL_SWITCH)
+        self.assertFalse(result.paper_intent_reserved)
+        self.assertEqual(self.count_intents(), 1)
+
+    def test_future_exit_event_cannot_unlock_new_signal(self):
+        self._previous_flat_position(exit_at=self.now + 1)
+        with self.assertRaisesRegex(DataValidationError, "future PAPER position checkpoint"):
+            self.admit()
+        self.assertEqual(self.count_intents(), 1)
 
     def test_invalid_types_identity_future_snapshot_and_quantity_refuse(self):
         for bad in (None, "2", 2, D("NaN"), D(-1), D("1e99"), D(0)):

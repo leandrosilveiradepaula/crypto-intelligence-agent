@@ -193,3 +193,8 @@ Antes de uma nova reserva causal, `causal_paper_open` invoca `paper_open_health.
 
 
 **Revisão AUTO8 (corrida TOCTOU):** uma auditoria read-only independente não autoriza uma abertura posterior. O adaptador AUTO7 chama exclusivamente a operação `SQLitePaperOrderJournal.reserve_open_if_paper_risk_with_health`; ela inicia `BEGIN IMMEDIATE` no arquivo AUTO2, valida esquema e todas as OPENs, lê AUTO4 em RO e só então, com o lock AUTO2 ainda retido, executa o preflight AUTO6 e a reserva. Eventos FILL AUTO2 concorrentes não podem aparecer entre a auditoria e o INSERT. As duas bases continuam distintas sem transação/snapshot compartilhado; o resultado expõe `cross_database_atomic_snapshot_available=false` e não representa proteção native STOP. `audit_paper_open_health` isolado é ferramenta de diagnóstico RO, não preflight suficiente.
+
+
+## J4/AUTO9 #192 — gate conservador para posição PAPER encerrada
+
+O auditor AUTO8 reutiliza o `_balance` canônico de AUTO4 e somente classifica `CLOSED_FLAT_HYPOTHETICAL_ONLY` quando há eventos de FILL REDUCE_ONLY explícitos que levam exatamente a zero, com estados de saída terminais e sem runner/reservas. A transação `BEGIN IMMEDIATE` do journal AUTO2 retém o lock na verificação de saúde, risco e reserva; o `decision_at_ms` é passado ao replay para recusar checkpoints futuros de ambos os arquivos SQLite. AUTO4 continua lido separadamente sem atomicidade cross-DB. Diagnóstico read-only isolado não substitui o gate transacional nem a validação real de proteção.

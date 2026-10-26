@@ -145,3 +145,8 @@ AUTO8 fecha uma lacuna entre o diário de ordens e a reserva de posições PAPER
 
 
 **Review de integração AUTO8:** a nova etapa revalida estados de abertura AUTO2 e reserva a próxima OPEN sob o mesmo lock `BEGIN IMMEDIATE`, para que um FILL de outro escritor não atravesse o intervalo entre auditoria e INSERT. AUTO4 permanece uma base RO independente, sem alegar proteção native stop nem snapshot atômico cross-db. A verificação pura RO isolada é diagnóstico, não condição suficiente para autorizar outra abertura. Gates J1/J2/J3/J4/J6 intactos.
+
+
+## J4/AUTO9 #192 — retomada de sinais PAPER após saída integral
+
+AUTO9 acrescenta `CLOSED_FLAT_HYPOTHETICAL_ONLY` para permitir uma nova intenção somente quando a posição anterior tiver fechado completamente por fills REDUCE_ONLY explícitos e antes da nova decisão. Parcial, STOP hipotético, runner residual e UNKNOWN permanecem bloqueados. O risco e a identidade do journal AUTO6 continuam em vigor. Não equivale à autorização de negociação real, lucro, execução na Binance/Bybit ou conclusão de J4 #5.
