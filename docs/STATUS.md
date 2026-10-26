@@ -208,3 +208,6 @@ Foi iniciada a implementação do primeiro **avaliador matemático de entrada** 
 ## J3/PRE3 #174 — validade temporal antes de pesquisa de resultados
 
 Implementação da estrutura offline de walk-forward: janelas de treino, gap e teste não sobreposto, fechamento confirmado antes de cada teste, regras de replay e recusa de períodos incompletos. J2/PRE2 #172/PR #173 integrada merge `d241dc8e025d88c98b7c5bc8cd7b366d63b25e14`, CI PR #40327807689 SUCCESS (**896 testes offline**, 14 docs), browser #40327807652 SUCCESS e ambas CI pós-merge #40327984929/#40327984911 SUCCESS. J5/PRE5 #170/PR #171 integrada merge `4c66aa7f9a3f4542396ff79a13e8f99b3d3a86de`, Python pós-merge #40326996341 e Chrome #40326996359 SUCCESS (**884 testes PR**). PRE3 aguarda CI própria; suas janelas ainda **NÃO** produzem resultados financeiros, ganhos, sinal autorizado ou PnL. J1–J6 não homologadas operacionalmente.
+
+
+**J3/PRE4 issue #176 (em revisão, 26/10/2026):** após PRE3 PR #175 integrada SHA `b524da877ea6f3cf7b9c4f84f9f6f707a85b73f0` com CI pós-merge Python #40329036508 e Chrome #40329036488 SUCCESS, foi aberta unidade de purga de labels sintéticos em horizontes fixos. Branch `codex/issue-176-j3-pre4-purged-label-horizons`. PRE4 não executa backtest, não mede estratégia nem valida dados reais e permanece pendente de PR/CI/revisão/merge. J1/J3/J6 não homologadas, nenhuma ordem real.
