@@ -82,7 +82,6 @@ def _checked_cursor_payload(cursor: _Cursor) -> str:
             or seal.version != SEAL_VERSION
             or type(cursor.sequence) is not int
             or not 1 <= cursor.sequence <= MAX_CANDLES
-            or cursor.sequence < 1
             or type(cursor.open_intent_ids) is not tuple
             or len(cursor.open_intent_ids) > cursor.sequence
             or len(set(cursor.open_intent_ids)) != len(cursor.open_intent_ids)
@@ -124,9 +123,7 @@ def _checked_cursor_payload(cursor: _Cursor) -> str:
 
 def _load_cursor(conn: sqlite3.Connection) -> _Cursor | None:
     from .paper_open_health import _verify_locked_order_schema
-    # The strict AUTO8 reader expects exactly schema_version. This new key is
-    # therefore deliberately validated here before any write; AUTO8 must be
-    # updated to accept precisely this optional key, never arbitrary metadata.
+    # AUTO8 validates exactly the optional cursor key and its canonical envelope.
     _verify_locked_order_schema(conn)
     rows = conn.execute(
         "SELECT key, value FROM paper_order_meta ORDER BY key"
