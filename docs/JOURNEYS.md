@@ -113,3 +113,7 @@ Após PRE1 com página estática, J5/PRE2 #164 cria uma interface local em HTML 
 
 ## J5/PRE3 #166 — acessibilidade e testes de browser, não homologação
 PRE3 preserva a tela PAPER mobile PT-BR, acrescenta navegação por teclado e fluxo horizontal de tabela acessível, com auditoria de seis larguras em Chrome mediante workflow de CI, sem APIs ou market data real. J5 #6 só será aceita após produto conectado com dados legítimos, revisão visual e de acessibilidade ampla em dispositivos reais, automação segura de ordens e homologação J6. Teste browser verde não é demonstração de rentabilidade, trading ou direitos J1.
+
+
+## J5/PRE4 #168 — visualização RO de posição fictícia persistida (26/10/2026 UTC)
+Após o demonstrador PRE1/PRE2 e o QA visual PRE3, a PRE4 acrescenta exportação por ID explícito de um único agregado SQLite PAPER existente, com quantidade preenchida/reservada e status UNKNOWN distinguíveis. A posição e o journal opcional de abertura são lidos somente via `mode=ro`; nenhum schema é criado/migrado. Render HTML mobile em PT-BR e JSON v1 são locais e demonstrativos, sem dados de exchange ou opção live. J5 #6 continua não homologada; futuros passos incluem múltiplas posições, privacidade/autenticação e dados/ordens reais somente após gates J1/J6.
