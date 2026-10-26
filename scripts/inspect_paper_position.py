@@ -28,6 +28,10 @@ from scripts.render_paper_dashboard import _audit_offline_template
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "web" / "paper-position-template.html"
 _SCHEMA = "paper_position_snapshot_v1"
+_BASIS_LABELS = {
+    "REMAINING_BALANCE": "saldo restante",
+    "INITIAL_POSITION": "posição inicial",
+}
 _STATUS_LABELS = {
     PaperOrderStatus.PENDING: "Pendente",
     PaperOrderStatus.ACKNOWLEDGED: "Confirmada, sem fill",
@@ -144,16 +148,20 @@ def render_paper_position(value: PaperPositionInspection, template: str) -> str:
         exit_markup = [
             '<tr><td colspan="5">Nenhuma ordem de saída PAPER registrada nesta posição.</td></tr>',
         ]
-    tranche_markup = [
-        "<li>Parcial " + escape(str(row["step"]))
-        + " · " + escape(str(row["basis"]))
-        + " · meta " + escape(row["target_units"])
-        + " · preenchido " + escape(row["filled_units"])
-        + " · reservado " + escape(row["reserved_unfilled_units"])
-        + " · ainda não alocado " + escape(row["unallocated_units"])
-        + " unidades</li>"
-        for row in p["tranches"]
-    ]
+    tranche_markup = []
+    for row in p["tranches"]:
+        basis_label = _BASIS_LABELS.get(row["basis"])
+        if basis_label is None:
+            raise DataValidationError("unrecognized PAPER exit tranche basis")
+        tranche_markup.append(
+            "<li>Parcial " + escape(str(row["step"]))
+            + " · regra: " + escape(basis_label)
+            + " · meta " + escape(row["target_units"])
+            + " · preenchido " + escape(row["filled_units"])
+            + " · reservado " + escape(row["reserved_unfilled_units"])
+            + " · ainda não alocado " + escape(row["unallocated_units"])
+            + " unidades</li>"
+        )
     replacement = {
         "initial": p["initial_confirmed_units"],
         "filled": p["filled_exit_units"],
