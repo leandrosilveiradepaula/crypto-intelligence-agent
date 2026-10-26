@@ -465,7 +465,13 @@ class SQLitePaperPositionJournal:
             ).fetchone()
             if row is not None:
                 old = self._read(con, position_id)
-                if _serialize(old) != payload:
+                # A restart can replay registration after one or more exits.
+                # Only opening facts and the immutable plan need to match; a
+                # later checkpoint / saved exits must never be reset.
+                original_registration = replace(
+                    old, as_of_ms=record.as_of_ms, exits=(),
+                )
+                if _serialize(original_registration) != payload:
                     raise DataValidationError("conflicting paper position registration")
                 return _balance(old)
             try:
