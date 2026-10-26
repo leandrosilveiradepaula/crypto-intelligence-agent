@@ -20,7 +20,7 @@ from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
 from crypto_intelligence_agent.paper_risk_gate import PaperRiskReason
 from crypto_intelligence_agent.synthetic_order_lifecycle import (
-    PaperOrderStatus, PaperVenue,
+    PaperOrderSide, PaperOrderStatus, PaperVenue,
 )
 from crypto_intelligence_agent.synthetic_position_state import SyntheticSide
 from test_causal_paper_open import limits, observation
@@ -103,7 +103,7 @@ class OfflineForwardSessionTests(unittest.TestCase):
         self.assertEqual(a.opening.reason, "no_fresh_synthetic_hypothesis")
         self.assertTrue(b.paper_intent_reserved)
         self.assertEqual(b.opening.candidate.side, SyntheticSide.SHORT)
-        self.assertEqual(b.opening.intent.side.value, "sell")
+        self.assertIs(b.opening.intent.side, PaperOrderSide.SELL)
         self.assertEqual(b.opening.reservation.entry.events, ())
 
     def test_latest_bar_only_then_new_neutral_bar_does_not_double_open(self):
