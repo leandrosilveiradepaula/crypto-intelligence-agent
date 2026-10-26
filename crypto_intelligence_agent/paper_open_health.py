@@ -97,11 +97,8 @@ def _verify_locked_order_schema(order_connection) -> None:
             or set(keys) - {"schema_version", "offline_paper_forward_cursor_v1"}):
         raise DataValidationError("incorrect PAPER order journal version")
     if "offline_paper_forward_cursor_v1" in keys:
-        # The optional cursor belongs to AUTO2's exact schema; validate its
-        # canonical envelope and digest, never silently skip unknown metadata.
-        from .offline_paper_durable_cursor import _load_cursor
-        # _load_cursor invokes this schema verifier, so the cursor payload is
-        # validated by its owning transaction/recovery path, not recursively.
+        from .offline_paper_durable_cursor import _decode_cursor_envelope
+        _decode_cursor_envelope(keys["offline_paper_forward_cursor_v1"])
 
 
 def _checked_order_entries(order_connection):
