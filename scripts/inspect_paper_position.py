@@ -166,6 +166,7 @@ def render_paper_position(value: PaperPositionInspection, template: str) -> str:
         "symbol": p["symbol_fixture"],
         "side": p["side"],
         "checkpoint": p["checkpoint_utc"],
+        "checkpoint_iso": p["checkpoint_utc"],
         "opened": p["opened_at_utc"],
         "crosscheck": (
             "Abertura conferida também no journal AUTO2"
