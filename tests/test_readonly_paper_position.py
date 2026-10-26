@@ -338,6 +338,7 @@ class ReadOnlyPaperPositionTests(unittest.TestCase):
         for poison in (
             template.replace("{{initial}}", "{{missing}}"),
             template.replace("{{initial}}", "{{initial}}{{initial}}"),
+            template.replace("{{checkpoint_iso}}", "{{checkpoint}}"),
             template.replace("</body>", '<a href="https://example.invalid">x</a></body>'),
             template.replace("</body>", '<script>alert(1)</script></body>'),
             template.replace("</body>", "<style>@import url(https://x.invalid)</style></body>"),
