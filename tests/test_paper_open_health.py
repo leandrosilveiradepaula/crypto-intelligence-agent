@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import closing
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 import sqlite3
@@ -133,6 +134,141 @@ class PaperOpenHealthTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(DataValidationError, "orphaned order index"):
             audit_paper_open_health(self.orders_path, self.positions_path)
+
+    def _position_with_exit(self, *, units=D(2), filled=D(2),
+                            floor=D(0)):
+        """Construct only declared hypothetical OPEN/REDUCE_ONLY events."""
+        self.orders.reserve(opening())
+        self.orders.append_events(opening().intent_id, (fill(),), as_of_ms=T + 1)
+        exit_plan = SyntheticExitPlan(
+            D(2), (
+                SyntheticExitTranche(
+                    ExitBasis.INITIAL_POSITION, D(50) if floor else D(100),
+                ),
+            ), D(50) if floor else D(0),
+        )
+        self.positions.create_position(
+            position_id="fixture_health_position", opening_intent=opening(),
+            opening_events=(fill(),), exit_plan=exit_plan,
+            plan_version="fixture-flat-v1", synthetic_lot_step_units=D(1),
+            as_of_ms=T + 1,
+        )
+        intent = PaperOrderIntent(
+            "fixture_exit_flat", "fixture_exit_signal_flat", PaperVenue.BINANCE_USDM,
+            "BTCUSDT", SyntheticSide.LONG, PaperOrderSide.SELL,
+            PaperOrderEffect.REDUCE_ONLY, units, T + 2, D(2),
+        )
+        self.positions.reserve_exit("fixture_health_position", 1, intent, as_of_ms=T + 2)
+        if filled is not None:
+            self.positions.append_exit_events(
+                "fixture_health_position", intent.intent_id,
+                (PaperOrderEvent("fixture_exit_fill", PaperOrderEventKind.FILL, T + 3, filled),),
+                as_of_ms=T + 3,
+            )
+        return intent
+
+    def test_complete_exit_qualifies_as_flat_paper_only(self):
+        self._position_with_exit()
+        h = audit_paper_open_health(
+            self.orders_path, self.positions_path, decision_at_ms=T + 4,
+        )
+        self.assertTrue(h.new_open_allowed)
+        self.assertTrue(h.closed_flat_paper_only)
+        self.assertEqual(h.reason, "all_paper_positions_fully_flat_hypothetical_only")
+        self.assertEqual(h.fills[0].protection_state,
+                         PaperProtectionState.CLOSED_FLAT_HYPOTHETICAL_ONLY)
+        self.assertFalse(h.native_stop_verified)
+        self.assertFalse(h.approved_for_live_use)
+        self.assertFalse(h.cross_database_atomic_snapshot_available)
+        self.assertEqual(
+            SQLitePaperPositionJournal(self.positions_path).load("fixture_health_position")
+            .confirmed_remaining_units, D(0),
+        )
+
+    def test_residual_units_and_runner_floor_stay_blocked(self):
+        self._position_with_exit(units=D(1), filled=D(1))
+        h = audit_paper_open_health(self.orders_path, self.positions_path)
+        self.assertFalse(h.new_open_allowed)
+        self.assertEqual(h.reason, "paper_open_unverified_protection")
+        self.assertFalse(h.closed_flat_paper_only)
+
+    def test_runner_floor_cannot_be_fully_consumed(self):
+        self._position_with_exit(units=D(1), filled=D(1), floor=D(50))
+        h = audit_paper_open_health(self.orders_path, self.positions_path)
+        self.assertFalse(h.new_open_allowed)
+        self.assertEqual(h.fills[0].protection_state,
+                         PaperProtectionState.PROTECTED_HYPOTHETICAL_ONLY)
+
+    def test_pending_unknown_and_partial_exit_do_not_count_as_flat(self):
+        self._position_with_exit(filled=None)
+        pending = audit_paper_open_health(self.orders_path, self.positions_path)
+        self.assertEqual(pending.reason, "paper_open_health_unknown")
+        self.assertEqual(pending.fills[0].reason, "unresolved_paper_reduce_only_exit")
+        self.positions.append_exit_events(
+            "fixture_health_position", "fixture_exit_flat",
+            (PaperOrderEvent("fixture_exit_unknown", PaperOrderEventKind.UNKNOWN, T + 3),),
+            as_of_ms=T + 3,
+        )
+        unresolved = audit_paper_open_health(self.orders_path, self.positions_path)
+        self.assertFalse(unresolved.new_open_allowed)
+        self.assertEqual(unresolved.fills[0].protection_state, PaperProtectionState.UNKNOWN)
+
+    def test_future_exit_checkpoint_and_order_checkpoint_fail_closed(self):
+        self._position_with_exit()
+        with self.assertRaisesRegex(DataValidationError, "future PAPER position checkpoint"):
+            audit_paper_open_health(
+                self.orders_path, self.positions_path, decision_at_ms=T + 2,
+            )
+        with self.assertRaisesRegex(DataValidationError, "future PAPER order checkpoint"):
+            audit_paper_open_health(
+                self.orders_path, self.positions_path, decision_at_ms=T,
+            )
+        with self.assertRaises(DataValidationError):
+            audit_paper_open_health(
+                self.orders_path, self.positions_path, decision_at_ms=True,
+            )
+
+    def test_multiple_positions_flat_plus_active_are_blocked_after_restart(self):
+        self._position_with_exit()
+        second = replace(
+            opening(), intent_id="fixture_health_open_b",
+            fixture_signal_id="fixture_health_signal_b", created_at_ms=T + 4,
+        )
+        other_fill = PaperOrderEvent(
+            "fixture_health_fill_b", PaperOrderEventKind.FILL, T + 5, D(2),
+        )
+        self.orders.reserve(second)
+        self.orders.append_events(second.intent_id, (other_fill,), as_of_ms=T + 5)
+        self.positions.create_position(
+            position_id="fixture_health_position_b", opening_intent=second,
+            opening_events=(other_fill,), exit_plan=plan(),
+            plan_version="fixture-v1", synthetic_lot_step_units=D(1),
+            as_of_ms=T + 5,
+        )
+        h = audit_paper_open_health(
+            self.orders_path, self.positions_path, decision_at_ms=T + 6,
+        )
+        self.assertFalse(h.new_open_allowed)
+        self.assertFalse(h.closed_flat_paper_only)
+        self.assertEqual(h.reason, "paper_open_unverified_protection")
+        self.assertEqual(len(h.fills), 2)
+        self.assertEqual(h, audit_paper_open_health(
+            self.orders_path, self.positions_path, decision_at_ms=T + 6,
+        ))
+
+    def test_standalone_unresolved_reduce_only_blocks_even_after_flat(self):
+        self._position_with_exit()
+        extra = PaperOrderIntent(
+            "fixture_other_reduce", "fixture_other_reduce_signal",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.SELL, PaperOrderEffect.REDUCE_ONLY, D(1), T + 3, D(2),
+        )
+        self.orders.reserve(extra)
+        h = audit_paper_open_health(
+            self.orders_path, self.positions_path, decision_at_ms=T + 4,
+        )
+        self.assertFalse(h.new_open_allowed)
+        self.assertEqual(h.reason, "paper_open_health_unknown")
 
     def test_no_network_or_orders(self):
         with patch("urllib.request.urlopen", side_effect=AssertionError("network")):
