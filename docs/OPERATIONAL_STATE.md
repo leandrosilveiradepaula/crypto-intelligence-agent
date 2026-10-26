@@ -94,3 +94,7 @@ Autonomia: `AGENTS.md`; não pedir "prossiga", avançar em microtarefas seguras,
 4. WU10 #32 requer registro cripto real e licença; WU12 #36 segue sem atestado de unidade do candle Kraken, WU17 #48 aguarda direitos para eventual distribuição, Binance #19 bloqueada HTTP451. Não repetir sondagem Kraken #40201868577.
 5. Manter checkpoints de CI/SHAs e evidências WU26 versionadas; nenhuma chamada de mercado, ordem, deploy, licença ou migration adicional autorizada. Custo R$0.
 6. Ao pedido "gere prompt para novo chat", fornecer handoff operacional verificado com repositório, decisões, jornada, issues/PRs/SHAs, testes, bloqueios e próxima ação.
+
+
+## WU45 #141 — proteção de matriz de fontes em CI (26/10/2026 UTC)
+Checkpoint de partida comprovado: main `0e13de03b3493f2432bfc96ce7c9ab3c97deb0ba`, PR #140 integrada e zero PRs abertas antes da WU45. A WU45 associa o checker de documentação ao documento `docs/J1_SOURCE_GATES.md`, acrescenta testes de regressão e detalha por que schema Kraken, contratos PF_, trade history e aviso de direitos não provam unidade de candle nem permissão pública. Minuta formal já existente na issue #36 não foi enviada. Branch `codex/issue-141-j1-wu45-source-gates-ci`. Próxima verificação: CI no HEAD da PR e diff; merge apenas com gates verdes. J1 #2, #32, #36, #48 permanecem **ABERTAS**; sem API de mercado, conta, chave, produção, ordem ou gasto.
