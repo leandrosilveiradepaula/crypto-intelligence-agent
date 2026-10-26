@@ -114,9 +114,9 @@ def _audit_with_orders(
     orders, position_journal_path: str | Path,
     *, decision_at_ms: int | None = None,
 ) -> PaperOpenHealth:
+    """Inspect local positions; these are never exchange-native protection."""
     if decision_at_ms is not None:
-        _utc_ms(decision_at_ms, 'PAPER health decision_at_ms')
-    """Inspect positions separately; they are never an exchange stop proof."""
+        _utc_ms(decision_at_ms, "PAPER health decision_at_ms")
     with _read_database(
         position_journal_path, _POSITION_TABLES, "paper_position_meta", _POSITION_VERSION,
     ) as position_connection:
