@@ -290,3 +290,8 @@ Checkpoint: issue #200; branch `work/issue-200-j6-durable-paper-cursor`; base ma
 ## Plano operacional aprovado — 26/10/2026 UTC
 
 Fonte de execução por etapas: [`docs/EXECUTION_ROADMAP.md`](EXECUTION_ROADMAP.md). Prioridade: (1) finalizar revisão/CI/merge seguro da PR #202 J6/PRE2-B; (2) desbloquear por evidência legítima J1 #2/#19/#32/#36/#48/#196, sem novos probes restritos; (3) validar sinais e risco J2/J3 com dados reais; (4) implementar executor e UI J4/J5 após os gates; (5) homologar J6 com PAPER prospectivo e autorizações específicas de testnet/live. Sem cronograma ou porcentagem arbitrários. Nenhuma ordem real, deploy ou gasto extra autorizado.
+
+
+### J6/PRE2-C #200 — fechamento de lacunas de teste de recuperação (26/10/2026 UTC)
+
+Adicionada cobertura offline para encerramento real de processo **após commit** com OPEN e cursor persistidos, reenvio da mesma barra recusado, avanço para próxima barra sem nova OPEN, SQLite ocupado sem progresso, inventário de OPEN adulterado, metadado inesperado e arquivo SQLite corrompido. A cobertura anterior já testava interrupção real **antes do commit**. Estes testes são regressões de engenharia PAPER, não prova de durabilidade perante falha de hardware, corretora real ou snapshot AUTO2/AUTO4. PR e CI do SHA final ainda precisam de verificação; issue #200 permanece aberta até aceite. Próxima prioridade após aceite: J1, conforme docs/EXECUTION_ROADMAP.md.
