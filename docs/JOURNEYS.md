@@ -150,3 +150,8 @@ AUTO8 fecha uma lacuna entre o diário de ordens e a reserva de posições PAPER
 ## J4/AUTO9 #192 — retomada de sinais PAPER após saída integral
 
 AUTO9 acrescenta `CLOSED_FLAT_HYPOTHETICAL_ONLY` para permitir uma nova intenção somente quando a posição anterior tiver fechado completamente por fills REDUCE_ONLY explícitos e antes da nova decisão. Parcial, STOP hipotético, runner residual e UNKNOWN permanecem bloqueados. O risco e a identidade do journal AUTO6 continuam em vigor. Não equivale à autorização de negociação real, lucro, execução na Binance/Bybit ou conclusão de J4 #5.
+
+
+## J1/WU49 #194 — candidato multipágina Bybit V5 linear USDT somente em laboratório
+
+Auditor de envelopes de páginas `instruments-info` e ticker `linear` fornecidos por fixtures: o cursor terminal é obrigatório, duplicatas/futuros são recusados e só perpétuos USDT de bases crypto positivas num registro datado entram no ranking de `turnover24h` na própria moeda USDT. Não há conversão USD, autorização de direitos, feed prospectivo, dados reais ou código de ordens. J1 #2 continua aberta; testes de seleção estrutural não concluem top50 histórico nem garantem Binance/Bybit acessíveis na infraestrutura.
