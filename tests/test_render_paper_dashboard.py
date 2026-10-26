@@ -4,6 +4,7 @@ from copy import deepcopy
 from decimal import Decimal
 from html.parser import HTMLParser
 from io import StringIO
+import json
 from pathlib import Path
 import re
 import tempfile
@@ -55,6 +56,7 @@ class RenderPaperDashboardTests(unittest.TestCase):
 
     def test_fixture_contract_is_explicitly_non_live(self):
         checked = validate_paper_snapshot(self.snapshot)
+        self.assertEqual(self.snapshot["schema_version"], "paper_dashboard_snapshot_v1")
         self.assertEqual(len(checked), 2)
         self.assertEqual([v["venue_candidate"] for v in checked],
                          ["binance_usdm", "bybit_v5"])
@@ -192,6 +194,7 @@ class RenderPaperDashboardTests(unittest.TestCase):
         main = next(a for tag, a in parsed.attrs if tag == "main")
         self.assertEqual(main.get("data-mode"), "offline_paper")
         self.assertEqual(main.get("data-demo-only"), "true")
+        self.assertEqual(main.get("data-snapshot-schema"), "paper_dashboard_snapshot_v1")
         self.assertEqual(parsed.tags.count("h1"), 1)
         self.assertEqual(parsed.tags.count("footer"), 1)
         self.assertIn("SIMULADO", " ".join(parsed.visible))
@@ -224,6 +227,26 @@ class RenderPaperDashboardTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 main(["--output", str(destination)])
             self.assertEqual(destination.read_text("utf-8"), self.rendered)
+
+    def test_json_export_is_only_generated_fixture_with_explicit_v1_schema(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            main(["--format", "json"])
+        data = json.loads(output.getvalue())
+        self.assertEqual(data, self.snapshot)
+        self.assertEqual(data["schema_version"], "paper_dashboard_snapshot_v1")
+        self.assertFalse(data["orders_sent"])
+        self.assertFalse(data["live_trading_authorized"])
+        with tempfile.TemporaryDirectory() as d:
+            target = Path(d) / "snapshot.json"
+            main(["--format", "json", "--output", str(target)])
+            self.assertEqual(json.loads(target.read_text("utf-8")), data)
+            with self.assertRaises(FileExistsError):
+                main(["--format", "json", "--output", str(target)])
+        tampered = deepcopy(self.snapshot)
+        tampered["schema_version"] = "paper_dashboard_snapshot_live_v2"
+        with self.assertRaises(InvalidPaperSnapshot):
+            validate_paper_snapshot(tampered)
 
     def test_cli_never_accepts_external_json_and_no_network_is_used(self):
         with redirect_stdout(StringIO()), self.assertRaises(SystemExit):
