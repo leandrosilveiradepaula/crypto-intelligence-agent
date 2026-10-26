@@ -5,6 +5,7 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 import json
+import os
 import sqlite3
 import tempfile
 import unittest
@@ -57,6 +58,7 @@ class WindowReader(Reader):
             observed_at_ms=NOW + 400, staged=result)
 
 
+@unittest.skipUnless(os.name == "posix", "private Kraken capture uses POSIX owner-only files")
 class KrakenExtendedWindowTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
