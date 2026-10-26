@@ -28,7 +28,7 @@ Quando o usuário solicitar "gere prompt para novo chat", gerar prompt operacion
 - Saídas fragmentadas sobre posição inicial ou saldo restante, trailing e parcela residual para tendências longas.
 - Posições com margem, exposição, correlação, funding, custos, liquidação e PnL. Backtest intrabar com taxas, slippage, funding, liquidação, walk-forward e fora da amostra.
 - ML somente quando melhorar resultados validados; LLM/LangGraph opcionais para contexto, jamais decisor primário.
-- UI PT-BR simples, responsiva e mobile-first. Inicialmente alertas e execução MANUAL. Nenhuma ordem real automática.
+- UI PT-BR simples, responsiva e mobile-first. **Alvo: entradas e saídas automáticas**, incluindo stops, parciais, trailing e runner, após validação. Desenvolvimento offline/paper por padrão; **ordens reais desativadas até autorização explícita e gates de produção**.
 - 50x é parâmetro de pesquisa, não garantia de segurança. Medir retorno líquido ajustado ao risco de carteira, não percentuais isolados sobre margem.
 
 ## Restrições de custo e segurança
@@ -36,3 +36,7 @@ Custo adicional autorizado R$ 0,00. Usar ferramentas livres, APIs gratuitas, VPS
 
 ## Engenharia e validação
 Cada work unit para Codex deve incluir objetivo, contexto, escopo e exclusões, critérios de aceite, testes e evidências. Preferir issues duráveis e PRs revisáveis; não pedir implementação do projeto inteiro num prompt. Evitar duplicações, hardcodes de parâmetros configuráveis, regressões e alteração fora de escopo. Validar contratos e cálculos financeiros. CI verde não demonstra rentabilidade nem prontidão completa. Registrar decisões no docs/DECISIONS.md e estado em docs/OPERATIONAL_STATE.md.
+
+
+## Decisão vigente D77 — automação de trading como objetivo
+A correção explícita do Product Owner em 26/10/2026 substitui a diretriz antiga de operação manual como estado FINAL. Construir motor quantitativo + `OrderExecutionEngine` com simulação, controle de risco, reconciliação, idempotência, stops, saídas parciais, trailing, runner e kill-switch. A seleção final entre Binance USD-M e Bybit V5 linear está pendente. **Não enviar ordens reais nem configurar credenciais/deploy sem gate humano próprio.** Modos distintos `offline_paper` (default), `testnet` (opt-in autorizado), `live` (travado até aceite). Exigências e critérios em `docs/AUTOMATED_EXECUTION_SPEC.md`. Trechos históricos de J4 ou WU47 sobre operação MANUAL descrevem somente o escopo anterior e não anulam D77.
