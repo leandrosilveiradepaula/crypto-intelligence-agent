@@ -271,7 +271,7 @@ class _OfflineHTMLPolicy(HTMLParser):
 
 def _audit_offline_template(template: str) -> None:
     """Strict safety policy for the built-in template, not an HTML sanitizer."""
-    _require(not re.search(r"https?://|@import\\b|url\\s*\\(", template,
+    _require(not re.search(r"https?://|@import\b|url\s*\(", template,
                            flags=re.IGNORECASE),
              "outbound URL or remote stylesheet in PAPER template")
     parser = _OfflineHTMLPolicy()
