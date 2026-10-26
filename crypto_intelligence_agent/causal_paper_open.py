@@ -9,10 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from hashlib import sha256
+from pathlib import Path
 from typing import Sequence
 
 from .market_data import ClosedCandle, DataValidationError
 from .paper_order_store import PaperOpenRiskReservation, SQLitePaperOrderJournal
+from .paper_open_health import PaperOpenHealth
 from .paper_risk_gate import PaperRiskLimits, PaperRiskObservation, PaperRiskReason
 from .synthetic_entry_hypotheses import (
     CompressionBreakoutConfig, SyntheticEntryCandidate,
@@ -36,6 +38,7 @@ class CausalPaperOpening:
     candidate: SyntheticEntryCandidate | None
     intent: PaperOrderIntent | None
     reservation: PaperOpenRiskReservation | None
+    health: PaperOpenHealth | None
     reason: str
 
     @property
@@ -102,6 +105,7 @@ def reserve_causal_paper_open(
     limits: PaperRiskLimits,
     observation: PaperRiskObservation,
     journal: SQLitePaperOrderJournal,
+    position_journal_path: str | Path,
     decision_at_ms: int,
     close_safety_ms: int = 1_000,
 ) -> CausalPaperOpening:
@@ -148,9 +152,7 @@ def reserve_causal_paper_open(
     if len(fresh) > 1:
         raise DataValidationError("multiple hypotheses for latest closed candle")
     if not fresh:
-        return CausalPaperOpening(
-            now, None, None, None, "no_fresh_synthetic_hypothesis"
-        )
+        return CausalPaperOpening(now, None, None, None, None, "no_fresh_synthetic_hypothesis")
     candidate = fresh[0]
     if (candidate.earliest_research_at_ms != now
             or candidate.symbol != observation.symbol
@@ -168,14 +170,26 @@ def reserve_causal_paper_open(
         requested_units=requested_units,
         created_at_ms=now,
     )
-    receipt = journal.reserve_open_if_paper_risk(
+    # AUTO8 must audit under the SAME order-file write lock that reserves
+    # the next OPEN, so a concurrent FILL cannot bypass the health gate.
+    health, receipt = journal.reserve_open_if_paper_risk_with_health(
         intent, limits, observation, decision_at_ms=now,
+        position_journal_path=position_journal_path,
     )
+    if not health.new_open_allowed:
+        if receipt is not None:
+            raise DataValidationError("health-denied PAPER OPEN must not reserve")
+        return CausalPaperOpening(
+            now, candidate, None, None, health,
+            "paper_open_health_denied_" + health.reason,
+        )
+    if receipt is None:
+        raise DataValidationError("health allowed without PAPER risk decision")
     if not receipt.decision.allowed_for_paper_only:
         if receipt.entry is not None:
             raise DataValidationError("risk denied but PAPER journal reserved OPEN")
         return CausalPaperOpening(
-            now, candidate, intent, receipt,
+            now, candidate, intent, receipt, health,
             "paper_risk_denied_" + receipt.decision.reason.value,
         )
     if (receipt.decision.reason is not PaperRiskReason.OPEN_ALLOWED_PAPER_ONLY
@@ -186,5 +200,5 @@ def reserve_causal_paper_open(
             or receipt.entry.snapshot.filled_total_units != Decimal(0)):
         raise DataValidationError("unexpected PAPER reservation/fill state")
     return CausalPaperOpening(
-        now, candidate, intent, receipt, "paper_open_intent_reserved_only",
+        now, candidate, intent, receipt, health, "paper_open_intent_reserved_only",
     )

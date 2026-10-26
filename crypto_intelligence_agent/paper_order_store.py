@@ -188,6 +188,11 @@ class SQLitePaperOrderJournal:
             raise ValueError("paper journal requires a dedicated ordinary SQLite file path")
         self._initialize()
 
+    @property
+    def path(self) -> Path:
+        """Dedicated local fixture path, exposed for read-only health checks."""
+        return Path(self._path)
+
     @contextmanager
     def _transaction(self) -> Iterator[sqlite3.Connection]:
         conn = sqlite3.connect(self._path, timeout=5)
@@ -363,53 +368,94 @@ class SQLitePaperOrderJournal:
                     has_unknown = True
         return pending, has_unknown
 
-    def reserve_open_if_paper_risk(
-        self, intent: PaperOrderIntent, limits: PaperRiskLimits,
-        observation: PaperRiskObservation, *, decision_at_ms: int,
-    ) -> "PaperOpenRiskReservation":
-        """Evaluate and reserve a hypothetical OPEN in ONE SQLite transaction.
-
-        Pending/UNKNOWN cannot be hidden by an input fixture claiming zero.
-        Fail-closed combination also honors LARGER caller-declared pending
-        counts and a caller-declared unresolved OPEN. The rest of the market
-        observation is still a SYNTHETIC claim, never exchange-verified.
-        """
+    @staticmethod
+    def _check_paper_open_risk_inputs(
+        intent: PaperOrderIntent, limits: PaperRiskLimits,
+        observation: PaperRiskObservation,
+    ) -> None:
         if (type(intent) is not PaperOrderIntent
                 or intent.effect is not PaperOrderEffect.OPEN
                 or type(limits) is not PaperRiskLimits
                 or type(observation) is not PaperRiskObservation):
             raise DataValidationError("explicit paper OPEN, risk limits and observation required")
-        with self._transaction() as conn:
-            existing = conn.execute(
-                "SELECT intent_id FROM paper_order_intents WHERE intent_id=?",
-                (intent.intent_id,),
-            ).fetchone()
-            if existing is not None:
-                # A replay should load its known intent; it must never appear
-                # to be a fresh preflight authorization / network retry.
-                self._checked_entry(conn, intent.intent_id)
-                raise DataValidationError("paper intent already reserved; recover existing state")
-            pending_local, unknown_local = self._pending_open_from_connection(conn)
-            effective = replace(
-                observation,
-                pending_open_orders=max(pending_local, observation.pending_open_orders),
-                unresolved_open_exists=(
-                    unknown_local or observation.unresolved_open_exists
-                ),
-            )
-            decision = evaluate_paper_risk(
-                intent, limits, effective, decision_at_ms=decision_at_ms,
-            )
-            if not decision.allowed_for_paper_only:
-                return PaperOpenRiskReservation(
-                    decision=decision, entry=None, local_pending_before=pending_local,
-                    local_unknown_before=unknown_local,
-                )
-            entry = self._reserve_on_connection(conn, intent)
+
+    def _reserve_open_risk_locked(
+        self, conn: sqlite3.Connection, intent: PaperOrderIntent,
+        limits: PaperRiskLimits, observation: PaperRiskObservation,
+        decision_at_ms: int,
+    ) -> "PaperOpenRiskReservation":
+        """Single AUTO6 contract reused with and without the AUTO8 guard."""
+        existing = conn.execute(
+            "SELECT intent_id FROM paper_order_intents WHERE intent_id=?",
+            (intent.intent_id,),
+        ).fetchone()
+        if existing is not None:
+            self._checked_entry(conn, intent.intent_id)
+            raise DataValidationError("paper intent already reserved; recover existing state")
+        pending_local, unknown_local = self._pending_open_from_connection(conn)
+        effective = replace(
+            observation,
+            pending_open_orders=max(pending_local, observation.pending_open_orders),
+            unresolved_open_exists=(
+                unknown_local or observation.unresolved_open_exists
+            ),
+        )
+        decision = evaluate_paper_risk(
+            intent, limits, effective, decision_at_ms=decision_at_ms,
+        )
+        if not decision.allowed_for_paper_only:
             return PaperOpenRiskReservation(
-                decision=decision, entry=entry, local_pending_before=pending_local,
+                decision=decision, entry=None, local_pending_before=pending_local,
                 local_unknown_before=unknown_local,
             )
+        entry = self._reserve_on_connection(conn, intent)
+        return PaperOpenRiskReservation(
+            decision=decision, entry=entry, local_pending_before=pending_local,
+            local_unknown_before=unknown_local,
+        )
+
+    def reserve_open_if_paper_risk(
+        self, intent: PaperOrderIntent, limits: PaperRiskLimits,
+        observation: PaperRiskObservation, *, decision_at_ms: int,
+    ) -> "PaperOpenRiskReservation":
+        """Legacy atomic PAPER risk reservation; never an exchange order.
+
+        Pending/UNKNOWN cannot be hidden by a stale caller fixture, but the
+        legacy API has NO cross-journal position-health guard. The causal
+        AUTO7 caller MUST use reserve_open_if_paper_risk_with_health instead.
+        """
+        self._check_paper_open_risk_inputs(intent, limits, observation)
+        with self._transaction() as conn:
+            return self._reserve_open_risk_locked(
+                conn, intent, limits, observation, decision_at_ms,
+            )
+
+    def reserve_open_if_paper_risk_with_health(
+        self, intent: PaperOrderIntent, limits: PaperRiskLimits,
+        observation: PaperRiskObservation, *,
+        decision_at_ms: int,
+        position_journal_path: str | Path,
+    ) -> "tuple[PaperOpenHealth, PaperOpenRiskReservation | None]":
+        """Guard health + OPEN risk + reservation under ONE order-file lock.
+
+        Health reads every AUTO2 OPEN while BEGIN IMMEDIATE prevents a new
+        order FILL from slipping between audit and insert. The separate AUTO4
+        file remains independently sampled, never cross-database atomic.
+        Blocking health returns no reservation; allow only a PENDING fixture.
+        """
+        from .paper_open_health import _audit_paper_open_health_locked
+
+        self._check_paper_open_risk_inputs(intent, limits, observation)
+        with self._transaction() as conn:
+            health = _audit_paper_open_health_locked(
+                conn, self.path, position_journal_path,
+            )
+            if not health.new_open_allowed:
+                return health, None
+            receipt = self._reserve_open_risk_locked(
+                conn, intent, limits, observation, decision_at_ms,
+            )
+            return health, receipt
 
     @staticmethod
     def _insert_event(

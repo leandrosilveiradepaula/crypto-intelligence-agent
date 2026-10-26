@@ -1,0 +1,210 @@
+"""J4/AUTO8: read-only, fail-closed PAPER OPEN/position health.
+
+The AUTO2 order journal and AUTO4 position journal are intentionally separate
+SQLite files.  They cannot provide a cross-file atomic snapshot or prove a
+venue-native stop.  This module therefore treats every local exit plan as
+*hypothetical only* and blocks a new PAPER OPEN whenever an opening fill or a
+position needs reconciliation.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+
+from .market_data import DataValidationError
+from .paper_order_store import (
+    SQLitePaperOrderJournal, _TABLES as _ORDER_TABLES, _VERSION as _ORDER_VERSION,
+    _intent_json,
+)
+from .paper_position_inspection import _checked_path, _read_database
+from .paper_position_reservations import (
+    SQLitePaperPositionJournal, _TABLES as _POSITION_TABLES,
+    _VERSION as _POSITION_VERSION,
+)
+from .synthetic_order_lifecycle import PaperOrderEffect
+
+
+class PaperProtectionState(str, Enum):
+    PROTECTED_HYPOTHETICAL_ONLY = "PROTECTED_HYPOTHETICAL_ONLY"
+    UNPROTECTED = "UNPROTECTED"
+    UNKNOWN = "UNKNOWN"
+
+
+@dataclass(frozen=True)
+class PaperOpenFillHealth:
+    """Identity evidence only; never an exchange position or native stop."""
+
+    intent_id: str
+    position_id: str | None
+    protection_state: PaperProtectionState
+    reason: str
+
+
+@dataclass(frozen=True)
+class PaperOpenHealth:
+    """Conservative local result used only to deny/allow another PAPER intent."""
+
+    fills: tuple[PaperOpenFillHealth, ...]
+    new_open_allowed: bool
+    reason: str
+    cross_database_atomic_snapshot_available: bool = False
+
+    @property
+    def orders_sent(self) -> bool:
+        return False
+
+    @property
+    def approved_for_live_use(self) -> bool:
+        return False
+
+    @property
+    def native_stop_verified(self) -> bool:
+        return False
+
+    @property
+    def unverified_protection(self) -> bool:
+        return any(
+            item.protection_state is PaperProtectionState.PROTECTED_HYPOTHETICAL_ONLY
+            for item in self.fills
+        )
+
+
+def _verify_locked_order_schema(order_connection) -> None:
+    """Match the strict RO reader's schema checks under the order write lock."""
+    entries = order_connection.execute(
+        "SELECT type, name FROM sqlite_master "
+        "WHERE type IN ('table','view','trigger') AND name NOT LIKE 'sqlite_%'"
+    ).fetchall()
+    if (any(row["type"] != "table" for row in entries)
+            or {row["name"] for row in entries} != _ORDER_TABLES):
+        raise DataValidationError("foreign or incorrect PAPER order journal schema")
+    meta = order_connection.execute(
+        "SELECT key, value FROM paper_order_meta ORDER BY key"
+    ).fetchall()
+    if (len(meta) != 1 or meta[0]["key"] != "schema_version"
+            or meta[0]["value"] != _ORDER_VERSION):
+        raise DataValidationError("incorrect PAPER order journal version")
+
+
+def _checked_order_entries(order_connection):
+    """Replay every journal row while caller holds a stable order snapshot."""
+    rows = order_connection.execute(
+        "SELECT intent_id FROM paper_order_intents ORDER BY intent_id LIMIT 4097"
+    ).fetchall()
+    if len(rows) > 4096:
+        raise DataValidationError("PAPER health order audit exceeds resource bound")
+    return tuple(
+        SQLitePaperOrderJournal._checked_entry(order_connection, row["intent_id"])
+        for row in rows
+    )
+
+
+def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHealth:
+    """Inspect positions separately; they are never an exchange stop proof."""
+    with _read_database(
+        position_journal_path, _POSITION_TABLES, "paper_position_meta", _POSITION_VERSION,
+    ) as position_connection:
+        rows = position_connection.execute(
+            "SELECT position_id FROM paper_positions ORDER BY position_id LIMIT 4097"
+        ).fetchall()
+        if len(rows) > 4096:
+            raise DataValidationError("PAPER health position audit exceeds resource bound")
+        # _read verifies canonical digest, event replay, position indexes and
+        # quantity conservation; do not replace it with unchecked SQL.
+        records = tuple(
+            SQLitePaperPositionJournal._read(position_connection, row["position_id"])
+            for row in rows
+        )
+        # A dangling index may be invisible to per-position replay. Always
+        # reject a journal with orphaned intent->position references.
+        orphan = position_connection.execute(
+            "SELECT 1 FROM paper_position_order_ids i "
+            "LEFT JOIN paper_positions p ON i.position_id=p.position_id "
+            "WHERE p.position_id IS NULL LIMIT 1"
+        ).fetchone()
+        if orphan is not None:
+            raise DataValidationError("PAPER position journal has orphaned order index")
+
+    positions_by_open: dict[str, list[object]] = {}
+    for record in records:
+        positions_by_open.setdefault(record.opening_intent.intent_id, []).append(record)
+    fills: list[PaperOpenFillHealth] = []
+    filled_ids: set[str] = set()
+    for entry in orders:
+        if (entry.intent.effect is not PaperOrderEffect.OPEN
+                or entry.snapshot.filled_total_units == 0):
+            continue
+        filled_ids.add(entry.intent.intent_id)
+        matches = positions_by_open.get(entry.intent.intent_id, [])
+        if len(matches) != 1:
+            fills.append(PaperOpenFillHealth(
+                entry.intent.intent_id, None, PaperProtectionState.UNPROTECTED,
+                "missing_or_duplicate_local_position",
+            ))
+            continue
+        record = matches[0]
+        if (_intent_json(record.opening_intent) != _intent_json(entry.intent)
+                or record.opening_events != entry.events):
+            fills.append(PaperOpenFillHealth(
+                entry.intent.intent_id, record.position_id, PaperProtectionState.UNKNOWN,
+                "opening_intent_or_fill_events_mismatch",
+            ))
+            continue
+        fills.append(PaperOpenFillHealth(
+            entry.intent.intent_id, record.position_id,
+            PaperProtectionState.PROTECTED_HYPOTHETICAL_ONLY,
+            "synthetic_exit_plan_is_not_native_stop",
+        ))
+    for opening_id, matches in positions_by_open.items():
+        if opening_id not in filled_ids:
+            for record in matches:
+                fills.append(PaperOpenFillHealth(
+                    opening_id, record.position_id, PaperProtectionState.UNKNOWN,
+                    "position_has_no_matching_filled_open_snapshot",
+                ))
+    if not fills:
+        return PaperOpenHealth((), True, "no_filled_open_or_position_requires_protection")
+    states = {item.protection_state for item in fills}
+    if PaperProtectionState.UNKNOWN in states:
+        reason = "paper_open_health_unknown"
+    elif PaperProtectionState.UNPROTECTED in states:
+        reason = "paper_open_unprotected"
+    else:
+        reason = "paper_open_unverified_protection"
+    return PaperOpenHealth(tuple(fills), False, reason)
+
+
+def _audit_paper_open_health_locked(
+    order_connection, order_journal_path: str | Path,
+    position_journal_path: str | Path,
+) -> PaperOpenHealth:
+    """Used only during the order journal BEGIN IMMEDIATE transaction.
+
+    By reading the OPEN rows under the SAME write lock as the prospective
+    reservation, no other AUTO2 writer can insert a FILL in the health->OPEN
+    gap. AUTO4 remains an independently read SQLite file, not an atomic
+    cross-database snapshot; protection remains unverified.
+    """
+    if _checked_path(order_journal_path) == _checked_path(position_journal_path):
+        raise DataValidationError("PAPER order and position health sources must be independent")
+    _verify_locked_order_schema(order_connection)
+    return _audit_with_orders(_checked_order_entries(order_connection), position_journal_path)
+
+
+def audit_paper_open_health(
+    order_journal_path: str | Path, position_journal_path: str | Path,
+) -> PaperOpenHealth:
+    """Read-only independent diagnostic (not a reservation authorization).
+
+    For a reservation use the order-journal guarded method so the health
+    check and eventual OPEN insert happen under one order-file write lock.
+    """
+    if _checked_path(order_journal_path) == _checked_path(position_journal_path):
+        raise DataValidationError("PAPER order and position health sources must be independent")
+    with _read_database(
+        order_journal_path, _ORDER_TABLES, "paper_order_meta", _ORDER_VERSION,
+    ) as order_connection:
+        return _audit_with_orders(
+            _checked_order_entries(order_connection), position_journal_path,
+        )

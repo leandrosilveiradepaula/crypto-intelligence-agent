@@ -1,7 +1,7 @@
 """J4/AUTO7: only the latest causal J2 fixture can reserve an OPEN PAPER."""
 from __future__ import annotations
 
-from contextlib import closing
+from contextlib import closing, contextmanager
 from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
@@ -13,6 +13,7 @@ from unittest.mock import patch
 from crypto_intelligence_agent.causal_paper_open import reserve_causal_paper_open
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
+from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
 from crypto_intelligence_agent.paper_risk_gate import (
     PaperRiskLimits, PaperRiskObservation, PaperRiskReason,
 )
@@ -58,7 +59,9 @@ class CausalPaperOpenTests(unittest.TestCase):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
         self.db = Path(temp.name) / "paper-open.sqlite"
+        self.position_db = Path(temp.name) / "paper-positions.sqlite"
         self.journal = SQLitePaperOrderJournal(self.db)
+        self.positions = SQLitePaperPositionJournal(self.position_db)
         self.rows = candles()[:6]
         self.now = self.rows[-1].close_time_ms + 1_000
         self.strategy = config().strategy
@@ -78,6 +81,7 @@ class CausalPaperOpenTests(unittest.TestCase):
             limits=limits() if rules is None else rules,
             observation=observation(at, venue=venue) if snapshot is None else snapshot,
             journal=self.journal if journal is None else journal,
+            position_journal_path=self.position_db,
             decision_at_ms=at, close_safety_ms=safety,
         )
 
@@ -215,6 +219,65 @@ class CausalPaperOpenTests(unittest.TestCase):
         self.assertEqual(blocked.reservation.decision.reason, PaperRiskReason.UNRESOLVED_OPEN)
         self.assertFalse(blocked.paper_intent_reserved)
         self.assertEqual(self.count_intents(), 1)
+
+    def test_filled_open_without_position_health_blocks_even_when_not_pending(self):
+        old = PaperOrderIntent(
+            "fixture_health_prior_open", "fixture_health_prior_signal",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.BUY, PaperOrderEffect.OPEN, D(1), self.now - 2,
+        )
+        self.journal.reserve(old)
+        self.journal.append_events(
+            old.intent_id,
+            (PaperOrderEvent("fixture_health_prior_fill", PaperOrderEventKind.FILL,
+                             self.now - 1, D(1)),),
+            as_of_ms=self.now - 1,
+        )
+        result = self.admit()
+        self.assertEqual(result.reason,
+                         "paper_open_health_denied_paper_open_unprotected")
+        self.assertIsNone(result.intent)
+        self.assertIsNone(result.reservation)
+        self.assertFalse(result.health.new_open_allowed)
+        self.assertEqual(self.count_intents(), 1)
+
+    def test_concurrent_fill_before_reservation_transaction_cannot_pass_health(self):
+        """Regression: detached RO audit followed by a separate TX was unsafe."""
+        old = PaperOrderIntent(
+            "fixture_race_open", "fixture_race_signal",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.BUY, PaperOrderEffect.OPEN, D(1), self.now - 2,
+        )
+        other_writer = SQLitePaperOrderJournal(self.db)
+        other_writer.reserve(old)
+        original_transaction = self.journal._transaction
+        injected = [False]
+
+        @contextmanager
+        def fill_before_lock():
+            if not injected[0]:
+                injected[0] = True
+                other_writer.append_events(
+                    old.intent_id,
+                    (PaperOrderEvent(
+                        "fixture_race_fill", PaperOrderEventKind.FILL,
+                        self.now - 1, D(1),
+                    ),),
+                    as_of_ms=self.now - 1,
+                )
+            with original_transaction() as conn:
+                yield conn
+
+        # The former path audited BEFORE this injected FILL; its subsequent
+        # risk-only transaction could then accept the new OPEN. AUTO8 now
+        # checks health after acquiring that exact write lock.
+        with patch.object(self.journal, "_transaction", fill_before_lock):
+            result = self.admit()
+        self.assertTrue(injected[0])
+        self.assertEqual(result.reason, "paper_open_health_denied_paper_open_unprotected")
+        self.assertIsNone(result.reservation)
+        self.assertEqual(self.count_intents(), 1)
+        self.assertFalse(result.orders_sent)
 
     def test_invalid_types_identity_future_snapshot_and_quantity_refuse(self):
         for bad in (None, "2", 2, D("NaN"), D(-1), D("1e99"), D(0)):
