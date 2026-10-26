@@ -167,3 +167,7 @@ O usuário **não precisa confirmar cada operação**: após futura autorizaçã
 ## J3/PRE3 — fronteira de walk-forward offline
 
 O planejador de folds `synthetic_walk_forward.py` tem responsabilidade EXCLUSIVA de dividir uma série `ClosedCandle` sintética validada em treino/gap/teste temporal com índices half-open, stride não sobrepondo os blocos OOS e tempo de disponibilidade do último candle de treino. Não contém otimizador, métricas de trade, fills ou estratégia J2 acoplada. Um fold futuro pode treinar com amostras que já foram OOS em fold anterior, porque chegaram a ser históricas depois; isso não permite usar OOS do próprio fold para ajustar configurações. A avaliação futura com labels de trades, horizon purging, custos/funding/liquidação e benchmark exige módulo separado e dados J1 homologados. NENHUM endpoint, conta, ordens ou live.
+
+## J3/PRE6 — avaliação financeira condicional
+
+`synthetic_financial_scenarios.py` compõe `SyntheticBarrierObservation` PRE1 com `SyntheticCostScenario` PRE2, sem reimplementar funding/taxas ou inferir fills de candles. Recebe branches de entrada/saída ou perda de liquidação explicitamente declarados, com fonte/moeda/sinal de funding, e devolve alternativas condicionais em `Decimal`. Não contém rede, persistência, ledger de exchange ou superfície de ordem; flags de validação financeira e live permanecem falsas.
