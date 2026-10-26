@@ -221,3 +221,6 @@ A issue #180 adiciona branches financeiras sintéticas com premissas explícitas
 
 
 **Revisão PR #181 / issue #180:** o primeiro SHA do Codex `f750712f9802e5a2212d7ca8cc8f451fa218db8c` teve CI Python Linux (929 testes/14 docs) e Chrome SUCCESS. A revisão financeira encontrou incompatibilidade possível entre preço×quantidade e nocionais de taxas, ausência de vínculo com o plano/barreira PRE1 e cobertura incompleta de níveis intrabar. Correção e testes adicionais foram incorporados **na mesma PR**, exigindo nova verificação no HEAD final antes de integrar. Não interpretar CI antiga como aceite dos commits posteriores.
+
+
+**J1/WU48 issue #182 (em execução no checkpoint inicial, 26/10/2026):** `main=82aacf78bf8718846ab7530867353e3773331db7`, PR #181 J3/PRE6 integrada, CI pós-merge Python #40337579169 SUCCESS (934 testes, 14 docs) e Chrome #40337579002 SUCCESS. Nenhuma PR aberta ao iniciar. Nova branch `codex/issue-182-j1-wu48-offline-bybit-json-audit`: auditoria local pura de instrumento+kline JSON **fornecidos voluntariamente**, sem acesso externo; protege precisão/qualidade e não emite OHLCV canônico/ordens. PR/CI/merge da WU48 ainda sujeitos a verificação; J1 e direitos reais permanecem bloqueados. R$0 adicional.
