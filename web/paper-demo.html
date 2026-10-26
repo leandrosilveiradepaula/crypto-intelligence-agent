@@ -7,8 +7,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'">
   <meta name="description" content="Protótipo offline e fictício do Crypto Intelligence Agent. Nenhum dado de mercado nem ordem real.">
   <title>Crypto Intelligence Agent — Demonstração PAPER</title>
-  <!-- J5/PRE1. STATIC FIXTURE ONLY. Values must match scripts/demo_automated_paper_cycle.py.
-       No account, exchange connection, scripts, requests, forms, controls or PnL. -->
+  <!-- J5/PRE1 static fallback / J5/PRE2 offline build template.
+       Renderer only accepts in-process synthetic fixtures. No live account,
+       market data, scripts, requests, forms, order controls or PnL. -->
   <style>
     :root {
       color-scheme: dark;
@@ -108,7 +109,7 @@
   <header class="site-header">
     <div class="page header-content">
       <div class="brand"><span class="mark" aria-hidden="true">CI</span><span>Crypto Intelligence Agent</span></div>
-      <span class="header-label">Protótipo local · J5/PRE1</span>
+      <span class="header-label">Prévia local · PAPER</span>
     </div>
   </header>
   <main class="page" data-mode="offline_paper" data-demo-only="true">
@@ -123,11 +124,11 @@
 
     <section class="section" aria-labelledby="overview-title">
       <h2 id="overview-title">Resumo do cenário</h2>
-      <p class="section-subtitle">Exemplo determinístico com 100 unidades abstratas de uma posição hipotética. O sistema confirma fills fictícios antes de reduzir o saldo.</p>
+      <p class="section-subtitle">Exemplo determinístico com <span data-snapshot-key="overview-opening">100</span> unidades abstratas de uma posição hipotética. O sistema confirma fills fictícios antes de reduzir o saldo.</p>
       <dl class="stats">
         <div class="stat"><dt>Quantidade inicial confirmada</dt><dd data-metric="initial_units">100</dd><small>Unidades fictícias, não US$</small></div>
-        <div class="stat"><dt>Saídas preenchidas</dt><dd data-metric="filled_exit_units">94</dd><small>50 + 30 + 14 unidades</small></div>
-        <div class="stat"><dt>Parcela residual (runner)</dt><dd class="tone-accent" data-metric="residual_units">6</dd><small>6% da posição inicial</small></div>
+        <div class="stat"><dt>Saídas preenchidas</dt><dd data-metric="filled_exit_units">94</dd><small data-snapshot-key="summary-exits">50 + 30 + 14 unidades</small></div>
+        <div class="stat"><dt>Parcela residual (runner)</dt><dd class="tone-accent" data-metric="residual_units">6</dd><small data-snapshot-key="summary-runner-percent">6% da posição inicial</small></div>
       </dl>
     </section>
 
@@ -136,7 +137,7 @@
       <p class="section-subtitle">É uma sequência de laboratório pré-definida, não uma estratégia quantitativa já aprovada.</p>
       <div class="flow">
         <div class="flow-step"><span class="flow-num">1</span><h3>Verificar risco</h3><p>Limites, pendências e trava de novas entradas são checados apenas no diário local simulado.</p></div>
-        <div class="flow-step"><span class="flow-num">2</span><h3>Confirmar entrada</h3><p>ACK não cria posição. Somente um FILL explicitamente fictício confirma as 100 unidades.</p></div>
+        <div class="flow-step"><span class="flow-num">2</span><h3>Confirmar entrada</h3><p>ACK não cria posição. Somente um FILL explicitamente fictício confirma as <span data-snapshot-key="flow-opening">100</span> unidades.</p></div>
         <div class="flow-step"><span class="flow-num">3</span><h3>Realizar parciais</h3><p>O motor simula três saídas sobre o saldo remanescente, sem ultrapassar as reservas agregadas.</p></div>
         <div class="flow-step"><span class="flow-num">4</span><h3>Conciliar o restante</h3><p>UNKNOWN segura a reserva até FILL fictício; o saldo final sobrevive à reabertura do SQLite.</p></div>
       </div>
@@ -149,16 +150,16 @@
         <article class="card" data-venue="binance_usdm">
           <div class="venue-header"><div><h3>Binance USDⓈ-M</h3><p>Fixture BTCUSDT · cotação inventada</p></div><span class="tag">Candidata · não conectada</span></div>
           <div class="venue-metric"><span>Modo</span><strong>offline_paper</strong></div>
-          <div class="venue-metric"><span>Entrada fictícia</span><strong>100 unidades</strong></div>
-          <div class="venue-metric"><span>Saídas concluídas</span><strong>50 / 30 / 14</strong></div>
-          <div class="venue-metric"><span>Saldo fictício</span><strong class="tone-accent">6 unidades</strong></div>
+          <div class="venue-metric"><span>Entrada fictícia</span><strong data-snapshot-key="binance_usdm-initial">100 unidades</strong></div>
+          <div class="venue-metric"><span>Saídas concluídas</span><strong data-snapshot-key="binance_usdm-exits">50 / 30 / 14</strong></div>
+          <div class="venue-metric"><span>Saldo fictício</span><strong class="tone-accent" data-snapshot-key="binance_usdm-runner">6 unidades</strong></div>
         </article>
         <article class="card" data-venue="bybit_v5">
           <div class="venue-header"><div><h3>Bybit V5 linear</h3><p>Fixture BTCUSDT · cotação inventada</p></div><span class="tag">Candidata · não conectada</span></div>
           <div class="venue-metric"><span>Modo</span><strong>offline_paper</strong></div>
-          <div class="venue-metric"><span>Entrada fictícia</span><strong>100 unidades</strong></div>
-          <div class="venue-metric"><span>Saídas concluídas</span><strong>50 / 30 / 14</strong></div>
-          <div class="venue-metric"><span>Saldo fictício</span><strong class="tone-accent">6 unidades</strong></div>
+          <div class="venue-metric"><span>Entrada fictícia</span><strong data-snapshot-key="bybit_v5-initial">100 unidades</strong></div>
+          <div class="venue-metric"><span>Saídas concluídas</span><strong data-snapshot-key="bybit_v5-exits">50 / 30 / 14</strong></div>
+          <div class="venue-metric"><span>Saldo fictício</span><strong class="tone-accent" data-snapshot-key="bybit_v5-runner">6 unidades</strong></div>
         </article>
       </div>
     </section>
@@ -171,13 +172,13 @@
           <caption class="small" style="text-align:left;padding:13px 17px">Sequência sintética · unidades sem valor financeiro</caption>
           <thead><tr><th scope="col">Etapa</th><th scope="col">Regra</th><th scope="col">Fill fictício</th><th scope="col">Saldo após</th></tr></thead>
           <tbody>
-            <tr data-step="1" data-qty="50"><td>1ª parcial</td><td>50% do restante</td><td><strong>50</strong> unidades</td><td>50</td></tr>
-            <tr data-step="2" data-qty="30"><td>2ª parcial</td><td>60% do restante</td><td><strong>30</strong> unidades</td><td>20</td></tr>
-            <tr data-step="3" data-qty="14"><td>3ª parcial</td><td>70% do restante</td><td><strong>14</strong> unidades</td><td>6</td></tr>
+            <tr data-step="1" data-qty="50"><td>1ª parcial</td><td>50% do restante</td><td><strong data-snapshot-key="exit-1-fill">50</strong> unidades</td><td data-snapshot-key="exit-1-balance">50</td></tr>
+            <tr data-step="2" data-qty="30"><td>2ª parcial</td><td>60% do restante</td><td><strong data-snapshot-key="exit-2-fill">30</strong> unidades</td><td data-snapshot-key="exit-2-balance">20</td></tr>
+            <tr data-step="3" data-qty="14"><td>3ª parcial</td><td>70% do restante</td><td><strong data-snapshot-key="exit-3-fill">14</strong> unidades</td><td data-snapshot-key="exit-3-balance">6</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="note">Resta uma parcela residual de <strong>6 unidades (6%)</strong>. Neste protótipo não há stop nativo, trailing operacional, PnL financeiro nem proteção instalada em corretora.</p>
+      <p class="note">Resta uma parcela residual de <strong data-snapshot-key="runner-note">6 unidades (6%)</strong>. Neste protótipo não há stop nativo, trailing operacional, PnL financeiro nem proteção instalada em corretora.</p>
     </section>
 
     <section class="section" aria-labelledby="details-title">
