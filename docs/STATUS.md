@@ -289,3 +289,8 @@ Prioridade ativa: **J1 #2**. Matriz WU51 em `J1_SOURCE_GATES.md` diferencia prov
 ## J1/AUTH1 #205 — autorização read-only do Product Owner (26/10/2026 UTC)
 
 O usuário autorizou **somente conexão de leitura** de suas contas Binance e Bybit na VPS existente. Contrato e procedimento em `docs/PRIVATE_EXCHANGE_READONLY.md`; scripts e testes mockados na branch `work/issue-205-readonly-exchange-probe`, sem requisição autenticada real. Consulta ao plugin DigitalOcean retornou **zero droplets visíveis**; acesso à VPS/chaves não comprovado. Próximo gate é revisar CI Linux/Windows/QA, confirmar infraestrutura existente sem gasto, e executar diagnóstico somente em ambiente privado permitido com credenciais read-only. Nenhuma ordem, saldo divulgado, credential em chat, proxy, deploy ou alteração produtiva. J1 #2 e J6 #7 permanecem abertas.
+
+
+### J1/AUTH1 — instalação offline real, autenticação pendente (26/10/2026 UTC)
+
+O titular demonstrou as duas saídas `offline_network_disabled` na VPS Hostinger e checkout SHA `3dd2980eb8d1ddb93c8d8928a3336f8aac53c00b`. Próxima entrega na issue #205 é launcher seguro de credenciais `scripts/run_private_exchange_readonly_tty.py` para **uma GET autenticada por corretora** somente após verificação de chave exclusivamente de leitura; CI/PR sob avaliação. Nenhuma solicitação autenticada, ordem, saldo ou deploy.

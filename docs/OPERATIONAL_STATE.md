@@ -311,3 +311,8 @@ O usuário autorizou **somente conexão de leitura** de suas contas Binance e By
 
 ### AUTH1 Hostinger — 26/10/2026
 O titular confirmou VPS existente na Hostinger. Não há acesso remoto autenticado à VPS nesta sessão. A autorização é somente leitura para Binance/Bybit, sem ordens, credenciais em chat, gasto ou deploy de trading. O procedimento Hostinger está em `docs/PRIVATE_EXCHANGE_READONLY.md`; PR #206 segue em revisão. Próximo passo: CI no SHA final e merge seguro; diagnóstico real exige sessão privada no hPanel/SSH da VPS.
+
+
+### J1/AUTH1 — instalação offline Hostinger comprovada e captura efêmera (26/10/2026 UTC)
+
+O PO comprovou execução `offline_network_disabled` em Binance e Bybit na VPS existente, sob usuário isolado e checkout SHA `3dd2980eb8d1ddb93c8d8928a3336f8aac53c00b`; ambas com flags de trading, orders e balances negativas. Nenhuma conta foi autenticada. Branch `work/issue-205-private-tty-credential-entry` adiciona launcher interativo protegido por TTY, duas flags de consentimento, getpass fail-closed e dicionário temporário de segredos em memória, sem argumentos/variáveis globais. Documento: `docs/PRIVATE_EXCHANGE_READONLY.md`. Próximos gates: CI/revisão/merge não produtivo; somente depois execução voluntária do titular com chaves específicas de leitura no terminal SSH privado. Nenhuma ordem, mudança VPS produtiva, licença promovida ou gasto.
