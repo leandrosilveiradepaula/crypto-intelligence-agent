@@ -211,3 +211,6 @@ Implementação da estrutura offline de walk-forward: janelas de treino, gap e t
 
 
 **J3/PRE4 issue #176 (em revisão, 26/10/2026):** após PRE3 PR #175 integrada SHA `b524da877ea6f3cf7b9c4f84f9f6f707a85b73f0` com CI pós-merge Python #40329036508 e Chrome #40329036488 SUCCESS, foi aberta unidade de purga de labels sintéticos em horizontes fixos. Branch `codex/issue-176-j3-pre4-purged-label-horizons`. PRE4 não executa backtest, não mede estratégia nem valida dados reais e permanece pendente de PR/CI/revisão/merge. J1/J3/J6 não homologadas, nenhuma ordem real.
+
+
+**J3/PRE5 issue #178 (em revisão):** a base inicial é `main=6924f2545704954d695db66520ee71f2667d7235`, PR #177 PRE4 integrada, 915 testes offline/14 docs e CI Python/Chrome pós-merge SUCCESS. Branch `codex/issue-178-j3-pre5-causal-oos-replay` introduz integração J2→J3 com prefixos temporais e categorias ex-post de alteração de fechamento em dados 100% sintéticos, sem PnL/ordens/otimização de parâmetros. A nova PR e CI/merge ainda precisam ser comprovadas e revisadas. J1/J2/J3/J6 não homologadas.
