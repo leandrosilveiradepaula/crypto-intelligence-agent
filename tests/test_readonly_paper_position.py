@@ -327,6 +327,8 @@ class ReadOnlyPaperPositionTests(unittest.TestCase):
         self.assertIn("SIMULADO — NENHUMA ORDEM REAL", page)
         self.assertIn("Nenhuma ordem de saída PAPER registrada", page)
         self.assertIn("Hash local não é assinatura", page)
+        self.assertIn("regra: saldo restante", page)
+        self.assertNotIn("REMAINING_BALANCE", page)
         self.assertIn("default-src 'none'", page)
         self.assertIn("connect-src 'none'", page)
         self.assertIn("Pular para o conteúdo principal", page)
