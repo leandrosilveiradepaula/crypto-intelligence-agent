@@ -6,9 +6,9 @@
 | J1 Dados | Coleta de perpétuos, histórico, qualidade, persistência e conformance | J0 | #2 |
 | J2 Entradas | Indicadores, regimes, estratégias e seleção | J1 | #3 |
 | J3 Pesquisa | Backtest, funding, slippage, alavancagem, liquidação e validação | J1 e J2 | #4 |
-| J4 Winner Management | Posições, saídas parciais, trailing e runner | J2 e contratos de J3 | #5 |
-| J5 Produto | Interface PT-BR, posições, histórico e alertas | J2 e J4 | #6 |
-| J6 Homologação | Simulação contínua, observabilidade e evidências, sem ordens reais | J1–J5 | #7 |
+| J4 Winner Management/Execução | Ledger de ordens/fills, entradas/saídas automáticas, parciais, trailing, runner e reconciliação | J2 e contratos de J3 | #5 |
+| J5 Produto | Interface PT-BR, posições, histórico, alertas, estado do bot e kill-switch | J2 e J4 | #6 |
+| J6 Homologação | Paper trading contínuo, testnet autorizada, incidentes e gates de eventual live, sem ordens reais na homologação inicial | J1–J5 | #7 |
 | J7 Evolução | ML e contexto ampliado, somente com melhoria validada | J3 e J6 | #8 |
 
 ## J1 — Work units
@@ -97,3 +97,7 @@ A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausên
 - J1/WU43 #135 CONCLUÍDA no escopo de integridade local: PR #136 merged `8e2a61d352bd4f0d40a4b1de86bfccf039cad4cb`, HEAD `f55e2da431561a913bf34f6bb295ec135476637f`, review #5646590380, CI PR #40256399524 SUCCESS (**750 testes offline**, compileall, 12 docs), pós-merge #40256467576 SUCCESS. Universo Kraken e 1..5 páginas preço-only gravados atomicamente no SQLite, rollback garantido também em DB existente sob conflito tardio; APIs individuais compatíveis, sem novo schema/rede/ordem. WU42 CandleFeed Free código entregue sem LIVE/conta, J1 #2/#32/#36/#48 abertas.
 
 - J1/WU44 #138 CONCLUÍDA como investigação de acesso com sonda REAL BLOQUEADA: PR #139 merged `61566e2d9377f7565579c1516d738f1f7748ecae`, HEAD `4077b5101c7d543694567d40afe8526765ed1285`, review #5646635581, CI PR #40257293302 SUCCESS (**760 offline**, compileall 12 docs), pós-merge #40257371491 SUCCESS. Único real run #40257405663/j #121362109826: 1 GET metadados BTCUSDT Bybit e acesso restrito; 0 candles, sem bypass/retry. Por documentação Bybit volumes BASE BTC e turnover QUOTE USDT, mas sem conformance REAL no runner. Matriz `docs/J1_SOURCE_GATES.md` contém gates comparativos; Kraken 24h price-only real não se converte em OHLCV. J1 #2/#32/#36/#48 continuam ABERTAS.
+
+
+## D77 — mudança material aprovada para o destino das jornadas
+O requisito final é **trading automatizado** com entradas e saídas (stops/parciais/trailing/runner), diferentemente dos protótipos anteriores descritos como "manuais". O histórico de WUs e PRs não é reescrito: continuam implementações sintéticas, não ordens reais. Acrescentar simulador de intenções/fills e reconciliação a J4, monitor de estado/kill-switch a J5, paper prospectivo/testnet condicionada e release gate separado a J6. J1 continua ativa e bloqueada por dados/rights; nenhum salto direto a `live`. Fonte: `docs/AUTOMATED_EXECUTION_SPEC.md` e issue #147.

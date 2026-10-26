@@ -100,15 +100,19 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
         },
     ]
     result = {
-        "schema_version": "j1-readiness-v1",
+        "schema_version": "j1-readiness-v2",
         "assessment_kind": "reviewed_repository_checkpoint_not_live",
         "ready_for_live_top50": False,
         "ready_for_canonical_ohlcv": False,
         "ready_for_public_market_data_release": False,
+        "ready_for_live_order_execution": False,
+        "target_execution_mode": "automated_entries_and_exits",
+        "current_execution_mode": "offline_paper_not_deployed",
+        "live_trading_authorized": False,
         "gates": gates,
-        # These are candidate venues for a future MANUAL action, not data-feed
-        # approvals. Account ownership cannot prove API availability or rights.
-        "manual_execution_candidates": [
+        # These are candidate venues for FUTURE automated trading, not live
+        # authorizations. Account ownership cannot prove API availability or rights.
+        "automated_execution_candidates": [
             {
                 "venue": "binance_usdm",
                 "market": "linear_perpetual_usdt",
@@ -118,7 +122,8 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
                 "quote_currency": "USDT",
                 "account_access_verified": False,
                 "live_signal_approved": False,
-                "manual_plan_approved": False,
+                "automated_execution_approved": False,
+                "exchange_order_adapter_live_approved": False,
                 "order_execution_enabled": False,
             },
             {
@@ -130,7 +135,8 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
                 "quote_currency": "USDT_or_USDC_not_USD",
                 "account_access_verified": False,
                 "live_signal_approved": False,
-                "manual_plan_approved": False,
+                "automated_execution_approved": False,
+                "exchange_order_adapter_live_approved": False,
                 "order_execution_enabled": False,
             },
         ],

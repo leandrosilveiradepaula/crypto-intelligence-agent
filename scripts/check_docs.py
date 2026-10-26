@@ -16,6 +16,7 @@ REQUIRED = [
     "docs/STATUS.md",
     "docs/OPERATIONAL_STATE.md",
     "docs/J1_SOURCE_GATES.md",
+    "docs/AUTOMATED_EXECUTION_SPEC.md",
 ]
 errors = []
 texts = {}
@@ -39,13 +40,14 @@ registry_doc = texts.get("docs/CRYPTO_REGISTRY.md", "")
 rights_doc = texts.get("docs/PROVIDER_RIGHTS.md", "")
 source_gates = texts.get("docs/J1_SOURCE_GATES.md", "")
 product = texts.get("docs/PRODUCT_SPEC.md", "")
+execution = texts.get("docs/AUTOMATED_EXECUTION_SPEC.md", "")
 for token in ["microtarefa", "prossiga", "Codex", "GitHub"]:
     if token.lower() not in agents.lower():
         errors.append(f"missing autonomy invariant: {token}")
 for token in ["D01", "D02", "D03", "D05", "D07", "D13"]:
     if token not in decisions:
         errors.append(f"missing approved decision: {token}")
-for token in ["50x", "futuros", "parciais", "manual"]:
+for token in ["50x", "futuros", "parciais", "automática", "kill-switch"]:
     if token.lower() not in product.lower():
         errors.append(f"missing product invariant: {token}")
 for token in ["UTC", "ClosedCandle", "idempotente", "read-only"]:
@@ -61,6 +63,21 @@ for token in ["SHA-256", "look-ahead", "internal_research_only", "CoinPaprika", 
 for token in ["commercial_or_public_distribution_authorized = false", "marketdata@kraken.com", "não concede", "BLOQUEADO", "R$0,00"]:
     if token.lower() not in rights_doc.lower():
         errors.append(f"missing provider rights release gate: {token}")
+
+# D77: automatic trading is the product goal, NOT a permission to place orders.
+# These checks only ensure that safety requirements remain documented.
+for token in (
+    "entradas", "saídas", "offline_paper", "testnet", "live",
+    "reduce-only", "kill-switch", "idempotente", "reconciliação",
+    "autorização explícita", "live_trading_enabled=false",
+    "order_submission_enabled=false",
+):
+    if token.lower() not in execution.lower():
+        errors.append(f"missing automated execution invariant: {token}")
+
+for token in ("auto", "live", "ordens reais", "AUTOMÁTICA"):
+    if token.lower() not in agents.lower():
+        errors.append(f"missing automated agent requirement: {token}")
 
 # The matrix is a release-critical negative attestation, not an optional reference.
 # Text checks do not authenticate upstream market data or legal rights.
