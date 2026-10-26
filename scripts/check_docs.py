@@ -84,6 +84,8 @@ for token in ("auto", "live", "ordens reais", "AUTOMÁTICA"):
 for token in (
     "J1 #2 NÃO homologada", "Kraken Futures", "volume", "price-only",
     "Top50", "#32", "#36", "#48", "direitos", "BLOQUEADO",
+    "bybit_ticker_24h_units=blocked", "ticker_turnover_unit_verified=false",
+    "ticker_volume_unit_verified=false",
 ):
     if token.lower() not in source_gates.lower():
         errors.append(f"missing J1 source-gates invariant: {token}")
