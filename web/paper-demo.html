@@ -28,9 +28,12 @@
     a { color: var(--accent); }
     :focus-visible { outline: 3px solid var(--amber); outline-offset: 4px; }
     .page { width: min(100% - 32px, 1100px); margin-inline: auto; }
+    .skip-link { position: fixed; z-index: 20; top: 10px; left: 10px; padding: 11px 15px; background: var(--amber); color: #17232d; font-weight: 750; border-radius: 10px; transform: translateY(-180%); text-decoration: none; }
+    .skip-link:focus-visible { transform: translateY(0); }
     .site-header { border-bottom: 1px solid var(--border); background: #101c29; }
     .header-content { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 18px; }
-    .brand { display: flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: .01em; }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: .01em; min-width: 0; }
+    .brand span:last-child { min-width: 0; overflow-wrap: anywhere; }
     .mark { display: inline-grid; place-items: center; width: 37px; height: 37px; border: 1px solid #679e96; border-radius: 11px; color: var(--accent); font-size: .9rem; }
     .header-label { border: 1px solid var(--border); border-radius: 999px; padding: 5px 10px; font-size: .78rem; color: var(--muted); white-space: nowrap; }
     main { padding-block: 35px 64px; }
@@ -57,14 +60,15 @@
     .flow-num { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: #25483f; color: var(--accent); font-size: .84rem; font-weight: 750; margin-bottom: 13px; }
     .flow-step p { color: var(--muted); font-size: .84rem; margin: 0; }
     .venues { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .venue-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 13px; }
+    .venue-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 13px; min-width: 0; }
     .venue-header p { margin: 0; color: var(--muted); font-size: .83rem; }
     .tag { display: inline-block; border: 1px solid var(--border); border-radius: 999px; padding: 4px 9px; color: var(--muted); font-size: .68rem; font-weight: 700; white-space: nowrap; }
     .venue-metric { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding: 10px 0; font-size: .9rem; }
     .venue-metric:last-child { padding-bottom: 0; }
     .venue-metric span:first-child { color: var(--muted); }
-    .venue-metric strong { font-variant-numeric: tabular-nums; text-align: right; }
-    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); }
+    .venue-metric strong { font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); scrollbar-width: auto; scrollbar-color: var(--accent) var(--panel); }
+    .table-wrap:focus-visible { outline-offset: 3px; }
     table { width: 100%; border-collapse: collapse; min-width: 440px; text-align: left; }
     th, td { padding: 14px 17px; vertical-align: top; }
     th { color: var(--muted); font-size: .77rem; font-weight: 650; background: var(--panel-light); }
@@ -95,6 +99,8 @@
       .stat dd { flex-shrink: 0; font-size: 2rem; text-align: right; }
       .stat small { display: none; }
       .venues { grid-template-columns: 1fr; }
+      .venue-header { flex-wrap: wrap; }
+      .tag { white-space: normal; overflow-wrap: anywhere; }
       .flow-step { padding: 14px; }
       .section { margin-block: 29px; }
       .card { padding: 18px; }
@@ -106,13 +112,14 @@
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
   <header class="site-header">
     <div class="page header-content">
       <div class="brand"><span class="mark" aria-hidden="true">CI</span><span>Crypto Intelligence Agent</span></div>
       <span class="header-label">Prévia local · PAPER</span>
     </div>
   </header>
-  <main class="page" data-mode="offline_paper" data-demo-only="true" data-snapshot-schema="paper_dashboard_snapshot_v1">
+  <main id="conteudo-principal" tabindex="-1" class="page" data-mode="offline_paper" data-demo-only="true" data-snapshot-schema="paper_dashboard_snapshot_v1">
     <p class="eyebrow">Laboratório de execução automática</p>
     <h1>Um ciclo completo. Nenhuma operação real.</h1>
     <p class="lead">Uma prévia de como o robô poderá abrir posições, acompanhar os preenchimentos e realizar saídas parciais sozinho. Tudo nesta tela é uma <strong>simulação com valores fictícios</strong>, sem sinal de mercado ou conta conectada.</p>
@@ -167,7 +174,8 @@
     <section class="section" aria-labelledby="exits-title">
       <h2 id="exits-title">Plano de saídas automáticas simulado</h2>
       <p class="section-subtitle">Cada porcentagem incide sobre a quantidade restante antes daquela etapa, não sobre a posição inicial.</p>
-      <div class="table-wrap">
+      <p class="note" id="table-scroll-instructions">Em telas pequenas, deslize a tabela para ver todas as colunas. Pelo teclado, pressione Tab até a tabela e use as setas horizontais.</p>
+      <div class="table-wrap" role="region" tabindex="0" aria-label="Etapas e saldos das saídas simuladas" aria-describedby="table-scroll-instructions">
         <table>
           <caption class="small" style="text-align:left;padding:13px 17px">Sequência sintética · unidades sem valor financeiro</caption>
           <thead><tr><th scope="col">Etapa</th><th scope="col">Regra</th><th scope="col">Fill fictício</th><th scope="col">Saldo após</th></tr></thead>
