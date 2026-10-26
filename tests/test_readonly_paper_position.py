@@ -6,6 +6,7 @@ from hashlib import sha256
 from html.parser import HTMLParser
 from io import StringIO
 import json
+import os
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -240,14 +241,17 @@ class ReadOnlyPaperPositionTests(unittest.TestCase):
         for value in (":memory:", "file:/tmp/unknown?mode=rw", ""):
             with self.subTest(path=value), self.assertRaises(DataValidationError):
                 inspect_paper_position(value, "fixture_position_A")
-        symlink = self.base / "symlink.sqlite"
-        symlink.symlink_to(self.db)
-        with self.assertRaises(DataValidationError):
-            inspect_paper_position(symlink, "fixture_position_A")
         with self.assertRaises(DataValidationError):
             inspect_paper_position(self.order_db, "fixture_position_A")
         with self.assertRaises(DataValidationError):
             inspect_paper_position(self.db, "not_a_fixture")
+
+    @unittest.skipUnless(os.name == "posix", "symlink creation requires POSIX permissions")
+    def test_existing_symlink_to_paper_db_is_refused(self):
+        symlink = self.base / "symlink.sqlite"
+        symlink.symlink_to(self.db)
+        with self.assertRaises(DataValidationError):
+            inspect_paper_position(symlink, "fixture_position_A")
 
     def test_unknown_version_foreign_tables_and_corrupt_digest_fail(self):
         with sqlite3.connect(self.db) as conn:
