@@ -81,8 +81,10 @@ class ReadinessSnapshotTests(unittest.TestCase):
     def test_ui_labels_or_candle_metadata_cannot_promote_ticker_units(self):
         """V5 KLINE BASE/QUOTE and venue UI labels are not REST ticker proof."""
         first = readiness_snapshot()
-        first["gates"][-1]["status"] = "verified"
-        first["gates"][-1]["reason"] = "some UI text says 24H Turnover(USDT)"
+        injected = next(g for g in first["gates"]
+                        if g["capability"] == "bybit_ticker_24h_units")
+        injected["status"] = "verified"
+        injected["reason"] = "some UI text says 24H Turnover(USDT)"
         first["automated_execution_candidates"][1][
             "ticker_turnover_unit_verified"
         ] = True
