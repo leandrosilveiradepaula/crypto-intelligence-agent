@@ -115,7 +115,7 @@ class OfflinePaperForwardSession:
                 or type(requested_units) is not Decimal
                 or type(limits) is not PaperRiskLimits
                 or type(journal) is not SQLitePaperOrderJournal
-                or type(position_journal_path) not in (str, Path)
+                or not isinstance(position_journal_path, (str, Path))
                 or not str(position_journal_path).strip()
                 or type(close_safety_ms) is not int
                 or not 0 <= close_safety_ms <= MAX_CLOSE_SAFETY_MS
