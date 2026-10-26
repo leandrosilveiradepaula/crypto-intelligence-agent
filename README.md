@@ -1,6 +1,9 @@
 # Crypto Intelligence Agent
 
-Plataforma em desenvolvimento de inteligência quantitativa para futuros perpétuos de criptomoedas: identificação de oportunidades, pesquisa estatística e futuras saídas parciais de vencedores. **Sem execução automática real e sem promessa de lucro.**
+Plataforma em desenvolvimento para **trading quantitativo AUTOMÁTICO** de futuros perpétuos de criptomoedas: descoberta de entradas, abertura e gerenciamento automatizado de posições, stops, saídas parciais, trailing e runner. **Objetivo de produto, não status operacional:** nenhuma ordem real foi autorizada e não há promessa de lucro.
+
+## Decisão vigente — D77 (26/10/2026)
+O requisito final é automação de entradas **e** saídas, em futura venue Binance USD-M ou Bybit V5 linear, com motor de risco/ordens e painel de acompanhamento. O modo de engenharia é `offline_paper`; testnet depende de autorização e `live` está bloqueado até homologação e gate explícito do titular. Registros anteriores com 'manual' são históricos de protótipos e não definem o novo alvo. [Contrato de execução automatizada](docs/AUTOMATED_EXECUTION_SPEC.md).
 
 ## Situação
 - J0 documental concluída.
@@ -8,7 +11,7 @@ Plataforma em desenvolvimento de inteligência quantitativa para futuros perpét
 - CI pós-WU5: **78 testes Python offline**, compilação e dez documentos aprovados. Não equivale a feed live homologado.
 
 ## Documentação
-[Regras para agentes](AGENTS.md) · [Produto](docs/PRODUCT_SPEC.md) · [Arquitetura](docs/ARCHITECTURE.md) · [Decisões](docs/DECISIONS.md) · [Contrato de dados](docs/DATA_CONTRACT.md) · [Estratégias](docs/STRATEGY_SPEC.md) · [Validação](docs/VALIDATION_PLAN.md) · [Jornadas](docs/JOURNEYS.md) · [Status](docs/STATUS.md) · [Estado operacional](docs/OPERATIONAL_STATE.md)
+[Regras para agentes](AGENTS.md) · [Produto](docs/PRODUCT_SPEC.md) · [Execução automática](docs/AUTOMATED_EXECUTION_SPEC.md) · [Arquitetura](docs/ARCHITECTURE.md) · [Decisões](docs/DECISIONS.md) · [Contrato de dados](docs/DATA_CONTRACT.md) · [Estratégias](docs/STRATEGY_SPEC.md) · [Validação](docs/VALIDATION_PLAN.md) · [Jornadas](docs/JOURNEYS.md) · [Status](docs/STATUS.md) · [Estado operacional](docs/OPERATIONAL_STATE.md)
 
 ## Demonstração offline — fixtures sintéticas, nenhuma rede
 ```bash
