@@ -165,3 +165,8 @@ Diligência em fontes oficiais Bybit (REST tickers, WebSocket, Kline, instrument
 ## J6/PRE1 #198 — integração de replay em ordem temporal com AUTO7/8/9
 
 O percurso de pesquisa incremental recebe apenas candles artificiais como prefixo fechado, exige uma nova barra por decisão e rejeita reescrita, saltos e uso de futura observação. A reserva PAPER que resultar do sinal passa pelos gates já existentes de risco/posição, sem criar fills ou stops automaticamente. O checkpoint é in-memory e não constitui recuperação após restart nem feed prospectivo verdadeiro; J6 #7 segue aberta para observabilidade real, incidentes, dados e autorização futura. Nenhum trade, conta, API ou gasto.
+
+
+### J6/PRE2-A #200 — pré-requisito de integridade offline (26/10/2026 UTC)
+
+Foi acrescentado contrato puro de selo determinístico SHA-256 para prefixos sintéticos completos e contexto versionado, com escala Decimal preservada e extensão de exatamente uma barra. É uma preparação verificável para recuperação futura, **não** checkpoint durável, transação conjunta com AUTO2, proteção de exchange, stream prospectivo ou homologação. A issue #200 permanece aberta: próximo passo é integrar cursor e reserva/no-signal na MESMA transação AUTO2, com crash tests e auditoria do schema RO, ou manter fail-closed se inviável. AUTO4 continua sem snapshot atômico cruzado. Nenhuma rede, ordem real, migration produtiva ou custo.
