@@ -328,3 +328,25 @@ jobs:
             --database "$private_dir/private.sqlite" \
             --allow-public-network --allow-private-persistence \
             --registry expanded-10 --max-price-symbols 1 --price-hours 24
+
+  bybit-private-btc-base-quote:
+    if: >-
+      github.event.issue.number == 138 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-bybit-btc-volume-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout reviewed main without persistent credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Bybit v5 BTCUSDT read-only research, max 2 GETs
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_bybit_private_ohlcv \
+            --allow-public-network --allow-private-bybit-probe
