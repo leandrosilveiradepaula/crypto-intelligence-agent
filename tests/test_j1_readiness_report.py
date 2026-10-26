@@ -27,6 +27,13 @@ class ReadinessSnapshotTests(unittest.TestCase):
         self.assertEqual(by_name["historical_coverage"]["status"], "unknown")
         self.assertEqual(by_name["bybit_quote_currency"]["evidence_kind"],
                          "documented_schema_offline_only")
+        # A proof of quote/settlement and KLINE volume cannot certify the
+        # *ticker* fields, whose V5 REST schema omits an explicit unit.
+        ticker = by_name["bybit_ticker_24h_units"]
+        self.assertEqual(ticker["status"], "blocked")
+        self.assertEqual(ticker["issue"], 196)
+        self.assertEqual(ticker["evidence_kind"], "ticker_api_units_unattested")
+        self.assertIn("ticker", ticker["reason"].lower())
 
     def test_no_authority_from_fixture_mutation(self):
         first = readiness_snapshot()
@@ -51,6 +58,12 @@ class ReadinessSnapshotTests(unittest.TestCase):
                          "order_execution_enabled"):
                 self.assertFalse(row[flag])
         self.assertFalse(report["ready_for_live_top50"])
+        bybit = candidates[1]
+        self.assertEqual(
+            bybit["ticker_units_evidence_scope"], "v5_rest_ticker_field_not_attested",
+        )
+        self.assertFalse(bybit["ticker_turnover_unit_verified"])
+        self.assertFalse(bybit["ticker_volume_unit_verified"])
         self.assertFalse(report["ready_for_canonical_ohlcv"])
         self.assertFalse(report["ready_for_public_market_data_release"])
 
@@ -64,6 +77,32 @@ class ReadinessSnapshotTests(unittest.TestCase):
         self.assertFalse(again["automated_execution_candidates"][1]["order_execution_enabled"])
         self.assertFalse(again["ready_for_live_order_execution"])
         self.assertFalse(again["live_trading_authorized"])
+
+    def test_ui_labels_or_candle_metadata_cannot_promote_ticker_units(self):
+        """V5 KLINE BASE/QUOTE and venue UI labels are not REST ticker proof."""
+        first = readiness_snapshot()
+        first["gates"][-1]["status"] = "verified"
+        first["gates"][-1]["reason"] = "some UI text says 24H Turnover(USDT)"
+        first["automated_execution_candidates"][1][
+            "ticker_turnover_unit_verified"
+        ] = True
+        first["automated_execution_candidates"][1][
+            "ticker_volume_unit_verified"
+        ] = True
+        again = readiness_snapshot()
+        gate = {r["capability"]: r for r in again["gates"]}[
+            "bybit_ticker_24h_units"
+        ]
+        self.assertEqual(gate["status"], "blocked")
+        self.assertEqual(gate["source"], "docs/J1_SOURCE_GATES.md")
+        self.assertFalse(
+            again["automated_execution_candidates"][1]["ticker_turnover_unit_verified"]
+        )
+        self.assertFalse(
+            again["automated_execution_candidates"][1]["ticker_volume_unit_verified"]
+        )
+        self.assertFalse(again["ready_for_live_top50"])
+        self.assertFalse(again["ready_for_live_order_execution"])
 
     def test_cli_stable_json(self):
         out = io.StringIO()
