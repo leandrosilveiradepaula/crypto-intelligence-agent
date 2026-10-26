@@ -61,3 +61,8 @@ Executar PAPER prospectivo com dados reais autorizados, observabilidade, replays
 - PR #202 / issue #200: branch `work/issue-200-j6-durable-paper-cursor`; checkpoint de CI verde no SHA `db9bbad0ec3efa9d050f162a6934cd2af931a722` (**1.043 testes** Linux/Windows; Windows registra skips POSIX; QA mobile Chrome verde). **Ainda sem merge na criação deste plano**.
 - Dependências J1 #2/#19/#32/#36/#48/#196 permanecem abertas, sem feed real homologado. Sem trades reais, receita comprovada ou deploy.
 - **Próxima ação imediata:** revisar o contrato de recuperação da PR #202 contra todos os critérios de #200, corrigir/testar o SHA final, fazer squash merge seguro se elegível e verificar pós-merge. Depois priorizar matriz de fontes da J1, sem repetir GET/POST restritos.
+
+
+## Checkpoint executado — 26/10/2026 UTC
+
+A etapa 1, J6/PRE2 #200, teve **aceite limitado à simulação**: PR #201 / #202 / #203 integradas e CI pós-merge `5ee3312b362387a37bc3f403914741a5a33676ea` verde (runs #40392712218 e #40392711941). Não representa a conclusão da J6 épica #7. O próximo foco autorizado é **etapa 2, J1 #2**, conforme matriz WU51 em `docs/J1_SOURCE_GATES.md`, sem repetição de sondas já bloqueadas nem promoção de fonte sem comprovação.
