@@ -162,3 +162,7 @@ AUTO5 #157 propõe uma CLI de percurso automático **somente fixtures**, reunind
 ## J4/AUTO5 integrada; AUTO6 #159 — pendências do journal no RiskGate PAPER
 AUTO5 #157/PR #158 foi integrada SHA `2861207076aea3d2c5cd4f2a079e61825ef599ec`; [CI pós-merge #40298681391](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40298681391) SUCCESS com **830 testes offline**, compileall e 14 docs. O comando `python3 -m scripts.demo_automated_paper_cycle` reproduz cenário sintético de entrada e saídas, sem financeiro real.
 AUTO6 #159 acrescenta preflight/reserva OPEN numa única transação PAPER, calculando pendências/UNKNOWN dos registros locais, não confiando em zeros fornecidos pelo fixture, e atualiza o demo. A PR/CI AUTO6 ainda exigem revisão; J1/J4/J6 continuam abertas e nenhuma autorização live foi dada.
+
+
+## J5/PRE1 #161 — tela em português offline, execução PAPER visualizada
+A branch `codex/issue-161-j5-pre1-mobile-paper-demo` introduz `web/paper-demo.html` com prévia mobile e indicadores de fluxo J4 exclusivamente sintéticos, sem scripts/contas/rede/ordens. A PR/CI desta tela exigem validação antes de integração. Base confirmada: AUTO6 #159/PR #160 integrada SHA `830bdc6705458a7e3f9bb88623a22d8eaf1c1dab`, pós-merge [CI #40299720648](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40299720648) SUCCESS **843 testes offline**, compileall e 14 docs. J1, J2, J3, J4, J5 e J6 ainda não aceitas para operação real; interface é uma amostra, não release.
