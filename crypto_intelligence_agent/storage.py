@@ -241,23 +241,31 @@ class SQLiteMarketDataStore:
             ).fetchall()
         return tuple(_contract_from_row(row) for row in rows)
 
-    def save_universe_snapshot(self, snapshot: UniverseSnapshot) -> None:
+    @staticmethod
+    def _save_universe_snapshot_on_connection(
+        connection: sqlite3.Connection, snapshot: UniverseSnapshot,
+    ) -> None:
+        """Internal insertion shared by single-write and atomic session paths."""
         eligible_json = json.dumps(
             [{"symbol": member.symbol, "rank": member.rank, "quote_volume": str(member.quote_volume)} for member in snapshot.eligible],
             separators=(",", ":"), sort_keys=True,
         )
         excluded_json = json.dumps(dict(snapshot.excluded), separators=(",", ":"), sort_keys=True)
+        existing = connection.execute(
+            "SELECT eligible_json, excluded_json FROM universe_snapshots WHERE observed_at_ms=? AND selection_rule_version=? AND source=?",
+            (snapshot.observed_at_ms, snapshot.selection_rule_version, snapshot.source),
+        ).fetchone()
+        if existing and (existing["eligible_json"] != eligible_json or existing["excluded_json"] != excluded_json):
+            raise DuplicateCandleError("conflicting universe snapshot at the same observed timestamp")
+        connection.execute(
+            "INSERT OR IGNORE INTO universe_snapshots VALUES (?, ?, ?, ?, ?)",
+            (snapshot.observed_at_ms, snapshot.selection_rule_version, snapshot.source, eligible_json, excluded_json),
+        )
+
+    def save_universe_snapshot(self, snapshot: UniverseSnapshot) -> None:
+        """Preserve the existing single-snapshot atomic public API."""
         with self._transaction() as connection:
-            existing = connection.execute(
-                "SELECT eligible_json, excluded_json FROM universe_snapshots WHERE observed_at_ms=? AND selection_rule_version=? AND source=?",
-                (snapshot.observed_at_ms, snapshot.selection_rule_version, snapshot.source),
-            ).fetchone()
-            if existing and (existing["eligible_json"] != eligible_json or existing["excluded_json"] != excluded_json):
-                raise DuplicateCandleError("conflicting universe snapshot at the same observed timestamp")
-            connection.execute(
-                "INSERT OR IGNORE INTO universe_snapshots VALUES (?, ?, ?, ?, ?)",
-                (snapshot.observed_at_ms, snapshot.selection_rule_version, snapshot.source, eligible_json, excluded_json),
-            )
+            self._save_universe_snapshot_on_connection(connection, snapshot)
 
     def universe_snapshot(self, *, observed_at_ms: int, selection_rule_version: str, source: str) -> UniverseSnapshot | None:
         with self._transaction() as connection:
