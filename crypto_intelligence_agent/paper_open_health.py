@@ -9,6 +9,7 @@ position needs reconciliation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from enum import Enum
 from pathlib import Path
 
@@ -20,12 +21,14 @@ from .paper_order_store import (
 from .paper_position_inspection import _checked_path, _read_database
 from .paper_position_reservations import (
     SQLitePaperPositionJournal, _TABLES as _POSITION_TABLES,
-    _VERSION as _POSITION_VERSION,
+    _VERSION as _POSITION_VERSION, _balance,
 )
-from .synthetic_order_lifecycle import PaperOrderEffect
+from .synthetic_order_lifecycle import PaperOrderEffect, PaperOrderStatus
+from .synthetic_manual_exit_replay import _utc_ms
 
 
 class PaperProtectionState(str, Enum):
+    CLOSED_FLAT_HYPOTHETICAL_ONLY = "CLOSED_FLAT_HYPOTHETICAL_ONLY"
     PROTECTED_HYPOTHETICAL_ONLY = "PROTECTED_HYPOTHETICAL_ONLY"
     UNPROTECTED = "UNPROTECTED"
     UNKNOWN = "UNKNOWN"
@@ -49,6 +52,13 @@ class PaperOpenHealth:
     new_open_allowed: bool
     reason: str
     cross_database_atomic_snapshot_available: bool = False
+
+    @property
+    def closed_flat_paper_only(self) -> bool:
+        return bool(self.fills) and all(
+            item.protection_state is PaperProtectionState.CLOSED_FLAT_HYPOTHETICAL_ONLY
+            for item in self.fills
+        )
 
     @property
     def orders_sent(self) -> bool:
@@ -100,7 +110,12 @@ def _checked_order_entries(order_connection):
     )
 
 
-def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHealth:
+def _audit_with_orders(
+    orders, position_journal_path: str | Path,
+    *, decision_at_ms: int | None = None,
+) -> PaperOpenHealth:
+    if decision_at_ms is not None:
+        _utc_ms(decision_at_ms, 'PAPER health decision_at_ms')
     """Inspect positions separately; they are never an exchange stop proof."""
     with _read_database(
         position_journal_path, _POSITION_TABLES, "paper_position_meta", _POSITION_VERSION,
@@ -116,6 +131,10 @@ def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHe
             SQLitePaperPositionJournal._read(position_connection, row["position_id"])
             for row in rows
         )
+        if decision_at_ms is not None and any(
+            record.as_of_ms > decision_at_ms for record in records
+        ):
+            raise DataValidationError('future PAPER position checkpoint is not causal')
         # A dangling index may be invisible to per-position replay. Always
         # reject a journal with orphaned intent->position references.
         orphan = position_connection.execute(
@@ -132,8 +151,16 @@ def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHe
     fills: list[PaperOpenFillHealth] = []
     filled_ids: set[str] = set()
     for entry in orders:
-        if (entry.intent.effect is not PaperOrderEffect.OPEN
-                or entry.snapshot.filled_total_units == 0):
+        if decision_at_ms is not None and entry.snapshot.as_of_ms > decision_at_ms:
+            raise DataValidationError("future PAPER order checkpoint is not causal")
+        if entry.intent.effect is PaperOrderEffect.REDUCE_ONLY:
+            if entry.snapshot.requires_reconciliation:
+                fills.append(PaperOpenFillHealth(
+                    entry.intent.intent_id, None, PaperProtectionState.UNKNOWN,
+                    "unresolved_order_journal_reduce_only",
+                ))
+            continue
+        if entry.intent.effect is not PaperOrderEffect.OPEN or entry.snapshot.filled_total_units == 0:
             continue
         filled_ids.add(entry.intent.intent_id)
         matches = positions_by_open.get(entry.intent.intent_id, [])
@@ -151,11 +178,43 @@ def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHe
                 "opening_intent_or_fill_events_mismatch",
             ))
             continue
-        fills.append(PaperOpenFillHealth(
-            entry.intent.intent_id, record.position_id,
-            PaperProtectionState.PROTECTED_HYPOTHETICAL_ONLY,
-            "synthetic_exit_plan_is_not_native_stop",
-        ))
+        if entry.snapshot.requires_reconciliation:
+            fills.append(PaperOpenFillHealth(
+                entry.intent.intent_id, record.position_id, PaperProtectionState.UNKNOWN,
+                "opening_order_not_terminal",
+            ))
+            continue
+        # Reuse canonical AUTO4 replay, with exact Decimal conservation.
+        balance = _balance(record)
+        if any(
+            exit_order.snapshot.requires_reconciliation
+            or exit_order.snapshot.status not in (
+                PaperOrderStatus.FILLED, PaperOrderStatus.CANCELLED,
+                PaperOrderStatus.REJECTED,
+            )
+            for exit_order in balance.exit_orders
+        ):
+            fills.append(PaperOpenFillHealth(
+                entry.intent.intent_id, record.position_id, PaperProtectionState.UNKNOWN,
+                "unresolved_paper_reduce_only_exit",
+            ))
+        elif (balance.initial_confirmed_units > Decimal(0)
+              and balance.confirmed_remaining_units == Decimal(0)
+              and balance.reserved_unfilled_units == Decimal(0)
+              and balance.unreserved_units == Decimal(0)
+              and balance.runner_floor_units == Decimal(0)
+              and balance.filled_exit_units == balance.initial_confirmed_units):
+            fills.append(PaperOpenFillHealth(
+                entry.intent.intent_id, record.position_id,
+                PaperProtectionState.CLOSED_FLAT_HYPOTHETICAL_ONLY,
+                "explicit_reduce_only_fills_fully_flat_paper_only",
+            ))
+        else:
+            fills.append(PaperOpenFillHealth(
+                entry.intent.intent_id, record.position_id,
+                PaperProtectionState.PROTECTED_HYPOTHETICAL_ONLY,
+                "synthetic_exit_plan_is_not_native_stop",
+            ))
     for opening_id, matches in positions_by_open.items():
         if opening_id not in filled_ids:
             for record in matches:
@@ -166,6 +225,8 @@ def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHe
     if not fills:
         return PaperOpenHealth((), True, "no_filled_open_or_position_requires_protection")
     states = {item.protection_state for item in fills}
+    if states == {PaperProtectionState.CLOSED_FLAT_HYPOTHETICAL_ONLY}:
+        return PaperOpenHealth(tuple(fills), True, "all_paper_positions_fully_flat_hypothetical_only")
     if PaperProtectionState.UNKNOWN in states:
         reason = "paper_open_health_unknown"
     elif PaperProtectionState.UNPROTECTED in states:
@@ -177,7 +238,7 @@ def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHe
 
 def _audit_paper_open_health_locked(
     order_connection, order_journal_path: str | Path,
-    position_journal_path: str | Path,
+    position_journal_path: str | Path, *, decision_at_ms: int,
 ) -> PaperOpenHealth:
     """Used only during the order journal BEGIN IMMEDIATE transaction.
 
@@ -189,11 +250,15 @@ def _audit_paper_open_health_locked(
     if _checked_path(order_journal_path) == _checked_path(position_journal_path):
         raise DataValidationError("PAPER order and position health sources must be independent")
     _verify_locked_order_schema(order_connection)
-    return _audit_with_orders(_checked_order_entries(order_connection), position_journal_path)
+    return _audit_with_orders(
+        _checked_order_entries(order_connection), position_journal_path,
+        decision_at_ms=decision_at_ms,
+    )
 
 
 def audit_paper_open_health(
     order_journal_path: str | Path, position_journal_path: str | Path,
+    *, decision_at_ms: int | None = None,
 ) -> PaperOpenHealth:
     """Read-only independent diagnostic (not a reservation authorization).
 
@@ -207,4 +272,5 @@ def audit_paper_open_health(
     ) as order_connection:
         return _audit_with_orders(
             _checked_order_entries(order_connection), position_journal_path,
+            decision_at_ms=decision_at_ms,
         )
