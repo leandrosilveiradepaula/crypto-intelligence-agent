@@ -1,5 +1,6 @@
 """Regression: loss or weakening of J1 source gates must break docs CI (offline)."""
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -65,7 +66,8 @@ class SourceGateDocsTests(unittest.TestCase):
                        "reduce-only", "live_trading_enabled=false",
                        "order_submission_enabled=false"):
             with self.subTest(marker=marker):
-                spec.write_text(original.replace(marker, "DELETED"), encoding="utf-8")
+                spec.write_text(re.sub(re.escape(marker), "DELETED", original,
+                                       flags=re.IGNORECASE), encoding="utf-8")
                 result = self.check()
                 self.assertNotEqual(result.returncode, 0, result.stdout)
                 self.assertIn("missing automated execution invariant", result.stdout)
