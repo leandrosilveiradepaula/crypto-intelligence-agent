@@ -15,6 +15,7 @@ REQUIRED = [
     "docs/JOURNEYS.md",
     "docs/STATUS.md",
     "docs/OPERATIONAL_STATE.md",
+    "docs/J1_SOURCE_GATES.md",
 ]
 errors = []
 texts = {}
@@ -36,6 +37,7 @@ state = texts.get("docs/OPERATIONAL_STATE.md", "")
 data_contract = texts.get("docs/DATA_CONTRACT.md", "")
 registry_doc = texts.get("docs/CRYPTO_REGISTRY.md", "")
 rights_doc = texts.get("docs/PROVIDER_RIGHTS.md", "")
+source_gates = texts.get("docs/J1_SOURCE_GATES.md", "")
 product = texts.get("docs/PRODUCT_SPEC.md", "")
 for token in ["microtarefa", "prossiga", "Codex", "GitHub"]:
     if token.lower() not in agents.lower():
@@ -59,6 +61,15 @@ for token in ["SHA-256", "look-ahead", "internal_research_only", "CoinPaprika", 
 for token in ["commercial_or_public_distribution_authorized = false", "marketdata@kraken.com", "não concede", "BLOQUEADO", "R$0,00"]:
     if token.lower() not in rights_doc.lower():
         errors.append(f"missing provider rights release gate: {token}")
+
+# The matrix is a release-critical negative attestation, not an optional reference.
+# Text checks do not authenticate upstream market data or legal rights.
+for token in (
+    "J1 #2 NÃO homologada", "Kraken Futures", "volume", "price-only",
+    "Top50", "#32", "#36", "#48", "direitos", "BLOQUEADO",
+):
+    if token.lower() not in source_gates.lower():
+        errors.append(f"missing J1 source-gates invariant: {token}")
 
 if errors:
     for error in errors:
