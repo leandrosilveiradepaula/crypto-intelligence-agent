@@ -346,6 +346,64 @@ class SyntheticIntrabarBarrierTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             validate_synthetic_research_price(10.5, "test")
 
+
+    def test_cross_module_cost_receipt_cannot_certify_intrabar_fill_or_profit(self):
+        """Cost arithmetic and ambiguous OHLC remain separate evidence."""
+        from crypto_intelligence_agent.synthetic_cost_scenarios import (
+            SyntheticCostScenario, evaluate_synthetic_costs,
+        )
+        observation = assess(
+            rows=(candle(high="112", low="94"),),
+            p=plan(stop=D("95"), target=D("110")),
+        )
+        self.assertEqual(observation.kind, ObservationKind.MULTIPLE_LEVELS_UNORDERED)
+        costs = evaluate_synthetic_costs(SyntheticCostScenario(
+            direction=ResearchDirection.LONG,
+            entry_at_ms=START,
+            exit_at_ms=START+HOUR,
+            entry_hypothetical_notional_quote_units=D("1000"),
+            exit_hypothetical_notional_quote_units=D("1000"),
+            entry_fee_bps=D("10"),
+            exit_fee_bps=D("10"),
+            entry_adverse_slippage_bps=D("5"),
+            exit_adverse_slippage_bps=D("5"),
+        ))
+        self.assertEqual(costs.total_signed_cost_units, D("3"))
+        self.assertFalse(costs.fill_price_verified)
+        self.assertFalse(costs.net_pnl_verified)
+        self.assertFalse(observation.intrabar_path_verified)
+        self.assertFalse(observation.financial_backtest_approved)
+        self.assertFalse(observation.profitable_trade_verified)
+
+    def test_cross_module_liquidation_collision_does_not_resolve_with_costs(self):
+        from crypto_intelligence_agent.synthetic_cost_scenarios import (
+            SyntheticCostScenario, evaluate_synthetic_costs,
+        )
+        for side, row, p in (
+            (ResearchDirection.LONG, candle(high="112", low="89"),
+             plan(liquidation=D("90"))),
+            (ResearchDirection.SHORT, candle(high="111", low="88"),
+             plan(side=ResearchDirection.SHORT, stop=D("105"),
+                  target=D("90"), liquidation=D("110"))),
+        ):
+            with self.subTest(side=side):
+                obs = assess(rows=(row,), p=p)
+                self.assertEqual(obs.kind, ObservationKind.MULTIPLE_LEVELS_UNORDERED)
+                self.assertIn(SyntheticBarrier.HYPOTHETICAL_LIQUIDATION,
+                              obs.levels_reached)
+                costs = evaluate_synthetic_costs(SyntheticCostScenario(
+                    direction=side, entry_at_ms=START, exit_at_ms=START+HOUR,
+                    entry_hypothetical_notional_quote_units=D("100"),
+                    exit_hypothetical_notional_quote_units=D("100"),
+                    entry_fee_bps=D("0"), exit_fee_bps=D("0"),
+                    entry_adverse_slippage_bps=D("0"),
+                    exit_adverse_slippage_bps=D("0"),
+                ))
+                self.assertEqual(costs.total_signed_cost_units, D(0))
+                self.assertFalse(obs.liquidation_formula_verified)
+                self.assertFalse(costs.financial_backtest_approved)
+                self.assertFalse(costs.fill_price_verified)
+
     def test_no_network_storage_or_real_order_dependencies(self):
         text = (Path(__file__).resolve().parent.parent
                 / "crypto_intelligence_agent/synthetic_intrabar_barriers.py").read_text()
