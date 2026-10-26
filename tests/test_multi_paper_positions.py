@@ -1,5 +1,5 @@
 """J5/PRE5: multi-position selection is single-snapshot, read-only and non-live."""
-from contextlib import redirect_stdout
+from contextlib import closing, redirect_stdout
 from decimal import Decimal
 from html.parser import HTMLParser
 from io import StringIO
@@ -153,7 +153,7 @@ class MultiPaperPositionsTests(unittest.TestCase):
             inspect_paper_positions(self.path, ["fixture_multi_position_A"])
 
     def test_corrupt_second_selected_position_does_not_return_partial_results(self):
-        with sqlite3.connect(self.path) as con:
+        with closing(sqlite3.connect(self.path)) as con, con:
             con.execute(
                 "UPDATE paper_positions SET payload='{}' WHERE position_id=?",
                 ("fixture_multi_position_B",),
@@ -169,7 +169,7 @@ class MultiPaperPositionsTests(unittest.TestCase):
     def test_all_positions_share_one_sqlite_snapshot_under_concurrent_wal_writer(self):
         # With WAL mode a writer can advance B after A is read while the single
         # inspector transaction keeps the prior B snapshot consistent.
-        with sqlite3.connect(self.path) as con:
+        with closing(sqlite3.connect(self.path)) as con, con:
             self.assertEqual(con.execute("PRAGMA journal_mode=WAL").fetchone()[0], "wal")
         original_read = SQLitePaperPositionJournal._read
         errors = []
