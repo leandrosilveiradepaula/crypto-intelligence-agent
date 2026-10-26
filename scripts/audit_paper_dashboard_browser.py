@@ -57,6 +57,10 @@ _LAYOUT_JS = r"""() => {
   const firstTabbable = [...document.querySelectorAll('a[href], [tabindex], button, input')]
       .find(el => el.tabIndex >= 0);
   const tableScroll = table ? table.scrollWidth - table.clientWidth : 0;
+  const flow = document.querySelector('.flow');
+  const flowTracks = flow ? getComputedStyle(flow).gridTemplateColumns.trim().split(/\\s+/).length : 0;
+  const redundantLabel = document.querySelector('.header-label');
+  const labelVisible = Boolean(redundantLabel && getComputedStyle(redundantLabel).display !== 'none');
   function rgb(text) {
     const m = text.match(/rgba?\(([^)]+)\)/);
     return m ? m[1].split(',').slice(0,3).map(Number) : null;
@@ -91,6 +95,8 @@ _LAYOUT_JS = r"""() => {
         && table.getAttribute('aria-label')
         && table.getAttribute('aria-describedby') === 'table-scroll-instructions'),
     table_extra_scroll_width: tableScroll,
+    flow_columns: flowTracks,
+    header_label_visible: labelVisible,
     contrast: {
       muted_stat: contrast('.stat dt', '.stat'),
       warning: contrast('.warning p', '.warning'),
@@ -163,6 +169,9 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                     errors.append("elements extend outside viewport")
                 if observed["clipped"]:
                     errors.append("card/header text is clipped")
+                if width <= 420 and (observed["flow_columns"] != 1
+                                     or observed["header_label_visible"]):
+                    errors.append("narrow flow cards/header must use readable single column")
                 if not observed["banner_visible"]:
                     errors.append("SIMULADO warning missing from visible layout")
                 if not observed["skip_link"]:
