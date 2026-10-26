@@ -307,3 +307,7 @@ J6/PRE2 issue #200 **fechada somente como work unit de fixture** em 26/10/2026; 
 ## J1/AUTH1 #205 — autorização read-only do Product Owner (26/10/2026 UTC)
 
 O usuário autorizou **somente conexão de leitura** de suas contas Binance e Bybit na VPS existente. Contrato e procedimento em `docs/PRIVATE_EXCHANGE_READONLY.md`; scripts e testes mockados na branch `work/issue-205-readonly-exchange-probe`, sem requisição autenticada real. Consulta ao plugin DigitalOcean retornou **zero droplets visíveis**; acesso à VPS/chaves não comprovado. Próximo gate é revisar CI Linux/Windows/QA, confirmar infraestrutura existente sem gasto, e executar diagnóstico somente em ambiente privado permitido com credenciais read-only. Nenhuma ordem, saldo divulgado, credential em chat, proxy, deploy ou alteração produtiva. J1 #2 e J6 #7 permanecem abertas.
+
+
+### AUTH1 Hostinger — 26/10/2026
+O titular confirmou VPS existente na Hostinger. Não há acesso remoto autenticado à VPS nesta sessão. A autorização é somente leitura para Binance/Bybit, sem ordens, credenciais em chat, gasto ou deploy de trading. O procedimento Hostinger está em `docs/PRIVATE_EXCHANGE_READONLY.md`; PR #206 segue em revisão. Próximo passo: CI no SHA final e merge seguro; diagnóstico real exige sessão privada no hPanel/SSH da VPS.
