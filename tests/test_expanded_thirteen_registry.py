@@ -14,7 +14,7 @@ from crypto_intelligence_agent.research_registry_catalog import (
 ROOT = Path(__file__).resolve().parent.parent / "registries"
 V2 = ROOT / "crypto-bases-10-20261025-v2.json"
 V3 = ROOT / "crypto-bases-13-20261026-v3.json"
-T = 1792982308000
+T = 1792982418000
 
 
 class ExpandedThirteenIdentityTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class ExpandedThirteenIdentityTests(unittest.TestCase):
         self.assertEqual(len(current.assets), 13)
         self.assertEqual(current.observed_at_ms, T)
         self.assertEqual(current.sha256_digest,
-                         "b085b116e00dd903486060c1b7b95a07bfb1b6489c560ce0ea596f86e19ec2e0")
+                         "6b4d1de3d0d7519a3f08470b487b062cc216e3586873553b1a7029d32e6aa12b")
         self.assertEqual({x.base for x in current.assets[10:]}, {"XMR", "ETC", "ZEC"})
         for asset in current.assets[10:]:
             self.assertEqual(len({e.publisher_root for e in asset.evidence}), 2)
