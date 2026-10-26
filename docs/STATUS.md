@@ -140,3 +140,7 @@ Binance USD-M já tem adaptador/fixtures offline, mas o run real anterior foi bl
 
 ## J4/AUTO1 #149 — base de ordens simuladas, não robô pronto
 A implementação proposta adiciona `synthetic_order_lifecycle.py` e testes offline de estados e fills fictícios, como pré-requisito para controle automático de ordens. O estado nunca envia ordens nem cria PnL; lida com ACK vs FILL, timeout UNKNOWN, duplicações, parciais e REDUCE_ONLY puramente hipotético. Ausentes: estratégia J2 homologada, venue de execução selecionada, estado persistente/reconciliação REST+WS reais, stops, RiskGate global, licença de dados, controle regional e liberação live. #5 e #7 continuam abertos; nenhuma ordem real.
+
+
+## J4/AUTO2 #151 — diário SQLite de ordens simuladas (em validação)
+Incremento PAPER: intenções fictícias reservadas de forma durável, eventos hipotéticos de ACK/UNKNOWN/FILL/cancel e checkpoints reconstruíveis em transação SQLite atômica. Replays no mesmo arquivo não duplicam OPEN por sinal nem fills por IDs idênticos; corrupção e conflito interrompem o processamento. Ainda não há executor, integração privada Binance/Bybit, orçamento de risco, saldo agregado real, parciais coordenadas por posição, stops no livro da exchange ou PnL homologado. Nenhuma credencial/POST/ordem real, sem testnet, sem produção, sem seleção final de venue. A J4 #5 permanece aberta, além da J1 #2 e bloqueios de dados #19/#32/#36/#48.
