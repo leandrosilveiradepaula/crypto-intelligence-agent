@@ -28,6 +28,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--registry", choices=("btc-eth", "expanded-10"), default="btc-eth")
     parser.add_argument("--max-price-symbols", type=int, default=1,
                         help="1 to 5 real eligible perpetuals (BTC first); max 2+N GETs")
+    parser.add_argument("--price-hours", type=int, default=3,
+                        help="3 to 72 closed 1H price-only bars per selected symbol, default 3")
     args = parser.parse_args(argv)
     try:
         summary = capture_private_research(
@@ -35,6 +37,7 @@ def main(argv: list[str] | None = None) -> int:
             allow_private_persistence=args.allow_private_persistence,
             registry_variant=args.registry,
             max_price_symbols=args.max_price_symbols,
+            price_hours=args.price_hours,
         )
         result = {"status": "private_local_capture_complete", **asdict(summary)}
     except LocalResearchError as error:
