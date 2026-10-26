@@ -220,6 +220,87 @@ cursor.step_durable_offline_paper(
         self.assertTrue(self.step(6).opening.paper_intent_reserved)
         self.assertEqual(self.counts(), (1, 2))
 
+    def test_crash_after_commit_keeps_one_open_and_recoverable_cursor(self):
+        self.step(5)
+        # The process exits without graceful teardown AFTER the AUTO2 context
+        # manager committed. Replay must be refused, not duplicated.
+        code = """
+import os, sys
+from pathlib import Path
+from decimal import Decimal
+sys.path.insert(0, str(Path.cwd() / "tests"))
+from test_causal_paper_open import limits, observation
+from test_synthetic_research_cycle import candles, config
+from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
+from crypto_intelligence_agent.synthetic_order_lifecycle import PaperVenue
+from crypto_intelligence_agent.offline_paper_durable_cursor import step_durable_offline_paper
+rows = candles(n=6)
+now = rows[-1].close_time_ms + 1000
+step_durable_offline_paper(
+    rows, strategy=config().strategy, venue=PaperVenue.BINANCE_USDM,
+    requested_units=Decimal(2), limits=limits(), observation=observation(now),
+    journal=SQLitePaperOrderJournal(Path(sys.argv[1])),
+    position_journal_path=Path(sys.argv[2]), decision_at_ms=now,
+    max_candles=20,
+)
+os._exit(74)
+"""
+        completed = subprocess.run(
+            [sys.executable, "-c", code, str(self.db), str(self.positions_path)],
+            cwd=Path(__file__).resolve().parent.parent, capture_output=True,
+            text=True, timeout=20, check=False,
+        )
+        self.assertEqual(completed.returncode, 74, completed.stderr)
+        self.assertEqual(self.counts(), (1, 2))
+        self.assertEqual(self.recover(6).candle_count, 6)
+        with self.assertRaises(DataValidationError):
+            self.step(6)
+        self.assertFalse(self.step(7).opening.paper_intent_reserved)
+        self.assertEqual(self.counts(), (1, 2))
+
+    def test_sqlite_busy_does_not_advance_cursor_or_open(self):
+        self.step(5)
+        with closing(sqlite3.connect(self.db, timeout=1)) as blocker:
+            blocker.execute("BEGIN IMMEDIATE")
+            with self.assertRaises(sqlite3.OperationalError):
+                self.step(6)
+            blocker.rollback()
+        self.assertEqual(self.recover(5).candle_count, 5)
+        self.assertEqual(self.counts(), (0, 2))
+        self.assertTrue(self.step(6).opening.paper_intent_reserved)
+
+    def test_open_inventory_tampering_fails_closed_after_restart(self):
+        self.step(5)
+        self.step(6)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute("DELETE FROM paper_order_intents")
+            conn.commit()
+        with self.assertRaisesRegex(DataValidationError, "diverged"):
+            self.recover(6)
+        with self.assertRaisesRegex(DataValidationError, "diverged"):
+            self.step(7)
+
+    def test_unknown_metadata_key_blocks_after_restart(self):
+        self.step(5)
+        with closing(sqlite3.connect(self.db)) as conn:
+            conn.execute(
+                "INSERT INTO paper_order_meta(key,value) VALUES('unexpected','x')"
+            )
+            conn.commit()
+        with self.assertRaises(DataValidationError):
+            self.recover(5)
+        with self.assertRaises(DataValidationError):
+            SQLitePaperOrderJournal(self.db)
+
+    def test_sqlite_corruption_is_not_silent_recovery(self):
+        self.step(5)
+        # Delete the order file bytes only in a disposable test fixture.
+        self.db.write_bytes(b"not-a-sqlite-journal")
+        with self.assertRaises(sqlite3.DatabaseError):
+            self.recover(5)
+        with self.assertRaises(sqlite3.DatabaseError):
+            self.step(6)
+
     def test_no_network_and_recovery_does_not_reserve(self):
         with patch("urllib.request.urlopen", side_effect=AssertionError("network")):
             with patch("socket.create_connection", side_effect=AssertionError("network")):
