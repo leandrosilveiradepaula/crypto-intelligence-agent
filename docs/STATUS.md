@@ -202,3 +202,9 @@ PRE4 issue #168/PR #169 integrada no squash SHA `3ab6f99c81f1a72336f5df90d2297ab
 ## J2/PRE2 #172 — hipótese de entrada estudável sem feeds/ordens
 
 Foi iniciada a implementação do primeiro **avaliador matemático de entrada** (compressão ATR histórica, breakout estrito, filtro EMA/volume) com candles exclusivamente sintéticos e causalidade explícita. A engine J2/PRE1 fornece todos os indicadores, sem recálculo duplicado. Testes quantitativos de referência LONG/SHORT e adversariais foram adicionados. `ResearchCandidate` é hipótese e `approved_for_live_use=false`; não é sinal operacional, backtest, feed real ou rentabilidade. A J1 não está homologada e ainda não há dados históricos permitidos/representativos. A WU depende de CI e revisão no SHA da PR antes de integração, sem publicação ou ordem real.
+
+
+
+## J3/PRE3 #174 — validade temporal antes de pesquisa de resultados
+
+Implementação da estrutura offline de walk-forward: janelas de treino, gap e teste não sobreposto, fechamento confirmado antes de cada teste, regras de replay e recusa de períodos incompletos. J2/PRE2 #172/PR #173 integrada merge `d241dc8e025d88c98b7c5bc8cd7b366d63b25e14`, CI PR #40327807689 SUCCESS (**896 testes offline**, 14 docs), browser #40327807652 SUCCESS e ambas CI pós-merge #40327984929/#40327984911 SUCCESS. J5/PRE5 #170/PR #171 integrada merge `4c66aa7f9a3f4542396ff79a13e8f99b3d3a86de`, Python pós-merge #40326996341 e Chrome #40326996359 SUCCESS (**884 testes PR**). PRE3 aguarda CI própria; suas janelas ainda **NÃO** produzem resultados financeiros, ganhos, sinal autorizado ou PnL. J1–J6 não homologadas operacionalmente.
