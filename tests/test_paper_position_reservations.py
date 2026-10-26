@@ -88,7 +88,7 @@ class PaperPositionReservationTests(unittest.TestCase):
             opening_intent=opened_order(),
             opening_events=(e("open", PaperOrderEventKind.FILL, 1, "100"),),
             exit_plan=plan() if exit_plan is None else exit_plan,
-            plan_version="paper-plan-v1", as_of_ms=T + 1,
+            plan_version="paper-plan-v1", synthetic_lot_step_units=D(1), as_of_ms=T + 1,
         )
 
     def test_opening_is_derived_from_fills_not_ack_or_unknown(self):
@@ -112,14 +112,14 @@ class PaperPositionReservationTests(unittest.TestCase):
                 position_id="fixture_no_fill",
                 opening_intent=opened_order(intent_id="fixture_open_2"),
                 opening_events=(e("ack", PaperOrderEventKind.ACKNOWLEDGED, 1),),
-                exit_plan=plan(), plan_version="paper-plan-v1", as_of_ms=T + 1,
+                exit_plan=plan(), plan_version="paper-plan-v1", synthetic_lot_step_units=D(1), as_of_ms=T + 1,
             )
         with self.assertRaises(DataValidationError):
             self.store.create_position(
                 position_id="fixture_misreported_fill",
                 opening_intent=opened_order(intent_id="fixture_open_3"),
                 opening_events=(e("small", PaperOrderEventKind.FILL, 1, "10"),),
-                exit_plan=plan(), plan_version="paper-plan-v1", as_of_ms=T + 1,
+                exit_plan=plan(), plan_version="paper-plan-v1", synthetic_lot_step_units=D(1), as_of_ms=T + 1,
             )
 
     def test_realized_tranches_leave_six_percent_runner(self):
@@ -227,7 +227,7 @@ class PaperPositionReservationTests(unittest.TestCase):
                 position_id=first.position_id,
                 opening_intent=opened_order(),
                 opening_events=(e("open", PaperOrderEventKind.FILL, 1, "100"),),
-                exit_plan=plan(floor="5"), plan_version="paper-plan-v1",
+                exit_plan=plan(floor="5"), plan_version="paper-plan-v1", synthetic_lot_step_units=D(1),
                 as_of_ms=T + 1,
             )
         order = exit_order("idempotent", "50", 1)
@@ -258,7 +258,7 @@ class PaperPositionReservationTests(unittest.TestCase):
             position_id="fixture_position_A",
             opening_intent=opened_order(),
             opening_events=(e("open", PaperOrderEventKind.FILL, 1, "100"),),
-            exit_plan=plan(), plan_version="paper-plan-v1", as_of_ms=T + 1,
+            exit_plan=plan(), plan_version="paper-plan-v1", synthetic_lot_step_units=D(1), as_of_ms=T + 1,
         )
         self.assertEqual(same_open, after)
         self.assertEqual(same_open.filled_exit_units, D(20))
@@ -378,7 +378,7 @@ class PaperPositionReservationTests(unittest.TestCase):
         opts = dict(
             position_id="fixture_partial_position",
             opening_intent=opened_order(intent_id="fixture_partial_entry"),
-            exit_plan=short_plan, plan_version="partial-v1", as_of_ms=T + 2,
+            exit_plan=short_plan, plan_version="partial-v1", synthetic_lot_step_units=D(1), as_of_ms=T + 2,
         )
         with self.assertRaises(DataValidationError):
             self.store.create_position(opening_events=(partial,), **opts)
