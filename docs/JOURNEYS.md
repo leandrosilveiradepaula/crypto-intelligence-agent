@@ -160,3 +160,8 @@ WU49 acrescenta a auditoria OFFLINE de respostas de instrumentos `linear` pagina
 ## J1/WU50 #196 — distinguir evidência da UI de contrato REST ticker
 
 Diligência em fontes oficiais Bybit (REST tickers, WebSocket, Kline, instrumentos e interface de negociação) registra legibilidade de `24H Turnover(USDT)`/`24H Volume(BASE)` em páginas de perpétuos, mas nenhuma declaração explícita da unidade dos nomes `turnover24h` e `volume24h` da rota REST V5 linear. O relatório de prontidão J1 registra `bybit_ticker_24h_units=blocked`, separando a moeda QUOTE documentada do instrumento de uma unidade TICKER ainda não atestada. O draft de pergunta ao fornecedor não foi enviado e nenhum feed ou trading foi acionado; J1 #2 e direitos permanecem bloqueados.
+
+
+## J6/PRE1 #198 — integração de replay em ordem temporal com AUTO7/8/9
+
+O percurso de pesquisa incremental recebe apenas candles artificiais como prefixo fechado, exige uma nova barra por decisão e rejeita reescrita, saltos e uso de futura observação. A reserva PAPER que resultar do sinal passa pelos gates já existentes de risco/posição, sem criar fills ou stops automaticamente. O checkpoint é in-memory e não constitui recuperação após restart nem feed prospectivo verdadeiro; J6 #7 segue aberta para observabilidade real, incidentes, dados e autorização futura. Nenhum trade, conta, API ou gasto.

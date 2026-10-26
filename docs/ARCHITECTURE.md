@@ -198,3 +198,8 @@ Antes de uma nova reserva causal, `causal_paper_open` invoca `paper_open_health.
 ## J4/AUTO9 #192 — gate conservador para posição PAPER encerrada
 
 O auditor AUTO8 reutiliza o `_balance` canônico de AUTO4 e somente classifica `CLOSED_FLAT_HYPOTHETICAL_ONLY` quando há eventos de FILL REDUCE_ONLY explícitos que levam exatamente a zero, com estados de saída terminais e sem runner/reservas. A transação `BEGIN IMMEDIATE` do journal AUTO2 retém o lock na verificação de saúde, risco e reserva; o `decision_at_ms` é passado ao replay para recusar checkpoints futuros de ambos os arquivos SQLite. AUTO4 continua lido separadamente sem atomicidade cross-DB. Diagnóstico read-only isolado não substitui o gate transacional nem a validação real de proteção.
+
+
+## J6/PRE1 #198 — invólucro in-memory de decisão incremental PAPER
+
+`crypto_intelligence_agent.offline_paper_forward_session.OfflinePaperForwardSession` é camada fina sobre `synthetic_feature_engine._checked_candles` e `causal_paper_open.reserve_causal_paper_open`. Cada chamada com prefixo fechado verifica continuidade, identidade, integridade de todos os registros previamente aceitos e instante exato de decisão. Somente após o gate AUTO7/8/9 devolver resposta válida avança o estado da instância. Sinal atual pode produzir intenção OPEN `PENDING` com zero fills; no-signal ou risk-denial não inventa evento. Sessão usa lock local e limite de memória, sem checkpoint persistente, fila, worker, webhook, app, socket ou fonte de dados real. A garantia da transação de ordens continua restrita ao arquivo AUTO2; AUTO4 é banco independente. Exigir reconciliação externa na inicialização futura de fluxo real.
