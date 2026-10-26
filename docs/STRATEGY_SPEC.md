@@ -99,3 +99,8 @@ Saída `SyntheticEntryResearch` / `SyntheticEntryCandidate` conserva horário de
 ## J3/PRE3 — separar treino e teste sem escolher parâmetro pelo futuro
 
 A hipótese J2/PRE2 pode futuramente ser examinada em folds walk-forward, mas `synthetic_walk_forward.py` **apenas** estabelece janelas temporais com embargo simples e teste não sobreposto. Os thresholds e testes fora da amostra continuam não validados: não retroajustar parâmetros após observar o OOS do MESMO fold; não chamar separação temporal de estratégia rentável; nenhum sinal para exchange. Gaps entre treino e teste evitam usar candle não fechado sob `close_safety_ms`; isso não resolve sobreposição de labels de trades sem horizonte explícito, nem viés de seleção/dados. J3 #4 e J2 #3 seguem abertas.
+
+
+## J3/PRE5 #178 — contrato de aproximação da hipótese J2 ao OOS
+
+`synthetic_oos_replay.py` coordena **somente pesquisa sintética**: usa a hipótese A já existente, o plano causal PRE3 e a purga/censura PRE4, sem reimplementar EMA, ATR, volume ou rompimentos. Para cada candle OOS elegível, recalcula J2 exclusivamente a partir do prefixo até seu fechamento; registra abstenção ou candidato emitido naquele candle. Só depois observa `close[i+h]` e classifica direção relativa como alinhada/contrária/estável, com identidade, índice e UTC auditáveis. O método não refaz o treinamento, não escolhe parâmetros, não impede dependência dos labels entre si e não calcula retorno, PnL, custo, slippage ou fill. Reavaliar hipótese com dados reais canônicos, composição histórica, autorização de uso e teste financeiro é obrigação futura. Não conectar esse relatório PAPER à automação de ordens de D77.
