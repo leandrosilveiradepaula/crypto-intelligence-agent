@@ -191,3 +191,6 @@ Validar PRE3 e PRE4 novamente antes de cada replay. Processar **somente** `oos_i
 ## J3/PRE6 #180 — cenários financeiros condicionais offline
 
 Testar LONG/SHORT com preços de fixture explícitos, custos/funding positivos e negativos, perda de liquidação declarada, precisão Decimal e replay determinístico. Candle com níveis simultâneos precisa de múltiplas ramificações; cenário sem saída/perda, funding sem proveniência/moeda/sinal, identidade divergente ou ausência de barreira deve recusar antes de gerar resultado. Não testar inferência de fill, rentabilidade, execução, dados reais ou autorização de ordem: o output é cenário condicional, não backtest financeiro.
+
+
+**Regressões obrigatórias de review PRE6:** rejeitar nocional de custo diferente de entrada/saída × quantidade, lado ou entrada diferentes do plano PRE1, barreira não atingida, liquidação sem nível de liquidação declarado, duas cópias de TARGET fingindo cobrir TARGET+STOP, timestamp de saída fora da vela de primeiro toque, origem ou intervalo inconsistentes, moeda sintética vazia e quantidades/contagem excessivas. Um resultado explícito de liquidação pode usar nocional de taxa de saída **somente como hipótese separada**, pois não há preço de fill. Garantir `assumed_barrier` auditável nos resultados. A CI Linux inclui o teste de regressão adicional, não apenas o conjunto original de oito testes.
