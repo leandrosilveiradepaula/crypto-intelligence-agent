@@ -301,3 +301,30 @@ jobs:
           set -eu
           python3 -m scripts.probe_dydx_private_base_usd \
             --allow-public-network --allow-private-dydx-probe
+
+  kraken-btc-private-24h-history:
+    if: >-
+      github.event.issue.number == 130 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-kraken-btc-24h-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout reviewed main without retained credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate 24 closed BTC hourly price bars in disposable private SQLite
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          private_dir="$(mktemp -d)"
+          chmod 700 "$private_dir"
+          trap 'rm -rf "$private_dir"' EXIT
+          python3 -m scripts.collect_private_kraken_research \
+            --database "$private_dir/private.sqlite" \
+            --allow-public-network --allow-private-persistence \
+            --registry expanded-10 --max-price-symbols 1 --price-hours 24
