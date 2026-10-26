@@ -126,5 +126,88 @@ class PaperRiskGateTests(unittest.TestCase):
         ).allowed_for_paper_only)
 
 
+    def test_kill_switch_does_not_prevent_planning_paper_exit(self):
+        close = intent(
+            intent_id="fixture_close_X", fixture_signal_id="fixture_close_signal_X",
+            effect=PaperOrderEffect.REDUCE_ONLY, side=PaperOrderSide.SELL,
+            max_reducible_units=D(10),
+        )
+        d = evaluate_paper_risk(
+            close, limits(),
+            obs(kill_switch_active=True, unresolved_open_exists=True),
+            decision_at_ms=T + 5000,
+        )
+        self.assertTrue(d.allowed_for_paper_only)
+        self.assertEqual(d.reason, PaperRiskReason.PROTECTIVE_EXIT_PAPER_ONLY)
+        self.assertFalse(d.order_submission_enabled)
+        self.assertFalse(d.orders_sent)
+
+    def test_venue_and_quote_incompatible_snapshots_fail(self):
+        with self.assertRaises(DataValidationError):
+            evaluate_paper_risk(intent(), limits(),
+                                obs(venue=PaperVenue.BYBIT_V5), decision_at_ms=T)
+        with self.assertRaises(DataValidationError):
+            evaluate_paper_risk(intent(), limits(),
+                                obs(symbol="ETHUSDT"), decision_at_ms=T)
+        for name in ("USDC", "USD", "BTC"):
+            with self.subTest(name=name), self.assertRaises(DataValidationError):
+                obs(quote_currency=name)
+        bybit_order = intent(venue=PaperVenue.BYBIT_V5, symbol="BTCUSDC")
+        bybit_obs = obs(
+            venue=PaperVenue.BYBIT_V5, symbol="BTCUSDC", quote_currency="USDC",
+        )
+        self.assertTrue(evaluate_paper_risk(
+            bybit_order, limits(), bybit_obs, decision_at_ms=T,
+        ).allowed_for_paper_only)
+
+    def test_no_float_boolean_nan_or_implicit_limits(self):
+        for value in (0.5, True, D("NaN"), D("Infinity"), D(-1),
+                      D("1e100"), D("1e-28")):
+            with self.subTest(value=str(value)):
+                with self.assertRaises(DataValidationError):
+                    limits(max_order_notional_quote=value)
+                with self.assertRaises(DataValidationError):
+                    obs(mark_price_quote=value)
+        for values in (
+            dict(max_pending_open_orders=True),
+            dict(max_pending_open_orders=-1),
+            dict(max_market_age_ms=True),
+            dict(max_market_age_ms=-1),
+            dict(max_order_notional_quote=D(201)),
+        ):
+            with self.subTest(values=values), self.assertRaises(DataValidationError):
+                limits(**values)
+        for values in (
+            dict(portfolio_exposure_quote=D(99)),
+            dict(pending_open_orders=1.5),
+            dict(unresolved_open_exists=1),
+            dict(kill_switch_active="false"),
+            dict(observed_at_ms=True),
+        ):
+            with self.subTest(values=values), self.assertRaises(DataValidationError):
+                obs(**values)
+
+    def test_never_accept_live_flag_or_mutable_authority(self):
+        for incompatible in ("live", {"mode": "live"}):
+            with self.assertRaises(DataValidationError):
+                evaluate_paper_risk(incompatible, limits(), obs(), decision_at_ms=T)
+        with self.assertRaises(DataValidationError):
+            evaluate_paper_risk(intent(), {"mode": "live"}, obs(), decision_at_ms=T)
+        first = evaluate_paper_risk(intent(), limits(), obs(), decision_at_ms=T)
+        self.assertEqual(
+            first, evaluate_paper_risk(intent(), limits(), obs(), decision_at_ms=T)
+        )
+        self.assertFalse(first.approved_for_live_use)
+        self.assertFalse(first.order_submission_enabled)
+
+    def test_paper_risk_never_touches_network(self):
+        from unittest.mock import patch
+        with patch("urllib.request.urlopen",
+                   side_effect=AssertionError("unexpected network")):
+            d = evaluate_paper_risk(intent(), limits(), obs(), decision_at_ms=T)
+        self.assertTrue(d.allowed_for_paper_only)
+        self.assertFalse(d.orders_sent)
+
+
 if __name__ == "__main__":
     unittest.main()
