@@ -123,3 +123,7 @@ Restrições: custo R$0, repo público sem segredos, nenhum trade real, deploy, 
 
 ## J1/WU45 #141 — gate documental de matriz de fornecedores
 A PR da WU45 reforça a proteção **offline** de `docs/J1_SOURCE_GATES.md`, agora incluída nos 13 documentos obrigatórios, com regressões para matriz ausente e marcadores críticos perdidos. Pesquisa oficial Kraken não encontrou definição explícita de unidade econômica de `trade candles.volume` PF_; minuta à Kraken na #36 permanece **não enviada**. Direitos #48 e Top50 point-in-time #32 continuam sem prova externa. Não confundir este incremento com homologação J1 #2 nem divulgar dados de mercado.
+
+
+## J1/WU46 #143 — expansão causal das identidades sob revisão
+O manifesto v3 propõe 13 identidades documentadas para **pesquisa interna**, acrescentando XMR/ETC/ZEC à base v2, preservando SHA/instante das dez anteriores. A variante `expanded-13` é opt-in; defaults existentes intactos. Sem GET de exchange, sem afirmação de 13 contratos Kraken, ranking Top50 ou histórico de listagens, sem direitos de redistribuição. Gate de volume #36, identidade histórica #32, rights #48 e J1 #2 continuam abertos.
