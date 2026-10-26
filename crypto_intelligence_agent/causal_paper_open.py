@@ -120,7 +120,7 @@ def prepare_causal_paper_open(
             or type(venue) is not PaperVenue
             or type(limits) is not PaperRiskLimits
             or type(observation) is not PaperRiskObservation):
-        raise DataValidationError("typed J2, PAPER venue, risk and journal are required")
+        raise DataValidationError("typed J2, PAPER venue and risk observation are required")
     if type(requested_units) is not Decimal:
         raise DataValidationError("explicit Decimal PAPER requested units required")
     _fixture_units(requested_units)
