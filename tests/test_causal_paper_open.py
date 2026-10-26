@@ -154,8 +154,14 @@ class CausalPaperOpenTests(unittest.TestCase):
 
     def test_cross_venue_same_causal_signal_cannot_open_twice(self):
         first = self.admit()
-        with self.assertRaises(DataValidationError):
-            self.admit(venue=PaperVenue.BYBIT_V5)
+        denied = self.admit(venue=PaperVenue.BYBIT_V5)
+        self.assertIsNone(denied.reservation.entry)
+        self.assertEqual(denied.reservation.decision.reason, PaperRiskReason.PENDING_LIMIT)
+        # Even when the pending limit would allow another opening, the
+        # journal's unique index forbids a second venue on the SAME signal.
+        with self.assertRaisesRegex(DataValidationError, "already has an OPEN"):
+            self.admit(venue=PaperVenue.BYBIT_V5,
+                       rules=limits(max_pending_open_orders=2))
         self.assertEqual(self.count_intents(), 1)
         self.assertEqual(first.intent.venue, PaperVenue.BINANCE_USDM)
 
@@ -167,7 +173,8 @@ class CausalPaperOpenTests(unittest.TestCase):
             (observation(self.now - 1_001), limits(), PaperRiskReason.STALE_FEED),
             (observation(self.now, mark_price_quote=D(250)),
              limits(), PaperRiskReason.ORDER_NOTIONAL),
-            (observation(self.now, symbol_exposure_quote=D(900)),
+            (observation(self.now, symbol_exposure_quote=D(900),
+                         portfolio_exposure_quote=D(900)),
              limits(), PaperRiskReason.SYMBOL_EXPOSURE),
         )
         for snap, rule, reason in cases:
