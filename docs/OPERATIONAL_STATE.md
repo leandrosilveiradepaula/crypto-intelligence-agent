@@ -295,3 +295,10 @@ Fonte de execução por etapas: [`docs/EXECUTION_ROADMAP.md`](EXECUTION_ROADMAP.
 ### J6/PRE2-C #200 — fechamento de lacunas de teste de recuperação (26/10/2026 UTC)
 
 Adicionada cobertura offline para encerramento real de processo **após commit** com OPEN e cursor persistidos, reenvio da mesma barra recusado, avanço para próxima barra sem nova OPEN, SQLite ocupado sem progresso, inventário de OPEN adulterado, metadado inesperado e arquivo SQLite corrompido. A cobertura anterior já testava interrupção real **antes do commit**. Estes testes são regressões de engenharia PAPER, não prova de durabilidade perante falha de hardware, corretora real ou snapshot AUTO2/AUTO4. PR e CI do SHA final ainda precisam de verificação; issue #200 permanece aberta até aceite. Próxima prioridade após aceite: J1, conforme docs/EXECUTION_ROADMAP.md.
+
+
+## Checkpoint prevalente 26/10/2026 UTC — PRE2 finalizada e J1 ativa
+
+J6/PRE2 issue #200 **fechada somente como work unit de fixture** em 26/10/2026; PR #201 merge `4011812f33fec643f7dbe402f03457c046aa07f1`, PR #202 merge `f9a03435ba2338f91187dfe65c9bd43c96019959`, PR #203 merge `5ee3312b362387a37bc3f403914741a5a33676ea`. CI pós-merge #40392712218 SUCCESS (1.048 testes Linux/Windows, 14 docs) e #40392711941 Chrome SUCCESS. J6 épica #7 continua aberta: não houve PAPER prospectivo, snapshot AUTO2/AUTO4, feed real, ordens, testnet/live ou deploy.
+
+**Jornada prioritária atual: J1 #2**, com #19/#32/#36/#48/#196 ainda abertas; matriz operacional em `docs/J1_SOURCE_GATES.md` (WU51) e prioridades em `docs/EXECUTION_ROADMAP.md`. Nenhum novo GET/POST, credencial, conta, gasto ou autorização de licença. Observar especialmente unidade de chart Kraken #36 e direitos #48, unidades ticker Bybit #196 e Binance HTTP451 #19. **Próximo passo elegível:** revisão/CI desta atualização documental e, após merge, diligência de fontes primárias somente se trouxer prova nova, ou testes offline independentes sem afirmar que J1 foi homologada.

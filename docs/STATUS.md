@@ -277,3 +277,10 @@ Fonte de execução por etapas: [`docs/EXECUTION_ROADMAP.md`](EXECUTION_ROADMAP.
 ### J6/PRE2-C #200 — fechamento de lacunas de teste de recuperação (26/10/2026 UTC)
 
 Adicionada cobertura offline para encerramento real de processo **após commit** com OPEN e cursor persistidos, reenvio da mesma barra recusado, avanço para próxima barra sem nova OPEN, SQLite ocupado sem progresso, inventário de OPEN adulterado, metadado inesperado e arquivo SQLite corrompido. A cobertura anterior já testava interrupção real **antes do commit**. Estes testes são regressões de engenharia PAPER, não prova de durabilidade perante falha de hardware, corretora real ou snapshot AUTO2/AUTO4. PR e CI do SHA final ainda precisam de verificação; issue #200 permanece aberta até aceite. Próxima prioridade após aceite: J1, conforme docs/EXECUTION_ROADMAP.md.
+
+
+## Checkpoint atual — transição J6/PRE2 para J1 (26/10/2026 UTC)
+
+J6/PRE2 #200 encerrada como engenharia PAPER sintética: PRs #201/#202/#203 integradas, último merge SHA `5ee3312b362387a37bc3f403914741a5a33676ea`, CI pós-merge #40392712218 (Linux/Windows + 14 docs) e #40392711941 (Chrome) SUCCESS. J6 épica #7 e negociação real seguem bloqueadas.
+
+Prioridade ativa: **J1 #2**. Matriz WU51 em `J1_SOURCE_GATES.md` diferencia provas e bloqueios por fonte e determina próximas ações sem burlar acesso: Kraken price-only/unidade chart #36 + direitos #48, Bybit acesso negado + ticker #196, Binance HTTP451 #19, registro crypto #32. Não foi homologado OHLCV financeiro, Top50, estratégia lucrativa ou venue real. R$0 extra.
