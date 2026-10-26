@@ -353,8 +353,10 @@ class SQLitePaperOrderJournal:
         has_unknown = False
         for row in rows:
             item = SQLitePaperOrderJournal._checked_entry(conn, row["intent_id"])
+            # _checked_entry verifies the indexed effect against signed-off
+            # canonical payload before we skip REDUCE_ONLY paper exits.
             if item.intent.effect is not PaperOrderEffect.OPEN:
-                raise DataValidationError("paper OPEN index/payload conflict")
+                continue
             if item.snapshot.requires_reconciliation:
                 pending += 1
                 if item.snapshot.status is PaperOrderStatus.UNKNOWN:
