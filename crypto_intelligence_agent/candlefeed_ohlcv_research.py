@@ -108,12 +108,15 @@ def _open_ms(value: Any) -> int:
 
 
 def _nonnegative(value: Any, *, label: str) -> Decimal:
-    if value in (0, Decimal(0), "0", "0.0", "0.00") and type(value) is not bool:
+    # The JSON boundary preserves precise Decimal/int tokens; zero must not
+    # inadvertently admit float(0) or bool(False) by Python equality.
+    if type(value) is int and value == 0:
         return Decimal(0)
-    result = positive_market_decimal(value, label)
-    if not result.is_finite():
-        raise DataValidationError(f"CandleFeed {label} is nonfinite")
-    return result
+    if type(value) is Decimal and value.is_finite() and value == 0:
+        return Decimal(0)
+    if type(value) is str and re.fullmatch(r"0(?:\\.0{1,24})?", value):
+        return Decimal(0)
+    return positive_market_decimal(value, label)
 
 
 def stage_candlefeed_btc_24h(
