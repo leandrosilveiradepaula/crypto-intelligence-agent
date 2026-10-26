@@ -7,17 +7,18 @@ A tecnologia específica será escolhida por adequação, licenças e limites re
 2. Pipeline de dados: ingestão, histórico, UTC, candles fechados, controles de lacuna/duplicação e histórico de composição do universo.
 3. Feature Engine: indicadores determinísticos sem acesso a dados futuros.
 4. Strategy & Regime Engine: contexto BTC, tendências, rompimentos, compressão, correções, força relativa, liquidez e ranking.
-5. Position Ledger & Risk: margem e alavancagem de abertura, PnL realizado/não realizado, custos, funding, exposição e correlação.
+5. Position/Order Ledger & Risk: intenção de ordem, fills e estado reconciliado, margem e alavancagem de abertura, PnL realizado/não realizado, custos, funding, exposição e correlação.
 6. Winner Management: alvos, saídas parciais, trailing e posições residuais.
 7. Research: backtesting com mesma semântica de sinais da operação prospectiva, liquidação intrabar e walk-forward.
-8. API/UI: acesso protegido às posições do usuário; interface PT-BR mobile e alertas idempotentes.
+8. API/UI: acesso protegido às posições e ordens; interface PT-BR mobile, estado do robô, alertas idempotentes e kill-switch.
 9. ML/LLM: extensões opcionais submetidas a validação independente.
+10. AutoExecutionEngine: cadeia signal -> risk -> intent persistida -> adapter venue -> ack/fills reconciliados -> saídas; implementação simulada primeiro e live somente após gate.
 
 ## Candidatos gratuitos
 Python, bibliotecas científicas, FastAPI, PostgreSQL, DuckDB/Parquet, CCXT, Freqtrade quando compatível e n8n existente, se útil. Nenhum deles é obrigatório antes de uma decisão de arquitetura registrada.
 
 ## Fronteiras
-Serviços de mercado são read-only. Não implementar endpoints de ordens reais nesta fase. Nunca guardar segredos no GitHub público. Estados e cálculos financeiros devem ter precisão, idempotência e testes independentes.
+Adaptadores de DADOS continuam read-only. O executor de ORDENS é componente separado, iniciado com `offline_paper` e travado para produção; projetar contratos offline sem abrir endpoints reais nesta fase. Nunca guardar segredos no GitHub público. Estados e cálculos financeiros devem ter precisão, idempotência e testes independentes.
 
 
 ## Registro de identidade Kraken — módulo somente pesquisa (J1/WU10)
@@ -110,3 +111,7 @@ O histórico de identidade não confia mais no tipo da dataclass como marcador d
 ## J1/WU47 — Binance/Bybit como candidatas de execução manual (26/10/2026 UTC)
 O Product Owner informou que tem contas na Binance e na Bybit. **Isso não é evidência de acesso a futuros, habilitação regional de API, qualidade de OHLCV, alavancagem, ou autorização para usar credenciais.** Ambas são **candidatas**, nenhuma foi selecionada. O produto mantém execução **manual**, sem endpoints de ordens, chaves ou conexão à conta. Fonte de pesquisa não precisa coincidir com a venue de eventual execução, mas um sinal só poderá ser considerado executável após reconciliação de preço, símbolo, contrato, quote/settle, lot/step/min notional, funding, taxas, liquidez, limites de risco e disponibilidade na venue específica. Kraken price-only é pesquisa auxiliar e não certifica Binance/Bybit.
 Binance USD-M já tem adaptador/fixtures offline, mas o run real anterior foi bloqueado HTTP451 (#19). Bybit linear V5 possui parser documentado de volume BASE/turnover QUOTE em USDT/USDC, porém o único run real foi restrito no primeiro GET (WU44, 0 candles). Não repetir nem contornar restrições. O relatório `scripts/j1_readiness_report.py` distingue as duas candidatas com flags `account_access_verified=false`, `live_signal_approved=false`, `manual_plan_approved=false`, `order_execution_enabled=false`. Essa enumeração não concede direitos de dados, não escolhe venue nem homologa J1 #2, #32, #36 ou #48. Custo adicional R$0; sem credenciais, dados de conta, ordens, deploy ou feed público.
+
+
+## D77 — engine de entradas e saídas automáticas (destino final)
+O usuário **não precisa confirmar cada operação**: após futura autorização do modo live, o motor tomará decisões quantitativas, abrirá e gerenciará posições automaticamente na venue selecionada, inclusive saídas fracionadas e residuais. O estado `live` não é autorizável pela mera seleção de Binance ou Bybit no relatório: exige gates técnicos e de release. Separar `StrategySignal`, `RiskApproval`, `OrderIntent`, `ExecutionAdapter`, `Fill/OrderLedger` e `EmergencyStop`. Fluxo idempotente com ordem cliente determinística, eventos persistidos, reconciliação após timeout/restart, exits reduce-only onde válidos, stops nativos e telemetria de estado. Nenhum código de dados públicos pode ser reaproveitado para transmitir uma ordem sem novo contrato específico da venue e revisão de permissões. Fonte: `docs/AUTOMATED_EXECUTION_SPEC.md`.
