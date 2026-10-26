@@ -213,15 +213,26 @@ class PaperOpenHealthTests(unittest.TestCase):
         self.assertFalse(unresolved.new_open_allowed)
         self.assertEqual(unresolved.fills[0].protection_state, PaperProtectionState.UNKNOWN)
 
+    def test_partial_exit_fill_is_unresolved_not_flat(self):
+        self._position_with_exit(filled=D(1))
+        h = audit_paper_open_health(self.orders_path, self.positions_path)
+        self.assertFalse(h.new_open_allowed)
+        self.assertEqual(h.fills[0].protection_state, PaperProtectionState.UNKNOWN)
+        self.assertEqual(h.fills[0].reason, "unresolved_paper_reduce_only_exit")
+
     def test_future_exit_checkpoint_and_order_checkpoint_fail_closed(self):
         self._position_with_exit()
         with self.assertRaisesRegex(DataValidationError, "future PAPER position checkpoint"):
             audit_paper_open_health(
                 self.orders_path, self.positions_path, decision_at_ms=T + 2,
             )
+        # Use a separate, empty but valid AUTO4 file to test order-cutoff
+        # rejection without relying on which of two future files is read first.
+        empty_positions = self.positions_path.parent / "empty_future_case.sqlite"
+        SQLitePaperPositionJournal(empty_positions)
         with self.assertRaisesRegex(DataValidationError, "future PAPER order checkpoint"):
             audit_paper_open_health(
-                self.orders_path, self.positions_path, decision_at_ms=T,
+                self.orders_path, empty_positions, decision_at_ms=T,
             )
         with self.assertRaises(DataValidationError):
             audit_paper_open_health(
