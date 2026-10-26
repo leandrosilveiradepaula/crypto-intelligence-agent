@@ -196,3 +196,9 @@ Base real inicial: `main=e4c2e7daaf451971222b7567be8155d9431b35ac`, zero PRs abe
 
 ## J5/PRE4 homologada somente como pesquisa PAPER; J5/PRE5 #170 em validação
 PRE4 issue #168/PR #169 integrada no squash SHA `3ab6f99c81f1a72336f5df90d2297ab8dbe3445b`. CI pós-merge [#40320499557](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40320499557) SUCCESS (**875 testes offline**, compileall e 14 docs) e Chrome [#40320499417](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40320499417) SUCCESS em seis larguras e sem rede. A PRE4 é leitura isolada de **uma** posição fictícia com fill/UNKNOWN/reserva. A nova PRE5 issue #170 / branch `codex/issue-170-j5-pre5-multi-paper-positions` amplia para consulta consistente de vários IDs explicitamente escolhidos de UM SQLite RO, JSON/HTML por posição e nenhum somatório financeiro; adicionou QA Chrome e testes de concorrência. **PR/CI PRE5 ainda precisam de evidência**, J1/J2/J3/J4/J5/J6 ainda não homologadas para operação real, R$ 0.
+
+
+
+## J2/PRE2 #172 — hipótese de entrada estudável sem feeds/ordens
+
+Foi iniciada a implementação do primeiro **avaliador matemático de entrada** (compressão ATR histórica, breakout estrito, filtro EMA/volume) com candles exclusivamente sintéticos e causalidade explícita. A engine J2/PRE1 fornece todos os indicadores, sem recálculo duplicado. Testes quantitativos de referência LONG/SHORT e adversariais foram adicionados. `ResearchCandidate` é hipótese e `approved_for_live_use=false`; não é sinal operacional, backtest, feed real ou rentabilidade. A J1 não está homologada e ainda não há dados históricos permitidos/representativos. A WU depende de CI e revisão no SHA da PR antes de integração, sem publicação ou ordem real.
