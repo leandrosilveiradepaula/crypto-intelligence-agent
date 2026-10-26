@@ -52,12 +52,14 @@ def candle_payload():
 
 class Response:
     def __init__(self, content, *, status=200, url=None,
-                 mime="application/json; charset=utf-8"):
+                 mime="application/json; charset=utf-8", geo=None):
         self.body = BytesIO(content if isinstance(content, bytes)
                             else json.dumps(content).encode())
         self.status = status
         self.url = url
         self.headers = {"Content-Type": mime}
+        if geo is not None:
+            self.headers["geo-origin-status"] = geo
 
     def __enter__(self):
         return self
@@ -257,6 +259,13 @@ class DydxV4OneShotTests(unittest.TestCase):
                 self.assertEqual(len(opener.calls), 1)
         opener = FakeOpen(Response(market_payload(), url="https://other.invalid/"))
         self.assertEqual(probe(opener)["status"], "redirect_or_changed_origin_rejected")
+
+    def test_geographic_restriction_header_stops_before_second_get(self):
+        opener = FakeOpen(Response(market_payload(), geo="restricted"))
+        result = probe(opener)
+        self.assertEqual(result["status"], "access_or_geographic_restriction")
+        self.assertEqual(result["requests_attempted"], 1)
+        self.assertEqual(len(opener.calls), 1)
 
     def test_duplicate_json_and_wrong_content_type_rejected(self):
         raw = b'{"markets":{},"markets":{}}'
