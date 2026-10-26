@@ -269,3 +269,8 @@ python3 -m scripts.inspect_paper_positions --journal /caminho/positions.sqlite -
 python3 -m scripts.inspect_paper_positions --journal /caminho/positions.sqlite --position-id fixture_position_A --position-id fixture_position_B --format json --output /tmp/positions-paper.json
 ```
 Cada cartão mostra unidade inicial, saídas preenchidas, quantidade reservada, saldo disponível e contagem de ordens incertas de **uma posição**. Não existe soma de BTC, ETH, USDT ou qualquer exposição monetária, e o JSON versionado `paper_positions_snapshot_v1` explicita que não é carteira financeira. Aceita somente IDs `fixture_...` fornecidos individualmente, sem `--all`, URL, JSON importado, chaves, conta, ordem ou deploy. Limite de 128 IDs é somente proteção de recursos do leitor, não limite do produto/robô. Saída exclusiva, sem substituir arquivos; QA Chrome local produz capturas temporárias de duas posições sintéticas e não envia dados.
+
+
+## Canal de auditoria PRIVADA Bybit (pesquisa futura, sem ativar API)
+
+O módulo `crypto_intelligence_agent.bybit_local_json_audit` e a CLI `python3 -m scripts.audit_private_bybit_json` permitem examinar **somente no computador privado do titular** um par de respostas JSON V5 obtidas por meios permitidos, com manifesto autodeclarado. A ferramenta não contorna o bloqueio do runner GitHub, não baixa nada, não certifica autenticidade ou direitos e não transforma dados em sinais ou ordens. Ver [guia de insumos privados](docs/J1_PRIVATE_RESEARCH.md) e [gates J1](docs/J1_SOURCE_GATES.md). Nunca enviar arquivos com conta/chave ou preço/volume bruto ao repositório público.
