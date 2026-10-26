@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from crypto_intelligence_agent.crypto_asset_registry import load_registry_json
 from crypto_intelligence_agent.kraken_candle_validation import (
@@ -172,6 +173,7 @@ def collect(path, reader, *, now=NOW, decide=NOW + 200, **kwargs):
     )
 
 
+@unittest.skipUnless(os.name == "posix", "private Kraken SQLite collector requires POSIX 0700/0600 semantics")
 class PrivateLocalResearchTests(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
@@ -448,6 +450,47 @@ class PrivateLocalResearchTests(unittest.TestCase):
         self.assertEqual(json.loads(disabled.stdout)["status"], "double_opt_in_required")
         self.assertNotIn(str(self.db), disabled.stdout)
         self.assertFalse(self.db.exists())
+
+
+
+class PrivateLocalResearchPlatformTests(unittest.TestCase):
+    """Platform-neutral security preflight; never needs filesystem or network."""
+
+    def test_windows_acl_emulation_cannot_enable_private_collection(self):
+        reader = Reader()
+        with patch("crypto_intelligence_agent.private_kraken_research._private_posix_semantics_supported",
+                   return_value=False):
+            with self.assertRaisesRegex(
+                LocalResearchError, "private_collection_requires_posix_permissions"
+            ):
+                collect("unusable_nonprivate.sqlite", reader)
+        self.assertEqual(reader.calls, [])
+
+    def test_optin_is_required_even_on_unsupported_platform(self):
+        reader = Reader()
+        for allow_net, allow_disk in ((False, False), (True, False), (False, True)):
+            with self.subTest(allow_net=allow_net, allow_disk=allow_disk):
+                with self.assertRaisesRegex(LocalResearchError, "double_opt_in_required"):
+                    capture_private_research(
+                        db_path="not-a-private-path.sqlite",
+                        client=reader,
+                        allow_public_network=allow_net,
+                        allow_private_persistence=allow_disk,
+                    )
+        self.assertEqual(reader.calls, [])
+
+    def test_resource_limits_refuse_before_private_disk_preflight(self):
+        reader = Reader()
+        for bad in (0, 6, -1, True, False, 1.5, "2", None):
+            with self.subTest(bad=bad), self.assertRaises(LocalResearchError):
+                capture_private_research(
+                    db_path="not-a-private-path.sqlite",
+                    client=reader,
+                    allow_public_network=True,
+                    allow_private_persistence=True,
+                    max_price_symbols=bad,
+                )
+        self.assertEqual(reader.calls, [])
 
 
 if __name__ == "__main__":
