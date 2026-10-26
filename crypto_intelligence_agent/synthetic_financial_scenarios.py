@@ -16,17 +16,20 @@ from typing import Sequence
 from .market_data import DataValidationError
 from .synthetic_cost_scenarios import (
     SyntheticCostBreakdown, SyntheticCostScenario, SyntheticFundingEvent,
-    evaluate_synthetic_costs,
+    evaluate_synthetic_costs, _amount,
 )
 from .synthetic_feature_engine import validate_synthetic_research_price
 from .synthetic_intrabar_barriers import (
-    ObservationKind, ResearchDirection, SyntheticBarrierObservation,
+    ObservationKind, ResearchDirection, SyntheticBarrier, SyntheticBarrierPlan,
+    SyntheticBarrierObservation,
 )
 
 
 _EXACT = Context(prec=512, rounding=ROUND_HALF_EVEN)
 _ID = re.compile(r"fixture_financial_[A-Za-z0-9_-]{1,40}")
 _SOURCE_ID = re.compile(r"fixture_source_[A-Za-z0-9_-]{1,40}")
+_QUOTE_ID = re.compile(r"SYNTHETIC_[A-Z0-9_]{1,32}")
+MAX_SCENARIOS = 16
 
 
 class ScenarioResolution(str, Enum):
@@ -48,7 +51,7 @@ class FundingProvenance:
             raise DataValidationError("funding provenance requires synthetic funding event")
         if type(self.source_id) is not str or _SOURCE_ID.fullmatch(self.source_id) is None:
             raise DataValidationError("funding source requires fixture-only identity")
-        if type(self.quote_currency) is not str or not self.quote_currency.startswith("SYNTHETIC_"):
+        if type(self.quote_currency) is not str or _QUOTE_ID.fullmatch(self.quote_currency) is None:
             raise DataValidationError("funding quote currency must be declared synthetic unit")
         if self.positive_rate_means != "LONG_PAYS_SHORT_RECEIVES":
             raise DataValidationError("funding sign convention must be explicit and supported")
@@ -63,6 +66,7 @@ class ConditionalFinancialScenario:
     symbol: str
     interval: str
     direction: ResearchDirection
+    assumed_barrier: SyntheticBarrier
     entry_price: Decimal
     quantity_base_units: Decimal
     resolution: ScenarioResolution
@@ -79,10 +83,11 @@ class ConditionalFinancialScenario:
             raise DataValidationError("scenario market identity must be explicit")
         if type(self.direction) is not ResearchDirection or type(self.resolution) is not ScenarioResolution:
             raise DataValidationError("scenario direction and resolution require explicit enums")
+        if type(self.assumed_barrier) is not SyntheticBarrier:
+            raise DataValidationError("scenario requires an explicit observed barrier")
         validate_synthetic_research_price(self.entry_price, "entry_price")
-        if type(self.quantity_base_units) is not Decimal or not self.quantity_base_units.is_finite() or self.quantity_base_units <= 0:
-            raise DataValidationError("quantity_base_units requires positive finite Decimal")
-        if type(self.quote_currency) is not str or not self.quote_currency.startswith("SYNTHETIC_"):
+        _amount(self.quantity_base_units, "quantity_base_units")
+        if type(self.quote_currency) is not str or _QUOTE_ID.fullmatch(self.quote_currency) is None:
             raise DataValidationError("quote currency must be declared synthetic unit")
         if type(self.costs) is not SyntheticCostScenario or self.costs.direction is not self.direction:
             raise DataValidationError("scenario requires matching explicit synthetic cost scenario")
@@ -94,21 +99,34 @@ class ConditionalFinancialScenario:
         if len({item.event.event_id for item in self.funding_provenance}) != len(self.funding_provenance):
             raise DataValidationError("funding provenance cannot duplicate event identity")
         if self.resolution is ScenarioResolution.EXPLICIT_EXIT:
+            if self.assumed_barrier is SyntheticBarrier.HYPOTHETICAL_LIQUIDATION:
+                raise DataValidationError("liquidation barrier needs explicit liquidation loss")
             validate_synthetic_research_price(self.exit_price, "exit_price")
             if self.hypothetical_liquidation_loss_quote_units is not None:
                 raise DataValidationError("exit branch cannot also assert liquidation loss")
         else:
+            if self.assumed_barrier is not SyntheticBarrier.HYPOTHETICAL_LIQUIDATION:
+                raise DataValidationError("liquidation loss requires liquidation barrier")
             if self.exit_price is not None:
                 raise DataValidationError("liquidation branch cannot infer an exit price")
             if (type(self.hypothetical_liquidation_loss_quote_units) is not Decimal
                     or not self.hypothetical_liquidation_loss_quote_units.is_finite()
                     or self.hypothetical_liquidation_loss_quote_units <= 0):
                 raise DataValidationError("liquidation branch needs explicit positive loss Decimal")
+        # Preserve a single economic basis across quantity, price and fee notionals.
+        # Liquidation exit notional is necessarily a separate explicit assumption.
+        with localcontext(_EXACT):
+            if self.costs.entry_hypothetical_notional_quote_units != self.entry_price * self.quantity_base_units:
+                raise DataValidationError("entry cost notional must equal declared entry price times quantity")
+            if (self.resolution is ScenarioResolution.EXPLICIT_EXIT
+                    and self.costs.exit_hypothetical_notional_quote_units != self.exit_price * self.quantity_base_units):
+                raise DataValidationError("exit cost notional must equal declared exit price times quantity")
 
 
 @dataclass(frozen=True)
 class ConditionalFinancialResult:
     scenario_id: str
+    assumed_barrier: SyntheticBarrier
     resolution: ScenarioResolution
     quote_currency: str
     gross_price_movement_quote_units: Decimal
@@ -149,26 +167,64 @@ class ConditionalFinancialResult:
 def evaluate_conditional_financial_scenarios(
     observation: SyntheticBarrierObservation,
     scenarios: Sequence[ConditionalFinancialScenario],
+    *,
+    barrier_plan: SyntheticBarrierPlan,
 ) -> tuple[ConditionalFinancialResult, ...]:
-    """Evaluate explicit branches; refuse an unresolved OHLC ambiguity alone."""
+    """Evaluate only explicit branches tied to actually observed PRE1 levels.
+
+    The event time must be within PRE1's first hit candle, but a hypothetical
+    price/fee never becomes a verified fill. The matching synthetic plan binds
+    direction and entry assumptions, not authenticated market evidence.
+    """
     if type(observation) is not SyntheticBarrierObservation:
         raise DataValidationError("PRE1 synthetic barrier observation required")
-    if type(scenarios) not in (tuple, list) or not scenarios:
-        raise DataValidationError("at least one explicit conditional scenario is required")
+    if type(barrier_plan) is not SyntheticBarrierPlan:
+        raise DataValidationError("explicit matching PRE1 barrier plan required")
+    if observation.plan_created_at_ms != barrier_plan.plan_created_at_ms:
+        raise DataValidationError("PRE1 observation does not match barrier plan")
+    if type(observation.kind) is not ObservationKind:
+        raise DataValidationError("invalid PRE1 observation kind")
+    if observation.kind is ObservationKind.NO_LEVEL_REACHED:
+        raise DataValidationError("no observed barrier leaves no conditional exit premise")
+    levels = observation.levels_reached
+    if (type(levels) is not tuple or not levels
+            or any(type(level) is not SyntheticBarrier for level in levels)
+            or len(set(levels)) != len(levels)):
+        raise DataValidationError("PRE1 observation requires unique typed reached barriers")
+    if observation.kind is ObservationKind.MULTIPLE_LEVELS_UNORDERED and len(levels) < 2:
+        raise DataValidationError("unordered intrabar observation must identify multiple barriers")
+    if observation.kind is ObservationKind.SINGLE_LEVEL_RANGE and len(levels) != 1:
+        raise DataValidationError("single-level observation cannot contain multiple barriers")
+    if (SyntheticBarrier.HYPOTHETICAL_LIQUIDATION in levels
+            and barrier_plan.hypothetical_liquidation_level is None):
+        raise DataValidationError("liquidation barrier not declared in PRE1 plan")
+    opened = observation.first_candidate_open_time_ms
+    closed = observation.first_candidate_close_time_ms
+    if (type(opened) is not int or type(closed) is not int
+            or type(observation.as_of_ms) is not int
+            or type(observation.first_candidate_index) is not int
+            or observation.first_candidate_index < 0
+            or not barrier_plan.plan_created_at_ms <= opened <= closed <= observation.as_of_ms):
+        raise DataValidationError("invalid PRE1 event timestamp bounds")
+
+    if type(scenarios) not in (tuple, list) or not 1 <= len(scenarios) <= MAX_SCENARIOS:
+        raise DataValidationError("one to sixteen explicit conditional scenarios required")
     rows = tuple(scenarios)
     if any(type(row) is not ConditionalFinancialScenario for row in rows):
         raise DataValidationError("conditional scenarios must use the typed contract")
     if len({row.scenario_id for row in rows}) != len(rows):
         raise DataValidationError("conditional scenario identities must be unique")
-    if observation.kind is ObservationKind.MULTIPLE_LEVELS_UNORDERED and len(rows) < 2:
-        raise DataValidationError("unordered intrabar levels require explicit alternative scenarios")
-    if observation.kind is ObservationKind.NO_LEVEL_REACHED:
-        raise DataValidationError("no observed barrier leaves no conditional exit premise")
+    # Renaming a target scenario does not cover an unordered stop/target hit.
+    if {row.assumed_barrier for row in rows} != set(levels):
+        raise DataValidationError("explicit alternatives must cover each observed barrier exactly")
     for row in rows:
         if (row.exchange, row.symbol, row.interval) != (observation.exchange, observation.symbol, observation.interval):
             raise DataValidationError("scenario identity does not match PRE1 observation")
-        if row.costs.entry_at_ms < observation.plan_created_at_ms:
-            raise DataValidationError("financial assumption predates its synthetic barrier plan")
+        if row.direction is not barrier_plan.side or row.entry_price != barrier_plan.hypothetical_entry_price:
+            raise DataValidationError("scenario side/entry differs from PRE1 barrier plan")
+        if (row.costs.entry_at_ms < barrier_plan.plan_created_at_ms
+                or not opened <= row.costs.exit_at_ms <= closed):
+            raise DataValidationError("explicit exit event outside observed synthetic barrier candle")
     with localcontext(_EXACT):
         results: list[ConditionalFinancialResult] = []
         for row in rows:
@@ -182,8 +238,10 @@ def evaluate_conditional_financial_scenarios(
                 loss = row.hypothetical_liquidation_loss_quote_units
                 movement = -loss
             results.append(ConditionalFinancialResult(
-                scenario_id=row.scenario_id, resolution=row.resolution, quote_currency=row.quote_currency,
-                gross_price_movement_quote_units=movement, hypothetical_liquidation_loss_quote_units=loss,
+                scenario_id=row.scenario_id, assumed_barrier=row.assumed_barrier,
+                resolution=row.resolution, quote_currency=row.quote_currency,
+                gross_price_movement_quote_units=movement,
+                hypothetical_liquidation_loss_quote_units=loss,
                 costs=cost, conditional_net_quote_units=movement - cost.total_signed_cost_units,
                 ambiguity_branch_count=len(rows),
             ))
