@@ -239,3 +239,13 @@ python3 -m scripts.render_paper_dashboard --output /tmp/crypto-paper-view.html
 python3 -m scripts.render_paper_dashboard --format json --output /tmp/crypto-paper-snapshot.json
 ```
 Os comandos executam localmente as duas fixtures J4/AUTO5 e **não recebem JSON externo, API, conta ou preços de corretora**. O HTML continua abrindo diretamente no navegador, é somente leitura e não contém JavaScript, formulário, botão de negociação, dependências de CDN ou rede. O JSON tem `schema_version=paper_dashboard_snapshot_v1` e `orders_sent=false`; não é feed, backtest financeiro nem sinal de mercado. A CLI recusa sobrescrever arquivo existente (escolha um nome novo). O arquivo `web/paper-demo.html` permanece uma prévia estática funcional; a exportação preenche seus campos a partir do replay, validando plano e consistência entre as duas candidatas antes de gravar. Nenhum dado de conta ou negociação real é usado, e não há publicação nem deploy.
+
+
+### Acessibilidade e QA real em navegador do painel PAPER (J5/PRE3)
+A página local e a exportação HTML passam a incluir **Pular para o conteúdo principal** (tecla Tab), tabelas roláveis pelo teclado com indicação em português e prevenção de truncamento da marca/rótulos em celulares pequenos. O link de fragmento interno é o único `href` permitido; não há link externo, rede, formulário ou comando de trade.
+
+Validação opcional local, com Chromium/Chrome instalado e biblioteca Playwright livre (sem API paga):
+```bash
+python3 -m scripts.audit_paper_dashboard_browser --out-dir /tmp/paper-mobile-qa
+```
+A ação [PAPER mobile browser QA](.github/workflows/paper-mobile-browser-qa.yml) instala somente o driver Python livre em ambiente temporário do runner público e usa o navegador Chrome já disponível no sistema, sem baixar dados de mercado. Inspeciona 280/320/375/390/768/1280px, foco e navegação via teclado, overflow global, tabela horizontal, contrastes de amostras de texto, ausência de requisições e banner SIMULADO; produz JSON/PNG como artefato transitório. **Isso não substitui testes físicos em diferentes aparelhos, leitor de tela real nem homologação WCAG completa.** Continua J5 não homologada, sem deploy.
