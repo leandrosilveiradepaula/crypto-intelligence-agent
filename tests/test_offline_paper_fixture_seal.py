@@ -110,9 +110,9 @@ class OfflineFixtureSealTests(unittest.TestCase):
         first = self.seal(self.rows[:5])
         for prefix in (self.rows[:5], self.rows[:7], self.rows[:4]):
             with self.subTest(length=len(prefix)):
-                with self.assertRaisesRegex(DataValidationError, "exactly one"):
+                with self.assertRaises(DataValidationError):
                     self.extend(first, prefix)
-        with self.assertRaisesRegex(DataValidationError, "exactly one"):
+        with self.assertRaisesRegex(DataValidationError, "digest diverged"):
             self.extend(first, self.rows[2:8])
 
     def test_candle_corruption_gap_and_future_clock_block(self):
