@@ -117,3 +117,7 @@ PRE3 preserva a tela PAPER mobile PT-BR, acrescenta navegação por teclado e fl
 
 ## J5/PRE4 #168 — visualização RO de posição fictícia persistida (26/10/2026 UTC)
 Após o demonstrador PRE1/PRE2 e o QA visual PRE3, a PRE4 acrescenta exportação por ID explícito de um único agregado SQLite PAPER existente, com quantidade preenchida/reservada e status UNKNOWN distinguíveis. A posição e o journal opcional de abertura são lidos somente via `mode=ro`; nenhum schema é criado/migrado. Render HTML mobile em PT-BR e JSON v1 são locais e demonstrativos, sem dados de exchange ou opção live. J5 #6 continua não homologada; futuros passos incluem múltiplas posições, privacidade/autenticação e dados/ordens reais somente após gates J1/J6.
+
+
+## J5/PRE5 #170 — visão multi-posição PAPER em pesquisa
+A etapa adiciona seleção explícita de várias posições fictícias num mesmo snapshot SQLite read-only, em cartão/table mobile PT-BR e JSON, sem somar ativos ou sugerir valor financeiro. PRE4 foi integrada com QA de Chrome e 875 testes offline; PRE5 continua sujeita a PR/CI/QA. J5 #6 ainda não aceita; dados, lucro, risco de carteira e ordens reais dependem de J1/J2/J3/J4/J6, sem autorização de live.

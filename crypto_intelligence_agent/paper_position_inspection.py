@@ -152,3 +152,36 @@ def inspect_paper_position(
         balance=balance,
         opening_order_cross_checked=opening_order_path is not None,
     )
+
+
+def inspect_paper_positions(
+    position_path: str | Path, position_ids: tuple[str, ...],
+) -> tuple[PaperPositionInspection, ...]:
+    """Read an EXPLICIT collection in ONE local SQLite read transaction.
+
+    No wildcard, automatic listing, financial sum, multiple files or implicit
+    account namespace. SQLite holds a single snapshot across every selected
+    position: the reader never creates a database and fails all-or-nothing
+    if any selected ID, replay, hash or checkpoint is invalid.
+
+    The 128-ID limit is solely a local resource bound, NOT a trading cap.
+    """
+    if (type(position_ids) is not tuple
+            or not 1 <= len(position_ids) <= 128
+            or any(type(pid) is not str for pid in position_ids)):
+        raise DataValidationError("1-128 explicitly selected PAPER fixture IDs required")
+    if len(set(position_ids)) != len(position_ids):
+        raise DataValidationError("duplicate PAPER position identity is forbidden")
+    for position_id in position_ids:
+        _fixture_id(position_id)
+    balances = []
+    with _read_database(
+        position_path, _POSITION_TABLES, "paper_position_meta", _POSITION_VERSION,
+    ) as connection:
+        for position_id in position_ids:
+            # Reuse exactly the same digest/contract/replay checks as PRE4.
+            record = SQLitePaperPositionJournal._read(connection, position_id)
+            balances.append(PaperPositionInspection(
+                balance=_balance(record), opening_order_cross_checked=False,
+            ))
+    return tuple(balances)
