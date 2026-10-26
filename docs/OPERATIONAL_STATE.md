@@ -316,3 +316,8 @@ O titular confirmou VPS existente na Hostinger. Não há acesso remoto autentica
 ### J1/AUTH1 — instalação offline Hostinger comprovada e captura efêmera (26/10/2026 UTC)
 
 O PO comprovou execução `offline_network_disabled` em Binance e Bybit na VPS existente, sob usuário isolado e checkout SHA `3dd2980eb8d1ddb93c8d8928a3336f8aac53c00b`; ambas com flags de trading, orders e balances negativas. Nenhuma conta foi autenticada. Branch `work/issue-205-private-tty-credential-entry` adiciona launcher interativo protegido por TTY, duas flags de consentimento, getpass fail-closed e dicionário temporário de segredos em memória, sem argumentos/variáveis globais. Documento: `docs/PRIVATE_EXCHANGE_READONLY.md`. Próximos gates: CI/revisão/merge não produtivo; somente depois execução voluntária do titular com chaves específicas de leitura no terminal SSH privado. Nenhuma ordem, mudança VPS produtiva, licença promovida ou gasto.
+
+
+### J3/OFFLINE #208 — regressões metamórficas de custos (26/10/2026 UTC)
+
+Em `tests/test_synthetic_cost_scenarios.py`, novas invariantes sintéticas verificam que aumentar qualquer taxa ou slippage adverso não reduz custos, funding LONG/SHORT é antissimétrico, eventos idênticos duplicados não são cobrados duas vezes e intervalo sem funding não gera custo de funding. Sem cálculo de PnL, preço de liquidação, aprovação financeira, rede ou corretora. As lacunas de intrabar/liquidação/residual ainda exigem inventário separado; não alegar cobertura de #208 completa. Dependência #205 suspensa enquanto PO está somente no celular por aproximadamente 2–3 horas a partir de 26/10/2026 22:04 UTC; não pedir SSH/chaves. Branch `work/issue-208-j3-cost-metamorphic`; CI/PR pendentes de confirmação.
