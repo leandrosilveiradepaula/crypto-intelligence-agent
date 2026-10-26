@@ -4,6 +4,7 @@ from dataclasses import FrozenInstanceError, replace
 from decimal import Decimal
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -422,7 +423,7 @@ class PaperPositionReservationTests(unittest.TestCase):
         for bad in ("", ":memory:", "file::memory:?cache=shared"):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 SQLitePaperPositionJournal(bad)
-        with sqlite3.connect(self.path) as connection:
+        with closing(sqlite3.connect(self.path)) as connection, connection:
             connection.execute("UPDATE paper_positions SET payload='{}'")
         with self.assertRaises(DataValidationError):
             SQLitePaperPositionJournal(self.path).load("fixture_position_A")
