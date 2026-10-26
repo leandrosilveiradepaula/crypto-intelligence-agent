@@ -342,3 +342,9 @@ Problema: AUTO4/AUTO2 executam DDL inicializador/transações de escrita nos con
 
 ## D88 — J5/PRE5 #170: seleção multi-posição consistente sem agregar quantidades incompatíveis (26/10/2026 UTC)
 Após a inspeção de uma posição PRE4, o produto precisa exibir um número variável de posições. Decisão: consultar apenas IDs PAPER escolhidos explicitamente em um único banco AUTO4 e na mesma transação SQLite RO; nenhuma busca automática, outras contas ou cruzamento de arquivos. Recusar duplicatas, ausências, corrupção ou IDs não sintéticos em toda a seleção sem exportação parcial. Usar 128 IDs como teto de memória/consulta **do exportador**, jamais meta de quantidade de posições no produto. Uma quantidade BTC e uma quantidade ETH não são somáveis como exposição financeira: cada posição terá linhas/cartões independentes, sem totais de unidades, rentabilidade, USDT ou PnL. Arquivo HTML/JSON `paper_positions_snapshot_v1` continua fictício, sem conta/API/ordem/credencial/release, D77 e gates J1/J5/J6 inalterados. Custo adicional R$0.
+
+
+
+## D89 — J2/PRE2 #172: sinal é hipótese verificável, nunca autorização de ordem (26/10/2026 UTC)
+
+Decisão: implementar apenas uma hipótese A (rompimento após compressão) em `synthetic_entry_hypotheses.py`, reutilizando J2/PRE1, sem criar algoritmo paralelo de EMA/ATR/extremos/volume. O ATR candidato não integra as janelas de compressão; comparar duas janelas exclusivamente passadas e disjuntas, com baseline não zero. Causalidade do candle fechado é obrigatória, cooldown é de pesquisa e thresholds são entradas declaradas (sem hardcode de "estratégia vencedora"). Output carrega evidência numérica e flags de não-live; não possui execução, probabilidade ou rentabilidade. B/C/D continuam hipóteses futuras; ML e LLM não decidem ordens. Não integrar com AUTO1–AUTO6 ou API privada antes de J1 (unidade, direitos, Top50) e J3 risco/backtest. Questão #172, épica J2 #3 permanece aberta.
