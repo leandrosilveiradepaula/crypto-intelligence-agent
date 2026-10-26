@@ -60,6 +60,7 @@ class OfflinePaperDashboardTests(unittest.TestCase):
                             "width=device-width" in a.get("content", "")
                             for a in meta))
         self.assertIn("@media (max-width: 640px)", self.html)
+        self.assertIn("@media (max-width: 420px)", self.html)
         self.assertIn("@media (max-width: 790px)", self.html)
         main = next(a for tag, a in self.page.attrs if tag == "main")
         self.assertEqual(main["data-mode"], "offline_paper")
