@@ -119,3 +119,7 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
 Restrições: custo R$0, repo público sem segredos, nenhum trade real, deploy, gasto ou migration sensível. Ler OPERATIONAL_STATE.md e verificar GitHub vivo antes de agir.
+
+
+## J1/WU45 #141 — gate documental de matriz de fornecedores
+A PR da WU45 reforça a proteção **offline** de `docs/J1_SOURCE_GATES.md`, agora incluída nos 13 documentos obrigatórios, com regressões para matriz ausente e marcadores críticos perdidos. Pesquisa oficial Kraken não encontrou definição explícita de unidade econômica de `trade candles.volume` PF_; minuta à Kraken na #36 permanece **não enviada**. Direitos #48 e Top50 point-in-time #32 continuam sem prova externa. Não confundir este incremento com homologação J1 #2 nem divulgar dados de mercado.
