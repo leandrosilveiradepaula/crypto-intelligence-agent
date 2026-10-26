@@ -47,10 +47,17 @@ class SyntheticResearchCycle:
 
     @property
     def signal_count(self) -> int:
-        return len(self.events)
+        """Count only J2 candidate hypotheses, never downstream abstentions."""
+        return sum(len(fold.observations) for fold in self.oos.folds)
+
     @property
     def abstention_count(self) -> int:
-        return sum(event.abstention_reason is not None for event in self.events)
+        """Include both J2 refusals and PRE7 refusals of candidate hypotheses."""
+        return (
+            sum(len(fold.abstained_indices) for fold in self.oos.folds)
+            + sum(event.abstention_reason is not None for event in self.events)
+        )
+
     @property
     def conditional_branch_count(self) -> int:
         return sum(len(event.conditional_results) for event in self.events)

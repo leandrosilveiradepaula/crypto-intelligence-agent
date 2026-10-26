@@ -55,6 +55,14 @@ class SyntheticResearchCycleTests(unittest.TestCase):
         for name in ("approved_for_live_use","orders_sent","financial_backtest_approved","out_of_sample_results_validated","net_pnl_verified"):
             self.assertFalse(getattr(report,name))
 
+    def test_missing_explicit_financial_premise_abstains_after_barrier_observation(self):
+        rows=candles()
+        candidate=cycle(rows).events[0]
+        plan=SyntheticBarrierPlan(ResearchDirection.LONG,D("105"),D("100"),D("110"),candidate.candidate_available_at_ms)
+        report=cycle(rows,plans={5:plan})
+        self.assertEqual(report.events[0].abstention_reason,"missing_explicit_financial_assumption")
+        self.assertEqual(report.conditional_branch_count,0)
+
     def test_bad_plan_binding_and_no_network_or_orders(self):
         rows=candles(); event=cycle(rows).events[0]
         bad=SyntheticBarrierPlan(ResearchDirection.LONG,D("106"),D("100"),D("110"),event.candidate_available_at_ms)
