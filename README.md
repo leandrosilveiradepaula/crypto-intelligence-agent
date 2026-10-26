@@ -231,3 +231,11 @@ Executa duas sessões **independentes e inventadas** (candidatas Binance USD-M e
 
 ## Prévia do painel para celular — totalmente offline
 Abra `web/paper-demo.html` diretamente no navegador (arquivo local; não precisa de servidor, instalação, login ou rede). É a **primeira tela demonstrativa**, somente HTML/CSS acessível e responsivo em português, sem JavaScript, botões de negociação, dados de conta ou API. Mostra o mesmo cenário artificial da CLI de AUTO5: 100 unidades fictícias, saídas 50/30/14, runner 6%, duas venues candidatas não conectadas. **Não representa painel do robô em produção**, nem estratégia, lucro ou mercado em tempo real; `SIMULADO` aparece em destaque.
+
+
+### Exportar a tela PAPER gerada diretamente pelo replay fictício (J5/PRE2)
+```bash
+python3 -m scripts.render_paper_dashboard --output /tmp/crypto-paper-view.html
+python3 -m scripts.render_paper_dashboard --format json --output /tmp/crypto-paper-snapshot.json
+```
+Os comandos executam localmente as duas fixtures J4/AUTO5 e **não recebem JSON externo, API, conta ou preços de corretora**. O HTML continua abrindo diretamente no navegador, é somente leitura e não contém JavaScript, formulário, botão de negociação, dependências de CDN ou rede. O JSON tem `schema_version=paper_dashboard_snapshot_v1` e `orders_sent=false`; não é feed, backtest financeiro nem sinal de mercado. A CLI recusa sobrescrever arquivo existente (escolha um nome novo). O arquivo `web/paper-demo.html` permanece uma prévia estática funcional; a exportação preenche seus campos a partir do replay, validando plano e consistência entre as duas candidatas antes de gravar. Nenhum dado de conta ou negociação real é usado, e não há publicação nem deploy.
