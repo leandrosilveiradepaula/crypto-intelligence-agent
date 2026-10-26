@@ -103,4 +103,8 @@ A hipótese J2/PRE2 pode futuramente ser examinada em folds walk-forward, mas `s
 
 ## J3/PRE5 #178 — contrato de aproximação da hipótese J2 ao OOS
 
+## J3/PRE7 #184 — ciclo causal com abstenção explícita
+
+Com `close_safety_ms=1000`, a abertura da barra imediatamente posterior ocorre 1 ms após o fechamento e não é elegível para um candidato disponível 1000 ms depois. PRE7 seleciona a primeira barra posterior realmente elegível ou abstém; nunca retrodata o plano. Cenários STOP/TARGET/LIQUIDAÇÃO são hipóteses externas e alternativas, nunca escolhidas pelo fechamento futuro.
+
 `synthetic_oos_replay.py` coordena **somente pesquisa sintética**: usa a hipótese A já existente, o plano causal PRE3 e a purga/censura PRE4, sem reimplementar EMA, ATR, volume ou rompimentos. Para cada candle OOS elegível, recalcula J2 exclusivamente a partir do prefixo até seu fechamento; registra abstenção ou candidato emitido naquele candle. Só depois observa `close[i+h]` e classifica direção relativa como alinhada/contrária/estável, com identidade, índice e UTC auditáveis. O método não refaz o treinamento, não escolhe parâmetros, não impede dependência dos labels entre si e não calcula retorno, PnL, custo, slippage ou fill. Reavaliar hipótese com dados reais canônicos, composição histórica, autorização de uso e teste financeiro é obrigação futura. Não conectar esse relatório PAPER à automação de ordens de D77.

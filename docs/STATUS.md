@@ -217,6 +217,10 @@ Implementação da estrutura offline de walk-forward: janelas de treino, gap e t
 
 ## J3/PRE6 #180 — cenários financeiros condicionais offline, em revisão
 
+## J3/PRE7 #184 — integração causal sintética, em revisão
+
+A issue #184 integra J2/PRE2 e J3/PRE1–PRE6 com abstenção temporal e ramos condicionais explícitos. Não cria backtest, PnL agregado, ordem PAPER, feed real ou autorização live. Consultar a PR/CI antes de declarar integração.
+
 A issue #180 adiciona branches financeiras sintéticas com premissas explícitas, custos PRE2 e ambiguidade PRE1. Não infere fill, não calcula liquidação de venue e não valida estratégia, lucro, backtest ou execução. Consultar GitHub para PR/CI/SHA antes de declarar integração; J1 #2, J2 #3 e J3 #4 continuam abertas.
 
 

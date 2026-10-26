@@ -170,6 +170,10 @@ O planejador de folds `synthetic_walk_forward.py` tem responsabilidade EXCLUSIVA
 
 ## J3/PRE6 — avaliação financeira condicional
 
+## J3/PRE7 — ciclo causal integrado
+
+`synthetic_research_cycle.py` apenas orquestra J2/PRE2 e J3/PRE1–PRE6. Ele reconstrói folds/purge/OOS, reexecuta hipóteses por prefixos fechados e só observa barreiras a partir da primeira barra cuja abertura seja posterior à disponibilidade do candidato. Ramas financeiras são entradas externas explícitas; não há soma de alternativas, persistência PAPER, rede ou ordem.
+
 `synthetic_financial_scenarios.py` compõe `SyntheticBarrierObservation` PRE1 com `SyntheticCostScenario` PRE2, sem reimplementar funding/taxas ou inferir fills de candles. Recebe branches de entrada/saída ou perda de liquidação explicitamente declarados, com fonte/moeda/sinal de funding, e devolve alternativas condicionais em `Decimal`. Não contém rede, persistência, ledger de exchange ou superfície de ordem; flags de validação financeira e live permanecem falsas.
 
 

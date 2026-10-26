@@ -213,6 +213,10 @@ Checkpoint confirmado: PR #177, issue #176 integradas em `main=6924f2545704954d6
 
 ## J3/PRE6 #180 — cenários financeiros condicionais offline (26/10/2026 UTC)
 
+## J3/PRE7 #184 — integração causal sintética (26/10/2026 UTC)
+
+Base verificada: `main=57433db4af45a9e1043d3eadd9e018809f7b898c`, PRs abertas zero. Branch `codex/issue-184-j3-pre7-synthetic-cycle` integra os módulos J2/PRE2 e J3/PRE1–PRE6 sem rede ou ordens. A regra de safety impede usar o OPEN imediatamente seguinte quando a disponibilidade ainda não ocorreu; sem barra/plano/premissa elegível há abstenção. Aguardar PR, CI e revisão do SHA final; J1/J2/J3 seguem não homologadas.
+
 Base: `main=dcaacf91d7a15cecb83d575cf4af65c9224956ab`, sem PRs abertas. Branch `codex/issue-180-j3-pre6-financial-scenarios` compõe PRE1/PRE2 em alternativas somente com preços/perdas, custos, funding, identidade, sinal e moeda declarados por fixture. Ambiguidade requer ramificações e premissa ausente falha fechado. Sem feed, SQLite, credencial, ordem, deploy, dado financeiro real ou gasto; aguardar PR/CI/revisão no SHA final. J1/J2/J3 seguem não homologadas.
 
 

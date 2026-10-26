@@ -190,6 +190,10 @@ Validar PRE3 e PRE4 novamente antes de cada replay. Processar **somente** `oos_i
 
 ## J3/PRE6 #180 — cenários financeiros condicionais offline
 
+## J3/PRE7 #184 — integração temporal offline
+
+Validar a diferença entre `close_safety_ms=0` e 1000, off-by-one da primeira barra elegível, término OOS sem barra futura, plano inconsistente, ausência de premissa financeira, replay determinístico e ausência de rede/ordens. O relatório expõe contagens de sinal, abstenção e ramos sem agregar alternativas como PnL de carteira.
+
 Testar LONG/SHORT com preços de fixture explícitos, custos/funding positivos e negativos, perda de liquidação declarada, precisão Decimal e replay determinístico. Candle com níveis simultâneos precisa de múltiplas ramificações; cenário sem saída/perda, funding sem proveniência/moeda/sinal, identidade divergente ou ausência de barreira deve recusar antes de gerar resultado. Não testar inferência de fill, rentabilidade, execução, dados reais ou autorização de ordem: o output é cenário condicional, não backtest financeiro.
 
 
