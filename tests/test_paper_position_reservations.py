@@ -273,3 +273,131 @@ class PaperPositionReservationTests(unittest.TestCase):
         successful = reopened.reserve_exit("fixture_position_A", 1, order,
                                            as_of_ms=T + 1)
         self.assertEqual(successful.reserved_unfilled_units, D(20))
+
+
+    def test_concurrent_reservations_share_single_balance(self):
+        self.open(exit_plan=entire_plan())
+        candidates = (exit_order("race1", "60", 1), exit_order("race2", "60", 1))
+        def commit(value):
+            try:
+                SQLitePaperPositionJournal(self.path).reserve_exit(
+                    "fixture_position_A", 1, value, as_of_ms=T + 1)
+                return "stored"
+            except DataValidationError:
+                return "blocked"
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            result = list(pool.map(commit, candidates))
+        self.assertEqual(sorted(result), ["blocked", "stored"])
+        after = SQLitePaperPositionJournal(self.path).load("fixture_position_A")
+        self.assertEqual(len(after.exit_orders), 1)
+        self.assertEqual(after.reserved_unfilled_units, D(60))
+        self.assertEqual(after.unreserved_units, D(40))
+
+    def test_three_concurrent_tranches_cannot_reserve_the_runner(self):
+        self.open()
+        balances = []
+        for step, amount in enumerate(("50", "30", "14"), 1):
+            balances.append(self.store.reserve_exit(
+                "fixture_position_A", step,
+                exit_order(str(step), amount, 1), as_of_ms=T + 1,
+            ))
+        final = balances[-1]
+        self.assertEqual([x.reserved_unfilled_units for x in final.tranches],
+                         [D(50), D(30), D(14)])
+        self.assertEqual(final.reserved_unfilled_units, D(94))
+        self.assertEqual(final.unreserved_units, D(6))
+        with self.assertRaises(DataValidationError):
+            self.store.reserve_exit(
+                "fixture_position_A", 3, exit_order("extra", "1", 1),
+                as_of_ms=T + 1,
+            )
+
+    def test_cross_order_event_id_collision_rolls_back(self):
+        self.open()
+        a = exit_order("sourceA", "20", 1)
+        b = exit_order("sourceB", "20", 1)
+        self.store.reserve_exit("fixture_position_A", 1, a, as_of_ms=T + 1)
+        self.store.reserve_exit("fixture_position_A", 1, b, as_of_ms=T + 1)
+        same = e("provider_fill", PaperOrderEventKind.FILL, 2, "10")
+        self.store.append_exit_events("fixture_position_A", a.intent_id,
+                                      (same,), as_of_ms=T + 2)
+        first = self.store.load("fixture_position_A")
+        with self.assertRaises(DataValidationError):
+            self.store.append_exit_events("fixture_position_A", b.intent_id,
+                                          (same,), as_of_ms=T + 2)
+        self.assertEqual(self.store.load("fixture_position_A"), first)
+
+    def test_retro_future_and_conflicting_events_fail_without_checkpoint(self):
+        self.open()
+        order = exit_order("timed", "10", 1)
+        self.store.reserve_exit("fixture_position_A", 1, order, as_of_ms=T + 1)
+        prior = self.store.load("fixture_position_A")
+        for event, cutoff in (
+            (e("future", PaperOrderEventKind.FILL, 4, "1"), T + 3),
+            (e("before", PaperOrderEventKind.FILL, 0, "1"), T + 2),
+        ):
+            with self.subTest(event=event), self.assertRaises(DataValidationError):
+                self.store.append_exit_events("fixture_position_A", order.intent_id,
+                                              (event,), as_of_ms=cutoff)
+        with self.assertRaises(DataValidationError):
+            self.store.append_exit_events("fixture_position_A", order.intent_id,
+                                          (), as_of_ms=T)
+        with self.assertRaises(DataValidationError):
+            self.store.reserve_exit("fixture_position_A", 1,
+                replace(exit_order("invalidvenue", "5", 1),
+                        venue=PaperVenue.BYBIT_V5), as_of_ms=T + 1)
+        self.assertEqual(self.store.load("fixture_position_A"), prior)
+
+    def test_partial_open_only_after_terminal_cancellation(self):
+        partial = e("partial_open", PaperOrderEventKind.FILL, 1, "40")
+        cancel = e("cancel_open", PaperOrderEventKind.CANCELLED, 2)
+        short_plan = SyntheticExitPlan(
+            initial_units=D(40),
+            tranches=(SyntheticExitTranche(ExitBasis.INITIAL_POSITION, D(50)),),
+        )
+        opts = dict(
+            position_id="fixture_partial_position",
+            opening_intent=opened_order(intent_id="fixture_partial_entry"),
+            exit_plan=short_plan, plan_version="partial-v1", as_of_ms=T + 2,
+        )
+        with self.assertRaises(DataValidationError):
+            self.store.create_position(opening_events=(partial,), **opts)
+        confirmed = self.store.create_position(
+            opening_events=(partial, cancel), **opts)
+        self.assertEqual(confirmed.initial_confirmed_units, D(40))
+        self.assertEqual(confirmed.confirmed_remaining_units, D(40))
+
+    def test_schema_and_corrupt_checksum_refuse_replay(self):
+        self.open()
+        with self.assertRaises(DataValidationError):
+            SQLitePaperOrderJournal(self.path)
+        legacy = self.path.parent / "legacy-j4.sqlite"
+        SQLitePaperOrderJournal(legacy)
+        with self.assertRaises(DataValidationError):
+            SQLitePaperPositionJournal(legacy)
+        for bad in ("", ":memory:", "file::memory:?cache=shared"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                SQLitePaperPositionJournal(bad)
+        with sqlite3.connect(self.path) as connection:
+            connection.execute("UPDATE paper_positions SET payload='{}'")
+        with self.assertRaises(DataValidationError):
+            SQLitePaperPositionJournal(self.path).load("fixture_position_A")
+
+    def test_no_network_live_authorization_or_real_position(self):
+        with patch("urllib.request.urlopen", side_effect=AssertionError("network")):
+            self.open()
+            order = exit_order("fake", "20", 1)
+            self.store.reserve_exit("fixture_position_A", 1, order, as_of_ms=T + 1)
+            d = self.store.append_exit_events(
+                "fixture_position_A", order.intent_id,
+                (e("mockfill", PaperOrderEventKind.FILL, 2, "20"),),
+                as_of_ms=T + 2,
+            )
+        self.assertFalse(d.orders_sent)
+        self.assertFalse(d.approved_for_live_use)
+        self.assertFalse(d.live_trading_authorized)
+        self.assertFalse(d.persistent_idempotency_verified)
+
+
+if __name__ == "__main__":
+    unittest.main()
