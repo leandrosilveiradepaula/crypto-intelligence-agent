@@ -166,6 +166,10 @@ def inspect_once(
         output["status"] = "provider_hourly_schema_or_completeness_rejected"
     except CandleFeedPrivateError as error:
         output["status"] = error.args[0]
+    except Exception:
+        # An unexpected opener/provider exception might embed a credential in
+        # its message. Never let that message reach stdout or traceback output.
+        output["status"] = "unexpected_provider_failure_sanitized"
     return output
 
 
