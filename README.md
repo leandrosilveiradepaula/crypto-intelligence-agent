@@ -249,3 +249,14 @@ Validação opcional local, com Chromium/Chrome instalado e biblioteca Playwrigh
 python3 -m scripts.audit_paper_dashboard_browser --out-dir /tmp/paper-mobile-qa
 ```
 A ação [PAPER mobile browser QA](.github/workflows/paper-mobile-browser-qa.yml) instala somente o driver Python livre em ambiente temporário do runner público e usa o navegador Chrome já disponível no sistema, sem baixar dados de mercado. Inspeciona 280/320/375/390/768/1280px, foco e navegação via teclado, overflow global, tabela horizontal, contrastes de amostras de texto, ausência de requisições e banner SIMULADO; produz JSON/PNG como artefato transitório. **Isso não substitui testes físicos em diferentes aparelhos, leitor de tela real nem homologação WCAG completa.** Continua J5 não homologada, sem deploy.
+
+
+### Consultar posição PAPER salva, sem abrir banco para escrita (J5/PRE4)
+O diário de posições AUTO4 existe apenas para **fixtures fictícias**. A primeira inspeção pontual da J5 pode recuperar uma posição de SQLite local previamente criado, sem DDL/migration, conta, preço real ou envio de ordem:
+```bash
+python3 -m scripts.inspect_paper_position --journal /caminho/local/positions.sqlite --position-id fixture_position_A --format html --output /tmp/posicao-paper.html
+python3 -m scripts.inspect_paper_position --journal /caminho/local/positions.sqlite --position-id fixture_position_A --format json --output /tmp/posicao-paper.json
+```
+Se houver também o arquivo separado de abertura AUTO2, use `--opening-order-journal /caminho/local/orders.sqlite` para conferir que intenção e eventos OPEN são idênticos nos dois journals. Sem ele, a saída indica explicitamente **não conferido**; o diário AUTO4 continua sujeito às validações próprias. O leitor usa SQLite **`mode=ro`**, exige arquivo/versão/layout existentes, verifica digest/replay/índices e não cria bancos. Não aceita JSON importado, diretórios/coringas, arquivos desconhecidos, symlinks, URL, credenciais nem dados de conta; um identificador `fixture_...` é obrigatório. JSON `paper_position_snapshot_v1` e HTML mostram separadamente preenchimentos, reservas inclusive UNKNOWN, saldo restante e saldo não reservado, planos e hora UTC. Arquivos de saída são criados exclusivamente, sem overwrite. **Não publique arquivos de posição ou logs de contas reais** nem interprete SHA256 local como assinatura de corretora. A UI é só leitura, PAPER e sem PnL; `live` continua proibido.
+
+A workflow de QA no Chrome também inspeciona uma posição persistida sinteticamente em seis larguras e anexa imagens/JSON temporários. Isso não é leitura da conta Binance/Bybit, backtest, robô ativo ou conformidade WCAG completa.
