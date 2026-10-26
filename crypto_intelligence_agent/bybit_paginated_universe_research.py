@@ -27,13 +27,14 @@ _DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,22})(?:\.[0-9]{1,20})?")
 
 @dataclass(frozen=True)
 class BybitResearchUniverseMember:
-    """A research ranking in QUOTE USDT, not USD or a real trade contract."""
+    """Numeric research proxy. Ticker 24h fields have no proven economic unit."""
 
     rank: int
     symbol: str
     base_coin: str
-    turnover24h_usdt: Decimal
-    volume24h_base: Decimal
+    turnover24h_raw_unverified: Decimal
+    volume24h_raw_unverified: Decimal
+    quote_contract_currency: str = "USDT"
 
 
 @dataclass(frozen=True)
@@ -54,7 +55,7 @@ class BybitPaginatedUniverseResearch:
 
     @property
     def ranking_basis(self) -> str:
-        return "documented_quote_turnover_24h_usdt_not_usd"
+        return "raw_ticker_turnover24h_numeric_proxy_unit_unverified"
 
     @property
     def cursor_chain_complete_as_asserted(self) -> bool:
@@ -79,6 +80,14 @@ class BybitPaginatedUniverseResearch:
 
     @property
     def usd_comparable_volume_verified(self) -> bool:
+        return False
+
+    @property
+    def ticker_turnover_unit_verified(self) -> bool:
+        return False
+
+    @property
+    def ticker_volume_unit_verified(self) -> bool:
         return False
 
     @property
@@ -133,11 +142,13 @@ def audit_bybit_linear_universe_offline(
     max_symbols: int = 50,
     max_capture_age_ms: int = _MAX_CAPTURE_AGE_MS,
 ) -> BybitPaginatedUniverseResearch:
-    """Rank strictly documented crypto USDT perp candidates within ONE fixture.
+    """Rank RAW ticker turnover values for USDT-quoted crypto perps in fixtures.
 
     A second/subsequent page is accepted only when the caller supplies the
     exact prior returned cursor. The terminal page MUST expose an empty
     nextPageCursor. Cursors and timestamps are *claims*, not server proof.
+    The ticker endpoint documents raw 24h turnover but NOT its unit; the
+    separate kline endpoint\'s explicit quote units do NOT transfer to it.
     Never promote returned members into a validated Top50 universe or OHLCV.
     """
     if (type(observed_at_ms) is not int or observed_at_ms <= 0
@@ -256,7 +267,8 @@ def audit_bybit_linear_universe_offline(
     selected = tuple(
         BybitResearchUniverseMember(
             rank=i + 1, symbol=symbol, base_coin=candidate_bases[symbol],
-            turnover24h_usdt=values[0], volume24h_base=values[1],
+            turnover24h_raw_unverified=values[0],
+            volume24h_raw_unverified=values[1],
         )
         for i, (symbol, values) in enumerate(ranked[:max_symbols])
     )
