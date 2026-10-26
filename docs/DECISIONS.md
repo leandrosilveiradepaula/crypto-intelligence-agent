@@ -348,3 +348,9 @@ Após a inspeção de uma posição PRE4, o produto precisa exibir um número va
 ## D89 — J2/PRE2 #172: sinal é hipótese verificável, nunca autorização de ordem (26/10/2026 UTC)
 
 Decisão: implementar apenas uma hipótese A (rompimento após compressão) em `synthetic_entry_hypotheses.py`, reutilizando J2/PRE1, sem criar algoritmo paralelo de EMA/ATR/extremos/volume. O ATR candidato não integra as janelas de compressão; comparar duas janelas exclusivamente passadas e disjuntas, com baseline não zero. Causalidade do candle fechado é obrigatória, cooldown é de pesquisa e thresholds são entradas declaradas (sem hardcode de "estratégia vencedora"). Output carrega evidência numérica e flags de não-live; não possui execução, probabilidade ou rentabilidade. B/C/D continuam hipóteses futuras; ML e LLM não decidem ordens. Não integrar com AUTO1–AUTO6 ou API privada antes de J1 (unidade, direitos, Top50) e J3 risco/backtest. Questão #172, épica J2 #3 permanece aberta.
+
+
+
+## D90 — J3/PRE3 #174: janelas temporais reproduzíveis antes de qualquer backtest real (26/10/2026 UTC)
+
+Decisão: usar uma divisão puramente temporal e offline de `ClosedCandle` sintético com treino deslizante, gap explícito (não afirmar que seja embargo de labels completo) e teste de blocos não sobrepostos (`stride >= test_bars`). `train_last_close_ms + close_safety_ms <= test_first_open_ms` é gate anti-lookahead; valida-se toda a série antes da segmentação. Recusar splits incompletos e limites excessivos, não criar dados ou medir rentabilidade. O plano é **índice/tempo somente**, nenhum treinamento, combinação financeiro-monetária, ordem, autorização live ou OOS homologado. Históricos J1, custos J3 e seleção/validação efetiva de parâmetros são dependências futuras.
