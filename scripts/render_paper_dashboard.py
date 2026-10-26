@@ -251,7 +251,6 @@ def render_paper_dashboard(snapshot: object, template: str) -> str:
     updated = _tag_text(updated, "flow-opening", _fmt(initial))
     updated = _tag_text(updated, "runner-note",
                         _fmt(residual) + " unidades (" + _fmt(residual_pct) + "%)")
-    updated = _tag_text(updated, "runner-note-plain", _fmt(residual) + " unidades")
     running = initial
     for index, amount in enumerate(steps, 1):
         running -= amount
