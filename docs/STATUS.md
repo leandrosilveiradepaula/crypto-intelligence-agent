@@ -113,6 +113,8 @@ Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomi
 
 **J1/WU43 #135 CONCLUÍDA na integridade do SQLite LOCAL:** PR #136 merged SHA `8e2a61d352bd4f0d40a4b1de86bfccf039cad4cb`, HEAD revisado `f55e2da431561a913bf34f6bb295ec135476637f`, review #5646590380, CI PR #40256399524 SUCCESS (**750 testes Python offline**, compileall e 12 docs), CI pós-merge #40256467576 SUCCESS. O coletor Kraken usa UMA transação para UniverseSnapshot+1..5 páginas price-only, rollback integral de conflito em banco EXISTENTE, replay idempotente; nenhum volume econômico ou rights liberado. Issues #133 e #135 fechadas, J1 #2/#32/#36/#48 seguem abertas.
 
+**J1/WU44 #138 EM IMPLEMENTAÇÃO — origem de volume documentado Bybit V5:** parser WU39 já existe e será validado por um único probe real owner-only (após PR/CI/revisão) de instrument BTCUSDT Trading e 3 candles fechados 1H, **2 GETs máximos**, base BTC e turnover quote USDT. Status HTTP/restrição regional 403 causa parada sem retry/alterar host. Tudo privado, sem outputs financeiros e sem autorização comercial; direitos Bybit não equivalem a Kraken #48 ou prova unidade Kraken #36. J1 #2/#32/#36/#48 ainda abertas, sem `ClosedCandle` financeiro ou ordem real.
+
 ## Riscos/pendências
 A Binance respondeu HTTP451 no runner gratuito, sem candles. Kraken respondeu HTTP200 para instrumentos, tickers e 3 candles BTC (amostra pontual), com `volumeQuote` em USD, porém inclui instrumentos tokenizados não cripto (`PF_AAPLXUSD`). **213 prefixos PI_/PF_ não equivalem a 213 criptoativos elegíveis.** Falta classificação confiável, precisão das unidades, fechamento intrabar, cobertura histórica e homologação em ambiente operacional. J1 continua **ABERTA**, sem estratégias validadas, trades ou produção.
 
