@@ -134,7 +134,10 @@ def _load_cursor(conn: sqlite3.Connection) -> _Cursor | None:
     values = {r["key"]: r["value"] for r in rows}
     if _CURSOR_KEY not in values:
         return None
-    raw = values[_CURSOR_KEY]
+    return _decode_cursor_envelope(values[_CURSOR_KEY])
+
+
+def _decode_cursor_envelope(raw: str) -> _Cursor:
     if type(raw) is not str or len(raw) > _MAX_CURSOR_CHARS:
         raise DataValidationError("PAPER cursor metadata exceeds bound")
     try:
@@ -165,6 +168,7 @@ def _load_cursor(conn: sqlite3.Connection) -> _Cursor | None:
         return cursor
     except (ValueError, TypeError, KeyError, OverflowError) as exc:
         raise DataValidationError("invalid or tampered durable PAPER cursor") from exc
+
 
 
 def _verify_cursor_orders(conn: sqlite3.Connection, cursor: _Cursor | None) -> None:
