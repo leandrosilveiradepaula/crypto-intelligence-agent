@@ -142,3 +142,6 @@ Ao lado dos módulos J4/AUTO1–AUTO6, introduz-se uma ligação de **pesquisa s
 ## J4/AUTO8 #190 — travar OPEN após FILL não reconciliado
 
 AUTO8 fecha uma lacuna entre o diário de ordens e a reserva de posições PAPER: qualquer FILL OPEN requer vínculo local íntegro com uma posição antes de uma nova entrada. O único plano hoje disponível é sintético, portanto recebe estado `PROTECTED_HYPOTHETICAL_ONLY`, nunca a alegação de stop real; novas OPEN continuam travadas até existir capacidade de proteção/reconciliação própria, enquanto REDUCE_ONLY simulado não é removido. A entrega não conclui J4 #5, não promove PAPER a prospectivo e não altera os gates de testnet/live.
+
+
+**Review de integração AUTO8:** a nova etapa revalida estados de abertura AUTO2 e reserva a próxima OPEN sob o mesmo lock `BEGIN IMMEDIATE`, para que um FILL de outro escritor não atravesse o intervalo entre auditoria e INSERT. AUTO4 permanece uma base RO independente, sem alegar proteção native stop nem snapshot atômico cross-db. A verificação pura RO isolada é diagnóstico, não condição suficiente para autorizar outra abertura. Gates J1/J2/J3/J4/J6 intactos.
