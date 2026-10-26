@@ -70,6 +70,23 @@ class PaperOpenHealth:
         )
 
 
+def _verify_locked_order_schema(order_connection) -> None:
+    """Match the strict RO reader's schema checks under the order write lock."""
+    entries = order_connection.execute(
+        "SELECT type, name FROM sqlite_master "
+        "WHERE type IN ('table','view','trigger') AND name NOT LIKE 'sqlite_%'"
+    ).fetchall()
+    if (any(row["type"] != "table" for row in entries)
+            or {row["name"] for row in entries} != _ORDER_TABLES):
+        raise DataValidationError("foreign or incorrect PAPER order journal schema")
+    meta = order_connection.execute(
+        "SELECT key, value FROM paper_order_meta ORDER BY key"
+    ).fetchall()
+    if (len(meta) != 1 or meta[0]["key"] != "schema_version"
+            or meta[0]["value"] != _ORDER_VERSION):
+        raise DataValidationError("incorrect PAPER order journal version")
+
+
 def _checked_order_entries(order_connection):
     """Replay every journal row while caller holds a stable order snapshot."""
     rows = order_connection.execute(
@@ -171,6 +188,7 @@ def _audit_paper_open_health_locked(
     """
     if _checked_path(order_journal_path) == _checked_path(position_journal_path):
         raise DataValidationError("PAPER order and position health sources must be independent")
+    _verify_locked_order_schema(order_connection)
     return _audit_with_orders(_checked_order_entries(order_connection), position_journal_path)
 
 
