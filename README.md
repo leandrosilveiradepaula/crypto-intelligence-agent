@@ -6,6 +6,9 @@ Plataforma em desenvolvimento para **trading quantitativo AUTOMÁTICO** de futur
 O requisito final é automação de entradas **e** saídas, em futura venue Binance USD-M ou Bybit V5 linear, com motor de risco/ordens e painel de acompanhamento. O modo de engenharia é `offline_paper`; testnet depende de autorização e `live` está bloqueado até homologação e gate explícito do titular. Registros anteriores com 'manual' são históricos de protótipos e não definem o novo alvo. [Contrato de execução automatizada](docs/AUTOMATED_EXECUTION_SPEC.md).
 
 ## Situação
+**Checkpoint consolidado em 26/10/2026 UTC:** `main=c9ed28ca6c979895441807e2611d50a617d26939`; CI pós-merge [#40300735438](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40300735438) **SUCCESS: 848 testes offline**, `compileall` e 14 documentos. J4/AUTO4 (#155/PR #156), J4/AUTO5 (#157/PR #158), J4/AUTO6 (#159/PR #160) e J5/PRE1 (#161/PR #162) estão integradas. **Isto demonstra engenharia de simulação e tela local, NÃO dados financeiros homologados, estratégia rentável ou bot operando dinheiro real.** J1 segue aberta, J2/J3 ainda não homologadas, J4/J5/J6 não aceitas operacionalmente. A interface estática em português fica em `web/paper-demo.html` (abrir localmente), sem scripts/contas/rede.
+
+**Histórico inicial da J1 (linhas legadas, não status atual):**
 - J0 documental concluída.
 - J1 Dados em andamento: WU1 (#12), WU2 (#14), WU3 (#16) e WU4 (#18) integradas; parte offline da WU5 (#20) integrada. [Issue #19](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/19) continua aberta aguardando evidência real de API pública.
 - CI pós-WU5: **78 testes Python offline**, compilação e dez documentos aprovados. Não equivale a feed live homologado.

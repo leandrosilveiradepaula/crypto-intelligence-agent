@@ -166,3 +166,13 @@ AUTO6 #159 acrescenta preflight/reserva OPEN numa única transação PAPER, calc
 
 ## J5/PRE1 #161 — tela em português offline, execução PAPER visualizada
 A branch `codex/issue-161-j5-pre1-mobile-paper-demo` introduz `web/paper-demo.html` com prévia mobile e indicadores de fluxo J4 exclusivamente sintéticos, sem scripts/contas/rede/ordens. A PR/CI desta tela exigem validação antes de integração. Base confirmada: AUTO6 #159/PR #160 integrada SHA `830bdc6705458a7e3f9bb88623a22d8eaf1c1dab`, pós-merge [CI #40299720648](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40299720648) SUCCESS **843 testes offline**, compileall e 14 docs. J1, J2, J3, J4, J5 e J6 ainda não aceitas para operação real; interface é uma amostra, não release.
+
+
+## Checkpoint consolidado pós-J4/AUTO6 e J5/PRE1 — 26/10/2026 UTC (prevalece sobre notas "em revisão" acima)
+- **GitHub `main`**: `c9ed28ca6c979895441807e2611d50a617d26939`; PRs abertas **zero** na verificação. [CI pós-merge #40300735438](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40300735438): **SUCCESS, 848 testes offline, compileall, 14 documentos**.
+- **AUTO4** issue #155 / PR #156: `355c12c30f70a972721592be38f4393bbfa030b3`, proteção conjunta de REDUCE_ONLY, rollback, recovery, lote fictício.
+- **AUTO5** issue #157 / PR #158: `2861207076aea3d2c5cd4f2a079e61825ef599ec`, `python3 -m scripts.demo_automated_paper_cycle` para duas venues **somente em fixtures**, 50/30/14 e runner 6.
+- **AUTO6** issue #159 / PR #160: `830bdc6705458a7e3f9bb88623a22d8eaf1c1dab`, pendências/UNKNOWN locais auditadas em transação única de gate/reserva OPEN PAPER.
+- **J5/PRE1** issue #161 / PR #162: `c9ed28ca6c979895441807e2611d50a617d26939`, `web/paper-demo.html` standalone em PT-BR, responsivo, sem JS e sem controles de negociação; **QA visual física/abrangente ainda não realizada**.
+- **Jornadas**: J0 concluída; J1 #2 continua **não homologada** (fontes/rights #19/#32/#36/#48); J2 #3 sinais reais não homologados; J3 #4 backtest financeiro real não homologado; J4 #5 tem componentes PAPER mas não é executor de exchange; J5 #6 tem protótipo estático, não UI operacional; J6 #7 sem homologação contínua; J7 #8 condicionado a resultado validado.
+- **Próxima prioridade independente**: construir UI local consumindo snapshot PAPER versionado e testar visual/acessibilidade sem rede, enquanto J1 continua requerendo evidência primária de OHLCV econômico/licença e a futura escolha de venue. Nunca habilitar ordens/testnet/live ou deploy por default. Custo adicional R$0,00.

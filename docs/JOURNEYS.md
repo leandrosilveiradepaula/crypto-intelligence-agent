@@ -101,3 +101,7 @@ A J1 só termina com aceite e evidência; testes sintéticos, CI verde ou ausên
 
 ## D77 — mudança material aprovada para o destino das jornadas
 O requisito final é **trading automatizado** com entradas e saídas (stops/parciais/trailing/runner), diferentemente dos protótipos anteriores descritos como "manuais". O histórico de WUs e PRs não é reescrito: continuam implementações sintéticas, não ordens reais. Acrescentar simulador de intenções/fills e reconciliação a J4, monitor de estado/kill-switch a J5, paper prospectivo/testnet condicionada e release gate separado a J6. J1 continua ativa e bloqueada por dados/rights; nenhum salto direto a `live`. Fonte: `docs/AUTOMATED_EXECUTION_SPEC.md` e issue #147.
+
+
+## Checkpoint de implementação — 26/10/2026 UTC
+J4 tem AUTO1–AUTO6 como **componentes de simulação** (incluindo posições/ordens/fills/risco transacional PAPER); não é negociação real nem aceite da jornada #5. J5 recebeu apenas PRE1 #161/PR #162, tela `web/paper-demo.html` estática PT-BR para o roteiro fictício; não é UI operacional nem aceite #6. J1 segue bloqueada e não homologada; J2/J3/J6 sem validação necessária para produção. CI pós-J5/PRE1 #40300735438 SUCCESS (848 testes offline, 14 docs), sem evidência de lucro, direitos de mercado ou permissão de ordens.
