@@ -109,3 +109,7 @@ J4 tem AUTO1–AUTO6 como **componentes de simulação** (incluindo posições/o
 
 ## J5/PRE2 — exportação do replay fictício (26/10/2026 UTC)
 Após PRE1 com página estática, J5/PRE2 #164 cria uma interface local em HTML obtida de snapshots `paper_dashboard_snapshot_v1` **gerados e validados em processo** de fixtures J4/AUTO5. Sem rede, sem live e sem sobrescrita de arquivos de usuário; entrega em validação. J5 permanece **não homologada** até ter UI operacional, provas visuais/acessibilidade e dados/ordens legítimos. J1/J2/J3/J4/J6 seguem com seus gates independentes, sem qualquer autorização de dinheiro real.
+
+
+## J5/PRE3 #166 — acessibilidade e testes de browser, não homologação
+PRE3 preserva a tela PAPER mobile PT-BR, acrescenta navegação por teclado e fluxo horizontal de tabela acessível, com auditoria de seis larguras em Chrome mediante workflow de CI, sem APIs ou market data real. J5 #6 só será aceita após produto conectado com dados legítimos, revisão visual e de acessibilidade ampla em dispositivos reais, automação segura de ordens e homologação J6. Teste browser verde não é demonstração de rentabilidade, trading ou direitos J1.
