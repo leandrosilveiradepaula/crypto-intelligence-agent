@@ -7,6 +7,7 @@ import getpass
 import json
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from scripts.run_private_exchange_readonly_tty import main
 
@@ -36,8 +37,8 @@ class TtyReadonlyTests(unittest.TestCase):
                 raise provider_error
             return fake_provider(*args, **kwargs)
 
-        with patch(f"{MODULE}.sys.stdin.isatty", return_value=tty), \
-             patch(f"{MODULE}.sys.stderr.isatty", return_value=tty), \
+        with patch(f"{MODULE}.sys.stdin", SimpleNamespace(isatty=lambda: tty)), \
+             patch(f"{MODULE}.sys.stderr", SimpleNamespace(isatty=lambda: tty)), \
              patch(f"{MODULE}.getpass.getpass", side_effect=secrets) as hidden, \
              patch(f"{MODULE}.diagnose", side_effect=provider), \
              redirect_stdout(output):
@@ -111,8 +112,8 @@ class TtyReadonlyTests(unittest.TestCase):
                       OSError("sensitive")):
             with self.subTest(kind=type(error).__name__):
                 output = StringIO()
-                with patch(f"{MODULE}.sys.stdin.isatty", return_value=True), \
-                     patch(f"{MODULE}.sys.stderr.isatty", return_value=True), \
+                with patch(f"{MODULE}.sys.stdin", SimpleNamespace(isatty=lambda: True)), \
+                     patch(f"{MODULE}.sys.stderr", SimpleNamespace(isatty=lambda: True)), \
                      patch(f"{MODULE}.getpass.getpass", side_effect=error), \
                      patch(f"{MODULE}.diagnose") as provider, \
                      redirect_stdout(output):
