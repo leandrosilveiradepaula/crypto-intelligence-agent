@@ -123,3 +123,7 @@ O usuário **não precisa confirmar cada operação**: após futura autorizaçã
 
 ## J4/AUTO2 — persistência PAPER separada dos candles
 `SQLitePaperOrderJournal` é um componente local de referência independente de `SQLiteMarketDataStore`, sem usar suas tabelas, sem migration, e sem I/O de rede. Reutiliza `PaperOrderIntent`, `PaperOrderEvent`, `replay_paper_order` e os validadores Decimal/UTC existentes. `reserve` toma reserva OPEN por `fixture_signal_id`, `append_events` reaplica o reducer antes de gravar eventos e checkpoint na mesma transação, e `load` confere hashes, ordem, cursor e replay. Simula recuperação de estado após restart, mas não substitui Order/FillLedger real nem uma política de risco por posição. Bancos de pesquisa devem ficar locais e fora do GitHub público; live/trading continua desabilitado.
+
+
+## J4/AUTO3 — revisão pura de risco simulado
+`paper_risk_gate.py` é um módulo sem I/O. Distingue `PaperRiskLimits` explícitos, `PaperRiskObservation` fictícia e `PaperRiskDecision` imutável; calcula notional em moeda de cotação usando Decimal, rejeita snapshots futuros/obsoletos e nega novos OPEN com kill-switch/perda/limites ou OPEN incerto. Ordens `REDUCE_ONLY` permanecem apenas planos hipotéticos quando o kill switch pausa entrada. Nenhuma política de risco real é hardcoded: cap de ordem, exposição, perda, pendências e idade máxima são parâmetros, sujeitos aos testes da J3. Não conecta `PaperRiskObservation` à verdade da exchange ou à lista persistida de intenções J4/AUTO2, logo não é gate live nem substitui reconciliação real.
