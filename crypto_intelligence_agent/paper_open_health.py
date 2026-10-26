@@ -70,34 +70,21 @@ class PaperOpenHealth:
         )
 
 
-def audit_paper_open_health(
-    order_journal_path: str | Path, position_journal_path: str | Path,
-) -> PaperOpenHealth:
-    """Cross-check all local opening fills without writing either database.
+def _checked_order_entries(order_connection):
+    """Replay every journal row while caller holds a stable order snapshot."""
+    rows = order_connection.execute(
+        "SELECT intent_id FROM paper_order_intents ORDER BY intent_id LIMIT 4097"
+    ).fetchall()
+    if len(rows) > 4096:
+        raise DataValidationError("PAPER health order audit exceeds resource bound")
+    return tuple(
+        SQLitePaperOrderJournal._checked_entry(order_connection, row["intent_id"])
+        for row in rows
+    )
 
-    A matching AUTO4 record proves only that the same synthetic intent/events
-    were copied into a local position with an exit *plan*.  Because that plan
-    is not a venue-native protective order and two files cannot be read in one
-    transaction, it remains ``PROTECTED_HYPOTHETICAL_ONLY`` and blocks a new
-    OPEN.  Any missing, duplicate, tampered or mismatched identity is also a
-    fail-closed block.
-    """
-    if _checked_path(order_journal_path) == _checked_path(position_journal_path):
-        raise DataValidationError("PAPER order and position health sources must be independent")
 
-    with _read_database(
-        order_journal_path, _ORDER_TABLES, "paper_order_meta", _ORDER_VERSION,
-    ) as order_connection:
-        rows = order_connection.execute(
-            "SELECT intent_id FROM paper_order_intents ORDER BY intent_id LIMIT 4097"
-        ).fetchall()
-        if len(rows) > 4096:
-            raise DataValidationError("PAPER health order audit exceeds resource bound")
-        orders = tuple(
-            SQLitePaperOrderJournal._checked_entry(order_connection, row["intent_id"])
-            for row in rows
-        )
-
+def _audit_with_orders(orders, position_journal_path: str | Path) -> PaperOpenHealth:
+    """Inspect positions separately; they are never an exchange stop proof."""
     with _read_database(
         position_journal_path, _POSITION_TABLES, "paper_position_meta", _POSITION_VERSION,
     ) as position_connection:
@@ -106,10 +93,21 @@ def audit_paper_open_health(
         ).fetchall()
         if len(rows) > 4096:
             raise DataValidationError("PAPER health position audit exceeds resource bound")
+        # _read verifies canonical digest, event replay, position indexes and
+        # quantity conservation; do not replace it with unchecked SQL.
         records = tuple(
             SQLitePaperPositionJournal._read(position_connection, row["position_id"])
             for row in rows
         )
+        # A dangling index may be invisible to per-position replay. Always
+        # reject a journal with orphaned intent->position references.
+        orphan = position_connection.execute(
+            "SELECT 1 FROM paper_position_order_ids i "
+            "LEFT JOIN paper_positions p ON i.position_id=p.position_id "
+            "WHERE p.position_id IS NULL LIMIT 1"
+        ).fetchone()
+        if orphan is not None:
+            raise DataValidationError("PAPER position journal has orphaned order index")
 
     positions_by_open: dict[str, list[object]] = {}
     for record in records:
@@ -158,3 +156,37 @@ def audit_paper_open_health(
     else:
         reason = "paper_open_unverified_protection"
     return PaperOpenHealth(tuple(fills), False, reason)
+
+
+def _audit_paper_open_health_locked(
+    order_connection, order_journal_path: str | Path,
+    position_journal_path: str | Path,
+) -> PaperOpenHealth:
+    """Used only during the order journal BEGIN IMMEDIATE transaction.
+
+    By reading the OPEN rows under the SAME write lock as the prospective
+    reservation, no other AUTO2 writer can insert a FILL in the health->OPEN
+    gap. AUTO4 remains an independently read SQLite file, not an atomic
+    cross-database snapshot; protection remains unverified.
+    """
+    if _checked_path(order_journal_path) == _checked_path(position_journal_path):
+        raise DataValidationError("PAPER order and position health sources must be independent")
+    return _audit_with_orders(_checked_order_entries(order_connection), position_journal_path)
+
+
+def audit_paper_open_health(
+    order_journal_path: str | Path, position_journal_path: str | Path,
+) -> PaperOpenHealth:
+    """Read-only independent diagnostic (not a reservation authorization).
+
+    For a reservation use the order-journal guarded method so the health
+    check and eventual OPEN insert happen under one order-file write lock.
+    """
+    if _checked_path(order_journal_path) == _checked_path(position_journal_path):
+        raise DataValidationError("PAPER order and position health sources must be independent")
+    with _read_database(
+        order_journal_path, _ORDER_TABLES, "paper_order_meta", _ORDER_VERSION,
+    ) as order_connection:
+        return _audit_with_orders(
+            _checked_order_entries(order_connection), position_journal_path,
+        )
