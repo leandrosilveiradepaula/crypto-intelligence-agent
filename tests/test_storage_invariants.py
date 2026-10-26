@@ -9,6 +9,7 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 
@@ -83,7 +84,7 @@ class PersistenceInvariantTests(unittest.TestCase):
 
     def test_missing_cached_prefix_cannot_be_skipped_by_high_checkpoint(self):
         self.run_backfill(WindowSource(self.rows), end=6 * HOUR)
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn, conn:
             conn.execute("DELETE FROM candles WHERE open_time_ms=?", (2 * HOUR,))
         request = WindowSource(self.rows)
         with self.assertRaises(DataGapError):
