@@ -64,7 +64,7 @@ class PaperPositionInspection:
 
 
 def _checked_path(path: str | Path) -> Path:
-    if type(path) not in (str, Path):
+    if not isinstance(path, (str, Path)):
         raise DataValidationError("existing PAPER journal path required")
     value = str(path)
     if not value or value == ":memory:" or value.startswith("file:") or "\x00" in value:
