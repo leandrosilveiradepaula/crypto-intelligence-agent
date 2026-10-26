@@ -83,7 +83,8 @@ class SourceGateDocsTests(unittest.TestCase):
             "ticker_volume_unit_verified=false",
         ):
             with self.subTest(token=token):
-                matrix.write_text(original.replace(token, "REDACTED"), encoding="utf-8")
+                matrix.write_text(re.sub(re.escape(token), "REDACTED", original,
+                                         flags=re.IGNORECASE), encoding="utf-8")
                 result = self.check()
                 self.assertNotEqual(result.returncode, 0, result.stdout)
                 self.assertIn("missing J1 source-gates invariant", result.stdout)
