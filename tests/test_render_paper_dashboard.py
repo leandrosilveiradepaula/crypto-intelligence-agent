@@ -210,6 +210,7 @@ class RenderPaperDashboardTests(unittest.TestCase):
         self.assertIn("SIMULADO", " ".join(parsed.visible))
         self.assertIn(":focus-visible", self.rendered)
         self.assertIn("@media (max-width: 640px)", self.rendered)
+        self.assertIn("@media (max-width: 420px)", self.rendered)
         for forbidden in ("script", "form", "button", "input", "iframe",
                           "img", "link", "object", "embed"):
             self.assertNotIn(forbidden, parsed.tags)
