@@ -194,3 +194,5 @@ Testar LONG/SHORT com preços de fixture explícitos, custos/funding positivos e
 
 
 **Regressões obrigatórias de review PRE6:** rejeitar nocional de custo diferente de entrada/saída × quantidade, lado ou entrada diferentes do plano PRE1, barreira não atingida, liquidação sem nível de liquidação declarado, duas cópias de TARGET fingindo cobrir TARGET+STOP, timestamp de saída fora da vela de primeiro toque, origem ou intervalo inconsistentes, moeda sintética vazia e quantidades/contagem excessivas. Um resultado explícito de liquidação pode usar nocional de taxa de saída **somente como hipótese separada**, pois não há preço de fill. Garantir `assumed_barrier` auditável nos resultados. A CI Linux inclui o teste de regressão adicional, não apenas o conjunto original de oito testes.
+
+**Proteção de escala:** perda de liquidação hipotética também respeita os limites financeiros Decimal de PRE2; valores com expoente extremo ou precisão excessiva devem falhar, nunca gerar números enganadores. Flags `net_pnl_verified` e `out_of_sample_results_validated` permanecem sempre falsas, ainda que `conditional_net_quote_units` seja positivo.
