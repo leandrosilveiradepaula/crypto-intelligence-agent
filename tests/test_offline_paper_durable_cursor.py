@@ -7,6 +7,8 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -175,6 +177,48 @@ class DurableCursorTests(unittest.TestCase):
             self.recover(5)
         with self.assertRaises(DataValidationError):
             SQLitePaperOrderJournal(self.db)
+
+    def test_real_process_termination_before_commit_rolls_back_cursor_and_open(self):
+        self.step(5)
+        # Terminate an actual child process AFTER both SQLite writes but BEFORE
+        # AUTO2's context manager commits. Neither operation may survive.
+        code = """
+import os, sys
+from pathlib import Path
+from decimal import Decimal
+sys.path.insert(0, str(Path.cwd() / "tests"))
+from test_causal_paper_open import limits, observation
+from test_synthetic_research_cycle import candles, config
+from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
+from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
+from crypto_intelligence_agent.synthetic_order_lifecycle import PaperVenue
+import crypto_intelligence_agent.offline_paper_durable_cursor as cursor
+db, positions = Path(sys.argv[1]), Path(sys.argv[2])
+journal = SQLitePaperOrderJournal(db)
+rows = candles(n=6)
+now = rows[-1].close_time_ms + 1000
+original = cursor._write_cursor
+def kill_after_write(conn, new_cursor):
+    original(conn, new_cursor)
+    os._exit(73)
+cursor._write_cursor = kill_after_write
+cursor.step_durable_offline_paper(
+    rows, strategy=config().strategy, venue=PaperVenue.BINANCE_USDM,
+    requested_units=Decimal(2), limits=limits(),
+    observation=observation(now), journal=journal,
+    position_journal_path=positions, decision_at_ms=now, max_candles=20,
+)
+"""
+        completed = subprocess.run(
+            [sys.executable, "-c", code, str(self.db), str(self.positions_path)],
+            cwd=Path(__file__).resolve().parent.parent, capture_output=True,
+            text=True, timeout=20, check=False,
+        )
+        self.assertEqual(completed.returncode, 73, completed.stderr)
+        self.assertEqual(self.counts(), (0, 2))
+        self.assertEqual(self.recover(5).candle_count, 5)
+        self.assertTrue(self.step(6).opening.paper_intent_reserved)
+        self.assertEqual(self.counts(), (1, 2))
 
     def test_no_network_and_recovery_does_not_reserve(self):
         with patch("urllib.request.urlopen", side_effect=AssertionError("network")):
