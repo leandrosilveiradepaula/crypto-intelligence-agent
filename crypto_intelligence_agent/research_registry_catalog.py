@@ -14,10 +14,11 @@ from .crypto_asset_registry import (
 from .market_data import DataValidationError
 
 _ROOT = Path(__file__).resolve().parent.parent / "registries"
-REGISTRY_VARIANTS = frozenset({"btc-eth", "expanded-10"})
+REGISTRY_VARIANTS = frozenset({"btc-eth", "expanded-10", "expanded-13"})
 _FILES = {
     "btc-eth": _ROOT / "crypto-btc-eth-20261025-v1.json",
     "expanded-10": _ROOT / "crypto-bases-10-20261025-v2.json",
+    "expanded-13": _ROOT / "crypto-bases-13-20261026-v3.json",
 }
 
 
@@ -36,12 +37,14 @@ def load_reviewed_registry(
         raise DataValidationError("registry lookup needs positive UTC-ms observation")
     previous = load_registry_json(_FILES["btc-eth"].read_bytes())
     revisions = CryptoRegistryHistory((previous,))
-    if variant == "expanded-10":
-        newer = load_registry_json(_FILES["expanded-10"].read_bytes())
-        revisions.append(newer)
-        desired = newer
-    else:
-        desired = previous
+    desired = previous
+    for revision in ("expanded-10", "expanded-13"):
+        if variant in (revision, "expanded-13"):
+            newer = load_registry_json(_FILES[revision].read_bytes())
+            revisions.append(newer)
+            desired = newer
+        if revision == variant:
+            break
     selected = revisions.as_of(as_of_ms, max_age_ms=7 * 86_400_000)
     if selected.sha256_digest != desired.sha256_digest:
         raise DataValidationError("requested crypto registry revision was not yet known")
