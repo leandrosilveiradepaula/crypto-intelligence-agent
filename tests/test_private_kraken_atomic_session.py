@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from decimal import Decimal
+import os
 import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -57,6 +58,8 @@ class ResearchSessionAtomicityTests(unittest.TestCase):
 
     def test_late_eth_conflict_rolls_back_btc_and_new_universe_in_existing_db(self):
         archive = SQLiteKrakenPriceOnlyArchive(self.db)
+        # Direct SQLite fixture creation honors the private-collector 0600 preflight.
+        os.chmod(self.db, 0o600)
         seed = MultiReader()
         seed.current_market_snapshot()
         make_page(seed, "PF_XBTUSD")  # advance fake observation time
@@ -91,6 +94,8 @@ class ResearchSessionAtomicityTests(unittest.TestCase):
         self.assertTrue(baseline.price_window_complete)
         self.assertEqual(counts(self.db), (1, 9, 3, 0))
         archive = SQLiteKrakenPriceOnlyArchive(self.db)
+        # Direct SQLite fixture creation honors the private-collector 0600 preflight.
+        os.chmod(self.db, 0o600)
         snapshot = existing_snapshot(archive)
         tampered = replace(
             snapshot, eligible=(
@@ -112,6 +117,8 @@ class ResearchSessionAtomicityTests(unittest.TestCase):
         self.assertEqual(first.private_price_candles_added, 9)
         self.assertEqual(counts(self.db), (1, 9, 3, 0))
         archive = SQLiteKrakenPriceOnlyArchive(self.db)
+        # Direct SQLite fixture creation honors the private-collector 0600 preflight.
+        os.chmod(self.db, 0o600)
         snapshot = existing_snapshot(archive)
         before = archive.prices_as_of(
             symbol="PF_XBTUSD", interval="1h",
@@ -132,6 +139,8 @@ class ResearchSessionAtomicityTests(unittest.TestCase):
 
     def test_standalone_legacy_writers_still_atomic_and_idempotent(self):
         archive = SQLiteKrakenPriceOnlyArchive(self.db)
+        # Direct SQLite fixture creation honors the private-collector 0600 preflight.
+        os.chmod(self.db, 0o600)
         reader = MultiReader()
         reader.current_market_snapshot()
         page = make_page(reader, "PF_XBTUSD")
@@ -147,6 +156,8 @@ class ResearchSessionAtomicityTests(unittest.TestCase):
 
     def test_duplicate_symbol_batch_preflight_never_writes_snapshot(self):
         archive = SQLiteKrakenPriceOnlyArchive(self.db)
+        # Direct SQLite fixture creation honors the private-collector 0600 preflight.
+        os.chmod(self.db, 0o600)
         # Create just a universe snapshot through the already-valid pipeline
         # and then remove only its rows to simulate an unpopulated research DB.
         collect(self.db, MultiReader(), registry_variant="expanded-10",
@@ -168,6 +179,8 @@ class ResearchSessionAtomicityTests(unittest.TestCase):
         collect(self.db, MultiReader(), registry_variant="expanded-10",
                 max_price_symbols=1)
         archive = SQLiteKrakenPriceOnlyArchive(self.db)
+        # Direct SQLite fixture creation honors the private-collector 0600 preflight.
+        os.chmod(self.db, 0o600)
         snapshot = existing_snapshot(archive)
         before = counts(self.db)
         reader = MultiReader()
