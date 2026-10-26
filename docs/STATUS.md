@@ -152,3 +152,8 @@ AUTO2 #151/PR #152 integrada SHA `47d51ac33142bcbd9672fbbe041f922948adca70`, CI 
 
 ## J4/AUTO4 #155 — over-close agregado PAPER (em validação)
 A branch `codex/issue-155-j4-auto4-paper-position-reservations` acrescenta um agregado SQLite exclusivo para posições fictícias, em que quantidade inicial vem de FILL, reservas REDUCE_ONLY e fills por tranche compartilham um único saldo e runner. Inclui replay/idempotência/crash concorrente e os casos 50%/60%/70% => 6% residual. **Não** é executora de exchange, nem migra DB AUTO2, confirma conta real ou homologa J4; aguardar PR/CI antes de afirmar integração. A J1 #2 segue aberta; ordens reais, chaves e deploy continuam não autorizados.
+
+
+## J4/AUTO4 integrada; AUTO5 #157 — ciclo automático PAPER demonstrativo
+AUTO4 issue #155/PR #156 integrada SHA `355c12c30f70a972721592be38f4393bbfa030b3`, [CI pós-merge #40297847492](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40297847492) SUCCESS, **824 testes offline**, compileall e 14 documentos. AUTO4 contém saldo e reservas de saídas por posição, com passo de lote **fictício**; não há tick de preço, ordens reais ou reconciliação da corretora.
+AUTO5 #157 propõe uma CLI de percurso automático **somente fixtures**, reunindo risco PAPER, OPEN, ACK/FILL, saídas parciais, runner e restart para os dois candidatos, sem desempenho validado. A PR/CI da AUTO5 ainda exigem comprovação. J1 #2 e J4/J6 permanecem não homologadas e `live` bloqueado.
