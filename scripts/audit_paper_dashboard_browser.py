@@ -58,7 +58,7 @@ _LAYOUT_JS = r"""() => {
       .find(el => el.tabIndex >= 0);
   const tableScroll = table ? table.scrollWidth - table.clientWidth : 0;
   function rgb(text) {
-    const m = text.match(/rgba?\\(([^)]+)\\)/);
+    const m = text.match(/rgba?\(([^)]+)\)/);
     return m ? m[1].split(',').slice(0,3).map(Number) : null;
   }
   function lum(channels) {
