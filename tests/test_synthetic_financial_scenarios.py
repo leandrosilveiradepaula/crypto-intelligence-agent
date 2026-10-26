@@ -198,6 +198,10 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
             replace(liq, assumed_barrier=SyntheticBarrier.STOP)
         with self.assertRaisesRegex(DataValidationError, "liquidation barrier needs"):
             replace(scenario(), assumed_barrier=SyntheticBarrier.HYPOTHETICAL_LIQUIDATION)
+        with self.assertRaises(DataValidationError):
+            replace(liq, hypothetical_liquidation_loss_quote_units=D("1e1000000"))
+        with self.assertRaises(DataValidationError):
+            replace(liq, hypothetical_liquidation_loss_quote_units=D("0.0000000000000000001"))
 
     def test_result_records_hypothetical_assumed_barrier(self):
         results = evaluate(observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED),
@@ -206,6 +210,8 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
         self.assertEqual(tuple(r.assumed_barrier for r in results),
                          (SyntheticBarrier.TARGET, SyntheticBarrier.STOP))
         self.assertTrue(all(not r.financial_backtest_approved for r in results))
+        self.assertTrue(all(not r.net_pnl_verified and not r.out_of_sample_results_validated
+                            for r in results))
 
     def test_module_has_no_network_storage_or_order_surface(self):
         source = (Path(__file__).resolve().parent.parent / "crypto_intelligence_agent" / "synthetic_financial_scenarios.py").read_text()
