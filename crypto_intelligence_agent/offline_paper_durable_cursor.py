@@ -230,8 +230,10 @@ def step_durable_offline_paper(
     No cursor-only recovery is attempted after a failed/ambiguous transaction.
     """
     if (type(journal) is not SQLitePaperOrderJournal
-            or type(position_journal_path) not in (str, Path)
+            or not isinstance(position_journal_path, (str, Path))
             or not str(position_journal_path).strip()
+            or type(max_candles) is not int
+            or not 1 <= max_candles <= MAX_CANDLES
             or type(closed_prefix) not in (tuple, list)
             or not 1 <= len(closed_prefix) <= max_candles
             or fault_at not in (None, "after_reservation_before_cursor",
