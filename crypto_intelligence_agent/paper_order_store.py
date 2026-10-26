@@ -344,7 +344,7 @@ class SQLitePaperOrderJournal:
     ) -> tuple[int, bool]:
         """Verify ALL relevant local PAPER OPEN events under one write lock."""
         rows = conn.execute(
-            "SELECT intent_id FROM paper_order_intents WHERE effect='OPEN' "
+            "SELECT intent_id FROM paper_order_intents "
             "ORDER BY intent_id LIMIT 4097"
         ).fetchall()
         if len(rows) > 4096:
