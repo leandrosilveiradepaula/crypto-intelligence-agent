@@ -148,3 +148,7 @@ Incremento PAPER: intenções fictícias reservadas de forma durável, eventos h
 
 ## J4/AUTO2 concluída / AUTO3 em revisão (26/10/2026 UTC)
 AUTO2 #151/PR #152 integrada SHA `47d51ac33142bcbd9672fbbe041f922948adca70`, CI pós-merge [#40279479428](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/40279479428) SUCCESS: **797 testes offline**, compileall e 14 docs; ordens continuam simuladas. AUTO3 #153 propõe preflight de risco para PAPER: cap de ordem, exposição, perdas, ordens incertas e kill-switch; não possui verdade de conta/venue, stops reais, estratégia validada nem habilitação de trading. J1/J4/J6 abertas, `live` desativado e R$0 adicional.
+
+
+## J4/AUTO4 #155 — over-close agregado PAPER (em validação)
+A branch `codex/issue-155-j4-auto4-paper-position-reservations` acrescenta um agregado SQLite exclusivo para posições fictícias, em que quantidade inicial vem de FILL, reservas REDUCE_ONLY e fills por tranche compartilham um único saldo e runner. Inclui replay/idempotência/crash concorrente e os casos 50%/60%/70% => 6% residual. **Não** é executora de exchange, nem migra DB AUTO2, confirma conta real ou homologa J4; aguardar PR/CI antes de afirmar integração. A J1 #2 segue aberta; ordens reais, chaves e deploy continuam não autorizados.
