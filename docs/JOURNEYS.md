@@ -150,3 +150,8 @@ AUTO8 fecha uma lacuna entre o diário de ordens e a reserva de posições PAPER
 ## J4/AUTO9 #192 — retomada de sinais PAPER após saída integral
 
 AUTO9 acrescenta `CLOSED_FLAT_HYPOTHETICAL_ONLY` para permitir uma nova intenção somente quando a posição anterior tiver fechado completamente por fills REDUCE_ONLY explícitos e antes da nova decisão. Parcial, STOP hipotético, runner residual e UNKNOWN permanecem bloqueados. O risco e a identidade do journal AUTO6 continuam em vigor. Não equivale à autorização de negociação real, lucro, execução na Binance/Bybit ou conclusão de J4 #5.
+
+
+## J1/WU49 #194 — pesquisa multipágina de elegibilidade Bybit V5, unidade de ticker pendente
+
+WU49 acrescenta a auditoria OFFLINE de respostas de instrumentos `linear` paginadas e ticker `turnover24h` como métrica numérica bruta de unidade NÃO comprovada, com filtros positivos crypto-only/USDT, idade de captura declarada e desempate estável. Nenhum ranking representa Top50 econômico/comparável, pois ticker não fornece unidade explícita na página oficial; KLINE fornece unidade BASE/QUOTE apenas para candles. Não foi feito GET real, conta, credencial ou trade. J1 #2 e os bloqueios de acesso/volume/direitos não foram liberados. O objetivo automático D77 continua futuro, condicionado aos gates completos.
