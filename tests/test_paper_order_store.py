@@ -166,5 +166,138 @@ class PaperOrderStoreTests(unittest.TestCase):
         self.assertEqual(resolved.snapshot.filled_total_units, D(5))
 
 
+    def test_duplicate_conflict_and_causal_checkpoint_fail_closed(self):
+        i = make_intent()
+        self.store.reserve(i)
+        ack = make_event("ack", PaperOrderEventKind.ACKNOWLEDGED, 1)
+        self.store.append_events(i.intent_id, (ack,), as_of_ms=T + 1)
+        initial = self.store.load(i.intent_id)
+        with self.assertRaises(DataValidationError):
+            self.store.append_events(i.intent_id, (
+                make_event("first", PaperOrderEventKind.FILL, 2, "2"),
+                replace(ack, kind=PaperOrderEventKind.UNKNOWN),
+            ), as_of_ms=T + 2)
+        with self.assertRaises(DataValidationError):
+            self.store.append_events(i.intent_id, (
+                make_event("backdated", PaperOrderEventKind.FILL, 0, "1"),
+            ), as_of_ms=T + 2)
+        with self.assertRaises(DataValidationError):
+            self.store.append_events(i.intent_id, (
+                make_event("future", PaperOrderEventKind.FILL, 4, "2"),
+            ), as_of_ms=T + 3)
+        with self.assertRaises(DataValidationError):
+            self.store.append_events(i.intent_id, (), as_of_ms=T)
+        self.assertEqual(SQLitePaperOrderJournal(self.db).load(i.intent_id), initial)
+
+    def test_invalid_input_does_not_change_database(self):
+        with self.assertRaises(DataValidationError):
+            self.store.reserve(object())
+        with self.assertRaises(DataValidationError):
+            self.store.load("not_a_fixture")
+        with self.assertRaises(DataValidationError):
+            self.store.load("fixture_unknown")
+        i = make_intent()
+        self.store.reserve(i)
+        original = self.store.load(i.intent_id)
+        for batch in (
+            [make_event("ack", PaperOrderEventKind.ACKNOWLEDGED, 1)],
+            (object(),),
+        ):
+            with self.subTest(batch=batch), self.assertRaises(DataValidationError):
+                self.store.append_events(i.intent_id, batch, as_of_ms=T + 1)
+        self.assertEqual(self.store.load(i.intent_id), original)
+
+    def test_reduce_only_enforces_stated_fixture_limit(self):
+        with self.assertRaises(DataValidationError):
+            make_intent(
+                intent_id="fixture_exit_A", fixture_signal_id="fixture_close_A",
+                effect=PaperOrderEffect.REDUCE_ONLY, side=PaperOrderSide.SELL,
+                max_reducible_units=D("9"),
+            )
+        close = make_intent(
+            intent_id="fixture_exit_B", fixture_signal_id="fixture_close_B",
+            effect=PaperOrderEffect.REDUCE_ONLY, side=PaperOrderSide.SELL,
+            max_reducible_units=D("10"),
+        )
+        self.store.reserve(close)
+        result = self.store.append_events(
+            close.intent_id,
+            (make_event("close", PaperOrderEventKind.FILL, 1, "10"),),
+            as_of_ms=T + 1,
+        )
+        self.assertEqual(result.snapshot.status, PaperOrderStatus.FILLED)
+        self.assertEqual(result.snapshot.filled_total_units, D(10))
+        self.assertEqual(SQLitePaperOrderJournal(self.db).load(close.intent_id), result)
+        self.assertFalse(result.orders_sent)
+
+    def test_corrupt_event_or_checkpoint_fails_closed_after_restart(self):
+        i = make_intent()
+        self.store.reserve(i)
+        ack = make_event("ack", PaperOrderEventKind.ACKNOWLEDGED, 1)
+        self.store.append_events(i.intent_id, (ack,), as_of_ms=T + 1)
+        with sqlite3.connect(self.db) as conn:
+            conn.execute("UPDATE paper_order_events SET payload='{}'")
+        with self.assertRaises(DataValidationError):
+            SQLitePaperOrderJournal(self.db).load(i.intent_id)
+        with sqlite3.connect(self.db) as conn:
+            conn.execute("DELETE FROM paper_order_events")
+            conn.execute("UPDATE paper_order_intents SET event_count=0")
+        with self.assertRaises(DataValidationError):
+            SQLitePaperOrderJournal(self.db).load(i.intent_id)
+
+    def test_foreign_schema_and_unknown_version_refused(self):
+        for path in (":memory:", "file::memory:?cache=shared", ""):
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                SQLitePaperOrderJournal(path)
+        foreign_path = self.db.parent / "market.sqlite"
+        with sqlite3.connect(foreign_path) as conn:
+            conn.execute("CREATE TABLE candles (source TEXT)")
+        with self.assertRaises(DataValidationError):
+            SQLitePaperOrderJournal(foreign_path)
+        with sqlite3.connect(self.db) as conn:
+            conn.execute("UPDATE paper_order_meta SET value='unknown-v2'")
+        with self.assertRaises(DataValidationError):
+            SQLitePaperOrderJournal(self.db)
+
+    def test_concurrent_open_reservations_use_sqlite_unique_gate(self):
+        from concurrent.futures import ThreadPoolExecutor
+
+        a = make_intent(
+            intent_id="fixture_race_A", fixture_signal_id="fixture_race",
+        )
+        b = make_intent(
+            intent_id="fixture_race_B", fixture_signal_id="fixture_race",
+        )
+        def reserve(i):
+            try:
+                SQLitePaperOrderJournal(self.db).reserve(i)
+                return "stored"
+            except DataValidationError:
+                return "blocked"
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(executor.map(reserve, (a, b)))
+        self.assertEqual(sorted(results), ["blocked", "stored"])
+        with sqlite3.connect(self.db) as conn:
+            count = conn.execute(
+                "SELECT COUNT(*) FROM paper_order_intents "
+                "WHERE fixture_signal_id='fixture_race'"
+            ).fetchone()[0]
+        self.assertEqual(count, 1)
+
+    def test_paper_journal_does_not_use_network(self):
+        with patch("urllib.request.urlopen",
+                   side_effect=AssertionError("unexpected network")):
+            i = make_intent()
+            self.store.reserve(i)
+            self.store.append_events(
+                i.intent_id,
+                (make_event("ack", PaperOrderEventKind.ACKNOWLEDGED, 1),),
+                as_of_ms=T + 1,
+            )
+            item = SQLitePaperOrderJournal(self.db).load(i.intent_id)
+        self.assertFalse(item.orders_sent)
+        self.assertFalse(item.approved_for_live_use)
+
+
 if __name__ == "__main__":
     unittest.main()
