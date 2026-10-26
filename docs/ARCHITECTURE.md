@@ -203,3 +203,8 @@ O auditor AUTO8 reutiliza o `_balance` canônico de AUTO4 e somente classifica `
 ## J6/PRE1 #198 — invólucro in-memory de decisão incremental PAPER
 
 `crypto_intelligence_agent.offline_paper_forward_session.OfflinePaperForwardSession` é camada fina sobre `synthetic_feature_engine._checked_candles` e `causal_paper_open.reserve_causal_paper_open`. Cada chamada com prefixo fechado verifica continuidade, identidade, integridade de todos os registros previamente aceitos e instante exato de decisão. Somente após o gate AUTO7/8/9 devolver resposta válida avança o estado da instância. Sinal atual pode produzir intenção OPEN `PENDING` com zero fills; no-signal ou risk-denial não inventa evento. Sessão usa lock local e limite de memória, sem checkpoint persistente, fila, worker, webhook, app, socket ou fonte de dados real. A garantia da transação de ordens continua restrita ao arquivo AUTO2; AUTO4 é banco independente. Exigir reconciliação externa na inicialização futura de fluxo real.
+
+
+### J6/PRE2-A #200 — pré-requisito de integridade offline (26/10/2026 UTC)
+
+Foi acrescentado contrato puro de selo determinístico SHA-256 para prefixos sintéticos completos e contexto versionado, com escala Decimal preservada e extensão de exatamente uma barra. É uma preparação verificável para recuperação futura, **não** checkpoint durável, transação conjunta com AUTO2, proteção de exchange, stream prospectivo ou homologação. A issue #200 permanece aberta: próximo passo é integrar cursor e reserva/no-signal na MESMA transação AUTO2, com crash tests e auditoria do schema RO, ou manter fail-closed se inviável. AUTO4 continua sem snapshot atômico cruzado. Nenhuma rede, ordem real, migration produtiva ou custo.

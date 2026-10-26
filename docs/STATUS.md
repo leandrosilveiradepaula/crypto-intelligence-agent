@@ -257,3 +257,8 @@ A issue #184 integra J2/PRE2 e J3/PRE1–PRE6 com abstenção temporal e ramos c
 
 
 **J6/PRE1 #198 (implementação em revisão, 26/10/2026 UTC):** base auditada `main=cffac3bc5dca30e64308618014e861f19265febe` após PR #197 integrada, CI pós-merge 1.008 testes Linux/Windows, QA Chrome e 14 documentos SUCCESS. A investigação J1 #36 do endpoint Kraken Futures charts confirmou que `volume` é tipado int64 mas unidade econômica não é declarada; documentos de ticker `volumeQuote` e interface BTC/USD não atestam a unidade da vela. Portanto J1 permanece bloqueada. Branch `codex/issue-198-j6-forward-only-paper-session` entrega replay **offline de candles artificiais**, limitado a um novo candle por passo, preservando prefixo, timestamp, risco AUTO6/8/9 e ausência de fill/ordens; checkpoint de sessão NÃO durável. **CI/PR/head/merge desta work unit ainda precisam de evidência exata.** J1 #2/#19/#32/#36/#48/#196, J2/J3/J4/J6 ainda não homologadas; custo extra R$0.
+
+
+### J6/PRE2-A #200 — pré-requisito de integridade offline (26/10/2026 UTC)
+
+Foi acrescentado contrato puro de selo determinístico SHA-256 para prefixos sintéticos completos e contexto versionado, com escala Decimal preservada e extensão de exatamente uma barra. É uma preparação verificável para recuperação futura, **não** checkpoint durável, transação conjunta com AUTO2, proteção de exchange, stream prospectivo ou homologação. A issue #200 permanece aberta: próximo passo é integrar cursor e reserva/no-signal na MESMA transação AUTO2, com crash tests e auditoria do schema RO, ou manter fail-closed se inviável. AUTO4 continua sem snapshot atômico cruzado. Nenhuma rede, ordem real, migration produtiva ou custo.
