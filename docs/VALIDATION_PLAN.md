@@ -190,6 +190,8 @@ Validar PRE3 e PRE4 novamente antes de cada replay. Processar **somente** `oos_i
 
 ## J3/PRE6 #180 — cenários financeiros condicionais offline
 
+Testar LONG/SHORT com preços de fixture explícitos, custos/funding positivos e negativos, perda de liquidação declarada, precisão Decimal e replay determinístico. Candle com níveis simultâneos precisa de múltiplas ramificações; cenário sem saída/perda, funding sem proveniência/moeda/sinal, identidade divergente ou ausência de barreira deve recusar antes de gerar resultado. Não testar inferência de fill, rentabilidade, execução, dados reais ou autorização de ordem: o output é cenário condicional, não backtest financeiro.
+
 
 
 **Regressões obrigatórias de review PRE6:** rejeitar nocional de custo diferente de entrada/saída × quantidade, lado ou entrada diferentes do plano PRE1, barreira não atingida, liquidação sem nível de liquidação declarado, duas cópias de TARGET fingindo cobrir TARGET+STOP, timestamp de saída fora da vela de primeiro toque, origem ou intervalo inconsistentes, moeda sintética vazia e quantidades/contagem excessivas. Um resultado explícito de liquidação pode usar nocional de taxa de saída **somente como hipótese separada**, pois não há preço de fill. Garantir `assumed_barrier` auditável nos resultados. A CI Linux inclui o teste de regressão adicional, não apenas o conjunto original de oito testes.
@@ -204,7 +206,5 @@ Testar `LocalBybitCaptureManifest` com 1h/3..72 candles, timestamps inteiros UTC
 ## J3/PRE7 #184 — integração temporal offline
 
 Validar a diferença entre `close_safety_ms=0` e 1000, off-by-one da primeira barra elegível, término OOS sem barra futura, plano inconsistente, ausência de premissa financeira, replay determinístico e ausência de rede/ordens. O relatório expõe contagens de sinal, abstenção e ramos sem agregar alternativas como PnL de carteira.
-
-Testar LONG/SHORT com preços de fixture explícitos, custos/funding positivos e negativos, perda de liquidação declarada, precisão Decimal e replay determinístico. Candle com níveis simultâneos precisa de múltiplas ramificações; cenário sem saída/perda, funding sem proveniência/moeda/sinal, identidade divergente ou ausência de barreira deve recusar antes de gerar resultado. Não testar inferência de fill, rentabilidade, execução, dados reais ou autorização de ordem: o output é cenário condicional, não backtest financeiro.
 
 **Regressões adicionais da revisão #185:** criar fold de teste curto (2 barras, horizonte 1) com a próxima vela disponível na série, porém já pertencente ao fold seguinte; é obrigatório abster o evento (não emprestar a vela). Para o caso válido, usar teste de 4 barras/horizonte 3 e safety=1000: sinal índice 5, primeira vela observável índice 7, fim exclusivo índice 9. Cobrir safety=0, SHORT, STOP+TARGET na mesma vela, alvo surgindo apenas após fim do horizonte, entrada financeira timestampada antes do OPEN elegível, entradas extras/ilegíveis, e todos os flags de execução/validação falsos. Executar CI no novo head SHA; o resultado verde anterior não libera commits novos.
