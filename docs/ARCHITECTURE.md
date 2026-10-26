@@ -173,4 +173,11 @@ O planejador de folds `synthetic_walk_forward.py` tem responsabilidade EXCLUSIVA
 `synthetic_financial_scenarios.py` compõe `SyntheticBarrierObservation` PRE1 com `SyntheticCostScenario` PRE2, sem reimplementar funding/taxas ou inferir fills de candles. Recebe branches de entrada/saída ou perda de liquidação explicitamente declarados, com fonte/moeda/sinal de funding, e devolve alternativas condicionais em `Decimal`. Não contém rede, persistência, ledger de exchange ou superfície de ordem; flags de validação financeira e live permanecem falsas.
 
 
+
 **Contrato endurecido na revisão da PR #181:** o avaliador PRE6 exige `SyntheticBarrierPlan` original e `assumed_barrier` em cada ramo; reconcilia preço × quantidade com nocionais explícitos de custos, restringe o encerramento ao candle observado e recusa alternativas que omitam alguma das barreiras realmente atingidas. A perda de liquidação e seu notional de taxas permanecem independentes, hipotéticos. O resultado carrega a barreira presumida para auditoria, nunca uma ordem/fill real.
+
+## J3/PRE7 — ciclo causal integrado
+
+`synthetic_research_cycle.py` apenas orquestra J2/PRE2 e J3/PRE1–PRE6. Ele reconstrói folds/purge/OOS, reexecuta hipóteses por prefixos fechados e só observa barreiras a partir da primeira barra cuja abertura seja posterior à disponibilidade do candidato. Ramas financeiras são entradas externas explícitas; não há soma de alternativas, persistência PAPER, rede ou ordem.
+
+**Limite de replay PRE7 revisado:** o corte efetivo de observação é `min(fold.test_end, outcome_index+1)`; apenas candles com `open_time_ms >= close_do_sinal + close_safety_ms` podem entrar na inspeção PRE1. PRE7 rejeita chaves não candidatas dos planos/cenários, inclusive bool, pressupostos não tipados e horários de entrada diferentes do OPEN da primeira barra permitida. A avaliação não observa outros folds, nem reaproveita períodos posteriores quando o horizonte terminou. Um evento registra número do fold e fim exclusivo da janela.
