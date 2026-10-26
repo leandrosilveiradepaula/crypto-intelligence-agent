@@ -206,18 +206,18 @@
       "evidence": [
         {
           "asset_ref": "monero",
-          "observed_at_ms": 1792982308000,
+          "observed_at_ms": 1792982418000,
           "publisher": "monero-org",
           "url": "https://www.getmonero.org/get-started/what-is-monero/"
         },
         {
           "asset_ref": "monero",
-          "observed_at_ms": 1792982308000,
+          "observed_at_ms": 1792982418000,
           "publisher": "coingecko",
           "url": "https://www.coingecko.com/en/coins/monero"
         }
       ],
-      "reviewed_at_ms": 1792982308000,
+      "reviewed_at_ms": 1792982418000,
       "reviewed_by": "assistant-technical-review"
     },
     {
@@ -226,18 +226,18 @@
       "evidence": [
         {
           "asset_ref": "ethereum-classic",
-          "observed_at_ms": 1792982308000,
+          "observed_at_ms": 1792982418000,
           "publisher": "ethereum-classic-org",
           "url": "https://ethereumclassic.org/"
         },
         {
           "asset_ref": "ethereum-classic",
-          "observed_at_ms": 1792982308000,
+          "observed_at_ms": 1792982418000,
           "publisher": "coingecko",
           "url": "https://www.coingecko.com/en/coins/ethereum-classic"
         }
       ],
-      "reviewed_at_ms": 1792982308000,
+      "reviewed_at_ms": 1792982418000,
       "reviewed_by": "assistant-technical-review"
     },
     {
@@ -246,24 +246,24 @@
       "evidence": [
         {
           "asset_ref": "zcash",
-          "observed_at_ms": 1792982308000,
+          "observed_at_ms": 1792982418000,
           "publisher": "zcash-org",
           "url": "https://z.cash/"
         },
         {
           "asset_ref": "zcash",
-          "observed_at_ms": 1792982308000,
+          "observed_at_ms": 1792982418000,
           "publisher": "coingecko",
           "url": "https://www.coingecko.com/en/coins/zcash"
         }
       ],
-      "reviewed_at_ms": 1792982308000,
+      "reviewed_at_ms": 1792982418000,
       "reviewed_by": "assistant-technical-review"
     }
   ],
   "label": "crypto-bases-13-20261026-review-v3",
-  "observed_at_ms": 1792982308000,
+  "observed_at_ms": 1792982418000,
   "schema_version": 1,
   "usage_policy": "internal_research_only",
-  "sha256": "b085b116e00dd903486060c1b7b95a07bfb1b6489c560ce0ea596f86e19ec2e0"
+  "sha256": "6b4d1de3d0d7519a3f08470b487b062cc216e3586873553b1a7029d32e6aa12b"
 }
