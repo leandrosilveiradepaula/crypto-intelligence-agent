@@ -304,6 +304,59 @@ class SyntheticCostTests(unittest.TestCase):
                      "liquidation_price", "filled_at", "order_id", "profit"):
             self.assertFalse(hasattr(res, name))
 
+
+    def test_metamorphic_higher_nonfunding_rates_never_reduce_cost(self):
+        """Same notionals/events: increasing a fee or adverse slip cannot help."""
+        base = scenario(events=(funding(rate="-5"),))
+        before = evaluate_synthetic_costs(base)
+        for field in ("entry_fee_bps", "exit_fee_bps",
+                      "entry_adverse_slippage_bps", "exit_adverse_slippage_bps"):
+            with self.subTest(field=field):
+                raised = replace(base, **{field: getattr(base, field) + D("0.000001")})
+                after = evaluate_synthetic_costs(raised)
+                self.assertGreater(after.fees_and_slippage_units,
+                                   before.fees_and_slippage_units)
+                self.assertGreater(after.total_signed_cost_units,
+                                   before.total_signed_cost_units)
+                self.assertEqual(after.signed_funding_cost_units,
+                                 before.signed_funding_cost_units)
+                self.assertFalse(after.net_pnl_verified)
+
+    def test_metamorphic_funding_long_short_antisymmetry(self):
+        """Funding sign reverses, but fees/slippage are direction-independent."""
+        events = (
+            funding("fixture_funding_a", rate="12.5", at=START+1000),
+            funding("fixture_funding_b", rate="-4", at=START+2000),
+        )
+        long = evaluate(side=L, events=events)
+        short = evaluate(side=S, events=events)
+        self.assertEqual(long.signed_funding_cost_units,
+                         -short.signed_funding_cost_units)
+        self.assertEqual(long.fees_and_slippage_units,
+                         short.fees_and_slippage_units)
+        self.assertEqual(long.total_signed_cost_units +
+                         short.total_signed_cost_units,
+                         long.fees_and_slippage_units * 2)
+
+    def test_metamorphic_exact_duplicate_funding_is_neutral(self):
+        a = funding("fixture_funding_a", rate="2", at=START+1000)
+        b = funding("fixture_funding_b", rate="-3", at=START+2000)
+        original = evaluate(events=(a, b))
+        replay = evaluate(events=(a, b, a, b))
+        self.assertEqual(original.total_signed_cost_units,
+                         replay.total_signed_cost_units)
+        self.assertEqual(original.unique_funding_count, replay.unique_funding_count)
+        self.assertEqual(replay.exact_duplicate_count, 2)
+
+    def test_metamorphic_no_funding_cost_during_empty_holding_interval(self):
+        for side in (L, S):
+            with self.subTest(side=side):
+                result = evaluate(side=side, events=())
+                self.assertEqual(result.signed_funding_cost_units, D(0))
+                self.assertEqual(result.total_signed_cost_units,
+                                 result.fees_and_slippage_units)
+                self.assertFalse(result.financial_backtest_approved)
+
     def test_no_network_storage_or_live_trading_api(self):
         src = (Path(__file__).resolve().parent.parent
                / "crypto_intelligence_agent/synthetic_cost_scenarios.py").read_text()
