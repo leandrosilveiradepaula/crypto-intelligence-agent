@@ -114,7 +114,7 @@ def _nonnegative(value: Any, *, label: str) -> Decimal:
         return Decimal(0)
     if type(value) is Decimal and value.is_finite() and value == 0:
         return Decimal(0)
-    if type(value) is str and re.fullmatch(r"0(?:\\.0{1,24})?", value):
+    if type(value) is str and (value == "0" or (value.startswith("0.") and 1 <= len(value[2:]) <= 24 and set(value[2:]) == {"0"})):
         return Decimal(0)
     return positive_market_decimal(value, label)
 
