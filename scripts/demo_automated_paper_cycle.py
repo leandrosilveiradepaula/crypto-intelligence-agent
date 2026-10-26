@@ -14,7 +14,7 @@ import tempfile
 from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
 from crypto_intelligence_agent.paper_risk_gate import (
-    PaperRiskLimits, PaperRiskObservation, PaperRiskReason, evaluate_paper_risk,
+    PaperRiskLimits, PaperRiskObservation, PaperRiskReason,
 )
 from crypto_intelligence_agent.synthetic_order_lifecycle import (
     PaperOrderEffect, PaperOrderEvent, PaperOrderEventKind, PaperOrderIntent,
@@ -69,10 +69,6 @@ def simulate_automatic_paper_cycle(venue: PaperVenue) -> dict[str, object]:
         realized_loss_today_quote=D(0), pending_open_orders=0,
         unresolved_open_exists=False, kill_switch_active=False,
     )
-    risk = evaluate_paper_risk(opening, limits, observed, decision_at_ms=T)
-    if not risk.allowed_for_paper_only or risk.reason is not PaperRiskReason.OPEN_ALLOWED_PAPER_ONLY:
-        raise RuntimeError("PAPER risk gate rejected entry, do not create simulated OPEN")
-
     exit_plan = SyntheticExitPlan(
         initial_units=D(100),
         tranches=tuple(
@@ -90,7 +86,14 @@ def simulate_automatic_paper_cycle(venue: PaperVenue) -> dict[str, object]:
         base = Path(temp_dir)
         # Isolated different schemas; neither is a market-data or live account DB.
         orders = SQLitePaperOrderJournal(base / "orders.sqlite")
-        orders.reserve(opening)
+        gate_receipt = orders.reserve_open_if_paper_risk(
+            opening, limits, observed, decision_at_ms=T,
+        )
+        risk = gate_receipt.decision
+        if (not risk.allowed_for_paper_only
+                or risk.reason is not PaperRiskReason.OPEN_ALLOWED_PAPER_ONLY
+                or gate_receipt.entry is None):
+            raise RuntimeError("paper risk rejected synthetic opening; no reservation")
         confirmed_entry = orders.append_events(
             opening.intent_id, entry_events, as_of_ms=T + 2,
         )

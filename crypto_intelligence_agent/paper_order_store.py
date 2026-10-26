@@ -8,7 +8,7 @@ exactly-once networking, venue-native reduce-only, or live readiness.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from hashlib import sha256
 import json
@@ -17,9 +17,12 @@ import sqlite3
 from typing import Iterator
 
 from .market_data import DataValidationError
+from .paper_risk_gate import (
+    PaperRiskDecision, PaperRiskLimits, PaperRiskObservation, evaluate_paper_risk,
+)
 from .synthetic_order_lifecycle import (
     PaperOrderEffect, PaperOrderEvent, PaperOrderEventKind, PaperOrderIntent,
-    PaperOrderSnapshot, PaperOrderSide, PaperVenue, replay_paper_order,
+    PaperOrderSnapshot, PaperOrderSide, PaperOrderStatus, PaperVenue, replay_paper_order,
 )
 from .synthetic_position_state import SyntheticSide
 from .synthetic_manual_exit_replay import MAX_FIXTURE_EVENTS, _utc_ms
@@ -148,6 +151,28 @@ class PaperJournalEntry:
         return "durable_paper_fixture_only"
 
 
+@dataclass(frozen=True)
+class PaperOpenRiskReservation:
+    """Never a real order or permission; local PAPER risk/insert receipt."""
+
+    decision: PaperRiskDecision
+    entry: PaperJournalEntry | None
+    local_pending_before: int
+    local_unknown_before: bool
+
+    @property
+    def orders_sent(self) -> bool:
+        return False
+
+    @property
+    def approved_for_live_use(self) -> bool:
+        return False
+
+    @property
+    def order_submission_enabled(self) -> bool:
+        return False
+
+
 class SQLitePaperOrderJournal:
     """Atomic *local PAPER* ledger; no API to submit or place exchange orders.
 
@@ -270,45 +295,121 @@ class SQLitePaperOrderJournal:
             raise DataValidationError("paper checkpoint disagrees with event replay")
         return PaperJournalEntry(intent=intent, events=tuple(events), snapshot=snapshot)
 
-    def reserve(self, intent: PaperOrderIntent) -> PaperJournalEntry:
-        """Reserve a paper intent exactly once within the SQLite file.
+    @staticmethod
+    def _reserve_on_connection(
+        conn: sqlite3.Connection, intent: PaperOrderIntent,
+    ) -> PaperJournalEntry:
+        """Share ONE atomic insert contract between legacy PAPER and gated API."""
+        payload = _intent_json(intent)
+        found = conn.execute(
+            "SELECT intent_id FROM paper_order_intents WHERE intent_id=?",
+            (intent.intent_id,),
+        ).fetchone()
+        if found:
+            entry = SQLitePaperOrderJournal._checked_entry(conn, intent.intent_id)
+            if _intent_json(entry.intent) != payload:
+                raise DataValidationError("conflicting reserved paper intent payload")
+            return entry
+        snapshot = replay_paper_order(intent, (), as_of_ms=intent.created_at_ms)
+        snap_payload = _snapshot_json(snapshot)
+        try:
+            conn.execute(
+                """INSERT INTO paper_order_intents
+                (intent_id, fixture_signal_id, venue, effect, payload,
+                 payload_sha256, checkpoint_as_of_ms, event_count,
+                 snapshot, snapshot_sha256) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    intent.intent_id, intent.fixture_signal_id,
+                    intent.venue.value, intent.effect.value, payload,
+                    _digest(payload), intent.created_at_ms, 0,
+                    snap_payload, _digest(snap_payload),
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise DataValidationError(
+                "paper signal already has an OPEN intent, or ID conflicts"
+            ) from exc
+        return PaperJournalEntry(intent, (), snapshot)
 
-        Reusing an ID with a different payload or re-opening the same simulated
-        signal under a new ID fails; this never creates exchange orders.
-        """
+    def reserve(self, intent: PaperOrderIntent) -> PaperJournalEntry:
+        """Legacy paper-only reservation; no order sender or real risk approval."""
         if type(intent) is not PaperOrderIntent:
             raise DataValidationError("validated paper intent required")
-        payload = _intent_json(intent)
         with self._transaction() as conn:
-            found = conn.execute(
+            return self._reserve_on_connection(conn, intent)
+
+    @staticmethod
+    def _pending_open_from_connection(
+        conn: sqlite3.Connection,
+    ) -> tuple[int, bool]:
+        """Verify ALL relevant local PAPER OPEN events under one write lock."""
+        rows = conn.execute(
+            "SELECT intent_id FROM paper_order_intents "
+            "ORDER BY intent_id LIMIT 4097"
+        ).fetchall()
+        if len(rows) > 4096:
+            raise DataValidationError("paper pending order audit exceeds resource bound")
+        pending = 0
+        has_unknown = False
+        for row in rows:
+            item = SQLitePaperOrderJournal._checked_entry(conn, row["intent_id"])
+            # _checked_entry verifies the indexed effect against signed-off
+            # canonical payload before we skip REDUCE_ONLY paper exits.
+            if item.intent.effect is not PaperOrderEffect.OPEN:
+                continue
+            if item.snapshot.requires_reconciliation:
+                pending += 1
+                if item.snapshot.status is PaperOrderStatus.UNKNOWN:
+                    has_unknown = True
+        return pending, has_unknown
+
+    def reserve_open_if_paper_risk(
+        self, intent: PaperOrderIntent, limits: PaperRiskLimits,
+        observation: PaperRiskObservation, *, decision_at_ms: int,
+    ) -> "PaperOpenRiskReservation":
+        """Evaluate and reserve a hypothetical OPEN in ONE SQLite transaction.
+
+        Pending/UNKNOWN cannot be hidden by an input fixture claiming zero.
+        Fail-closed combination also honors LARGER caller-declared pending
+        counts and a caller-declared unresolved OPEN. The rest of the market
+        observation is still a SYNTHETIC claim, never exchange-verified.
+        """
+        if (type(intent) is not PaperOrderIntent
+                or intent.effect is not PaperOrderEffect.OPEN
+                or type(limits) is not PaperRiskLimits
+                or type(observation) is not PaperRiskObservation):
+            raise DataValidationError("explicit paper OPEN, risk limits and observation required")
+        with self._transaction() as conn:
+            existing = conn.execute(
                 "SELECT intent_id FROM paper_order_intents WHERE intent_id=?",
                 (intent.intent_id,),
             ).fetchone()
-            if found:
-                entry = self._checked_entry(conn, intent.intent_id)
-                if _intent_json(entry.intent) != payload:
-                    raise DataValidationError("conflicting reserved paper intent payload")
-                return entry
-            snapshot = replay_paper_order(intent, (), as_of_ms=intent.created_at_ms)
-            snap_payload = _snapshot_json(snapshot)
-            try:
-                conn.execute(
-                    """INSERT INTO paper_order_intents
-                    (intent_id, fixture_signal_id, venue, effect, payload,
-                     payload_sha256, checkpoint_as_of_ms, event_count,
-                     snapshot, snapshot_sha256) VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        intent.intent_id, intent.fixture_signal_id,
-                        intent.venue.value, intent.effect.value, payload,
-                        _digest(payload), intent.created_at_ms, 0,
-                        snap_payload, _digest(snap_payload),
-                    ),
+            if existing is not None:
+                # A replay should load its known intent; it must never appear
+                # to be a fresh preflight authorization / network retry.
+                self._checked_entry(conn, intent.intent_id)
+                raise DataValidationError("paper intent already reserved; recover existing state")
+            pending_local, unknown_local = self._pending_open_from_connection(conn)
+            effective = replace(
+                observation,
+                pending_open_orders=max(pending_local, observation.pending_open_orders),
+                unresolved_open_exists=(
+                    unknown_local or observation.unresolved_open_exists
+                ),
+            )
+            decision = evaluate_paper_risk(
+                intent, limits, effective, decision_at_ms=decision_at_ms,
+            )
+            if not decision.allowed_for_paper_only:
+                return PaperOpenRiskReservation(
+                    decision=decision, entry=None, local_pending_before=pending_local,
+                    local_unknown_before=unknown_local,
                 )
-            except sqlite3.IntegrityError as exc:
-                raise DataValidationError(
-                    "paper signal already has an OPEN intent, or ID conflicts"
-                ) from exc
-            return PaperJournalEntry(intent, (), snapshot)
+            entry = self._reserve_on_connection(conn, intent)
+            return PaperOpenRiskReservation(
+                decision=decision, entry=entry, local_pending_before=pending_local,
+                local_unknown_before=unknown_local,
+            )
 
     @staticmethod
     def _insert_event(
