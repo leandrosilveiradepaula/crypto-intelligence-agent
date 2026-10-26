@@ -21,3 +21,25 @@ A pessoa administradora do ambiente deve:
 6. Não publicar dados de conta, chaves, UID, IP, conteúdo de respostas ou arquivo `.env` em issues, PRs, ChatGPT ou logs do Actions. Enviar para revisão apenas status sanitizado sem identificadores.
 
 **Nenhuma conexão privada foi feita neste desenvolvimento.** A validação CI usa transportes falsos e não possui chaves. Isso não resolve dados de mercado J1 #2 nem homologa execução automática J4/J6. A próxima etapa exige acesso efetivo, seguro e verificado à VPS do titular; manter `orders_sent=false`, `trading_enabled=false`.
+
+
+## Ambiente confirmado: VPS Hostinger (26/10/2026 UTC)
+
+**Confirmação do Product Owner:** a VPS existente é hospedada na **Hostinger**, não na DigitalOcean. O resultado anterior de zero droplets na integração DigitalOcean não constitui evidência de inexistência de VPS.
+
+A Hostinger documenta acesso pelo **hPanel → VPS → Gerenciar → Web Console** (em interfaces anteriores, “Terminal do navegador”), sem serviço adicional: https://www.hostinger.com/support/how-to-use-the-web-console-in-hostinger/ . O console usa a sessão autenticada do titular; não há, nesta conversa, sessão de controle remoto, SSH ou credenciais dessa VPS. A integração pesquisada no ChatGPT é “Hostinger Mail” e **não** controla VPS: não instalar esse plugin por engano.
+
+### Roteiro mínimo e controlado
+
+1. **Conexão à VPS:** usar somente sessão autenticada do titular no hPanel da Hostinger, ou acesso SSH já existente, sem compartilhar IP, senha, API key, token SSH ou captura com credenciais no chat/GitHub. Uma sessão Hostinger aberta no navegador do usuário não equivale automaticamente a acesso de execução do agente nesta conversa.
+2. **Levantamento local não destrutivo:** confirmar SO/Python/repositório, usuário da aplicação, relógio UTC, conexão permitida à internet e estratégia de gerenciamento de segredos do ambiente **sem alterar** firewall, serviços, Docker, aplicações, backups, chaves ou configurações de produção. Preferir conta de aplicação sem privilégios administrativos. Não executar código do repositório automaticamente no `root`.
+3. **Entregar código aprovado:** somente após CI/revisão, sincronizar o SHA específico de `main` em um diretório privado de trabalho não produtivo. Primeiro executar os testes unitários e o diagnóstico **sem flags** para verificar `offline_network_disabled`, sem acesso a contas.
+4. **Credenciais de leitura:** se o usuário já tiver chaves com permissão de trading, **não reutilizá-las** nesse probe. Criar/usar credenciais distintas estritamente read-only e sem saques, sob controle do titular e sujeitas a controles regionais das corretoras. Os segredos devem entrar no processo a partir de armazenamento privado da VPS; nunca pela conversa, repositório ou logs. Não usar shell history para comandos com segredos.
+5. **Uma consulta deliberada por corretora:** na VPS privada, com relógio e direitos de acesso corretos, usar `python -m scripts.probe_private_exchange_readonly --venue bybit --allow-private-read --confirm-read-only-key` ou `--venue binance` após revisar chaves/termos. Não há tentativa automática, repetição ou fallback de host. O processo retorna somente o código sanitizado.
+6. **Critério de resultado:** Bybit só apresenta `authenticated_read_only_key_confirmed` com `readOnly=1` inteiro. Binance pode apresentar `authenticated_permissions_not_attested`: prova autenticação do endpoint, **não** prova que a chave não possui direitos de trading. Sem confirmação independente na UI e escopo mínimo, não considerar o acesso apto a qualquer ampliação.
+7. **Acesso negado:** HTTP403/451, restrições regionais, rate limit, falta de chave ou erro de relógio são bloqueios a registrar; não tentar proxy, VPN, mudança de DNS ou domínio de fallback. Falhas exigem revisão local, não mais endpoints.
+8. **Saída e estado:** registrar em documento de evidências apenas `venue`, classe sanitizada, SHA validado, UTC e flags negativas. Não versionar API key, UID, IP, saldos, corpo bruto, ID de VPS, logs de terminal ou outros detalhes privados.
+
+O consentimento concedido é **read-only nas duas contas**, não aprovação de software para dar ordens, nem teste com capital real, nem autorização de gastos ou mudanças administrativas da VPS. **Nenhuma instalação ou prova de acesso real à Hostinger ocorreu até este checkpoint.**
+
+**Dependência operacional:** esta conversa dispõe de GitHub e de acesso de leitura a abas conectadas, mas não de ferramenta para controlar o Web Console da Hostinger. Para executar sem que o usuário transcreva comandos, abrir uma jornada em **ChatGPT Work**, com a sessão Hostinger devidamente autenticada e as permissões adequadas; o operador deve preservar a confidencialidade dos segredos e solicitar confirmação apenas nos gates sensíveis. Não afirmar que a Work já executou algo.
