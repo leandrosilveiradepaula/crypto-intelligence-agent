@@ -61,7 +61,6 @@ class OfflinePaperDashboardTests(unittest.TestCase):
                             for a in meta))
         self.assertIn("@media (max-width: 640px)", self.html)
         self.assertIn("@media (max-width: 790px)", self.html)
-        self.assertIn("prefers", self.html) if "prefers" in self.html else None
         main = next(a for tag, a in self.page.attrs if tag == "main")
         self.assertEqual(main["data-mode"], "offline_paper")
         self.assertEqual(main["data-demo-only"], "true")
