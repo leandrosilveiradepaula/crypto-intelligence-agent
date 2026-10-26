@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from hashlib import sha256
 import json
+import sqlite3
 from pathlib import Path
 
 from .kraken_candle_validation import (
@@ -20,7 +21,7 @@ from .kraken_public_readonly import (
     SOURCE as CAPTURE_SOURCE, KrakenCapturedCandleResearchPage,
 )
 from .market_data import (
-    DataGapError, DuplicateCandleError, interval_duration_ms,
+    DataGapError, DuplicateCandleError, UniverseSnapshot, interval_duration_ms,
     interval_open_aligned,
 )
 from .storage import SQLiteMarketDataStore
@@ -145,9 +146,13 @@ class SQLiteKrakenPriceOnlyArchive(SQLiteMarketDataStore):
                 );
             """)
 
-    def commit_price_only(self, page: KrakenCapturedCandleResearchPage) -> int:
-        """One atomic page; replay identical rows safely; never write ClosedCandle."""
-        candles = _validated_rows(page)
+    @staticmethod
+    def _commit_price_only_on_connection(
+        conn: sqlite3.Connection,
+        page: KrakenCapturedCandleResearchPage,
+        candles: tuple[PriceOnlyCandle, ...],
+    ) -> int:
+        """Insert exactly one prevalidated page on a caller's transaction."""
         staged = page.staged
         digest_value = {
             "symbol": staged.symbol, "interval": staged.interval,
@@ -162,51 +167,103 @@ class SQLiteKrakenPriceOnlyArchive(SQLiteMarketDataStore):
         digest = sha256(json.dumps(digest_value, sort_keys=True,
                                     separators=(",", ":")).encode()).hexdigest()
         inserted = 0
-        with self._transaction() as conn:
-            old_page = conn.execute(
-                """SELECT sha256_digest FROM kraken_research_price_pages
-                   WHERE symbol=? AND interval=? AND start_open_ms=? AND
-                   end_open_ms=? AND observed_at_ms=?""",
-                (staged.symbol, staged.interval, staged.start_open_ms,
-                 staged.end_open_ms, page.observed_at_ms),
+        old_page = conn.execute(
+            """SELECT sha256_digest FROM kraken_research_price_pages
+               WHERE symbol=? AND interval=? AND start_open_ms=? AND
+               end_open_ms=? AND observed_at_ms=?""",
+            (staged.symbol, staged.interval, staged.start_open_ms,
+             staged.end_open_ms, page.observed_at_ms),
+        ).fetchone()
+        if old_page is not None and old_page["sha256_digest"] != digest:
+            raise DuplicateCandleError("conflicting research price page receipt")
+        for candle in candles:
+            existing = conn.execute(
+                """SELECT * FROM kraken_research_prices
+                   WHERE symbol=? AND interval=? AND open_time_ms=?""",
+                (candle.symbol, candle.interval, candle.open_time_ms),
             ).fetchone()
-            if old_page is not None and old_page["sha256_digest"] != digest:
-                raise DuplicateCandleError("conflicting research price page receipt")
-            for candle in candles:
-                existing = conn.execute(
-                    """SELECT * FROM kraken_research_prices
-                       WHERE symbol=? AND interval=? AND open_time_ms=?""",
-                    (candle.symbol, candle.interval, candle.open_time_ms),
-                ).fetchone()
-                if existing is not None:
-                    same_price = (
-                        existing["close_time_ms"] == candle.close_time_ms
-                        and tuple(Decimal(existing[k]) for k in
-                                  ("open", "high", "low", "close")) ==
-                        (candle.open, candle.high, candle.low, candle.close)
-                        and existing["source"] == candle.source
+            if existing is not None:
+                same_price = (
+                    existing["close_time_ms"] == candle.close_time_ms
+                    and tuple(Decimal(existing[k]) for k in
+                              ("open", "high", "low", "close")) ==
+                    (candle.open, candle.high, candle.low, candle.close)
+                    and existing["source"] == candle.source
+                )
+                if not same_price or page.observed_at_ms < existing["first_observed_at_ms"]:
+                    raise DuplicateCandleError(
+                        "conflicting or backdated persisted Kraken research price"
                     )
-                    if not same_price or page.observed_at_ms < existing["first_observed_at_ms"]:
-                        raise DuplicateCandleError(
-                            "conflicting or backdated persisted Kraken research price"
-                        )
-            for candle in candles:
-                inserted += conn.execute(
-                    """INSERT OR IGNORE INTO kraken_research_prices VALUES
-                       (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (candle.symbol, candle.interval, candle.open_time_ms,
-                     candle.close_time_ms, str(candle.open), str(candle.high),
-                     str(candle.low), str(candle.close),
-                     candle.first_observed_at_ms, candle.source),
-                ).rowcount
-            conn.execute(
-                """INSERT OR IGNORE INTO kraken_research_price_pages
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (staged.symbol, staged.interval, staged.start_open_ms,
-                 staged.end_open_ms, page.observed_at_ms, digest,
-                 len(candles), page.source, int(staged.provider_reports_more_candles)),
-            )
+        for candle in candles:
+            inserted += conn.execute(
+                """INSERT OR IGNORE INTO kraken_research_prices VALUES
+                   (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (candle.symbol, candle.interval, candle.open_time_ms,
+                 candle.close_time_ms, str(candle.open), str(candle.high),
+                 str(candle.low), str(candle.close),
+                 candle.first_observed_at_ms, candle.source),
+            ).rowcount
+        conn.execute(
+            """INSERT OR IGNORE INTO kraken_research_price_pages
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (staged.symbol, staged.interval, staged.start_open_ms,
+             staged.end_open_ms, page.observed_at_ms, digest,
+             len(candles), page.source, int(staged.provider_reports_more_candles)),
+        )
         return inserted
+
+    def commit_price_only(self, page: KrakenCapturedCandleResearchPage) -> int:
+        """Preserve standalone page atomicity/idempotence for existing callers."""
+        candles = _validated_rows(page)
+        with self._transaction() as conn:
+            return self._commit_price_only_on_connection(conn, page, candles)
+
+    def commit_research_session(
+        self, snapshot: UniverseSnapshot,
+        pages: tuple[KrakenCapturedCandleResearchPage, ...],
+    ) -> tuple[int, ...]:
+        """One SQLite transaction: universe snapshot AND every price page.
+
+        Fail entirely on a later page collision even in an existing database.
+        Legacy standalone commit_price_only/save_universe_snapshot remain
+        available with their own transaction boundaries.
+        """
+        if (type(snapshot) is not UniverseSnapshot
+                or type(snapshot.observed_at_ms) is not int
+                or snapshot.observed_at_ms <= 0
+                or type(pages) is not tuple
+                or not 1 <= len(pages) <= 5
+                or type(snapshot.eligible) is not tuple):
+            raise DataGapError("invalid private research session input")
+        eligible_symbols = tuple(member.symbol for member in snapshot.eligible)
+        if len(set(eligible_symbols)) != len(eligible_symbols):
+            raise DataGapError("duplicate eligible symbols in private session")
+        first_window = None
+        last_observed = snapshot.observed_at_ms
+        validated = []
+        seen = set()
+        for page in pages:
+            candles = _validated_rows(page)  # all page contracts before disk IO
+            staged = page.staged
+            window = (staged.interval, staged.start_open_ms, staged.end_open_ms)
+            if (staged.symbol not in eligible_symbols
+                    or staged.symbol in seen
+                    or page.observed_at_ms < last_observed
+                    or (first_window is not None and window != first_window)):
+                raise DataGapError("private research session symbol/window/time mismatch")
+            seen.add(staged.symbol)
+            if first_window is None:
+                first_window = window
+            last_observed = page.observed_at_ms
+            validated.append((page, candles))
+        # SQLite BEGIN IMMEDIATE; failure at ANY insert rolls back even earlier
+        # pages, receipts and the universe snapshot in this same session.
+        with self._transaction() as conn:
+            self._save_universe_snapshot_on_connection(conn, snapshot)
+            return tuple(
+                self._commit_price_only_on_connection(conn, page, candles)
+                for page, candles in validated
+            )
 
     def prices_as_of(
         self, *, symbol: str, interval: str, start_open_ms: int,

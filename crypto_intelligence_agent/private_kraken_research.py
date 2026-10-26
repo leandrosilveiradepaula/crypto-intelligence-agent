@@ -115,8 +115,8 @@ def capture_private_research(
 
     At most 2 + max_price_symbols GET calls, at most 72 1H price-only bars per chart.
     Validate provider responses before opening or writing the local database.
-    The store's two record families are individually transactional; a crash
-    between them can leave a valid partial capture, not a completed session.
+    The snapshot and ALL chart pages commit in ONE SQLite transaction, so an
+    unexpected later conflict never leaves partial session writes behind.
     Replays detect conflicts and preserve first-observed prices.
     """
     if allow_public_network is not True or allow_private_persistence is not True:
@@ -199,11 +199,15 @@ def capture_private_research(
     created = _create_private_file(target)
     try:
         archive = SQLiteKrakenPriceOnlyArchive(target)
-        archive.save_universe_snapshot(ranked)
-        added = 0
+        # One BEGIN IMMEDIATE covers universe, ALL price pages and receipts.
+        # On any later conflict there are NO partial session writes left,
+        # including when the target database already existed.
+        inserted = archive.commit_research_session(
+            ranked, tuple(captured for _, captured in validated_pages),
+        )
+        added = sum(inserted)
         covered = 0
         for symbol, captured in validated_pages:
-            added += archive.commit_price_only(captured)
             quality = archive.price_quality(
                 symbol=symbol, interval=_INTERVAL,
                 start_open_ms=start, end_open_ms=end,
@@ -239,9 +243,8 @@ def capture_private_research(
             price_hours_requested=price_hours,
         )
     except Exception:
-        # If newly created and the session fails, never silently leave a DB
-        # that might be mistaken for an accepted completed capture. Existing
-        # DBs retain individually validated transactional records.
+        # On new-file failure, discard the empty/new DB. In an existing DB,
+        # a failed transaction rolls back ALL session writes atomically.
         if created:
             target.unlink(missing_ok=True)
         raise
