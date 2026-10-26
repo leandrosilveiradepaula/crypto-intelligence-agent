@@ -65,24 +65,26 @@ def check(*, source_pages=None, cursors=(None, "cursor-B"), tick=None,
 
 
 class BybitPaginatedUniverseOfflineTests(unittest.TestCase):
-    def test_complete_two_page_chain_ranks_quote_usdt_not_usd(self):
+    def test_complete_two_page_chain_ranks_raw_ticker_proxy_without_units(self):
         out = check()
         self.assertIsInstance(out, BybitPaginatedUniverseResearch)
         self.assertEqual([x.symbol for x in out.selected], ["ETHUSDT", "BTCUSDT"])
         self.assertEqual([x.rank for x in out.selected], [1, 2])
-        self.assertEqual(out.selected[0].turnover24h_usdt, D("300.50"))
-        self.assertEqual(out.selected[0].volume24h_base, D("3.00"))
+        self.assertEqual(out.selected[0].turnover24h_raw_unverified, D("300.50"))
+        self.assertEqual(out.selected[0].volume24h_raw_unverified, D("3.00"))
         self.assertEqual(out.instrument_page_count, 2)
         self.assertEqual(out.instrument_row_count, 2)
         self.assertEqual(out.candidate_contract_count, 2)
         self.assertEqual(out.ticker_row_count, 2)
-        self.assertEqual(out.ranking_basis, "documented_quote_turnover_24h_usdt_not_usd")
+        self.assertEqual(out.ranking_basis, "raw_ticker_turnover24h_numeric_proxy_unit_unverified")
+        self.assertEqual(out.selected[0].quote_contract_currency, "USDT")
         self.assertEqual(out.source_quality, "unverified_caller_supplied_offline_payload")
         self.assertTrue(out.cursor_chain_complete_as_asserted)
         for attr in (
             "live_source_verified", "canonical_ohlcv_ready",
             "verified_top50_coverage", "rights_verified",
-            "usd_comparable_volume_verified", "point_in_time_history_verified",
+            "usd_comparable_volume_verified", "ticker_turnover_unit_verified",
+            "ticker_volume_unit_verified", "point_in_time_history_verified",
             "automatic_trading_authorized", "orders_sent",
         ):
             self.assertFalse(getattr(out, attr), attr)
