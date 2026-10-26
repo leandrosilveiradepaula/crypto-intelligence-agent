@@ -28,8 +28,15 @@ def _report(venue: str, status: str) -> None:
     print(json.dumps(_safe_result(venue, status), sort_keys=True))
 
 
+class _SanitizedParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        # argparse normally echoes unrecognized CLI values. Never print an
+        # accidentally pasted API secret in errors or usage.
+        self.exit(2, "invalid arguments; use --help for options\\n")
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
+    parser = _SanitizedParser(
         description="AUTH1 private, single-GET read-only API connectivity probe (TTY only)",
     )
     parser.add_argument("--venue", required=True, choices=tuple(_ENV_NAMES))
