@@ -98,6 +98,18 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
             "issue": 50,
             "reason": "Documented quote USDT/USDC; neither USD conversion nor live proof",
         },
+        {
+            "capability": "bybit_ticker_24h_units",
+            "status": "blocked",
+            "evidence_kind": "ticker_api_units_unattested",
+            "source": "docs/J1_SOURCE_GATES.md",
+            "issue": 196,
+            "reason": (
+                "Bybit V5 ticker turnover24h and volume24h units lack explicit "
+                "endpoint-scoped attestation. Kline units and UI labels are "
+                "not proof of REST ticker semantics."
+            ),
+        },
     ]
     result = {
         "schema_version": "j1-readiness-v2",
@@ -133,6 +145,9 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
                 "data_conformance": "documented_schema_offline_only",
                 "last_observed_access": "first_instrument_get_restricted_no_candles",
                 "quote_currency": "USDT_or_USDC_not_USD",
+                "ticker_turnover_unit_verified": False,
+                "ticker_volume_unit_verified": False,
+                "ticker_units_evidence_scope": "v5_rest_ticker_field_not_attested",
                 "account_access_verified": False,
                 "live_signal_approved": False,
                 "automated_execution_approved": False,
