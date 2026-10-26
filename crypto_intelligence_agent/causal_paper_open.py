@@ -96,7 +96,7 @@ def _fixture_signal_key(candidate: SyntheticEntryCandidate) -> str:
     return sha256(identity.encode("ascii")).hexdigest()[:24]
 
 
-def reserve_causal_paper_open(
+def prepare_causal_paper_open(
     candles: Sequence[ClosedCandle],
     *,
     strategy: CompressionBreakoutConfig,
@@ -104,24 +104,22 @@ def reserve_causal_paper_open(
     requested_units: Decimal,
     limits: PaperRiskLimits,
     observation: PaperRiskObservation,
-    journal: SQLitePaperOrderJournal,
-    position_journal_path: str | Path,
     decision_at_ms: int,
     close_safety_ms: int = 1_000,
 ) -> CausalPaperOpening:
-    """Recompute J2 from the entire available *closed prefix*, then reserve.
+    """Recompute a J2 hypothesis from the closed prefix, WITHOUT reserving.
 
     Only a hypothesis on the LAST closed candle is eligible. The decision
     clock must be exactly its close+safety. The independent PAPER risk
     observation explicitly supplies the fictional mark and exposures; the
     J2 candidate close is NEVER passed as a verified mark, fill, or notional.
-    The journal's existing AUTO6 transaction enforces dedup/pending/UNKNOWN.
+    Reservation is deliberately deferred so a durable caller can hold ONE
+    AUTO2 transaction across the risk gate and its PAPER cursor.
     """
     if (type(strategy) is not CompressionBreakoutConfig
             or type(venue) is not PaperVenue
             or type(limits) is not PaperRiskLimits
-            or type(observation) is not PaperRiskObservation
-            or type(journal) is not SQLitePaperOrderJournal):
+            or type(observation) is not PaperRiskObservation):
         raise DataValidationError("typed J2, PAPER venue, risk and journal are required")
     if type(requested_units) is not Decimal:
         raise DataValidationError("explicit Decimal PAPER requested units required")
@@ -170,11 +168,23 @@ def reserve_causal_paper_open(
         requested_units=requested_units,
         created_at_ms=now,
     )
-    # AUTO8 must audit under the SAME order-file write lock that reserves
-    # the next OPEN, so a concurrent FILL cannot bypass the health gate.
-    health, receipt = journal.reserve_open_if_paper_risk_with_health(
-        intent, limits, observation, decision_at_ms=now,
-        position_journal_path=position_journal_path,
+    return CausalPaperOpening(
+        now, candidate, intent, None, None, "candidate_pending_paper_risk_gate",
+    )
+
+
+def _finish_causal_paper_open(
+    prepared: CausalPaperOpening,
+    health: PaperOpenHealth,
+    receipt: PaperOpenRiskReservation | None,
+) -> CausalPaperOpening:
+    """Reuse AUTO7 response checks for legacy and durable atomic reservation."""
+    if (type(prepared) is not CausalPaperOpening
+            or prepared.intent is None
+            or type(health) is not PaperOpenHealth):
+        raise DataValidationError("invalid prepared PAPER reservation result")
+    now, candidate, intent = (
+        prepared.decision_at_ms, prepared.candidate, prepared.intent,
     )
     if not health.new_open_allowed:
         if receipt is not None:
@@ -202,3 +212,34 @@ def reserve_causal_paper_open(
     return CausalPaperOpening(
         now, candidate, intent, receipt, health, "paper_open_intent_reserved_only",
     )
+
+
+def reserve_causal_paper_open(
+    candles: Sequence[ClosedCandle], *,
+    strategy: CompressionBreakoutConfig,
+    venue: PaperVenue,
+    requested_units: Decimal,
+    limits: PaperRiskLimits,
+    observation: PaperRiskObservation,
+    journal: SQLitePaperOrderJournal,
+    position_journal_path: str | Path,
+    decision_at_ms: int,
+    close_safety_ms: int = 1_000,
+) -> CausalPaperOpening:
+    """Legacy AUTO7 entry point; health, risk and OPEN share AUTO2 lock."""
+    if type(journal) is not SQLitePaperOrderJournal:
+        raise DataValidationError("typed PAPER journal required")
+    prepared = prepare_causal_paper_open(
+        candles, strategy=strategy, venue=venue,
+        requested_units=requested_units, limits=limits,
+        observation=observation, decision_at_ms=decision_at_ms,
+        close_safety_ms=close_safety_ms,
+    )
+    if prepared.intent is None:
+        return prepared
+    health, receipt = journal.reserve_open_if_paper_risk_with_health(
+        prepared.intent, limits, observation,
+        decision_at_ms=prepared.decision_at_ms,
+        position_journal_path=position_journal_path,
+    )
+    return _finish_causal_paper_open(prepared, health, receipt)
