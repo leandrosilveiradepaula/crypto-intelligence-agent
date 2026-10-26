@@ -71,10 +71,14 @@ class OfflinePaperDashboardTests(unittest.TestCase):
         forbidden = {"script", "iframe", "form", "button", "input", "object",
                      "embed", "video", "audio", "img", "link"}
         self.assertFalse(forbidden.intersection(self.page.tags))
+        links = []
         for tag, attrs in self.page.attrs:
             with self.subTest(tag=tag):
                 self.assertFalse(any(k.lower().startswith("on") for k in attrs))
-                self.assertFalse(any(k in attrs for k in ("src", "action", "href")))
+                self.assertFalse(any(k in attrs for k in ("src", "action", "srcset")))
+                if "href" in attrs:
+                    links.append((tag, attrs["href"]))
+        self.assertEqual(links, [("a", "#conteudo-principal")])
         self.assertNotIn("https://", self.html)
         self.assertNotIn("http://", self.html)
         policy = next(a["content"] for tag, a in self.page.attrs
@@ -83,6 +87,26 @@ class OfflinePaperDashboardTests(unittest.TestCase):
         self.assertIn("connect-src 'none'", policy)
         self.assertIn("form-action 'none'", policy)
         self.assertIn("frame-src 'none'", policy)
+
+    def test_keyboard_skip_navigation_and_scrollable_table_semantics(self):
+        main = next(a for tag, a in self.page.attrs if tag == "main")
+        self.assertEqual(main.get("id"), "conteudo-principal")
+        self.assertEqual(main.get("tabindex"), "-1")
+        internal_link = next(a for tag, a in self.page.attrs if tag == "a")
+        self.assertEqual(internal_link.get("class"), "skip-link")
+        self.assertEqual(internal_link.get("href"), "#conteudo-principal")
+        self.assertIn("Pular para o conteúdo principal", " ".join(self.page.text))
+        self.assertIn(".skip-link:focus-visible", self.html)
+        scroller = next(a for tag, a in self.page.attrs
+                        if tag == "div" and a.get("class") == "table-wrap")
+        self.assertEqual(scroller.get("role"), "region")
+        self.assertEqual(scroller.get("tabindex"), "0")
+        self.assertEqual(scroller.get("aria-describedby"), "table-scroll-instructions")
+        self.assertIn("Etapas e saldos", scroller.get("aria-label", ""))
+        self.assertIn('id="table-scroll-instructions"', self.html)
+        self.assertIn("use as setas horizontais", " ".join(self.page.text))
+        self.assertIn(".brand span:last-child", self.html)
+        self.assertIn("overflow-wrap: anywhere", self.html)
 
     def test_static_cards_match_current_paper_demo_math(self):
         self.assertEqual(self.page.venues, ["binance_usdm", "bybit_v5"])
