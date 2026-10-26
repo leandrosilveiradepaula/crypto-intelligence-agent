@@ -76,9 +76,15 @@ class SourceGateDocsTests(unittest.TestCase):
     def test_removing_critical_invariants_fails(self):
         matrix = self.root / "docs/J1_SOURCE_GATES.md"
         original = matrix.read_text(encoding="utf-8")
-        for token in ("#32", "#36", "#48", "Top50", "price-only"):
+        for token in (
+            "#32", "#36", "#48", "Top50", "price-only",
+            "bybit_ticker_24h_units=blocked",
+            "ticker_turnover_unit_verified=false",
+            "ticker_volume_unit_verified=false",
+        ):
             with self.subTest(token=token):
-                matrix.write_text(original.replace(token, "REDACTED"), encoding="utf-8")
+                matrix.write_text(re.sub(re.escape(token), "REDACTED", original,
+                                         flags=re.IGNORECASE), encoding="utf-8")
                 result = self.check()
                 self.assertNotEqual(result.returncode, 0, result.stdout)
                 self.assertIn("missing J1 source-gates invariant", result.stdout)

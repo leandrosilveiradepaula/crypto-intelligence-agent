@@ -155,3 +155,8 @@ AUTO9 acrescenta `CLOSED_FLAT_HYPOTHETICAL_ONLY` para permitir uma nova intenç�
 ## J1/WU49 #194 — pesquisa multipágina de elegibilidade Bybit V5, unidade de ticker pendente
 
 WU49 acrescenta a auditoria OFFLINE de respostas de instrumentos `linear` paginadas e ticker `turnover24h` como métrica numérica bruta de unidade NÃO comprovada, com filtros positivos crypto-only/USDT, idade de captura declarada e desempate estável. Nenhum ranking representa Top50 econômico/comparável, pois ticker não fornece unidade explícita na página oficial; KLINE fornece unidade BASE/QUOTE apenas para candles. Não foi feito GET real, conta, credencial ou trade. J1 #2 e os bloqueios de acesso/volume/direitos não foram liberados. O objetivo automático D77 continua futuro, condicionado aos gates completos.
+
+
+## J1/WU50 #196 — distinguir evidência da UI de contrato REST ticker
+
+Diligência em fontes oficiais Bybit (REST tickers, WebSocket, Kline, instrumentos e interface de negociação) registra legibilidade de `24H Turnover(USDT)`/`24H Volume(BASE)` em páginas de perpétuos, mas nenhuma declaração explícita da unidade dos nomes `turnover24h` e `volume24h` da rota REST V5 linear. O relatório de prontidão J1 registra `bybit_ticker_24h_units=blocked`, separando a moeda QUOTE documentada do instrumento de uma unidade TICKER ainda não atestada. O draft de pergunta ao fornecedor não foi enviado e nenhum feed ou trading foi acionado; J1 #2 e direitos permanecem bloqueados.
