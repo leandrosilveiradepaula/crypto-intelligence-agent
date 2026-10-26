@@ -232,6 +232,8 @@ def step_durable_offline_paper(
     if (type(journal) is not SQLitePaperOrderJournal
             or type(position_journal_path) not in (str, Path)
             or not str(position_journal_path).strip()
+            or type(closed_prefix) not in (tuple, list)
+            or not 1 <= len(closed_prefix) <= max_candles
             or fault_at not in (None, "after_reservation_before_cursor",
                                 "after_cursor_before_commit")):
         raise DataValidationError("explicit fixture journals and fault hook required")
