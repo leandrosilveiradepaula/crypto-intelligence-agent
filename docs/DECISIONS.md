@@ -277,3 +277,7 @@ Consolidar fontes em [`docs/J1_SOURCE_GATES.md`](J1_SOURCE_GATES.md), separando 
 
 ## D74 — J1/WU45: matriz de fontes como documento obrigatório (26/10/2026 UTC)
 A PR #140 consolidou `docs/J1_SOURCE_GATES.md`, mas `scripts/check_docs.py` ainda testava apenas 12 documentos. A WU45 #141 coloca a matriz no gate offline e adiciona regressões para ausência e retirada de marcadores críticos (#32 identidade, #36 volume Kraken, #48 direitos). A checagem textual não comprova identidade, unidade, licença, completude histórica ou segurança financeira. A minuta de solicitação à Kraken já está na issue #36 e **não foi enviada**; não criar requisições externas. Nenhuma promoção a `ClosedCandle`, release, dado público ou J1 homologada.
+
+
+## D75 — J1/WU46: ampliar apenas identidade observada, sem implicar mercado disponível
+A partir de 26/10/2026 UTC, adicionar pesquisa documental sobre XMR, ETC e ZEC ao manifesto de identidades Kraken **v3 (13 bases)** mantendo inteiras as evidências v2 (10 bases), versão/hash, instante causal e seleção explícita. A nova versão não pode informar amostras anteriores a `1792982418000`, não presume que a Kraken disponha de 13 contratos, que símbolos estejam líquidos ou que CoinGecko conceda direitos de market data. Default `btc-eth` e opt-in `expanded-10` reprodutíveis; `expanded-13` apenas pesquisa privada com filtro positivo e validação contemporânea de contratos/quote. Nenhum trade, GET de exchange, transformação `ClosedCandle`, Top50 histórico ou release. WU46 #143 não resolve #32/#36/#48.

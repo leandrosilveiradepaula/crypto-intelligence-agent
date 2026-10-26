@@ -126,7 +126,7 @@ class ExpandedRegistryTests(unittest.TestCase):
         for bad in ("default", "", "v2.json", None, 2, True):
             with self.subTest(variant=bad), self.assertRaises(DataValidationError):
                 load_reviewed_registry(bad, as_of_ms=T)
-        self.assertEqual(REGISTRY_VARIANTS, frozenset({"btc-eth", "expanded-10"}))
+        self.assertEqual(REGISTRY_VARIANTS, frozenset({"btc-eth", "expanded-10", "expanded-13"}))
 
     def test_hash_tamper_rejected_instead_of_silently_reidentifying(self):
         raw = json.loads(V2.read_text(encoding="utf-8"))

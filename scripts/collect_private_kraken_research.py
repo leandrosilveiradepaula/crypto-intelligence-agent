@@ -25,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="absolute path outside repo, in owner-only directory (0700)")
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--allow-private-persistence", action="store_true")
-    parser.add_argument("--registry", choices=("btc-eth", "expanded-10"), default="btc-eth")
+    parser.add_argument("--registry", choices=("btc-eth", "expanded-10", "expanded-13"), default="btc-eth")
     parser.add_argument("--max-price-symbols", type=int, default=1,
                         help="1 to 5 real eligible perpetuals (BTC first); max 2+N GETs")
     parser.add_argument("--price-hours", type=int, default=3,

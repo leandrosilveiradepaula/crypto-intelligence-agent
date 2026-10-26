@@ -64,7 +64,7 @@ def inspect_once(
         raise UniverseProbeError("reviewed_registry_not_yet_observed")
     history = CryptoRegistryHistory((registry,))
     report: dict[str, Any] = {
-        "schema_version": ("j1-kraken-private-universe-v2" if registry_variant == "expanded-10"
+        "schema_version": ("j1-kraken-private-universe-v2" if registry_variant in ("expanded-10", "expanded-13")
                            else "j1-kraken-btc-eth-private-universe-v1"),
         "provider": "kraken_futures",
         "observed_at_utc": datetime.fromtimestamp(now / 1000, timezone.utc)
@@ -145,7 +145,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--allow-private-kraken-universe", action="store_true")
-    parser.add_argument("--registry", choices=("btc-eth", "expanded-10"), default="btc-eth")
+    parser.add_argument("--registry", choices=("btc-eth", "expanded-10", "expanded-13"), default="btc-eth")
     args = parser.parse_args()
     try:
         result = inspect_once(
