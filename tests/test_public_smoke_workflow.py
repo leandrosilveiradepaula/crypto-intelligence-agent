@@ -289,5 +289,26 @@ class PublicSmokeWorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("contents: write", s)
 
 
+
+    def test_dydx_private_probe_requires_exact_owner_only_issue_comment(self):
+        s = self.source
+        for token in (
+            "dydx-private-btc-base-usd:",
+            "github.event.issue.number == 128",
+            "github.event.issue.pull_request == null",
+            "github.event.comment.body == '/probe-dydx-private-btc-v1'",
+            "github.event.comment.user.login == 'leandrosilveiradepaula'",
+            "github.actor == 'leandrosilveiradepaula'",
+            "python3 -m scripts.probe_dydx_private_base_usd",
+            "--allow-public-network --allow-private-dydx-probe",
+            "persist-credentials: false",
+            "timeout-minutes: 2",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, s)
+        self.assertNotIn("contents: write", s)
+        self.assertNotIn("secrets.", s)
+
+
 if __name__ == "__main__":
     unittest.main()
