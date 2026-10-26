@@ -36,10 +36,10 @@ class TtyReadonlyTests(unittest.TestCase):
                 raise provider_error
             return fake_provider(*args, **kwargs)
 
-        with patch(f"{MODULE}.sys.stdin.isatty", return_value=tty), \\
-             patch(f"{MODULE}.sys.stderr.isatty", return_value=tty), \\
-             patch(f"{MODULE}.getpass.getpass", side_effect=secrets) as hidden, \\
-             patch(f"{MODULE}.diagnose", side_effect=provider), \\
+        with patch(f"{MODULE}.sys.stdin.isatty", return_value=tty), \
+             patch(f"{MODULE}.sys.stderr.isatty", return_value=tty), \
+             patch(f"{MODULE}.getpass.getpass", side_effect=secrets) as hidden, \
+             patch(f"{MODULE}.diagnose", side_effect=provider), \
              redirect_stdout(output):
             code = main(["--venue", venue] + (FLAGS if flags is None else flags))
         return code, json.loads(output.getvalue()), captures, hidden
@@ -111,10 +111,10 @@ class TtyReadonlyTests(unittest.TestCase):
                       OSError("sensitive")):
             with self.subTest(kind=type(error).__name__):
                 output = StringIO()
-                with patch(f"{MODULE}.sys.stdin.isatty", return_value=True), \\
-                     patch(f"{MODULE}.sys.stderr.isatty", return_value=True), \\
-                     patch(f"{MODULE}.getpass.getpass", side_effect=error), \\
-                     patch(f"{MODULE}.diagnose") as provider, \\
+                with patch(f"{MODULE}.sys.stdin.isatty", return_value=True), \
+                     patch(f"{MODULE}.sys.stderr.isatty", return_value=True), \
+                     patch(f"{MODULE}.getpass.getpass", side_effect=error), \
+                     patch(f"{MODULE}.diagnose") as provider, \
                      redirect_stdout(output):
                     code = main(["--venue", "bybit"] + FLAGS)
                 self.assertEqual(code, 2)
