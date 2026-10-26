@@ -64,7 +64,18 @@ def _now(clock: Callable[[], int]) -> int:
     return value
 
 
+def _private_posix_semantics_supported() -> bool:
+    """Private 0700/0600 checks are meaningful only on POSIX filesystems.
+
+    Windows ACLs need a separate, reviewed implementation; Windows st_mode
+    emulation MUST NOT be mistaken for the owner's actual access policy.
+    """
+    return os.name == "posix"
+
+
 def _private_db_path(db_path: str | Path) -> Path:
+    if not _private_posix_semantics_supported():
+        raise LocalResearchError("private_collection_requires_posix_permissions")
     if not isinstance(db_path, (str, Path)):
         raise LocalResearchError("absolute_private_database_path_required")
     path = Path(db_path).expanduser()

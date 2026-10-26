@@ -16,3 +16,19 @@ jobs:
         run: python3 -m compileall -q crypto_intelligence_agent tests
       - name: Run offline unit tests
         run: python3 -m unittest discover -s tests -v
+
+  windows-offline:
+    # Free standard GitHub-hosted runner for this public repository. Never
+    # attempt provider access or private 0700/0600 collection on Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate project documents
+        run: python scripts/check_docs.py
+      - name: Validate Python syntax
+        run: python -m compileall -q crypto_intelligence_agent tests
+      - name: Run offline cross-platform tests (POSIX-only private collectors skipped)
+        run: python -m unittest discover -s tests -v

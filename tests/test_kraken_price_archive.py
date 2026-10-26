@@ -5,6 +5,7 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 
@@ -81,7 +82,7 @@ class PriceOnlyStorageTests(unittest.TestCase):
         self.assertFalse(hasattr(rows[0], "base_volume"))
         self.assertFalse(hasattr(rows[0], "quote_volume"))
         self.assertFalse(hasattr(rows[0], "raw_trade_volume_unverified"))
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn, conn:
             columns = [row[1] for row in conn.execute(
                 "PRAGMA table_info(kraken_research_prices)").fetchall()]
         self.assertEqual(columns.count("open"), 1)
@@ -102,7 +103,7 @@ class PriceOnlyStorageTests(unittest.TestCase):
         self.assertEqual(result.captured, 3)
         self.assertEqual(result.missing_open_times_ms, ())
         self.assertTrue(result.backed_by_page_receipts)
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn, conn:
             conn.execute("DELETE FROM kraken_research_price_pages")
         without_receipt = self.quality()
         self.assertFalse(without_receipt.complete)
@@ -156,7 +157,7 @@ class PriceOnlyStorageTests(unittest.TestCase):
         self.assertEqual(len(self.prices(end=END + HOUR, when=conflicting.observed_at_ms)), 3)
         self.assertFalse(self.quality(
             end=END + HOUR, when=conflicting.observed_at_ms).complete)
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn, conn:
             count, = conn.execute("SELECT COUNT(*) FROM kraken_research_price_pages").fetchone()
         self.assertEqual(count, 1)
 

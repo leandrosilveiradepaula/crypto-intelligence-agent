@@ -48,6 +48,7 @@ def existing_snapshot(archive: SQLiteKrakenPriceOnlyArchive):
     )
 
 
+@unittest.skipUnless(os.name == "posix", "private Kraken atomic capture requires POSIX permissions")
 class ResearchSessionAtomicityTests(unittest.TestCase):
     def setUp(self):
         self.folder = TemporaryDirectory()

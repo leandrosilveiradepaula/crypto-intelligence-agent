@@ -4,6 +4,7 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -193,7 +194,7 @@ class AtomicPaperRiskReserveTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=2) as pool:
             outcomes = list(pool.map(submit, ("race_A", "race_B")))
         self.assertEqual(sorted(outcomes), ["accepted", "blocked"])
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             count = con.execute(
                 "SELECT COUNT(*) FROM paper_order_intents WHERE effect='OPEN'"
             ).fetchone()[0]
@@ -201,11 +202,11 @@ class AtomicPaperRiskReserveTests(unittest.TestCase):
 
     def test_tampered_index_or_payload_fails_preflight_instead_of_undercounting(self):
         self.preflight()
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute("UPDATE paper_order_intents SET effect='REDUCE_ONLY'")
         with self.assertRaises(DataValidationError):
             self.preflight("B")
-        with sqlite3.connect(self.db) as con:
+        with closing(sqlite3.connect(self.db)) as con, con:
             con.execute("UPDATE paper_order_intents SET payload='{}'")
         with self.assertRaises(DataValidationError):
             self.preflight("C")

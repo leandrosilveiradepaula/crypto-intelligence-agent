@@ -61,3 +61,8 @@ python3 -m scripts.audit_private_bybit_json \
 ```
 
 Não executar este exemplo no GitHub Actions, VPS pública ou chat; nunca enviar material bruto ao GitHub ou compartilhar credenciais. O resumo JSON mostra apenas status de conformidade, IDs de crypto e intervalo, unidades documentadas, contagem e SHA-256, sem preços/volumes/contas. `offline_schema_conformance_passed_origin_unverified` não demonstra origem real, 24h completo, Top50, direitos, feed operacional ou autorização de trading. A modalidade local POSIX e a restrição de não persistir a saída foram escolhidas para prevenir vazamento acidental; Windows requer revisão de ACL específica antes de usar arquivos privados.
+
+
+## Qualidade #186 — execução privada Kraken requer POSIX
+
+O comando de persistência privada Kraken é **intencionalmente suportado apenas em sistemas POSIX com verificações reais de diretório 0700/arquivo 0600**. No Windows o coletor recusa antes de qualquer chamada de rede; `chmod` e `stat.st_mode` em Windows não certificam ACLs equivalentes. A compatibilidade Windows da pesquisa privada necessita desenho/revisão específica de ACL, não é habilitada pelos testes gerais de domínio Windows. O auditor Bybit local possui restrição POSIX equivalente. Não use esse recurso Windows por meio de bypass, proxy ou credenciais e não copie dados para o checkout público.

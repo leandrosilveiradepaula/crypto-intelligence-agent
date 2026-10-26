@@ -1,11 +1,12 @@
 """J5/PRE4: persisted PAPER position reader is explicitly fail-closed and RO."""
-from contextlib import redirect_stdout
+from contextlib import closing, redirect_stdout
 from dataclasses import replace
 from decimal import Decimal
 from hashlib import sha256
 from html.parser import HTMLParser
 from io import StringIO
 import json
+import os
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -125,7 +126,7 @@ class ReadOnlyPaperPositionTests(unittest.TestCase):
     def test_uses_existing_position_without_changes_and_no_implicit_extra_venue(self):
         before = self.db.read_bytes()
         tables = []
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             tables = sorted(row[0] for row in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
             ))
@@ -138,7 +139,7 @@ class ReadOnlyPaperPositionTests(unittest.TestCase):
         self.assertEqual(result.balance.filled_exit_units, D(0))
         self.assertFalse(result.opening_order_cross_checked)
         self.assertEqual(self.db.read_bytes(), before)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             later_tables = sorted(row[0] for row in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
             ))
@@ -240,37 +241,40 @@ class ReadOnlyPaperPositionTests(unittest.TestCase):
         for value in (":memory:", "file:/tmp/unknown?mode=rw", ""):
             with self.subTest(path=value), self.assertRaises(DataValidationError):
                 inspect_paper_position(value, "fixture_position_A")
-        symlink = self.base / "symlink.sqlite"
-        symlink.symlink_to(self.db)
-        with self.assertRaises(DataValidationError):
-            inspect_paper_position(symlink, "fixture_position_A")
         with self.assertRaises(DataValidationError):
             inspect_paper_position(self.order_db, "fixture_position_A")
         with self.assertRaises(DataValidationError):
             inspect_paper_position(self.db, "not_a_fixture")
 
+    @unittest.skipUnless(os.name == "posix", "symlink creation requires POSIX permissions")
+    def test_existing_symlink_to_paper_db_is_refused(self):
+        symlink = self.base / "symlink.sqlite"
+        symlink.symlink_to(self.db)
+        with self.assertRaises(DataValidationError):
+            inspect_paper_position(symlink, "fixture_position_A")
+
     def test_unknown_version_foreign_tables_and_corrupt_digest_fail(self):
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute(
                 "UPDATE paper_position_meta SET value='unsupported-v900'"
             )
         with self.assertRaises(DataValidationError):
             self.read()
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute(
                 "UPDATE paper_position_meta SET value='paper-position-reservations-v1'"
             )
             conn.execute("CREATE TABLE unexpected_private_table (secret TEXT)")
         with self.assertRaises(DataValidationError):
             self.read()
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("DROP TABLE unexpected_private_table")
             conn.execute("UPDATE paper_positions SET payload='{}'")
         with self.assertRaises(DataValidationError):
             self.read()
 
     def test_order_journal_mismatch_and_corruption_fail_closed(self):
-        with sqlite3.connect(self.order_db) as conn:
+        with closing(sqlite3.connect(self.order_db)) as conn, conn:
             conn.execute(
                 "UPDATE paper_order_intents SET payload='{}' WHERE intent_id=?",
                 (self.entry.intent_id,),
