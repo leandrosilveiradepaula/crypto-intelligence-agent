@@ -261,6 +261,10 @@ class SQLitePaperOrderJournal:
                 )
             elif row["value"] != _VERSION:
                 raise DataValidationError("unsupported paper journal schema version")
+            # Existing AUTO2 databases remain valid; the cursor is an optional
+            # precisely named metadata record, never an implicit migration.
+            from .paper_open_health import _verify_locked_order_schema
+            _verify_locked_order_schema(conn)
 
     @staticmethod
     def _checked_entry(conn: sqlite3.Connection, intent_id: str) -> PaperJournalEntry:

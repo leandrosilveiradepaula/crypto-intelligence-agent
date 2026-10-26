@@ -278,3 +278,15 @@ Base confirmada: main=25b4861d9b67916ef41a12644345684cca73fa5e; PR #191 integrad
 Foi acrescentado contrato puro de selo determinístico SHA-256 para prefixos sintéticos completos e contexto versionado, com escala Decimal preservada e extensão de exatamente uma barra. É uma preparação verificável para recuperação futura, **não** checkpoint durável, transação conjunta com AUTO2, proteção de exchange, stream prospectivo ou homologação. A issue #200 permanece aberta: próximo passo é integrar cursor e reserva/no-signal na MESMA transação AUTO2, com crash tests e auditoria do schema RO, ou manter fail-closed se inviável. AUTO4 continua sem snapshot atômico cruzado. Nenhuma rede, ordem real, migration produtiva ou custo.
 
 Checkpoint operacional parcial: base `a470877e130bbaa3dec6cfc877e8a0fe66fa70de`; branch `work/issue-200-j6-forward-seal-contract`; issue #200; PR/CI ainda sujeitos a confirmação; J1 #36 sem prova de unidade. Não declarar merge nem testes aprovados antes da execução real.
+
+
+### J6/PRE2-B #200 — cursor transacional de fixture em AUTO2 (26/10/2026 UTC)
+
+O módulo `offline_paper_durable_cursor.py` acrescenta API offline explícita com cursor SHA-256 e inventário de OPENs em metadado opcional do próprio banco AUTO2, sem migração de schema ou produção. Um único `BEGIN IMMEDIATE` verifica prefixo/versão, saúde AUTO8/AUTO9 e risco AUTO6, reserva intenção PENDING e atualiza cursor; no-signal e risco negado também registram progresso. A recuperação compara integralmente prefixo e contexto e rejeita replay, saltos, mudança de venue/quantidade/limites e OPEN legada sem cursor. AUTO4 continua arquivo independente, sem snapshot comum. `OfflinePaperForwardSession` PRE1 permanece in-memory. Nenhuma fonte de mercado real, rede, credencial, execução, deploy ou gasto. PR/CI e fault injection de processo ainda precisam ser validados; não declarar J6 homologada.
+
+Checkpoint: issue #200; branch `work/issue-200-j6-durable-paper-cursor`; base main `4011812f33fec643f7dbe402f03457c046aa07f1`; commit de implementação ainda sujeito a CI/revisão. Próxima ação: executar CI Linux/Windows/QA no SHA, corrigir falhas, validar crash/process kill e merge não produtivo somente após gates; não fechar J6 #7.
+
+
+## Plano operacional aprovado — 26/10/2026 UTC
+
+Fonte de execução por etapas: [`docs/EXECUTION_ROADMAP.md`](EXECUTION_ROADMAP.md). Prioridade: (1) finalizar revisão/CI/merge seguro da PR #202 J6/PRE2-B; (2) desbloquear por evidência legítima J1 #2/#19/#32/#36/#48/#196, sem novos probes restritos; (3) validar sinais e risco J2/J3 com dados reais; (4) implementar executor e UI J4/J5 após os gates; (5) homologar J6 com PAPER prospectivo e autorizações específicas de testnet/live. Sem cronograma ou porcentagem arbitrários. Nenhuma ordem real, deploy ou gasto extra autorizado.

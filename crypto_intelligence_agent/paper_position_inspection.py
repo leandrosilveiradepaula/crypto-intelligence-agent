@@ -106,7 +106,10 @@ def _read_database(
         meta = connection.execute(
             f"SELECT key, value FROM {meta_table} ORDER BY key"
         ).fetchall()
-        if len(meta) != 1 or meta[0]["key"] != "schema_version" or meta[0]["value"] != expected_version:
+        if meta_table == "paper_order_meta":
+            from .paper_open_health import _verify_locked_order_schema
+            _verify_locked_order_schema(connection)
+        elif len(meta) != 1 or meta[0]["key"] != "schema_version" or meta[0]["value"] != expected_version:
             raise DataValidationError("unknown PAPER journal version")
         yield connection
     except sqlite3.DatabaseError as exc:

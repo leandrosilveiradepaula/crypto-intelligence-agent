@@ -92,9 +92,13 @@ def _verify_locked_order_schema(order_connection) -> None:
     meta = order_connection.execute(
         "SELECT key, value FROM paper_order_meta ORDER BY key"
     ).fetchall()
-    if (len(meta) != 1 or meta[0]["key"] != "schema_version"
-            or meta[0]["value"] != _ORDER_VERSION):
+    keys = {row["key"]: row["value"] for row in meta}
+    if (len(keys) != len(meta) or keys.get("schema_version") != _ORDER_VERSION
+            or set(keys) - {"schema_version", "offline_paper_forward_cursor_v1"}):
         raise DataValidationError("incorrect PAPER order journal version")
+    if "offline_paper_forward_cursor_v1" in keys:
+        from .offline_paper_durable_cursor import _decode_cursor_envelope
+        _decode_cursor_envelope(keys["offline_paper_forward_cursor_v1"])
 
 
 def _checked_order_entries(order_connection):
