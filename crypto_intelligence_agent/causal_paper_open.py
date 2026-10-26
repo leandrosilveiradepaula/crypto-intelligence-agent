@@ -18,7 +18,7 @@ from .synthetic_entry_hypotheses import (
     CompressionBreakoutConfig, SyntheticEntryCandidate,
     research_synthetic_compression_breakouts,
 )
-from .synthetic_manual_exit_replay import _utc_ms
+from .synthetic_manual_exit_replay import _fixture_units, _utc_ms
 from .synthetic_order_lifecycle import (
     PaperOrderEffect, PaperOrderIntent, PaperOrderSide, PaperOrderStatus, PaperVenue,
 )
@@ -121,6 +121,7 @@ def reserve_causal_paper_open(
         raise DataValidationError("typed J2, PAPER venue, risk and journal are required")
     if type(requested_units) is not Decimal:
         raise DataValidationError("explicit Decimal PAPER requested units required")
+    _fixture_units(requested_units)
     if type(close_safety_ms) is not int or not 0 <= close_safety_ms <= MAX_CLOSE_SAFETY_MS:
         raise DataValidationError("close safety must be bounded integer UTC-ms")
     now = _utc_ms(decision_at_ms, "decision_at_ms")
