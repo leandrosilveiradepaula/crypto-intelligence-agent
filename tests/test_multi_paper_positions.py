@@ -125,7 +125,10 @@ class MultiPaperPositionsTests(unittest.TestCase):
         self.assertFalse(data["financial_pnl_available"])
         self.assertNotIn("portfolio_total_units", data)
         self.assertNotIn("gross_notional", data)
-        self.assertNotIn("pnl", json.dumps(data).lower())
+        self.assertFalse(data["financial_pnl_available"])
+        serialized = json.dumps(data).lower()
+        for financial_key in ('"pnl_quote"', '"equity"', '"mark_price"', '"notional"'):
+            self.assertNotIn(financial_key, serialized)
         self.assertEqual(before, self.path.read_bytes())
 
     def test_explicit_order_retained_and_subset_is_not_implicit_listing(self):
