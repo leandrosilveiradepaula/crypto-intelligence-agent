@@ -106,6 +106,34 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
         "ready_for_canonical_ohlcv": False,
         "ready_for_public_market_data_release": False,
         "gates": gates,
+        # These are candidate venues for a future MANUAL action, not data-feed
+        # approvals. Account ownership cannot prove API availability or rights.
+        "manual_execution_candidates": [
+            {
+                "venue": "binance_usdm",
+                "market": "linear_perpetual_usdt",
+                "selection_status": "candidate_not_selected",
+                "data_conformance": "offline_fixtures_only",
+                "last_observed_access": "http_451_restricted",
+                "quote_currency": "USDT",
+                "account_access_verified": False,
+                "live_signal_approved": False,
+                "manual_plan_approved": False,
+                "order_execution_enabled": False,
+            },
+            {
+                "venue": "bybit_v5",
+                "market": "linear_perpetual_usdt_usdc",
+                "selection_status": "candidate_not_selected",
+                "data_conformance": "documented_schema_offline_only",
+                "last_observed_access": "first_instrument_get_restricted_no_candles",
+                "quote_currency": "USDT_or_USDC_not_USD",
+                "account_access_verified": False,
+                "live_signal_approved": False,
+                "manual_plan_approved": False,
+                "order_execution_enabled": False,
+            },
+        ],
     }
 
     if evidence_json is not None:
