@@ -121,3 +121,9 @@ Após o demonstrador PRE1/PRE2 e o QA visual PRE3, a PRE4 acrescenta exportaçã
 
 ## J5/PRE5 #170 — visão multi-posição PAPER em pesquisa
 A etapa adiciona seleção explícita de várias posições fictícias num mesmo snapshot SQLite read-only, em cartão/table mobile PT-BR e JSON, sem somar ativos ou sugerir valor financeiro. PRE4 foi integrada com QA de Chrome e 875 testes offline; PRE5 continua sujeita a PR/CI/QA. J5 #6 ainda não aceita; dados, lucro, risco de carteira e ordens reais dependem de J1/J2/J3/J4/J6, sem autorização de live.
+
+
+
+## J2/PRE2 #172 — primeira hipótese de entrada sintética
+
+Após J2/PRE1 #66 / PR #67 (features matemáticas), J2/PRE2 introduz avaliação determinística LONG/SHORT para compressão ATR em duas janelas **anteriores** ao candle + rompimento estrito de máxima/mínima passada + EMA e volume confirmatórios. Não é estratégia homologada, recomendação, engine de ordens ou evidência de lucro. O próximo aceite J2 requer dados financeiramente canônicos J1, avaliação de parâmetros sem overfitting e backtest/out-of-sample J3; #3 continua aberta. Foco de produto segue robô automático D77 após gates.
