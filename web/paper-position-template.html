@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'">
+  <meta name="description" content="Inspeção local e somente leitura de posições PAPER fictícias. Nenhuma conta, ordem real, cotação ou lucro.">
+  <title>Crypto Intelligence Agent — Posição PAPER local</title>
+  <!-- J5/PRE4: trusted local SQLite fixture, schema paper_position_snapshot_v1.
+       This file is a TEMPLATE, not a live account or market dashboard.
+       Placeholders are replaced only with HTML-escaped, checked replay values. -->
+  <style>
+    :root { color-scheme:dark; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --bg:#0b141e; --panel:#142231; --panel-light:#1b2c3e; --border:#384c5e;
+      --text:#f0f6fc; --muted:#b8c8d7; --accent:#94e1cb; --amber:#ffda87; }
+    *,*::before,*::after { box-sizing:border-box; }
+    body { margin:0; min-width:280px; background:var(--bg); color:var(--text); line-height:1.55; }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:clamp(1.8rem,4.5vw,3rem); line-height:1.13; letter-spacing:-.035em; }
+    h2 { font-size:1.28rem; }
+    a { color:var(--accent); }
+    :focus-visible { outline:3px solid var(--amber); outline-offset:4px; }
+    .skip-link { position:fixed; z-index:5; top:10px; left:10px; background:var(--amber);
+      color:#17232d; border-radius:10px; padding:12px; transform:translateY(-180%); }
+    .skip-link:focus-visible { transform:translateY(0); }
+    .page { width:min(100% - 30px,1100px); margin-inline:auto; }
+    .site-header { border-bottom:1px solid var(--border); background:#101c29; }
+    .header-content { display:flex; align-items:center; gap:12px; padding:16px 0; }
+    .brand { font-weight:750; overflow-wrap:anywhere; min-width:0; }
+    main { padding:30px 0 58px; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; letter-spacing:.14em; font-weight:700; font-size:.75rem; }
+    .lead { color:var(--muted); max-width:760px; }
+    .warning { padding:18px 20px; border:2px solid #a88336; background:#2b2519; color:#ffe9b1;
+      border-radius:15px; margin:20px 0 30px; }
+    .warning strong { letter-spacing:.08em; }
+    .warning p { margin:8px 0 0; }
+    section { margin:32px 0; }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .stat,.card { padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--panel); min-width:0; }
+    .stat dt { color:var(--muted); font-size:.8rem; }
+    .stat dd { margin:8px 0 0; font-weight:750; font-variant-numeric:tabular-nums; font-size:clamp(1.3rem,3vw,2.1rem); overflow-wrap:anywhere; }
+    .stat small { display:block; margin-top:8px; color:var(--muted); font-size:.75rem; }
+    .tone-accent { color:var(--accent); }
+    .facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .card h3 { font-size:.95rem; color:var(--muted); margin-bottom:8px; }
+    .card p { margin:0; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+    .card .detail { margin-top:7px; font-size:.83rem; color:var(--muted); }
+    .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:14px;
+      background:var(--panel); scrollbar-width:auto; scrollbar-color:var(--accent) var(--panel); }
+    .table-wrap:focus-visible { outline-offset:3px; }
+    table { width:100%; min-width:650px; border-collapse:collapse; text-align:left; }
+    caption { padding:13px 16px; text-align:left; color:var(--muted); font-size:.8rem; }
+    th,td { padding:13px 15px; vertical-align:top; }
+    th { background:var(--panel-light); color:var(--muted); font-weight:700; font-size:.78rem; }
+    td { border-top:1px solid var(--border); font-size:.87rem; }
+    td strong { font-variant-numeric:tabular-nums; }
+    .status-unknown { color:var(--amber); font-weight:750; }
+    .note { color:var(--muted); font-size:.88rem; margin-top:12px; }
+    .tranche-list { margin:0; padding-left:1.4rem; display:grid; gap:10px; }
+    .tranche-list li { padding:12px; background:var(--panel); border:1px solid var(--border);
+      border-radius:11px; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+    footer { border-top:1px solid var(--border); padding:22px 0; color:var(--muted); font-size:.8rem; }
+    @media(max-width:850px) { .stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:540px) {
+      .stats,.facts { grid-template-columns:1fr; }
+      .stat { display:flex; justify-content:space-between; gap:14px; align-items:center; }
+      .stat dd { margin:0; text-align:right; }
+      .stat small { display:none; }
+      .card { padding:16px; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+  <header class="site-header">
+    <div class="page header-content"><span class="brand">Crypto Intelligence Agent · Inspeção PAPER</span></div>
+  </header>
+  <main id="conteudo-principal" tabindex="-1" class="page" data-mode="offline_paper" data-snapshot-schema="paper_position_snapshot_v1">
+    <p class="eyebrow">Diário local · somente leitura</p>
+    <h1>Posição fictícia registrada</h1>
+    <p class="lead">Estado recuperado de eventos do SQLite PAPER, não de uma conta de corretora. Uma verificação de hash local não autentica ordens, preços ou dados de mercado.</p>
+    <aside class="warning" aria-label="Aviso obrigatório de simulação">
+      <strong>SIMULADO — NENHUMA ORDEM REAL</strong>
+      <p>Nenhuma conta Binance/Bybit foi acessada. Não há botão de negociação, lucro financeiro, cotação atual, autorização live nem evidência de execução de exchange.</p>
+    </aside>
+
+    <section aria-labelledby="resumo-title">
+      <h2 id="resumo-title">Quantidades do diário fictício</h2>
+      <dl class="stats">
+        <div class="stat"><dt>Abertura confirmada</dt><dd data-metric="initial">{{initial}}</dd><small>Somente fills PAPER registrados</small></div>
+        <div class="stat"><dt>Saídas preenchidas</dt><dd data-metric="filled">{{filled}}</dd><small>Não inclui ordens pendentes</small></div>
+        <div class="stat"><dt>Reservado/pendente</dt><dd data-metric="reserved">{{reserved}}</dd><small>Não está disponível para nova saída</small></div>
+        <div class="stat"><dt>Disponível não reservado</dt><dd class="tone-accent" data-metric="available">{{available}}</dd><small>Inclui piso residual configurado</small></div>
+      </dl>
+      <p class="note">Saldo confirmado restante: <strong data-metric="remaining">{{remaining}}</strong> unidades. Piso residual: <strong data-metric="floor">{{floor}}</strong> unidades. Reservas pendentes NÃO são fills.</p>
+    </section>
+
+    <section aria-labelledby="origem-title">
+      <h2 id="origem-title">Identidade e proveniência</h2>
+      <div class="facts">
+        <div class="card"><h3>Posição fictícia</h3><p data-field="id">{{position_id}}</p><p class="detail">ID de fixture, sem identificação de conta.</p></div>
+        <div class="card"><h3>Corretora candidata / símbolo fictício</h3><p data-field="venue">{{venue}} · {{symbol}}</p><p class="detail">Sem conexão à exchange; lado {{side}}</p></div>
+        <div class="card"><h3>Checkpoint UTC registrado</h3><p><time datetime="{{checkpoint}}">{{checkpoint}}</time></p><p class="detail">Abertura PAPER UTC: {{opened}}</p></div>
+        <div class="card"><h3>Conferência de origem</h3><p data-field="crosscheck">{{crosscheck}}</p><p class="detail">Hash local não é assinatura da corretora. Versão do plano: {{plan_version}}.</p></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="saidas-title">
+      <h2 id="saidas-title">Ordens de saída do diário</h2>
+      <p class="note" id="table-scroll-instructions">Em telas pequenas, deslize a tabela horizontalmente. Pelo teclado, dê Tab até a região e use as setas horizontais.</p>
+      <div class="table-wrap" role="region" tabindex="0" aria-label="Saídas PAPER, fills e reservas ainda incertas" aria-describedby="table-scroll-instructions">
+        <table>
+          <caption>Ordens locais em ordem de registro — não são ordens aceitas pela exchange.</caption>
+          <thead><tr><th scope="col">Parcial</th><th scope="col">Estado</th><th scope="col">Pedido</th><th scope="col">Fill confirmado</th><th scope="col">Ainda reservado</th></tr></thead>
+          <tbody>
+            {{exit_rows}}
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Estado UNKNOWN ou pendente mantém reserva até evento terminal registrado. Não confundir ausência de resposta com cancelamento ou fill.</p>
+    </section>
+
+    <section aria-labelledby="tranches-title">
+      <h2 id="tranches-title">Alocação por alvo do plano</h2>
+      <ol class="tranche-list">
+        {{tranche_rows}}
+      </ol>
+    </section>
+
+    <section aria-labelledby="limites-title">
+      <h2 id="limites-title">O que esta leitura não comprova</h2>
+      <p class="lead">A posição foi simulada. Não há lucro, funding, slippage, saldo em USDT, margem, alavancagem, liquidação, reconciliação REST/WebSocket ou stop real. A integração com corretora, estratégia e dados autorizados depende de J1/J2/J3/J4/J6.</p>
+    </section>
+  </main>
+  <footer><div class="page">Crypto Intelligence Agent · paper_position_snapshot_v1 · somente leitura · R$ 0,00 adicional · sem negociação real.</div></footer>
+</body>
+</html>
