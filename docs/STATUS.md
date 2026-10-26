@@ -214,3 +214,10 @@ Implementação da estrutura offline de walk-forward: janelas de treino, gap e t
 
 
 **J3/PRE5 issue #178 (em revisão):** a base inicial é `main=6924f2545704954d695db66520ee71f2667d7235`, PR #177 PRE4 integrada, 915 testes offline/14 docs e CI Python/Chrome pós-merge SUCCESS. Branch `codex/issue-178-j3-pre5-causal-oos-replay` introduz integração J2→J3 com prefixos temporais e categorias ex-post de alteração de fechamento em dados 100% sintéticos, sem PnL/ordens/otimização de parâmetros. A nova PR e CI/merge ainda precisam ser comprovadas e revisadas. J1/J2/J3/J6 não homologadas.
+
+## J3/PRE6 #180 — cenários financeiros condicionais offline, em revisão
+
+A issue #180 adiciona branches financeiras sintéticas com premissas explícitas, custos PRE2 e ambiguidade PRE1. Não infere fill, não calcula liquidação de venue e não valida estratégia, lucro, backtest ou execução. Consultar GitHub para PR/CI/SHA antes de declarar integração; J1 #2, J2 #3 e J3 #4 continuam abertas.
+
+
+**Revisão PR #181 / issue #180:** o primeiro SHA do Codex `f750712f9802e5a2212d7ca8cc8f451fa218db8c` teve CI Python Linux (929 testes/14 docs) e Chrome SUCCESS. A revisão financeira encontrou incompatibilidade possível entre preço×quantidade e nocionais de taxas, ausência de vínculo com o plano/barreira PRE1 e cobertura incompleta de níveis intrabar. Correção e testes adicionais foram incorporados **na mesma PR**, exigindo nova verificação no HEAD final antes de integrar. Não interpretar CI antiga como aceite dos commits posteriores.
