@@ -127,3 +127,9 @@ A etapa adiciona seleção explícita de várias posições fictícias num mesmo
 ## J2/PRE2 #172 — primeira hipótese de entrada sintética
 
 Após J2/PRE1 #66 / PR #67 (features matemáticas), J2/PRE2 introduz avaliação determinística LONG/SHORT para compressão ATR em duas janelas **anteriores** ao candle + rompimento estrito de máxima/mínima passada + EMA e volume confirmatórios. Não é estratégia homologada, recomendação, engine de ordens ou evidência de lucro. O próximo aceite J2 requer dados financeiramente canônicos J1, avaliação de parâmetros sem overfitting e backtest/out-of-sample J3; #3 continua aberta. Foco de produto segue robô automático D77 após gates.
+
+
+
+## J3/PRE3 #174 — planejamento walk-forward, não aceite J3
+
+Após J3/PRE1 (barreiras intrabar hipotéticas) e PRE2 (custos assinados hipotéticos), PRE3 prepara janelas train/gap/teste em candles fechados **sintéticos** com disponibilidade causal, sem testes OOS duplicados. Isso não é resultado de backtest nem comprova generalização estatística. J3 #4 continua exigindo histórico de J1, custo/liquidação e validação prospectiva/fora da amostra. A arquitetura D77 de operação automática continua sujeita a gates.
