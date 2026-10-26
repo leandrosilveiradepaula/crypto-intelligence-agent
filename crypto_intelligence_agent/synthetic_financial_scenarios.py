@@ -109,10 +109,7 @@ class ConditionalFinancialScenario:
                 raise DataValidationError("liquidation loss requires liquidation barrier")
             if self.exit_price is not None:
                 raise DataValidationError("liquidation branch cannot infer an exit price")
-            if (type(self.hypothetical_liquidation_loss_quote_units) is not Decimal
-                    or not self.hypothetical_liquidation_loss_quote_units.is_finite()
-                    or self.hypothetical_liquidation_loss_quote_units <= 0):
-                raise DataValidationError("liquidation branch needs explicit positive loss Decimal")
+            _amount(self.hypothetical_liquidation_loss_quote_units, "liquidation loss")
         # Preserve a single economic basis across quantity, price and fee notionals.
         # Liquidation exit notional is necessarily a separate explicit assumption.
         with localcontext(_EXACT):
@@ -153,6 +150,14 @@ class ConditionalFinancialResult:
 
     @property
     def financial_backtest_approved(self) -> bool:
+        return False
+
+    @property
+    def net_pnl_verified(self) -> bool:
+        return False
+
+    @property
+    def out_of_sample_results_validated(self) -> bool:
         return False
 
     @property
