@@ -58,7 +58,7 @@ _LAYOUT_JS = r"""() => {
       .find(el => el.tabIndex >= 0);
   const tableScroll = table ? table.scrollWidth - table.clientWidth : 0;
   const flow = document.querySelector('.flow');
-  const flowTracks = flow ? getComputedStyle(flow).gridTemplateColumns.trim().split(/\\s+/).length : 0;
+  const flowTracks = flow ? getComputedStyle(flow).gridTemplateColumns.trim().split(/\s+/).length : 0;
   const redundantLabel = document.querySelector('.header-label');
   const labelVisible = Boolean(redundantLabel && getComputedStyle(redundantLabel).display !== 'none');
   function rgb(text) {
