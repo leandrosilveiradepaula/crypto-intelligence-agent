@@ -178,7 +178,7 @@ class SyntheticResearchCycleTests(unittest.TestCase):
                          "no_eligible_candle_within_oos_horizon")
         # Bars 7+ belong to subsequent folds and cannot rescue this event.
         changed = rows[:7] + (
-            replace(rows[7], high=D(200), close=D(200), open=D(200)),
+            replace(rows[7], high=D(201), low=D(199), close=D(200), open=D(200)),
         ) + rows[8:]
         other = cycle(changed, safety=1000, test_bars=2, horizon=1)
         self.assertEqual(event, other.events[0])
