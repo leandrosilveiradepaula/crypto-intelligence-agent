@@ -218,3 +218,6 @@ Implementação da estrutura offline de walk-forward: janelas de treino, gap e t
 ## J3/PRE6 #180 — cenários financeiros condicionais offline, em revisão
 
 A issue #180 adiciona branches financeiras sintéticas com premissas explícitas, custos PRE2 e ambiguidade PRE1. Não infere fill, não calcula liquidação de venue e não valida estratégia, lucro, backtest ou execução. Consultar GitHub para PR/CI/SHA antes de declarar integração; J1 #2, J2 #3 e J3 #4 continuam abertas.
+
+
+**Revisão PR #181 / issue #180:** o primeiro SHA do Codex `f750712f9802e5a2212d7ca8cc8f451fa218db8c` teve CI Python Linux (929 testes/14 docs) e Chrome SUCCESS. A revisão financeira encontrou incompatibilidade possível entre preço×quantidade e nocionais de taxas, ausência de vínculo com o plano/barreira PRE1 e cobertura incompleta de níveis intrabar. Correção e testes adicionais foram incorporados **na mesma PR**, exigindo nova verificação no HEAD final antes de integrar. Não interpretar CI antiga como aceite dos commits posteriores.
