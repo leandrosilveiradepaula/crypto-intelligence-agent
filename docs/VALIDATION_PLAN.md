@@ -96,3 +96,7 @@ A PR #126 merged SHA `bb3ecaf02f392bc8a1d06702a412d979b6ef1712` após review no 
 
 ## J1/WU45 — integridade da matriz operacional de fontes
 A validação documental `python3 scripts/check_docs.py` exige agora **13 documentos**, incluindo `docs/J1_SOURCE_GATES.md`, com verificação de marcadores negativos de J1 #2 e bloqueios #32/#36/#48. O unittest `tests/test_source_gates_docs.py` executa o checker offline em cópia temporária e deve rejeitar matriz ausente ou remoção de marcadores. O checker é lexical, não verificador de licenças, fonte primária, estado real de APIs ou prova de volume. Nenhuma alteração em `ready_for_live_top50`, `ready_for_canonical_ohlcv`, `ready_for_public_market_data_release` ou operações reais.
+
+
+## J1/WU46 — registros de identidade versionados
+Exigir hash SHA256 canônico, entradas v2 preservadas por igualdade, duas origens independentes XMR/ETC/ZEC, causalidade `as_of` antes e depois de `1792982308000`, versões explícitas `btc-eth`, `expanded-10`, `expanded-13`, invalidar variantes arbitrárias, e prova offline de que registro v3 com lista vazia de instrumentos não gera contratos fictícios. Testes sem rede; não confundir 13 referências cripto com 13 futuros perpétuos Kraken elegíveis, cobertura Top50 histórica, direitos de market data ou unidade `trade.volume`.
