@@ -10,6 +10,7 @@ import argparse
 import json
 from decimal import Decimal
 from html import escape
+from html.parser import HTMLParser
 from pathlib import Path
 import re
 import sys
@@ -221,6 +222,67 @@ def _tranche_attribute(document: str, step: int, value: str) -> str:
     return updated
 
 
+class _OfflineHTMLPolicy(HTMLParser):
+    """Allow one local skip link; deny all external assets and actionable HTML."""
+
+    _BLOCKED_TAGS = frozenset({
+        "script", "form", "iframe", "button", "input", "object", "embed",
+        "link", "img", "base", "video", "audio", "source", "picture",
+        "svg", "math", "textarea", "select",
+    })
+    _BLOCKED_ATTRIBUTES = frozenset({
+        "src", "srcset", "action", "formaction", "data", "poster",
+        "xlink:href", "ping",
+    })
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.errors: list[str] = []
+        self.skip_link_count = 0
+        self.main_target_count = 0
+        self.scroll_region_count = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self._BLOCKED_TAGS:
+            self.errors.append(f"forbidden dynamic/asset tag {tag}")
+        lookup = dict(attrs)
+        for name, value in attrs:
+            if name.startswith("on") or name in self._BLOCKED_ATTRIBUTES:
+                self.errors.append(f"forbidden HTML attribute {name}")
+            if name == "href":
+                if tag == "a" and value == "#conteudo-principal":
+                    self.skip_link_count += 1
+                else:
+                    self.errors.append("external or unknown link forbidden")
+        if tag == "main" and lookup.get("id") == "conteudo-principal":
+            if lookup.get("tabindex") == "-1":
+                self.main_target_count += 1
+            else:
+                self.errors.append("skip target must support focus")
+        if tag == "div" and "table-wrap" in (lookup.get("class") or "").split():
+            if (lookup.get("role") == "region"
+                    and lookup.get("tabindex") == "0"
+                    and lookup.get("aria-describedby") == "table-scroll-instructions"
+                    and lookup.get("aria-label")):
+                self.scroll_region_count += 1
+            else:
+                self.errors.append("scrollable table must have keyboard focus/name")
+
+
+def _audit_offline_template(template: str) -> None:
+    """Strict safety policy for the built-in template, not an HTML sanitizer."""
+    _require(not re.search(r"https?://|@import\\b|url\\s*\\(", template,
+                           flags=re.IGNORECASE),
+             "outbound URL or remote stylesheet in PAPER template")
+    parser = _OfflineHTMLPolicy()
+    parser.feed(template)
+    parser.close()
+    _require(not parser.errors and parser.skip_link_count == 1
+             and parser.main_target_count == 1 and parser.scroll_region_count == 1,
+             "unsafe or incomplete offline keyboard template: "
+             + ", ".join(parser.errors[:3]))
+
+
 def render_paper_dashboard(snapshot: object, template: str) -> str:
     """Pure rendering of confirmed synthetic results to offline HTML only."""
     validated = validate_paper_snapshot(snapshot)
@@ -233,6 +295,7 @@ def render_paper_dashboard(snapshot: object, template: str) -> str:
     _require(re.search(r"<\s*(?:script|form|iframe|button|input|object|embed|link)\b",
                        template, flags=re.IGNORECASE) is None,
              "dynamic or actionable tags forbidden in PAPER view")
+    _audit_offline_template(template)
     first = validated[0]
     initial = _number(first["initial_confirmed_units"], "initial")
     exit_total = _number(first["filled_exit_units"], "exit total")
