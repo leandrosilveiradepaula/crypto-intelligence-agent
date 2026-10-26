@@ -120,7 +120,7 @@ def diagnose(venue: str, *, allow_private_read: bool = False,
         if venue == "bybit":
             if data.get("retCode") != 0 or type(data.get("result")) is not dict:
                 return _safe_result(venue, "provider_rejected")
-            if data["result"].get("readOnly") != 1:
+            if type(data["result"].get("readOnly")) is not int or data["result"]["readOnly"] != 1:
                 return _safe_result(venue, "key_not_confirmed_read_only")
             return _safe_result(venue, "authenticated_read_only_key_confirmed")
         if type(data.get("dualSidePosition")) is not bool:
