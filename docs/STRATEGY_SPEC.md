@@ -110,3 +110,8 @@ A hipótese J2/PRE2 pode futuramente ser examinada em folds walk-forward, mas `s
 Com `close_safety_ms=1000`, a abertura da barra imediatamente posterior ocorre 1 ms após o fechamento e não é elegível para um candidato disponível 1000 ms depois. PRE7 seleciona a primeira barra posterior realmente elegível ou abstém; nunca retrodata o plano. Cenários STOP/TARGET/LIQUIDAÇÃO são hipóteses externas e alternativas, nunca escolhidas pelo fechamento futuro.
 
 **Revisão do isolamento OOS:** o horizonte usado para examinar as barreiras não pode ultrapassar `i + horizon_bars` nem `test_end-1`. Se `close_safety_ms` deslocar a primeira barra inteira elegível para depois desse limite, o evento é recusado. Não interpretar uma observação LONG/SHORT ex-post do PRE5 como autorização para manter posição depois do fold. A entrada financeira segue hipótese explicitamente timestampada no OPEN da primeira barra elegível, nunca um preço obtido da vela anterior como fill comprovado.
+
+
+## J4/AUTO7 #188 — isolamento do sinal de entrada PAPER
+
+A emissão da hipótese J2 na barra fechada não é ordem nem evento financeiro. AUTO7 recalcula a hipótese apenas sobre histórico fechado **até a última barra passada pelo chamador**, com relógio exato (`close+safety`) e nunca escolhe parâmetros pela direção futura de PRE5. Se não houver candidato na barra atual, históricos anteriores são ignorados. A proposta de intenção PAPER exige quantidade, mark, exposição, saldo de risco, janela de observação e limites **explicitamente sintéticos**; nenhuma dessas grandezas é inferida de um resultado PRE7. Sinal estável por venue para deduplicação não valida mercado real, nem é critério de trading aprovado.
