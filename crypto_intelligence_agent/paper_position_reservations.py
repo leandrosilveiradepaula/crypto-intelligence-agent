@@ -26,7 +26,7 @@ from .synthetic_order_lifecycle import (
 )
 from .synthetic_partial_exits import (
     ExitBasis, SyntheticExitPlan, SyntheticExitTranche,
-    plan_synthetic_partial_exits,
+    plan_synthetic_partial_exits, _synthetic_units,
 )
 from .synthetic_position_state import SyntheticSide, _fixture_id
 
@@ -102,6 +102,7 @@ class _PaperExit:
 class _PaperRecord:
     position_id: str
     plan_version: str
+    synthetic_lot_step_units: Decimal
     opening_intent: PaperOrderIntent
     opening_events: tuple[PaperOrderEvent, ...]
     plan: SyntheticExitPlan
@@ -113,6 +114,7 @@ def _serialize(record: _PaperRecord) -> str:
     data = {
         "position_id": record.position_id,
         "plan_version": record.plan_version,
+        "synthetic_lot_step_units": str(record.synthetic_lot_step_units),
         "opening_intent": json.loads(_intent_json(record.opening_intent)),
         "opening_events": [json.loads(_event_json(e)) for e in record.opening_events],
         "plan": _plan_payload(record.plan),
@@ -155,6 +157,7 @@ def _deserialize(payload: str) -> _PaperRecord:
         record = _PaperRecord(
             position_id=value["position_id"],
             plan_version=value["plan_version"],
+            synthetic_lot_step_units=Decimal(value["synthetic_lot_step_units"]),
             opening_intent=opening_intent,
             opening_events=opening_events,
             plan=_decode_plan(value["plan"]),
@@ -191,6 +194,7 @@ class PaperExitOrderBalance:
 class PaperPositionBalance:
     position_id: str
     plan_version: str
+    synthetic_lot_step_units: Decimal
     venue: PaperVenue
     symbol: str
     side: SyntheticSide
@@ -233,6 +237,7 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
     if not isinstance(record.plan_version, str) or not _PLAN_VERSION.fullmatch(record.plan_version):
         raise DataValidationError("paper exit plan version missing/invalid")
     cutoff = _utc_ms(record.as_of_ms, "paper position checkpoint")
+    step = _synthetic_units(record.synthetic_lot_step_units)
     opening = record.opening_intent
     if (type(opening) is not PaperOrderIntent
             or opening.effect is not PaperOrderEffect.OPEN):
@@ -245,6 +250,11 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
         raise DataValidationError("ACK/UNKNOWN/partial OPEN is not a confirmed paper position")
     with localcontext(_EXACT_CONTEXT):
         initial = opening_replay.filled_total_units
+        if initial % step != 0:
+            raise DataValidationError("confirmed paper open is not multiple of synthetic lot step")
+        for e in record.opening_events:
+            if e.kind is PaperOrderEventKind.FILL and e.filled_units % step != 0:
+                raise DataValidationError("paper opening fill violates synthetic lot step")
         if record.plan.initial_units != initial:
             raise DataValidationError("paper initial units must equal explicit OPEN fills")
         opened = next(e.event_at_ms for e in record.opening_events
@@ -252,6 +262,9 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
         if cutoff < opened:
             raise DataValidationError("paper checkpoint predates opening fill")
         schedule = plan_synthetic_partial_exits(record.plan)
+        for alloc in schedule.allocations:
+            if alloc.exit_units % step != 0:
+                raise DataValidationError("paper tranche target violates synthetic lot step")
         if type(record.exits) is not tuple or len(record.exits) > _MAX_EXITS:
             raise DataValidationError("too many paper exit intents")
         filled = [Decimal(0) for _ in schedule.allocations]
@@ -275,12 +288,16 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
                     or order.max_reducible_units is None
                     or order.max_reducible_units > initial):
                 raise DataValidationError("paper exit provenance, side or quantity mismatch")
+            if order.requested_units % step != 0:
+                raise DataValidationError("paper exit quantity violates synthetic lot step")
             if order.intent_id in seen_orders:
                 raise DataValidationError("paper exit intent reused")
             seen_orders.add(order.intent_id)
             if _unique_events(x.events) != x.events:
                 raise DataValidationError("duplicate paper exit event in durable journal")
             for event in x.events:
+                if event.kind is PaperOrderEventKind.FILL and event.filled_units % step != 0:
+                    raise DataValidationError("paper exit fill violates synthetic lot step")
                 if event.event_id in seen_events:
                     raise DataValidationError("paper event ID reused across position orders")
                 seen_events.add(event.event_id)
@@ -315,6 +332,7 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
     return PaperPositionBalance(
         position_id=record.position_id,
         plan_version=record.plan_version,
+        synthetic_lot_step_units=step,
         venue=opening.venue, symbol=opening.symbol,
         side=opening.position_side, opening_intent_id=opening.intent_id,
         opened_at_ms=opened, as_of_ms=cutoff,
@@ -440,6 +458,7 @@ class SQLitePaperPositionJournal:
         opening_events: tuple[PaperOrderEvent, ...],
         exit_plan: SyntheticExitPlan,
         plan_version: str,
+        synthetic_lot_step_units: Decimal,
         as_of_ms: int,
     ) -> PaperPositionBalance:
         """Materialize position ONLY from confirmed fictitious entry fills."""
@@ -453,7 +472,7 @@ class SQLitePaperPositionJournal:
         if len(cleaned) == 0:
             raise DataValidationError("paper position cannot be created from ACK only")
         record = _PaperRecord(
-            position_id, plan_version, opening_intent, cleaned, exit_plan,
+            position_id, plan_version, synthetic_lot_step_units, opening_intent, cleaned, exit_plan,
             cutoff, (),
         )
         view = _balance(record)
