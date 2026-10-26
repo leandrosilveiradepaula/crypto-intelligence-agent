@@ -3,6 +3,7 @@ from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -126,7 +127,7 @@ class PaperOrderStoreTests(unittest.TestCase):
         self.assertEqual(after.snapshot.filled_total_units, D(5))
         self.assertEqual(after.snapshot.unique_event_count, 2)
         self.assertEqual(after.snapshot.exact_duplicate_count, 0)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             count = conn.execute("SELECT COUNT(*) FROM paper_order_events").fetchone()[0]
         self.assertEqual(count, 2)
 
@@ -235,11 +236,11 @@ class PaperOrderStoreTests(unittest.TestCase):
         self.store.reserve(i)
         ack = make_event("ack", PaperOrderEventKind.ACKNOWLEDGED, 1)
         self.store.append_events(i.intent_id, (ack,), as_of_ms=T + 1)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("UPDATE paper_order_events SET payload='{}'")
         with self.assertRaises(DataValidationError):
             SQLitePaperOrderJournal(self.db).load(i.intent_id)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("DELETE FROM paper_order_events")
             conn.execute("UPDATE paper_order_intents SET event_count=0")
         with self.assertRaises(DataValidationError):
@@ -250,11 +251,11 @@ class PaperOrderStoreTests(unittest.TestCase):
             with self.subTest(path=path), self.assertRaises(ValueError):
                 SQLitePaperOrderJournal(path)
         foreign_path = self.db.parent / "market.sqlite"
-        with sqlite3.connect(foreign_path) as conn:
+        with closing(sqlite3.connect(foreign_path)) as conn, conn:
             conn.execute("CREATE TABLE candles (source TEXT)")
         with self.assertRaises(DataValidationError):
             SQLitePaperOrderJournal(foreign_path)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("UPDATE paper_order_meta SET value='unknown-v2'")
         with self.assertRaises(DataValidationError):
             SQLitePaperOrderJournal(self.db)
@@ -277,7 +278,7 @@ class PaperOrderStoreTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(reserve, (a, b)))
         self.assertEqual(sorted(results), ["blocked", "stored"])
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             count = conn.execute(
                 "SELECT COUNT(*) FROM paper_order_intents "
                 "WHERE fixture_signal_id='fixture_race'"
