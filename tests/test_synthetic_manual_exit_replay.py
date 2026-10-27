@@ -295,6 +295,43 @@ class SyntheticManualExitReplayTests(unittest.TestCase):
             ctx.prec = 2048
             self.assertEqual(r.remaining_units + r.filled_total_units, r.initial_units)
 
+
+    def test_metamorphic_replay_prefix_conserves_residual_after_each_fill(self):
+        history = (
+            event("a", 1, 25, START+1),
+            event("b", 1, 25, START+2),
+            event("c", 2, 15, START+3),
+            event("d", 2, 15, START+4),
+            event("e", 3, 14, START+5),
+        )
+        previous = replay(())
+        for count in range(1, len(history)+1):
+            with self.subTest(prefix=count):
+                current = replay(history[:count])
+                self.assertEqual(current.filled_total_units + current.remaining_units,
+                                 current.initial_units)
+                self.assertGreaterEqual(current.remaining_units,
+                                        current.residual_floor_units)
+                self.assertGreaterEqual(current.filled_total_units,
+                                        previous.filled_total_units)
+                self.assertLessEqual(current.remaining_units,
+                                     previous.remaining_units)
+                self.assertEqual(current.unique_event_count, count)
+                previous = current
+        self.assertEqual(previous.remaining_units, D(6))
+
+    def test_metamorphic_duplicate_events_never_deplete_runner(self):
+        a = event("a", 1, 50, START+1)
+        b = event("b", 2, 30, START+2)
+        c = event("c", 3, 14, START+3)
+        baseline = replay((a, b, c))
+        duplicate = replay((a, b, c, a, b, c))
+        self.assertEqual(baseline.remaining_units, D(6))
+        self.assertEqual(duplicate.remaining_units, baseline.remaining_units)
+        self.assertEqual(duplicate.filled_total_units, baseline.filled_total_units)
+        self.assertEqual(duplicate.exact_duplicate_count, 3)
+        self.assertFalse(duplicate.persistent_idempotency_verified)
+
     def test_no_market_or_trading_dependencies(self):
         module = (Path(__file__).resolve().parent.parent
                   / "crypto_intelligence_agent/synthetic_manual_exit_replay.py")
