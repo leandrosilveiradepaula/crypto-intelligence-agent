@@ -222,6 +222,30 @@ def evaluate_conditional_financial_scenarios(
     # Renaming a target scenario does not cover an unordered stop/target hit.
     if {row.assumed_barrier for row in rows} != set(levels):
         raise DataValidationError("explicit alternatives must cover each observed barrier exactly")
+    # All alternatives represent the SAME already-open hypothetical position.
+    # Varying quantity/currency/entry costs by exit branch would make the
+    # conditional net outcomes economically incomparable (and may hide risk).
+    # Exit prices, exit fees and funding accrued AFTER entry may legitimately
+    # vary between explicit hypothetical outcomes.
+    first = rows[0]
+    shared_entry = (
+        first.quote_currency, first.quantity_base_units,
+        first.costs.entry_at_ms,
+        first.costs.entry_hypothetical_notional_quote_units,
+        first.costs.entry_fee_bps, first.costs.entry_adverse_slippage_bps,
+    )
+    for row in rows[1:]:
+        row_entry = (
+            row.quote_currency, row.quantity_base_units,
+            row.costs.entry_at_ms,
+            row.costs.entry_hypothetical_notional_quote_units,
+            row.costs.entry_fee_bps, row.costs.entry_adverse_slippage_bps,
+        )
+        if row_entry != shared_entry:
+            raise DataValidationError(
+                "alternative financial branches must share the same "
+                "position quantity, currency, entry time, notional and entry costs"
+            )
     for row in rows:
         if (row.exchange, row.symbol, row.interval) != (observation.exchange, observation.symbol, observation.interval):
             raise DataValidationError("scenario identity does not match PRE1 observation")
