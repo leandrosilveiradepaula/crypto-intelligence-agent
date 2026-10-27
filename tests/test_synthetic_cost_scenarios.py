@@ -440,5 +440,38 @@ class SyntheticCostTests(unittest.TestCase):
             self.assertNotIn(forbidden, src)
 
 
+    def test_funding_sign_symmetry_and_fee_monotonicity_grid(self):
+        for rate in ("-100", "-1", "0", "1", "100"):
+            for notional in ("0.000001", "1000", "1000000000"):
+                with self.subTest(rate=rate, notional=notional):
+                    event = funding(rate=rate, notional=notional)
+                    long = evaluate(side=L, events=(event,))
+                    short = evaluate(side=S, events=(event,))
+                    self.assertEqual(long.signed_funding_cost_units,
+                                     -short.signed_funding_cost_units)
+                    for side, baseline in ((L, long), (S, short)):
+                        more = evaluate(side=side, events=(event,),
+                                        entry_fee="11", exit_fee="21",
+                                        entry_slip="6", exit_slip="16")
+                        self.assertGreater(more.total_signed_cost_units,
+                                           baseline.total_signed_cost_units)
+                        self.assertEqual(more.signed_funding_cost_units,
+                                         baseline.signed_funding_cost_units)
+                        self.assertFalse(more.net_pnl_verified)
+
+    def test_funding_duplicates_do_not_change_signed_cost_or_last_unique_time(self):
+        a = funding("fixture_funding_a", rate="-2", at=START+1000)
+        b = funding("fixture_funding_b", rate="7", at=START+2000)
+        for side in (L, S):
+            with self.subTest(side=side):
+                base = evaluate(side=side, events=(a, b))
+                duplicate = evaluate(side=side, events=(a, b, a, b))
+                self.assertEqual(base.total_signed_cost_units,
+                                 duplicate.total_signed_cost_units)
+                self.assertEqual(duplicate.unique_funding_count, 2)
+                self.assertEqual(duplicate.exact_duplicate_count, 2)
+                self.assertEqual(duplicate.last_unique_funding_at_ms, START+2000)
+
+
 if __name__ == "__main__":
     unittest.main()

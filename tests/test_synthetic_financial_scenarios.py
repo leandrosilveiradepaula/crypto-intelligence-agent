@@ -540,5 +540,50 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
             self.assertNotIn(forbidden, source)
 
 
+    def test_liquidation_loss_and_fees_are_monotonic_in_both_directions(self):
+        for side in (LONG, SHORT):
+            for loss in ("1", "75", "999.125"):
+                with self.subTest(side=side, loss=loss):
+                    row = scenario(
+                        side=side, resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+                        exit=None, loss=loss,
+                    )
+                    observed = observation(levels=(SyntheticBarrier.HYPOTHETICAL_LIQUIDATION,))
+                    base = evaluate(observed, (row,), side=side, liquidation=True)[0]
+                    higher_fees = replace(
+                        row, costs=replace(row.costs, entry_fee_bps=D("20"),
+                                           exit_fee_bps=D("20")),
+                    )
+                    costly = evaluate(observed, (higher_fees,), side=side, liquidation=True)[0]
+                    self.assertEqual(base.gross_price_movement_quote_units, -D(loss))
+                    self.assertEqual(costly.gross_price_movement_quote_units, -D(loss))
+                    self.assertLess(costly.conditional_net_quote_units,
+                                    base.conditional_net_quote_units)
+                    self.assertFalse(costly.liquidation_formula_verified)
+                    self.assertFalse(costly.net_pnl_verified)
+
+    def test_hypothetical_exit_net_is_invariant_to_decimal_global_precision(self):
+        for side, exit_price in ((LONG, "110"), (SHORT, "90")):
+            row = scenario(side=side, exit=exit_price)
+            with self.subTest(side=side):
+                reference = evaluate(observation(), (row,), side=side)
+                for precision in (2, 4, 28, 200):
+                    with localcontext() as ctx:
+                        ctx.prec = precision
+                        replay = evaluate(observation(), (row,), side=side)
+                    self.assertEqual(reference, replay)
+                    self.assertFalse(replay[0].financial_backtest_approved)
+
+    def test_liquidation_assumption_cannot_be_swapped_for_exit_price(self):
+        for side in (LONG, SHORT):
+            row = scenario(side=side, resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+                           exit=None, loss="100")
+            with self.subTest(side=side):
+                with self.assertRaisesRegex(DataValidationError, "cannot infer an exit price"):
+                    replace(row, exit_price=D("80"))
+                with self.assertRaisesRegex(DataValidationError, "liquidation loss requires"):
+                    replace(row, assumed_barrier=SyntheticBarrier.STOP)
+
+
 if __name__ == "__main__":
     unittest.main()
