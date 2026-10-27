@@ -203,5 +203,23 @@ class OfflinePaperBatchTests(unittest.TestCase):
         self.assertFalse(c.approved_for_live_use)
 
 
+    def test_executable_cli_demo_and_pause_have_no_real_execution(self):
+        from scripts.demo_durable_offline_paper_batch import run_demo
+        with patch("urllib.request.urlopen", side_effect=AssertionError("internet")):
+            with patch("socket.create_connection", side_effect=AssertionError("internet")):
+                normal = run_demo()
+                paused = run_demo(demonstrar_pausa=True)
+        self.assertEqual(normal["ciclos_iniciais"], 2)
+        self.assertEqual(normal["ciclos_restantes"], 4)
+        self.assertEqual(normal["reservas_open_paper_pendentes"], 1)
+        self.assertEqual(paused["reservas_open_paper_pendentes"], 0)
+        for outcome in (normal, paused):
+            self.assertTrue(outcome["reprocessamento_seguro_sem_novas_reservas"])
+            self.assertTrue(outcome["retomada_apos_reabertura_sqlite"])
+            self.assertFalse(outcome["dados_de_mercado_reais"])
+            self.assertFalse(outcome["ordens_reais_enviadas"])
+            self.assertFalse(outcome["aprovado_para_producao"])
+
+
 if __name__ == "__main__":
     unittest.main()
