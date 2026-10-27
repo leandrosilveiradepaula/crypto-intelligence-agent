@@ -17,7 +17,7 @@ class ReadinessSnapshotTests(unittest.TestCase):
         self.assertFalse(data["live_trading_authorized"])
         self.assertEqual(data["target_execution_mode"], "automated_entries_and_exits")
         self.assertEqual(data["current_execution_mode"], "offline_paper_not_deployed")
-        self.assertEqual(data["schema_version"], "j1-readiness-v2")
+        self.assertEqual(data["schema_version"], "j1-readiness-v3")
         self.assertNotIn("manual_execution_candidates", data)
         by_name = {gate["capability"]: gate for gate in data["gates"]}
         self.assertEqual(len(by_name), len(data["gates"]))
@@ -25,6 +25,11 @@ class ReadinessSnapshotTests(unittest.TestCase):
                     "provider_external_rights", "binance_network_access"):
             self.assertEqual(by_name[cap]["status"], "blocked")
         self.assertEqual(by_name["historical_coverage"]["status"], "unknown")
+        minimal = by_name["bybit_public_btcusdt_three_closed_1h_candles"]
+        self.assertEqual(minimal["status"], "verified")
+        self.assertEqual(minimal["issue"], 213)
+        self.assertEqual(minimal["evidence_kind"], "owner_supplied_sanitized_ssh_output")
+        self.assertIn("3 closed 1h", minimal["reason"])
         self.assertEqual(by_name["bybit_quote_currency"]["evidence_kind"],
                          "documented_schema_offline_only")
         # A proof of quote/settlement and KLINE volume cannot certify the
@@ -50,7 +55,7 @@ class ReadinessSnapshotTests(unittest.TestCase):
                          ["binance_usdm", "bybit_v5"])
         self.assertEqual(candidates[0]["last_observed_access"], "http_451_restricted")
         self.assertEqual(candidates[1]["last_observed_access"],
-                         "first_instrument_get_restricted_no_candles")
+                         "owner_vps_btcusdt_3_closed_1h_observed")
         for row in candidates:
             self.assertEqual(row["selection_status"], "candidate_not_selected")
             for flag in ("live_signal_approved", "automated_execution_approved",
@@ -74,7 +79,7 @@ class ReadinessSnapshotTests(unittest.TestCase):
         binance, bybit = report["automated_execution_candidates"]
         self.assertEqual(binance["last_observed_access"], "http_451_restricted")
         self.assertEqual(bybit["last_observed_access"],
-                         "first_instrument_get_restricted_no_candles")
+                         "owner_vps_btcusdt_3_closed_1h_observed")
         expected = (
             (binance, "access_or_region_restricted", False),
             (bybit, "authenticated_read_only_key_confirmed", True),
@@ -115,6 +120,72 @@ class ReadinessSnapshotTests(unittest.TestCase):
             "private_api_auth_observation"]["read_only_scope_attested_by_endpoint"])
         self.assertTrue(again["automated_execution_candidates"][1][
             "account_access_verified"])
+        self.assertFalse(again["ready_for_live_order_execution"])
+
+    def test_single_live_bybit_public_sample_does_not_certify_historical_feed(self):
+        report = readiness_snapshot()
+        binance, bybit = report["automated_execution_candidates"]
+        self.assertEqual(binance["last_observed_access"], "http_451_restricted")
+        previous = bybit["previous_github_actions_public_probe"]
+        self.assertEqual(previous["status"],
+                         "bybit_access_or_region_restricted_no_retry")
+        self.assertEqual(previous["observed_closed_candles"], 0)
+        self.assertEqual(previous["environment"],
+                         "github_actions_runner_not_owner_vps")
+        sample = bybit["public_market_research_observation"]
+        self.assertEqual(sample["status"],
+                         "private_real_bybit_base_btc_quote_usdt_observed")
+        self.assertEqual(sample["observed_at_utc"],
+                         "2026-10-27T13:07:29+00:00")
+        self.assertEqual(sample["evidence_issue"], 213)
+        self.assertEqual(sample["evidence_kind"],
+                         "owner_supplied_sanitized_ssh_output")
+        self.assertEqual(sample["symbol"], "BTCUSDT")
+        self.assertEqual(sample["interval"], "1h")
+        self.assertEqual(sample["requests_attempted"], 2)
+        self.assertEqual(sample["validated_closed_candles"], 3)
+        self.assertEqual(sample["documented_base_unit"], "BTC")
+        self.assertEqual(sample["documented_turnover_quote_unit"],
+                         "USDT_not_USD")
+        self.assertEqual(sample["instrument_response_sha256"],
+                         "cf3fbdc4bfe2f12c191cf122ca81f2e938c11111f7d6dbb9a075e16a7cf51651")
+        self.assertEqual(sample["kline_response_sha256"],
+                         "6e1727c293014f5aee5c596e90688ea6e6e091f21a9fbee0947862f75d7876d0")
+        self.assertEqual(sample["registry_sha256"],
+                         "a95179a342289833f3b14f0c2442163acdcb32f1ca0c9569fa01adeaa3534746")
+        for flag in ("current_access_rechecked",
+                     "raw_market_data_stored",
+                     "provider_signed_provenance_verified",
+                     "historical_top50_approved",
+                     "canonical_ohlcv_approved",
+                     "public_or_commercial_rights_authorized",
+                     "ready_for_trading", "orders_sent", "credentials_used"):
+            with self.subTest(flag=flag):
+                self.assertFalse(sample[flag])
+        for flag in ("ready_for_live_top50", "ready_for_canonical_ohlcv",
+                     "ready_for_public_market_data_release",
+                     "ready_for_live_order_execution", "live_trading_authorized"):
+            self.assertFalse(report[flag])
+        self.assertFalse(bybit["ticker_turnover_unit_verified"])
+        self.assertFalse(bybit["ticker_volume_unit_verified"])
+        self.assertFalse(bybit["order_execution_enabled"])
+
+    def test_mutation_of_public_market_observation_cannot_change_gates(self):
+        stale = readiness_snapshot()
+        bybit = stale["automated_execution_candidates"][1]
+        bybit["public_market_research_observation"]["validated_closed_candles"] = 50
+        bybit["public_market_research_observation"]["historical_top50_approved"] = True
+        bybit["previous_github_actions_public_probe"]["observed_closed_candles"] = 3
+        stale["gates"][-2]["status"] = "blocked"
+        again = readiness_snapshot()
+        fresh_bybit = again["automated_execution_candidates"][1]
+        self.assertEqual(fresh_bybit["public_market_research_observation"][
+            "validated_closed_candles"], 3)
+        self.assertFalse(fresh_bybit["public_market_research_observation"][
+            "historical_top50_approved"])
+        self.assertEqual(fresh_bybit["previous_github_actions_public_probe"][
+            "observed_closed_candles"], 0)
+        self.assertFalse(again["ready_for_live_top50"])
         self.assertFalse(again["ready_for_live_order_execution"])
 
     def test_mutated_candidate_cannot_change_future_gate(self):
