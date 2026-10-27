@@ -310,3 +310,27 @@ Reutiliza contratos sintéticos existentes; nenhum motor financeiro paralelo, ba
 `tests/test_synthetic_financial_scenarios.py` acrescenta três testes de contrato, inclusive mutações independentes em `quote_currency`, quantidade, horário de entrada, entry fee e slippage de entrada. Para um mesmo conjunto de níveis atingidos, STOP/TARGET/LIQUIDATION devem compartilhar **mesma entrada/exposição**; caso contrário, `evaluate_conditional_financial_scenarios` rejeita os cenários antes da contabilidade. Casos LONG de alvo/stop e SHORT de alvo/stop/liquidação; reordenação de alternativas não deve permitir bypass. Mudanças declaradas em preços, tempos e custos **de saída** permanecem válidas e condicionais. Todos os resultados guardam `net_pnl_verified=false`, `financial_backtest_approved=false`, `liquidation_formula_verified=false`. Decisão D109.
 
 O objetivo é comparabilidade econômica de alternativas sintéticas, não inferência de sequência intrabar nem prova de execução. A liquidação permanece perda hipotética explicitamente fornecida, sem mark/maintenance margin/tier real. Não houve HTTP, dados reais, credencial, VPS, trade, licença ou deploy. J1 #2 / direitos de retenção Bybit #217 continuam pendentes.
+
+## J3/PRE6 #208 — consistência do calendário de funding entre saídas alternativas (27/10/2026 UTC)
+
+Regredir LONG/SHORT com TARGET e STOP no mesmo primeiro candle: um settlement anterior à menor saída deve aparecer em todos os ramos com mesmo ID, horário, taxa e fonte, inclusive no ramo de liquidação hipotética. Ausência ou alterações de ID/hora/taxa/fonte falham antes de qualquer `ConditionalFinancialResult`. Nocionais de funding diferentes com premissas explícitas permanecem aceitos e contabilizados como hipóteses diferentes; evento posterior à primeira saída só pertence à posição que ainda estiver aberta. Fronteira temporal exata não infere ordenação dentro da vela. Validar flags `net_pnl_verified=false`, `liquidation_formula_verified=false`, `funding_schedule_verified=false`. Decisão D111. Sem feed real, licença, ordens ou rentabilidade verificada.
+
+## J3/PRE6 #208 — cobertura exata sem duplicação de cenários (D112, 27/10/2026 UTC)
+
+Na mesma avaliação condicional, contar exatamente um cenário por barreira observada. Rejeitar TARGET+TARGET em observação de um nível; TARGET+STOP+TARGET ou STOP duplicado em observação de dois níveis; e duplicação do TARGET em trio SHORT com liquidação hipotética. Permutações legítimas de STOP/TARGET e trio STOP/TARGET/LIQUIDATION continuam válidas. Flags de prova financeira reais permanecem falsas. Testar em CI Linux/Windows/docs/Chrome no SHA final; não inferir peso estatístico da quantidade de ramos.
+
+## J3/PRE6 #208 — entrada não pode ocorrer após o início da vela que tocou a barreira (27/10/2026 UTC)
+
+Regressão de causalidade em `tests/test_synthetic_financial_scenarios.py`: cenários LONG e SHORT, perda hipotética de liquidação e duas alternativas de saída com **mesmo timestamp tardio** devem falhar se `entry_at_ms > first_candidate_open_time_ms`, mesmo que `exit_at_ms` caiba na vela e a entrada seja igual entre ramos. Entradas no limite exato da abertura ou anteriores continuam válidas. Verificar que a guarda PRE6 precede a contabilidade de custos; não alterar testes de stop/target, idempotência ou funding. Decisão D110. São fixtures, não prova de ordem intrabar, preenchimento, ganho, mark, liquidação ou exposição efetiva.
+
+## J3/OFFLINE #208 — matriz metamórfica de custos (27/10/2026 UTC)
+
+Ampliação de regressão **sem alterar o motor** em `tests/test_synthetic_cost_scenarios.py`: LONG/SHORT × cinco taxas de funding sintéticas (incluindo extremos e zero) × três pares de notionals assimétricos; cada aumento de fee/slippage adverso mantém funding constante e aumenta o custo líquido assinado. Replays exatos de funding preservam custo e contam duplicata, mas não autorizam eventos na entrada/saída; a mesma aritmética é testada sob precisão global Decimal 2 e 400. São fixtures sem calendário de funding de venue, preço de execução, backtest ou lucro verificado. A PR #222, que corrige entrada após início da vela de toque, é independente e ainda requer merge permitido.
+
+## J3/PRE6 #208 — cronologia estrita de funding (D113 corrigida, 27/10/2026 UTC)
+
+LONG/SHORT: o PRE2 exige eventos de funding em ordem estritamente cronológica; inverter dois eventos deve ser rejeitado, e a sequência cronológica correta deve ser aceita. PRE6 compara exatamente a identidade, o instante, a taxa, a fonte, a moeda e a convenção dos eventos comuns anteriores à primeira saída entre ramos, sem reordenar entradas inválidas. Mudar a taxa ou a origem de um evento em apenas um ramo continua falhando. Regressões no HEAD da PR #224 devem confirmar a ordem e preservar flags de PnL, liquidação e backtest não verificados. Esta seção substitui o requisito anterior de aceitar permutações; não autoriza dados reais, licença, trading ou lucro.
+
+## D113 — Correção de contrato PRE2 após CI (27/10/2026 UTC)
+
+A CI no SHA e51a114bcb5bf04f8a47d453c111a34c1e623781 revelou que PRE2 exige ledger de funding estritamente cronológico. Revertida a tentativa de aceitar permutações de eventos entre ramos; PRE6 mantém comparação exata D111 e PRE2 rejeita ordem inválida. Regressões LONG/SHORT cobrem entrada ordenada aceita e inversão rejeitada. Não alterar o contrato de custo, não inferir calendário de venue, nem marcar resultados como PnL real. Esta decisão corrige/substitui a interpretação anterior de D113.
