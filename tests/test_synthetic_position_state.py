@@ -352,5 +352,37 @@ class SyntheticPositionStateTests(unittest.TestCase):
             self.assertNotIn(forbidden, source)
 
 
+    def test_margin_leverage_and_runner_matrix_does_not_imply_exposure(self):
+        """Abstract margin and 50x never change a conserved synthetic runner."""
+        for side in (SyntheticSide.LONG, SyntheticSide.SHORT):
+            for leverage in (1, 50, MAX_RESEARCH_LEVERAGE):
+                for margin in ("1", "3", "5"):
+                    identity = f"fixture_{side.value}_{leverage}_{margin}"
+                    with self.subTest(side=side, leverage=leverage, margin=margin):
+                        p = position(id=identity, side=side, leverage=leverage,
+                                     margin=margin)
+                        a = fill(position_id=identity, id="first",
+                                 step=1, quantity="50")
+                        b = fill(position_id=identity, id="second", step=2,
+                                 quantity="30", when=OPEN_AT+2)
+                        c = fill(position_id=identity, id="third", step=3,
+                                 quantity="14", when=OPEN_AT+3)
+                        snap = replay((a, b, a, c), pos=p)
+                        self.assertEqual(snap.initial_units, D("100"))
+                        self.assertEqual(snap.filled_total_units, D("94"))
+                        self.assertEqual(snap.remaining_units, D("6"))
+                        self.assertEqual(snap.residual_floor_units, D("6"))
+                        self.assertEqual(snap.unique_event_count, 3)
+                        self.assertEqual(snap.exact_duplicate_count, 1)
+                        self.assertEqual(snap.leverage_at_open, leverage)
+                        self.assertEqual(snap.synthetic_margin_units, D(margin))
+                        self.assertFalse(snap.collateral_currency_verified)
+                        self.assertFalse(snap.approved_for_live_use)
+                        self.assertFalse(hasattr(snap, "notional"))
+                        self.assertFalse(hasattr(snap, "liquidation_price"))
+                        self.assertFalse(hasattr(snap, "pnl"))
+                        self.assertEqual(p.plan.initial_units, D("100"))
+
+
 if __name__ == "__main__":
     unittest.main()

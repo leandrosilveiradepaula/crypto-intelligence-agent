@@ -644,5 +644,35 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
                     evaluate(observed, rows, liquidation=True)
 
 
+    def test_target_gross_gain_cannot_hide_net_loss_from_declared_costs(self):
+        """A reached TARGET is not evidence of a positive net financial result."""
+        for side, exit_price in ((LONG, "110"), (SHORT, "90")):
+            with self.subTest(side=side):
+                row = scenario(side=side, exit=exit_price)
+                baseline = evaluate(observation(), (row,), side=side)[0]
+                adverse = replace(
+                    row, costs=replace(
+                        row.costs, entry_fee_bps=D("600"), exit_fee_bps=D("600"),
+                        entry_adverse_slippage_bps=D("10"),
+                        exit_adverse_slippage_bps=D("10"),
+                    ),
+                )
+                result = evaluate(observation(), (adverse,), side=side)[0]
+                self.assertEqual(result.assumed_barrier, SyntheticBarrier.TARGET)
+                self.assertEqual(result.gross_price_movement_quote_units, D("20"))
+                self.assertGreater(baseline.conditional_net_quote_units, D("0"))
+                self.assertLess(result.conditional_net_quote_units, D("0"))
+                self.assertGreater(result.costs.total_signed_cost_units, D("20"))
+                self.assertEqual(
+                    result.conditional_net_quote_units,
+                    result.gross_price_movement_quote_units
+                    - result.costs.total_signed_cost_units,
+                )
+                self.assertFalse(result.net_pnl_verified)
+                self.assertFalse(result.financial_backtest_approved)
+                self.assertFalse(result.approved_for_live_use)
+                self.assertFalse(result.orders_sent)
+
+
 if __name__ == "__main__":
     unittest.main()

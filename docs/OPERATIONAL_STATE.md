@@ -413,3 +413,8 @@ Regressões de custos PRE2: funding positivo/negativo e zero LONG/SHORT com noti
 ## J3 #208 — invariância à permutação dos ramos PRE6 (27/10/2026)
 
 Para três barreiras sintéticas TARGET/STOP/LIQ LONG e SHORT, permutar a ordem dos ramos não pode alterar custos ou net condicional de cada barreira nem atribuir probabilidade, prioridade intrabar ou fill. Uma mutação de slippage na entrada de apenas um ramo deve falhar em ambas as permutações. Sem validação de venue, margem, funding real, residual, OOS ou lucro. CI Linux/docs, Windows e Chrome/PAPER no SHA exato é gate obrigatório.
+
+
+## J3 #208 — custos líquidos, margem abstrata e runner residual (27/10/2026 UTC)
+
+Testes de regressão sobre contratos existentes: PRE6 LONG/SHORT com TARGET atingido e gross positivo (+20 unidades sintéticas), porém taxas e slippage adversos declarados de 600/600 e 10/10 bps podem tornar o net condicional NEGATIVO; nenhuma classificação de TARGET equivale a lucro ou fill. PRE3/J4 exercita matriz LONG/SHORT × alavancagem de pesquisa 1x/50x/200x × margem abstrata 1/3/5, com replay de 50/30/14, duplicação exata e runner final 6 invariantes; 50x NÃO converte margem em notional ou preço de liquidação. PRE4 combina LONG/SHORT × leverage × margem com step 2, mínimo de saída 2 e residual mínimo de 6 (compatível) versus 7 (incompatível), sem arredondar/autorizar ordens. Não há integração financeira de moeda/collateral/preço entre J3 e J4 nem prova de viabilidade em Binance/Bybit, resultados OOS ou PnL real. Checks Linux/docs, Windows e Chrome/PAPER exigidos para integração.
