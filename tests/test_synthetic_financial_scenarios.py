@@ -213,6 +213,59 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
         self.assertTrue(all(not r.net_pnl_verified and not r.out_of_sample_results_validated
                             for r in results))
 
+    def test_alternative_exits_must_share_one_economic_entry_basis(self):
+        """Changing exposure or entry fees by outcome is not a valid comparison."""
+        target = scenario()
+        stop = scenario(identity="fixture_financial_stop", exit="95",
+                        barrier=SyntheticBarrier.STOP)
+        alternate = observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED)
+        changed_quantity = replace(
+            stop, quantity_base_units=D("3"),
+            costs=replace(stop.costs,
+                          entry_hypothetical_notional_quote_units=D("300"),
+                          exit_hypothetical_notional_quote_units=D("285")))
+        mutations = (
+            ("quote_unit", replace(stop, quote_currency="SYNTHETIC_OTHER")),
+            ("quantity", changed_quantity),
+            ("entry_time", replace(
+                stop, costs=replace(stop.costs, entry_at_ms=2_100))),
+            ("entry_fee", replace(
+                stop, costs=replace(stop.costs, entry_fee_bps=D("12")))),
+            ("entry_slippage", replace(
+                stop, costs=replace(stop.costs,
+                                    entry_adverse_slippage_bps=D("3")))),
+        )
+        for name, changed in mutations:
+            with self.subTest(name=name), self.assertRaisesRegex(
+                DataValidationError, "same position quantity"
+            ):
+                evaluate(alternate, (target, changed))
+        # Reordering alternatives cannot defeat the comparison gate.
+        with self.assertRaisesRegex(DataValidationError, "same position quantity"):
+            evaluate(alternate, (changed_quantity, target))
+
+    def test_alternative_exits_can_have_different_exit_costs_and_times(self):
+        """Exit-specific assumptions remain explicit and branch-dependent."""
+        target = scenario()
+        stop = scenario(identity="fixture_financial_stop", exit="95",
+                        barrier=SyntheticBarrier.STOP)
+        changed_exit = replace(
+            stop, costs=replace(
+                stop.costs, exit_at_ms=3_250, exit_fee_bps=D("15"),
+                exit_adverse_slippage_bps=D("7")))
+        results = evaluate(observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED),
+                           (target, changed_exit))
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].assumed_barrier, SyntheticBarrier.TARGET)
+        self.assertEqual(results[1].assumed_barrier, SyntheticBarrier.STOP)
+        self.assertNotEqual(results[0].conditional_net_quote_units,
+                            results[1].conditional_net_quote_units)
+        for row in results:
+            self.assertEqual(row.ambiguity_branch_count, 2)
+            self.assertFalse(row.net_pnl_verified)
+            self.assertFalse(row.liquidation_formula_verified)
+            self.assertFalse(row.financial_backtest_approved)
+
     def test_module_has_no_network_storage_or_order_surface(self):
         source = (Path(__file__).resolve().parent.parent / "crypto_intelligence_agent" / "synthetic_financial_scenarios.py").read_text()
         for forbidden in ("urllib.request", "requests.", "sqlite3", "create_order(", "send_order(", "socket", "open("):
