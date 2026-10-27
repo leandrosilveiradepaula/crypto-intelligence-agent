@@ -8,6 +8,8 @@ from __future__ import annotations
 from decimal import Decimal as D
 import unittest
 
+from crypto_intelligence_agent.market_data import DataValidationError
+
 from crypto_intelligence_agent.synthetic_intrabar_barriers import (
     ObservationKind, ResearchDirection, SyntheticBarrier,
 )
@@ -146,7 +148,7 @@ class IntrabarLiquidationOrderingRegressions(unittest.TestCase):
                 self.assertEqual(result.kind, ObservationKind.OPEN_AT_OR_BEYOND_LEVEL)
                 self.assertEqual(result.first_candidate_open_time_ms, row.open_time_ms)
                 self.assertFalse(result.orders_sent)
-                with self.assertRaises(Exception):
+                with self.assertRaisesRegex(DataValidationError, "future or unclosed"):
                     assess((row,), p=p, as_of=row.close_time_ms + 999)
 
 
