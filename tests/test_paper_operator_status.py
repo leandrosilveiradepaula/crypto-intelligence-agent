@@ -129,7 +129,7 @@ class PaperOperatorReadOnlyDashboardTests(unittest.TestCase):
             ).fetchone()
         event = PaperOrderEvent(
             "fixture_status_unknown", PaperOrderEventKind.UNKNOWN,
-            self.cs[6].open_time_ms, D(0),
+            self.cs[5].close_time_ms + 1_001, D(0),
         )
         self.orders.append_events(
             row[0], (event,), as_of_ms=event.event_at_ms,
