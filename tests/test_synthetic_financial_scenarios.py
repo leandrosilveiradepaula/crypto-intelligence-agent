@@ -585,5 +585,64 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
                     replace(row, assumed_barrier=SyntheticBarrier.STOP)
 
 
+    def test_ambiguous_outcome_order_cannot_change_branch_economics(self):
+        """No synthetic branch is a probability or a preferred intrabar fill."""
+        for side, target_price, stop_price in (
+            (LONG, "110", "95"), (SHORT, "90", "110"),
+        ):
+            target = scenario(identity="fixture_financial_target", side=side,
+                              exit=target_price)
+            stop = scenario(identity="fixture_financial_stop", side=side,
+                            exit=stop_price, barrier=SyntheticBarrier.STOP)
+            liquidation = scenario(
+                identity="fixture_financial_liquid", side=side,
+                resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+                exit=None, loss="75",
+            )
+            observed = observation(
+                ObservationKind.MULTIPLE_LEVELS_UNORDERED,
+                levels=(SyntheticBarrier.TARGET, SyntheticBarrier.STOP,
+                        SyntheticBarrier.HYPOTHETICAL_LIQUIDATION),
+            )
+            with self.subTest(side=side):
+                forward = evaluate(observed, (target, stop, liquidation),
+                                   side=side, liquidation=True)
+                reverse = evaluate(observed, (liquidation, stop, target),
+                                   side=side, liquidation=True)
+                keyed = lambda rows: {
+                    row.assumed_barrier: (row.gross_price_movement_quote_units,
+                                          row.conditional_net_quote_units,
+                                          row.costs.total_signed_cost_units)
+                    for row in rows
+                }
+                self.assertEqual(keyed(forward), keyed(reverse))
+                self.assertEqual(len(keyed(forward)), 3)
+                self.assertTrue(all(
+                    not row.intrabar_path_verified and
+                    not row.net_pnl_verified and
+                    not row.out_of_sample_results_validated
+                    for row in forward + reverse
+                ))
+
+    def test_three_way_branches_must_share_entry_fees_even_if_reordered(self):
+        target = scenario(identity="fixture_financial_target")
+        stop = scenario(identity="fixture_financial_stop", exit="95",
+                        barrier=SyntheticBarrier.STOP)
+        liquid = scenario(identity="fixture_financial_liquid",
+                          resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+                          exit=None, loss="75")
+        expensive = replace(liquid, costs=replace(
+            liquid.costs, entry_adverse_slippage_bps=D("1")))
+        observed = observation(
+            ObservationKind.MULTIPLE_LEVELS_UNORDERED,
+            levels=(SyntheticBarrier.TARGET, SyntheticBarrier.STOP,
+                    SyntheticBarrier.HYPOTHETICAL_LIQUIDATION),
+        )
+        for rows in ((target, stop, expensive), (expensive, stop, target)):
+            with self.subTest(first=rows[0].scenario_id):
+                with self.assertRaisesRegex(DataValidationError, "share the same"):
+                    evaluate(observed, rows, liquidation=True)
+
+
 if __name__ == "__main__":
     unittest.main()

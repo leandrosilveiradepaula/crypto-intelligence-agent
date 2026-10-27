@@ -409,3 +409,7 @@ Regressões PRE1 LONG/SHORT: a primeira vela com nível observado permanece a pr
 ## J3 #208 — bateria metamórfica financeira offline (27/10/2026)
 
 Regressões de custos PRE2: funding positivo/negativo e zero LONG/SHORT com notionals assimétricos, antissimetria de sinal, aumento monotônico de fee/slippage, replay idempotente de eventos duplicados. PRE6: perdas de liquidação explicitamente assumidas com taxas maiores reduzindo net condicional, rejeição de preço de saída inventado e precisão Decimal do chamador (2/4/28/200). Todos os resultados permanecem hipotéticos; nenhuma fórmula de margem/liquidação de venue, feed, fill ou retorno OOS foi homologado. CI Linux/docs, Windows e Chrome/PAPER exigida no SHA exato.
+
+## J3 #208 — invariância à permutação dos ramos PRE6 (27/10/2026)
+
+Para três barreiras sintéticas TARGET/STOP/LIQ LONG e SHORT, permutar a ordem dos ramos não pode alterar custos ou net condicional de cada barreira nem atribuir probabilidade, prioridade intrabar ou fill. Uma mutação de slippage na entrada de apenas um ramo deve falhar em ambas as permutações. Sem validação de venue, margem, funding real, residual, OOS ou lucro. CI Linux/docs, Windows e Chrome/PAPER no SHA exato é gate obrigatório.
