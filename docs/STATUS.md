@@ -302,3 +302,11 @@ O titular demonstrou as duas saídas `offline_network_disabled` na VPS Hostinger
 **J1 #2 permanece BLOQUEADA:** não há GET público de candles validado nessa VPS, autorização de dados, volume canônico, universo Top50 histórico, feed operacional ou homologação financeira. Autenticação de chave Bybit ≠ validação do feed. O relatório offline J1 inclui observação de autenticação datada, sem concessão de negociação ou dados. Próximo caminho: evidência legítima de market data e direitos, mantendo regressões sintéticas independentes.
 
 **J4/J3:** PR #211 de conservação do residual e duplicatas sintéticas integrada sem produção em `552aa5cb0b5a5c10e65ddcadade226e9ae67ac5e`, com CI da PR #40426971446/#40426971471 e CI pós-merge #40505375800/#40505375696 SUCCESS. Não há ordens, deploy ou custo adicional.
+
+## J1/WU53 — observação pública Bybit real no ambiente-alvo (27/10/2026 UTC)
+
+**Prova delimitada:** titular executou na VPS Hostinger uma sonda read-only pública sem credenciais: **2 GETs**, informações de perpétuo BTCUSDT + **3 candles 1H fechados validados**, `status=private_real_bybit_base_btc_quote_usdt_observed`, `observed_at_utc=2026-10-27T13:07:29+00:00`. `volume` em BTC (BASE) e `turnover` em USDT (QUOTE), conforme contrato de KLINE da Bybit. Identificadores SHA256 e flags `data_stored=false`, `orders_sent=false` constam na issue #213. O script já tinha revisão CI na PR #139 e o mesmo blob foi conferido no checkout da VPS e na main. O resultado não comprova direitos comerciais nem operação contínua.
+
+**Distinção:** observação anterior de bloqueio no GitHub Actions continua verdadeira **naquele ambiente**; não era prova de bloqueio na VPS. A autenticação privada da Bybit (issue #205) é independente do GET público da WU53. A Binance permanece sem autenticação pública/privada de mercado nessa VPS.
+
+**Permanece pendente:** J1 #2 para histórico persistido, qualidade multiativo, universo Top50 point-in-time, direitos de uso (#48), ticker 24h (#196), e validação J2/J3; flags de ordens, OHLCV canônico, redistribuição e release continuam desativadas. Próxima ação de engenharia: contrato offline de ingestão Bybit → armazenamento e testes sem novas chamadas ou dados financeiros reais no GitHub. R$0,00.
