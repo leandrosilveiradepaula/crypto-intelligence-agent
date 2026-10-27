@@ -266,6 +266,33 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
             self.assertFalse(row.liquidation_formula_verified)
             self.assertFalse(row.financial_backtest_approved)
 
+    def test_three_way_short_target_stop_liquidation_share_position(self):
+        levels = (SyntheticBarrier.TARGET, SyntheticBarrier.STOP,
+                  SyntheticBarrier.HYPOTHETICAL_LIQUIDATION)
+        alternate = observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED,
+                                levels=levels)
+        target = scenario(identity="fixture_financial_short_target",
+                          side=SHORT, exit="90")
+        stop = scenario(identity="fixture_financial_short_stop", side=SHORT,
+                        exit="110", barrier=SyntheticBarrier.STOP)
+        liquidation = scenario(
+            identity="fixture_financial_short_liquidation", side=SHORT,
+            resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+            exit=None, loss="75")
+        valid = evaluate(alternate, (target, stop, liquidation),
+                         side=SHORT, liquidation=True)
+        self.assertEqual(len(valid), 3)
+        self.assertTrue(all(r.ambiguity_branch_count == 3 for r in valid))
+        self.assertTrue(all(not r.liquidation_formula_verified and
+                            not r.financial_backtest_approved for r in valid))
+        invalid_liquidation = replace(
+            liquidation, quantity_base_units=D("3"),
+            costs=replace(liquidation.costs,
+                          entry_hypothetical_notional_quote_units=D("300")))
+        with self.assertRaisesRegex(DataValidationError, "same position quantity"):
+            evaluate(alternate, (target, stop, invalid_liquidation),
+                     side=SHORT, liquidation=True)
+
     def test_module_has_no_network_storage_or_order_surface(self):
         source = (Path(__file__).resolve().parent.parent / "crypto_intelligence_agent" / "synthetic_financial_scenarios.py").read_text()
         for forbidden in ("urllib.request", "requests.", "sqlite3", "create_order(", "send_order(", "socket", "open("):
