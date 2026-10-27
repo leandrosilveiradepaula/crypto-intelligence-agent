@@ -334,3 +334,7 @@ LONG/SHORT: o PRE2 exige eventos de funding em ordem estritamente cronológica; 
 ## D113 — Correção de contrato PRE2 após CI (27/10/2026 UTC)
 
 A CI no SHA e51a114bcb5bf04f8a47d453c111a34c1e623781 revelou que PRE2 exige ledger de funding estritamente cronológico. Revertida a tentativa de aceitar permutações de eventos entre ramos; PRE6 mantém comparação exata D111 e PRE2 rejeita ordem inválida. Regressões LONG/SHORT cobrem entrada ordenada aceita e inversão rejeitada. Não alterar o contrato de custo, não inferir calendário de venue, nem marcar resultados como PnL real. Esta decisão corrige/substitui a interpretação anterior de D113.
+
+## J3/OFFLINE #208 — first-hit e gaps adversariais (27/10/2026 UTC)
+
+Regressões PRE1 LONG/SHORT: a primeira vela com nível observado permanece a primeira mesmo que uma vela posterior toque todas as barreiras; gap favorável no OPEN só prova TARGET no OPEN, não ordena STOP/liquidação atingidos depois dentro da mesma vela; gap adverso STOP+liquidação no OPEN preserva ausência de prioridade e de fill. Exigir close_safety_ms na fronteira exata também nesses gaps. Não criar motor financeiro paralelo nem derivar preço de liquidação, PnL, mark, execução ou prioridade intrabar. Testes offline no SHA final; CI Linux/Windows/docs/Chrome obrigatória antes de merge.
