@@ -167,7 +167,7 @@ class SQLiteBybitResearchStore:
     """Explicit opt-in lab DB, never sharing canonical candle/checkpoint tables."""
 
     def __init__(self, path: str | Path) -> None:
-        if (type(path) not in (str, Path) or not str(path)
+        if (not isinstance(path, (str, Path)) or not str(path)
                 or str(path) == ":memory:" or Path(path).is_symlink()
                 or Path(path).is_dir()):
             raise ValueError("research-only SQLite requires a separate local file")
