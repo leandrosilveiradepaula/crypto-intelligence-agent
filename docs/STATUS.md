@@ -318,3 +318,7 @@ Implementação proposta na branch `work/issue-215-j1-bybit-isolated-staging`: m
 ## J1/WU55 — diligência de direitos Bybit sem liberação de retenção (27/10/2026 UTC)
 
 A WU54 #215 foi concluída por PR #216, main `5005de6a53b5b67a65c922dbd57587a9926c6354`, com staging SQLite de pesquisa **sintético/offline**, testes e CI aprovados; os 3 candles reais da WU53 não foram retidos. Na WU55 #217, a fonte oficial atualizada dos API Terms Bybit remete a conteúdo legal dinâmico que não pôde ser verificado integralmente. Referências oficiais anteriores restringem comercialização/redistribuição, mas não atestam retenção histórica local privada. **Gate de retenção permanece bloqueado**, `rights_authorized=false`. Preparar apenas contrato offline, sem consultar mercado, chaves, implantação, ordens, custos ou publicação. Fonte e restrições em `PROVIDER_RIGHTS.md`, decisão D108; J1 #2 não homologada.
+
+## J1/WU55-B — ensaio offline de captura e staging (27/10/2026 UTC)
+
+Branch `work/issue-217-j1-offline-capture-handoff-tests` acrescenta testes de integração simulando **duas respostas Bybit sintéticas** para `SQLiteBybitResearchStore` já implementado, com transporte fake estritamente limitado, replay e QA offline, proibição de endpoints errados e não-persistência após erro. O estudo documental de direitos da PR #218/D108 continua **sem licença de retenção privada comprovada**: não existe novo cliente live, GET, credencial, captura de candles reais ou alteração da VPS. PR/CI devem ser verificados antes de alegar aceite. J1 #2 e #217 abertas.
