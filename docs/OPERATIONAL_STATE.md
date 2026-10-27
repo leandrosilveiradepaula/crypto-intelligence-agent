@@ -326,3 +326,8 @@ Em `tests/test_synthetic_cost_scenarios.py`, novas invariantes sintéticas verif
 ### J3/OFFLINE #208 — barreiras e custos não implicam fill (26/10/2026 UTC)
 
 Dois testes de integração em `test_synthetic_intrabar_barriers.py` mantêm separadas a observação OHLC de STOP/TARGET/LIQUIDATION e a aritmética de custos sintéticos. Custos calculados, inclusive zero, não certificam ordem intrabar, fill, preço de liquidação, PnL ou rentabilidade. A issue #208 continua aberta para cobertura residual e revisão de lacunas; #205 aguarda acesso privado do titular, que está apenas no celular. Branch `work/issue-208-j3-cross-module-invariants`; CI pendente de confirmação, sem ordens/rede/deploy.
+
+
+### J4/J3 OFFLINE #208 — runner residual em prefixos (26/10/2026 UTC)
+
+Dois testes metamórficos em `tests/test_synthetic_manual_exit_replay.py` verificam conservação `filled + remaining = initial` e piso residual após cada prefixo de fills sintéticos, além da neutralidade de eventos duplicados na reserva do runner. Nenhuma execução real, preço, PnL, funding, ledger persistente ou aprovação financeira. Branch `work/issue-208-j4-residual-metamorphic`; PR/CI a confirmar. #205 continua adiada durante acesso apenas móvel do PO.
