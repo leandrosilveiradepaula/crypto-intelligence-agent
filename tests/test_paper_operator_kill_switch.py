@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import redirect_stdout
+from contextlib import closing, redirect_stdout
 from dataclasses import FrozenInstanceError, replace
 from decimal import Decimal
 from io import StringIO
@@ -127,7 +127,7 @@ class PaperOperatorKillSwitchTests(unittest.TestCase):
 
     def test_corruption_and_unknown_meta_key_fail_closed(self):
         self.pause()
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("UPDATE paper_order_meta SET value='forged_false' WHERE key=?", (KEY,))
         with self.assertRaises(DataValidationError):
             self.journal.read_local_kill_switch()
@@ -141,7 +141,7 @@ class PaperOperatorKillSwitchTests(unittest.TestCase):
             audit_paper_open_health(self.db, self.position_path)
 
     def test_unknown_metadata_fails_even_without_pause_key(self):
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute(
                 "INSERT INTO paper_order_meta(key,value) VALUES('unrecognized_flag','false')"
             )
@@ -194,7 +194,7 @@ class PaperOperatorKillSwitchTests(unittest.TestCase):
             max_candles=20,
         )
         self.assertEqual(recovered, next_tick.seal)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn, conn:
             self.assertEqual(
                 conn.execute("SELECT COUNT(*) FROM paper_order_intents").fetchone()[0], 0
             )
