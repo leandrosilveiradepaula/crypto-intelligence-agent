@@ -338,3 +338,7 @@ A CI no SHA e51a114bcb5bf04f8a47d453c111a34c1e623781 revelou que PRE2 exige ledg
 ## J3/OFFLINE #208 — first-hit e gaps adversariais (27/10/2026 UTC)
 
 Regressões PRE1 LONG/SHORT: a primeira vela com nível observado permanece a primeira mesmo que uma vela posterior toque todas as barreiras; gap favorável no OPEN só prova TARGET no OPEN, não ordena STOP/liquidação atingidos depois dentro da mesma vela; gap adverso STOP+liquidação no OPEN preserva ausência de prioridade e de fill. Exigir close_safety_ms na fronteira exata também nesses gaps. Não criar motor financeiro paralelo nem derivar preço de liquidação, PnL, mark, execução ou prioridade intrabar. Testes offline no SHA final; CI Linux/Windows/docs/Chrome obrigatória antes de merge.
+
+## J3 #208 — bateria metamórfica financeira offline (27/10/2026)
+
+Regressões de custos PRE2: funding positivo/negativo e zero LONG/SHORT com notionals assimétricos, antissimetria de sinal, aumento monotônico de fee/slippage, replay idempotente de eventos duplicados. PRE6: perdas de liquidação explicitamente assumidas com taxas maiores reduzindo net condicional, rejeição de preço de saída inventado e precisão Decimal do chamador (2/4/28/200). Todos os resultados permanecem hipotéticos; nenhuma fórmula de margem/liquidação de venue, feed, fill ou retorno OOS foi homologado. CI Linux/docs, Windows e Chrome/PAPER exigida no SHA exato.
