@@ -136,12 +136,12 @@ class OfflineVisionMonthTests(unittest.TestCase):
         blob, name, digest, cutoff = synthetic_zip()
         tampered = bytearray(blob)
         # Local header flag bits: encryption; central directory bits also set.
-        pos = tampered.find(b"PK\\x01\\x02")
-        if pos >= 0:
-            tampered[pos+8] |= 1
-            digest2 = sha256(tampered).hexdigest()
-            with self.assertRaises(DataValidationError):
-                parse(bytes(tampered), name, digest2, cutoff)
+        pos = tampered.find(bytes.fromhex("504b0102"))
+        self.assertGreaterEqual(pos, 0)
+        tampered[pos+8] |= 1
+        digest2 = sha256(tampered).hexdigest()
+        with self.assertRaises(DataValidationError):
+            parse(bytes(tampered), name, digest2, cutoff)
 
 
 if __name__ == "__main__":
