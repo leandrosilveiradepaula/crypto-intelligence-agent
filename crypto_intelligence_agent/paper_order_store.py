@@ -266,6 +266,28 @@ class SQLitePaperOrderJournal:
             from .paper_open_health import _verify_locked_order_schema
             _verify_locked_order_schema(conn)
 
+    def read_local_kill_switch(self):
+        """Return authenticated-by-local-schema *PAPER* operator status only."""
+        from .paper_open_health import _verify_locked_order_schema
+        from .paper_operator_kill_switch import _read_locked
+        with self._transaction() as conn:
+            _verify_locked_order_schema(conn)
+            return _read_locked(conn)
+
+    def set_local_kill_switch(
+        self, *, pause: bool, expected_sequence: int,
+        changed_at_ms: int, acknowledge_resume: bool = False,
+    ):
+        """Atomically compare-and-swap only the local PAPER operator state."""
+        from .paper_open_health import _verify_locked_order_schema
+        from .paper_operator_kill_switch import _transition_locked
+        with self._transaction() as conn:
+            _verify_locked_order_schema(conn)
+            return _transition_locked(
+                conn, pause=pause, expected_sequence=expected_sequence,
+                changed_at_ms=changed_at_ms, acknowledge_resume=acknowledge_resume,
+            )
+
     @staticmethod
     def _checked_entry(conn: sqlite3.Connection, intent_id: str) -> PaperJournalEntry:
         row = conn.execute(
@@ -341,10 +363,15 @@ class SQLitePaperOrderJournal:
         return PaperJournalEntry(intent, (), snapshot)
 
     def reserve(self, intent: PaperOrderIntent) -> PaperJournalEntry:
-        """Legacy paper-only reservation; no order sender or real risk approval."""
+        """Legacy fixture reservation; a durable pause still blocks OPEN."""
         if type(intent) is not PaperOrderIntent:
             raise DataValidationError("validated paper intent required")
         with self._transaction() as conn:
+            from .paper_open_health import _verify_locked_order_schema
+            from .paper_operator_kill_switch import _read_locked
+            _verify_locked_order_schema(conn)
+            if intent.effect is PaperOrderEffect.OPEN and _read_locked(conn).active:
+                raise DataValidationError("PAPER operator kill switch blocks OPEN")
             return self._reserve_on_connection(conn, intent)
 
     @staticmethod
@@ -396,9 +423,14 @@ class SQLitePaperOrderJournal:
         if existing is not None:
             self._checked_entry(conn, intent.intent_id)
             raise DataValidationError("paper intent already reserved; recover existing state")
+        from .paper_open_health import _verify_locked_order_schema
+        from .paper_operator_kill_switch import _read_locked
+        _verify_locked_order_schema(conn)
+        persisted_pause = _read_locked(conn)
         pending_local, unknown_local = self._pending_open_from_connection(conn)
         effective = replace(
             observation,
+            kill_switch_active=(persisted_pause.active or observation.kill_switch_active),
             pending_open_orders=max(pending_local, observation.pending_open_orders),
             unresolved_open_exists=(
                 unknown_local or observation.unresolved_open_exists
