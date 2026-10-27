@@ -327,9 +327,9 @@ Regressão de causalidade em `tests/test_synthetic_financial_scenarios.py`: cen�
 
 Ampliação de regressão **sem alterar o motor** em `tests/test_synthetic_cost_scenarios.py`: LONG/SHORT × cinco taxas de funding sintéticas (incluindo extremos e zero) × três pares de notionals assimétricos; cada aumento de fee/slippage adverso mantém funding constante e aumenta o custo líquido assinado. Replays exatos de funding preservam custo e contam duplicata, mas não autorizam eventos na entrada/saída; a mesma aritmética é testada sob precisão global Decimal 2 e 400. São fixtures sem calendário de funding de venue, preço de execução, backtest ou lucro verificado. A PR #222, que corrige entrada após início da vela de toque, é independente e ainda requer merge permitido.
 
-## J3/PRE6 #208 — ordem canônica de eventos de funding (D113, 27/10/2026 UTC)
+## J3/PRE6 #208 — cronologia estrita de funding (D113 corrigida, 27/10/2026 UTC)
 
-LONG/SHORT: dois eventos de funding anteriores à menor saída em ordens de inserção opostas devem produzir dois ramos válidos com mesmo custo de funding, sem exigir ordenação do chamador. Mudar a taxa de um evento no segundo ramo deve continuar falhando por divergência de histórico. Comparar chaves ordenadas por (timestamp, event_id) apenas para equivalência; não modificar o ledger de custos PRE2. CI Linux/Windows/docs/Chrome no HEAD final. Sem licença, dados de corretora ou backtest real.
+LONG/SHORT: o PRE2 exige eventos de funding em ordem estritamente cronológica; inverter dois eventos deve ser rejeitado, e a sequência cronológica correta deve ser aceita. PRE6 compara exatamente a identidade, o instante, a taxa, a fonte, a moeda e a convenção dos eventos comuns anteriores à primeira saída entre ramos, sem reordenar entradas inválidas. Mudar a taxa ou a origem de um evento em apenas um ramo continua falhando. Regressões no HEAD da PR #224 devem confirmar a ordem e preservar flags de PnL, liquidação e backtest não verificados. Esta seção substitui o requisito anterior de aceitar permutações; não autoriza dados reais, licença, trading ou lucro.
 
 ## D113 — Correção de contrato PRE2 após CI (27/10/2026 UTC)
 

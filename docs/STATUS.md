@@ -338,3 +338,7 @@ Branch `work/issue-208-j3-shared-funding-calendar`, base `2e9e5f4b3dbd12ca2169e9
 ## J3/OFFLINE #208 — ramificações únicas por barreira (D112, 27/10/2026 UTC)
 
 Na revisão da PR #224 foi identificada cobertura de PRE6 baseada só em igualdade de conjuntos, admitindo duplicar um nível atingido com `scenario_id` diferente. A branch existente `work/issue-208-j3-shared-funding-calendar` recebeu gate de cardinalidade + igualdade de barreiras e regressões LONG/SHORT, inclusive liquidação hipotética. Reapurar HEAD/CI antes de revisão e merge; PRs #222/#223 permanecem abertas com CI anterior aprovada. A contagem de ramos não significa probabilidade e o motor não é homologado para PnL real ou trading.
+
+## J3 #208 — reconciliação documental D113 e requisito D77 (27/10/2026 UTC)
+
+Revisão de consistência na PR #224: `VALIDATION_PLAN.md` ainda continha um critério D113 de aceitar funding fora da ordem, apesar da correção de CI exigir cronologia estrita PRE2; substituído pelo contrato efetivo. `STRATEGY_SPEC.md` ainda dizia que o produto mantém execução manual como requisito, apesar da decisão D77 estabelecer execução automática como objetivo futuro; corrigido para separar alvo automático de bloqueio de live atual. Não altera motor, testes, gates financeiros ou habilita ordens. A PR #224 continua sem merge, com CI a ser revalidada no novo SHA.

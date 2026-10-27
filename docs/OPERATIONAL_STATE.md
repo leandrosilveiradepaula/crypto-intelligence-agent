@@ -397,3 +397,7 @@ Branch `work/issue-217-j1-offline-capture-handoff-tests`, base `b68cee4dd55312ea
 ### Complemento da PR #224 — D112 cobertura única de níveis (27/10/2026 UTC)
 
 O gate PRE6 de cobertura foi reforçado na mesma branch `work/issue-208-j3-shared-funding-calendar`: cada barreira atingida exige exatamente um ramo condicional (cardinalidade e set iguais). Regressões de duplicação TARGET/STOP, caso de nível único e trio SHORT com liquidação. Não criar PR separada nem duplicar engine. O commit posterior ao HEAD inicial `904f25487ea155cbbc0b054d9a862e4fff3710b7` exige CI novamente no SHA exato. Sem merge, dados reais, ordens, rede ou gasto nesta etapa.
+
+## J3 #208 — reconciliação documental D113 e requisito D77 (27/10/2026 UTC)
+
+Revisão de consistência na PR #224: `VALIDATION_PLAN.md` ainda continha um critério D113 de aceitar funding fora da ordem, apesar da correção de CI exigir cronologia estrita PRE2; substituído pelo contrato efetivo. `STRATEGY_SPEC.md` ainda dizia que o produto mantém execução manual como requisito, apesar da decisão D77 estabelecer execução automática como objetivo futuro; corrigido para separar alvo automático de bloqueio de live atual. Não altera motor, testes, gates financeiros ou habilita ordens. A PR #224 continua sem merge, com CI a ser revalidada no novo SHA.
