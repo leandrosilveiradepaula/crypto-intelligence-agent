@@ -251,8 +251,14 @@ def evaluate_conditional_financial_scenarios(
             raise DataValidationError("scenario identity does not match PRE1 observation")
         if row.direction is not barrier_plan.side or row.entry_price != barrier_plan.hypothetical_entry_price:
             raise DataValidationError("scenario side/entry differs from PRE1 barrier plan")
-        if (row.costs.entry_at_ms < barrier_plan.plan_created_at_ms
-                or not opened <= row.costs.exit_at_ms <= closed):
+        # A candle's observed range may have touched a barrier before an entry
+        # placed partway through that candle. The position must already exist
+        # at its open; otherwise the range cannot support this exit premise.
+        if not barrier_plan.plan_created_at_ms <= row.costs.entry_at_ms <= opened:
+            raise DataValidationError(
+                "synthetic position entry must be at or before first-hit candle open"
+            )
+        if not opened <= row.costs.exit_at_ms <= closed:
             raise DataValidationError("explicit exit event outside observed synthetic barrier candle")
     with localcontext(_EXACT):
         results: list[ConditionalFinancialResult] = []
