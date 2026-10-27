@@ -314,3 +314,7 @@ O objetivo é comparabilidade econômica de alternativas sintéticas, não infer
 ## J3/PRE6 #208 — consistência do calendário de funding entre saídas alternativas (27/10/2026 UTC)
 
 Regredir LONG/SHORT com TARGET e STOP no mesmo primeiro candle: um settlement anterior à menor saída deve aparecer em todos os ramos com mesmo ID, horário, taxa e fonte, inclusive no ramo de liquidação hipotética. Ausência ou alterações de ID/hora/taxa/fonte falham antes de qualquer `ConditionalFinancialResult`. Nocionais de funding diferentes com premissas explícitas permanecem aceitos e contabilizados como hipóteses diferentes; evento posterior à primeira saída só pertence à posição que ainda estiver aberta. Fronteira temporal exata não infere ordenação dentro da vela. Validar flags `net_pnl_verified=false`, `liquidation_formula_verified=false`, `funding_schedule_verified=false`. Decisão D111. Sem feed real, licença, ordens ou rentabilidade verificada.
+
+## J3/PRE6 #208 — cobertura exata sem duplicação de cenários (D112, 27/10/2026 UTC)
+
+Na mesma avaliação condicional, contar exatamente um cenário por barreira observada. Rejeitar TARGET+TARGET em observação de um nível; TARGET+STOP+TARGET ou STOP duplicado em observação de dois níveis; e duplicação do TARGET em trio SHORT com liquidação hipotética. Permutações legítimas de STOP/TARGET e trio STOP/TARGET/LIQUIDATION continuam válidas. Flags de prova financeira reais permanecem falsas. Testar em CI Linux/Windows/docs/Chrome no SHA final; não inferir peso estatístico da quantidade de ramos.

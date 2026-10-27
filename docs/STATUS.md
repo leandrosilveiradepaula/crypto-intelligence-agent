@@ -334,3 +334,7 @@ Novo gate de engenharia no módulo existente `synthetic_financial_scenarios.py`:
 ## J3/OFFLINE #208 — calendário de funding pré-saída coerente (27/10/2026 UTC)
 
 Branch `work/issue-208-j3-shared-funding-calendar`, base `2e9e5f4b3dbd12ca2169e9c82da0d921194375f7`: inspeção de PRE6 encontrou possibilidade de omitir/alterar um settlement já ocorrido antes da saída mais cedo entre alternativas de uma mesma posição sintética. Gate D111 compara ID/hora/taxa/fonte/moeda/sinal sem fixar nocional path-dependent; permite eventos após a primeira saída só em ramos ainda abertos. Regressões LONG/SHORT, STOP/TARGET, liquidação, mutações e fronteira; CI, revisão e merge ainda sujeitos a confirmação. PRs #222/#223 independentes permanecem abertas com checks aprovados e bloqueio anterior de merge; não presumir integração. J3 #208, J1 #217 e trading real continuam abertos/bloqueados. R$0 adicional.
+
+## J3/OFFLINE #208 — ramificações únicas por barreira (D112, 27/10/2026 UTC)
+
+Na revisão da PR #224 foi identificada cobertura de PRE6 baseada só em igualdade de conjuntos, admitindo duplicar um nível atingido com `scenario_id` diferente. A branch existente `work/issue-208-j3-shared-funding-calendar` recebeu gate de cardinalidade + igualdade de barreiras e regressões LONG/SHORT, inclusive liquidação hipotética. Reapurar HEAD/CI antes de revisão e merge; PRs #222/#223 permanecem abertas com CI anterior aprovada. A contagem de ramos não significa probabilidade e o motor não é homologado para PnL real ou trading.

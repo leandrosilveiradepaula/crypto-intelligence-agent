@@ -432,6 +432,66 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
                          if hasattr(result[1], "funding_schedule_verified")
                          else result[1].costs.funding_schedule_verified)
 
+    def test_one_branch_per_observed_barrier_prevents_duplicate_outcome_weight(self):
+        """Extra branches for a reached level must not create fictitious odds."""
+        target = scenario(identity="fixture_financial_target")
+        extra_target = scenario(identity="fixture_financial_target_copy")
+        stop = scenario(identity="fixture_financial_stop", exit="95",
+                        barrier=SyntheticBarrier.STOP)
+        one = observation()
+        both = observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED)
+
+        for rows, observed in (
+            ((target, extra_target), one),
+            ((target, stop, extra_target), both),
+            ((extra_target, stop, target), both),
+            ((stop, target, stop.__class__(
+                scenario_id="fixture_financial_stop_copy",
+                exchange=stop.exchange, symbol=stop.symbol,
+                interval=stop.interval, direction=stop.direction,
+                assumed_barrier=stop.assumed_barrier,
+                entry_price=stop.entry_price,
+                quantity_base_units=stop.quantity_base_units,
+                resolution=stop.resolution, exit_price=stop.exit_price,
+                hypothetical_liquidation_loss_quote_units=(
+                    stop.hypothetical_liquidation_loss_quote_units),
+                quote_currency=stop.quote_currency, costs=stop.costs,
+                funding_provenance=stop.funding_provenance)), both),
+        ):
+            with self.subTest(identities=[r.scenario_id for r in rows]):
+                with self.assertRaisesRegex(DataValidationError,
+                                            "exactly once"):
+                    evaluate(observed, rows)
+
+        valid = evaluate(both, (stop, target))
+        self.assertEqual(len(valid), 2)
+        self.assertEqual({r.assumed_barrier for r in valid},
+                         {SyntheticBarrier.STOP, SyntheticBarrier.TARGET})
+        self.assertTrue(all(not r.net_pnl_verified for r in valid))
+
+    def test_three_way_liquidation_cannot_duplicate_winning_branch(self):
+        target = scenario(identity="fixture_financial_short_target",
+                          side=SHORT, exit="90")
+        stop = scenario(identity="fixture_financial_short_stop", side=SHORT,
+                        exit="110", barrier=SyntheticBarrier.STOP)
+        liquid = scenario(
+            identity="fixture_financial_short_liquid",
+            side=SHORT, resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+            exit=None, loss="75")
+        duplicate = scenario(identity="fixture_financial_short_target_copy",
+                             side=SHORT, exit="90")
+        levels = (SyntheticBarrier.TARGET, SyntheticBarrier.STOP,
+                  SyntheticBarrier.HYPOTHETICAL_LIQUIDATION)
+        observed = observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED,
+                               levels=levels)
+        with self.assertRaisesRegex(DataValidationError, "exactly once"):
+            evaluate(observed, (target, stop, liquid, duplicate),
+                     side=SHORT, liquidation=True)
+        good = evaluate(observed, (target, stop, liquid),
+                        side=SHORT, liquidation=True)
+        self.assertEqual(len(good), 3)
+        self.assertTrue(all(not r.financial_backtest_approved for r in good))
+
     def test_module_has_no_network_storage_or_order_surface(self):
         source = (Path(__file__).resolve().parent.parent / "crypto_intelligence_agent" / "synthetic_financial_scenarios.py").read_text()
         for forbidden in ("urllib.request", "requests.", "sqlite3", "create_order(", "send_order(", "socket", "open("):

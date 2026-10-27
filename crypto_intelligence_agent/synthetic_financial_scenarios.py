@@ -220,8 +220,11 @@ def evaluate_conditional_financial_scenarios(
     if len({row.scenario_id for row in rows}) != len(rows):
         raise DataValidationError("conditional scenario identities must be unique")
     # Renaming a target scenario does not cover an unordered stop/target hit.
-    if {row.assumed_barrier for row in rows} != set(levels):
-        raise DataValidationError("explicit alternatives must cover each observed barrier exactly")
+    if (len(rows) != len(levels)
+            or {row.assumed_barrier for row in rows} != set(levels)):
+        raise DataValidationError(
+            "explicit alternatives must cover each observed barrier exactly once"
+        )
     # All alternatives represent the SAME already-open hypothetical position.
     # Varying quantity/currency/entry costs by exit branch would make the
     # conditional net outcomes economically incomparable (and may hide risk).
