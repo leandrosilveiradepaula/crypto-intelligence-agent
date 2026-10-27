@@ -248,6 +248,11 @@ class BybitResearchStoreTests(unittest.TestCase):
             )
         with self.assertRaises(DuplicateCandleError):
             self.commit()
+        with self.assertRaises(DataGapError):
+            self.store.quality_report(
+                symbol="BTCUSDT", interval="1h",
+                start_open_ms=START, end_open_ms=END,
+            )
 
     def test_disallowed_manifest_and_environment_are_rejected_before_db_write(self):
         a, b, manifest = sample()
