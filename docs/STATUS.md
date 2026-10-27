@@ -342,3 +342,7 @@ Na revisão da PR #224 foi identificada cobertura de PRE6 baseada só em igualda
 ## J3 #208 — reconciliação documental D113 e requisito D77 (27/10/2026 UTC)
 
 Revisão de consistência na PR #224: `VALIDATION_PLAN.md` ainda continha um critério D113 de aceitar funding fora da ordem, apesar da correção de CI exigir cronologia estrita PRE2; substituído pelo contrato efetivo. `STRATEGY_SPEC.md` ainda dizia que o produto mantém execução manual como requisito, apesar da decisão D77 estabelecer execução automática como objetivo futuro; corrigido para separar alvo automático de bloqueio de live atual. Não altera motor, testes, gates financeiros ou habilita ordens. A PR #224 continua sem merge, com CI a ser revalidada no novo SHA.
+
+## J3/OFFLINE #208 — first-hit e gaps adversariais (27/10/2026 UTC)
+
+Regressões PRE1 LONG/SHORT: a primeira vela com nível observado permanece a primeira mesmo que uma vela posterior toque todas as barreiras; gap favorável no OPEN só prova TARGET no OPEN, não ordena STOP/liquidação atingidos depois dentro da mesma vela; gap adverso STOP+liquidação no OPEN preserva ausência de prioridade e de fill. Exigir close_safety_ms na fronteira exata também nesses gaps. Não criar motor financeiro paralelo nem derivar preço de liquidação, PnL, mark, execução ou prioridade intrabar. Testes offline no SHA final; CI Linux/Windows/docs/Chrome obrigatória antes de merge.
