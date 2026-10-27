@@ -326,3 +326,7 @@ Branch `work/issue-217-j1-offline-capture-handoff-tests` acrescenta testes de in
 ## J3/OFFLINE #208 — regressões de ambiguidade intrabar LONG/SHORT (27/10/2026 UTC)
 
 Branch `work/issue-208-j3-intrabar-liquidation-order-regression`: cinco cenários de teste exclusivamente sintéticos sobre OHLC para STOP/TARGET/LIQUIDATION, incluindo toques múltiplos, gaps adversos e igualdade no nível. Nenhuma prioridade de fill ou precedência de liquidação é inferível de OHLC; testes mantêm flags de liquidação, fill e backtest falsas. **A issue #208 permanece aberta** para custos, risco e executabilidade real não modelados. Essa tarefa não altera J1 #2, gates de licença Bybit #217, trading, VPS ou dados reais; PR/CI e merge a verificar.
+
+## J3/PRE6 #208 — base única de entrada nos cenários condicionais (27/10/2026 UTC)
+
+Novo gate de engenharia no módulo existente `synthetic_financial_scenarios.py`: um conjunto de alternativas STOP/TARGET/LIQUIDATION **da mesma posição** deve conservar quantidade, moeda sintética, horário/notional e taxa/slippage de **entrada**, sem confundir risco entre branches. Permite diferenças explícitas de saída. Regressões LONG/SHORT e de liquidação em `test_synthetic_financial_scenarios.py`, decisão D109. Branch `work/issue-208-j3-shared-position-branch-invariants`, PR/CI/revisão pendentes nesta etapa; nenhuma nova estratégia, backtest financeiro validado, rede ou ordens. J3 #208 permanece aberta; J1 #217 continua sem autorização comprovada de retenção real.
