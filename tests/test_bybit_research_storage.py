@@ -285,19 +285,24 @@ class BybitResearchStoreTests(unittest.TestCase):
         payload["result"]["list"][0][6] = "NaN"
         with self.assertRaises(DataValidationError):
             self.commit((a, json.dumps(payload).encode(), manifest))
-        # Even a self-claimed capture cannot make an in-progress candle closed.
+        # A claimed capture timestamp cannot validate future/open candles.
+        # Shift the exact UTC kline window forward two hours, but keep the
+        # capture clock unchanged: the newest bar has not closed yet.
+        later_payload = json.loads(b)
+        for row in later_payload["result"]["list"]:
+            row[0] = str(int(row[0]) + 2 * HOUR)
         newer = LocalBybitCaptureManifest(
             symbol=manifest.symbol, interval=manifest.interval,
             registry_variant=manifest.registry_variant,
-            start_open_ms=manifest.start_open_ms,
-            end_open_ms=manifest.end_open_ms,
+            start_open_ms=manifest.start_open_ms + 2 * HOUR,
+            end_open_ms=manifest.end_open_ms + 2 * HOUR,
             capture_started_ms=manifest.capture_started_ms,
             instrument_received_ms=manifest.instrument_received_ms,
-            kline_received_ms=END-1,
+            kline_received_ms=manifest.kline_received_ms,
             capture_finished_ms=manifest.capture_finished_ms,
         )
         with self.assertRaises(DataValidationError):
-            self.commit((a, b, newer))
+            self.commit((a, json.dumps(later_payload).encode(), newer))
         future_payload = json.loads(a)
         future_payload["time"] = NOW - 40_000
         with self.assertRaises(DataValidationError):
