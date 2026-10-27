@@ -278,14 +278,10 @@ def evaluate_conditional_financial_scenarios(
             if source.event.event_at_ms < earliest_exit_at_ms
         )
 
-    # Funding events are a time-ordered ledger, not an unordered set.
-    # Canonicalize declared event order before comparing alternative paths,
-    # without changing the event amounts or PRE2 arithmetic.
-    def ordered_shared_funding_schedule(row: ConditionalFinancialScenario) -> tuple:
-        return tuple(sorted(shared_funding_schedule(row), key=lambda event: (event[1], event[0])))
-
-    schedule = ordered_shared_funding_schedule(rows[0])
-    if any(ordered_shared_funding_schedule(row) != schedule for row in rows[1:]):
+    # PRE2 requires chronological event order. Keep the exact input ledger
+    # and compare histories as supplied; never normalize invalid order.
+    schedule = shared_funding_schedule(rows[0])
+    if any(shared_funding_schedule(row) != schedule for row in rows[1:]):
         raise DataValidationError(
             "alternative financial branches must share funding event identity, "
             "time, rate and source before their earliest exit"

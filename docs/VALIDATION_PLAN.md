@@ -330,3 +330,7 @@ Ampliação de regressão **sem alterar o motor** em `tests/test_synthetic_cost_
 ## J3/PRE6 #208 — ordem canônica de eventos de funding (D113, 27/10/2026 UTC)
 
 LONG/SHORT: dois eventos de funding anteriores à menor saída em ordens de inserção opostas devem produzir dois ramos válidos com mesmo custo de funding, sem exigir ordenação do chamador. Mudar a taxa de um evento no segundo ramo deve continuar falhando por divergência de histórico. Comparar chaves ordenadas por (timestamp, event_id) apenas para equivalência; não modificar o ledger de custos PRE2. CI Linux/Windows/docs/Chrome no HEAD final. Sem licença, dados de corretora ou backtest real.
+
+## D113 — Correção de contrato PRE2 após CI (27/10/2026 UTC)
+
+A CI no SHA e51a114bcb5bf04f8a47d453c111a34c1e623781 revelou que PRE2 exige ledger de funding estritamente cronológico. Revertida a tentativa de aceitar permutações de eventos entre ramos; PRE6 mantém comparação exata D111 e PRE2 rejeita ordem inválida. Regressões LONG/SHORT cobrem entrada ordenada aceita e inversão rejeitada. Não alterar o contrato de custo, não inferir calendário de venue, nem marcar resultados como PnL real. Esta decisão corrige/substitui a interpretação anterior de D113.

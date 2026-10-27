@@ -510,46 +510,29 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
         with self.assertRaisesRegex(DataValidationError, "at or before first-hit candle open"):
             evaluate(observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED), late_both)
 
-    def test_same_funding_calendar_is_order_invariant_across_branches(self):
-        """Equivalent event ledgers must not fail because of input ordering."""
+    def test_pre2_chronology_rejects_out_of_order_funding_on_both_sides(self):
+        """PRE6 must not mask a non-chronological PRE2 event ledger."""
         earlier = SyntheticFundingEvent(
             "fixture_funding_earlier", 2_200, D("1000"), D("5"))
         later = SyntheticFundingEvent(
             "fixture_funding_later", 2_500, D("1000"), D("-3"))
-        provenance = lambda events: tuple(
-            FundingProvenance(event, "fixture_source_rates", "SYNTHETIC_QUOTE")
-            for event in events)
-        for side, target_exit, stop_exit in (
-            (LONG, "110", "95"), (SHORT, "90", "110")
-        ):
-            target_events = (earlier, later)
-            stop_events = (later, earlier)
-            target = scenario(
-                identity="fixture_financial_target", side=side,
-                exit=target_exit, events=target_events,
-                provenance=provenance(target_events))
-            stop = scenario(
-                identity="fixture_financial_stop", side=side,
-                exit=stop_exit, barrier=SyntheticBarrier.STOP,
-                events=stop_events, provenance=provenance(stop_events))
-            with self.subTest(side=side):
-                result = evaluate(
-                    observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED),
-                    (target, stop), side=side)
-                self.assertEqual(len(result), 2)
-                self.assertEqual(result[0].costs.signed_funding_cost_units,
-                                 result[1].costs.signed_funding_cost_units)
-                changed = SyntheticFundingEvent(
-                    "fixture_funding_later", 2_500, D("1000"), D("-4"))
-                bad = replace(
-                    stop, costs=replace(stop.costs,
-                                        funding_events=(changed, earlier)),
-                    funding_provenance=provenance((changed, earlier)))
-                with self.assertRaisesRegex(DataValidationError,
-                                            "share funding event"):
-                    evaluate(
-                        observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED),
-                        (target, bad), side=side)
+        for side, exit_price in ((LONG, "110"), (SHORT, "90")):
+            for events in ((later, earlier), (earlier, later)):
+                row = scenario(
+                    side=side, exit=exit_price, events=events,
+                    provenance=tuple(
+                        FundingProvenance(
+                            event, "fixture_source_rates", "SYNTHETIC_QUOTE")
+                        for event in events))
+                with self.subTest(side=side, reversed=events[0] is later):
+                    if events[0] is later:
+                        with self.assertRaisesRegex(
+                                DataValidationError, "strictly chronological"):
+                            evaluate(observation(), (row,), side=side)
+                    else:
+                        result = evaluate(observation(), (row,), side=side)
+                        self.assertEqual(len(result), 1)
+                        self.assertFalse(result[0].net_pnl_verified)
 
     def test_module_has_no_network_storage_or_order_surface(self):
         source = (Path(__file__).resolve().parent.parent / "crypto_intelligence_agent" / "synthetic_financial_scenarios.py").read_text()

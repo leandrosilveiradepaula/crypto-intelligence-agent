@@ -502,3 +502,7 @@ O PO autorizou conexão read-only das contas Binance USD-M e Bybit na VPS Hostin
 ## D113 — Calendário de funding independente da ordem de entrada (J3 #208, 27/10/2026 UTC)
 
 O contrato D111 compara identidade/tempo/taxa/fonte dos settlements compartilhados, não a ordem em que fixtures equivalentes foram fornecidas. A comparação de tuplas na ordem de inserção rejeitava indevidamente os mesmos dois eventos declarados em ordens inversas em STOP/TARGET. **Decisão:** ordenar exclusivamente as chaves compartilhadas por (timestamp, event_id) para comparação de calendário, sem alterar os eventos ou a aritmética PRE2. Taxas, horários, IDs e origens divergentes continuam falhando. O ledger permanece hipotético; nenhum calendário de venue, fill, PnL, liquidação ou trade aprovado.
+
+## D113 — Correção de contrato PRE2 após CI (27/10/2026 UTC)
+
+A CI no SHA e51a114bcb5bf04f8a47d453c111a34c1e623781 revelou que PRE2 exige ledger de funding estritamente cronológico. Revertida a tentativa de aceitar permutações de eventos entre ramos; PRE6 mantém comparação exata D111 e PRE2 rejeita ordem inválida. Regressões LONG/SHORT cobrem entrada ordenada aceita e inversão rejeitada. Não alterar o contrato de custo, não inferir calendário de venue, nem marcar resultados como PnL real. Esta decisão corrige/substitui a interpretação anterior de D113.
