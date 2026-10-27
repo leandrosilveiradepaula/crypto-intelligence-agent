@@ -482,6 +482,34 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
         self.assertEqual(len(good), 3)
         self.assertTrue(all(not r.financial_backtest_approved for r in good))
 
+    def test_entry_must_precede_first_hit_candle_open_for_long_short_and_liquidation(self):
+        """No branch may consume a candle range that began before its entry."""
+        for side, exit_price in ((LONG, "110"), (SHORT, "90")):
+            row = scenario(side=side, exit=exit_price)
+            late = replace(row, costs=replace(row.costs, entry_at_ms=2_500))
+            with self.subTest(side=side), self.assertRaisesRegex(
+                    DataValidationError, "at or before first-hit candle open"):
+                evaluate(observation(), (late,), side=side)
+            # Both the exact open boundary and an already-open position are valid.
+            for entry_time in (1_999, 2_000):
+                existing = replace(row, costs=replace(row.costs, entry_at_ms=entry_time))
+                self.assertEqual(len(evaluate(observation(), (existing,), side=side)), 1)
+
+        liquid = scenario(resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+                          exit=None, loss="75")
+        late_liquid = replace(liquid, costs=replace(liquid.costs, entry_at_ms=2_500))
+        with self.assertRaisesRegex(DataValidationError, "at or before first-hit candle open"):
+            evaluate(observation(levels=(SyntheticBarrier.HYPOTHETICAL_LIQUIDATION,)),
+                     (late_liquid,), liquidation=True)
+
+        target = scenario()
+        stop = scenario(identity="fixture_financial_stop", exit="95",
+                        barrier=SyntheticBarrier.STOP)
+        late_both = tuple(replace(row, costs=replace(row.costs, entry_at_ms=2_500))
+                          for row in (target, stop))
+        with self.assertRaisesRegex(DataValidationError, "at or before first-hit candle open"):
+            evaluate(observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED), late_both)
+
     def test_module_has_no_network_storage_or_order_surface(self):
         source = (Path(__file__).resolve().parent.parent / "crypto_intelligence_agent" / "synthetic_financial_scenarios.py").read_text()
         for forbidden in ("urllib.request", "requests.", "sqlite3", "create_order(", "send_order(", "socket", "open("):

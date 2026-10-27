@@ -481,6 +481,12 @@ O PO autorizou conexão read-only das contas Binance USD-M e Bybit na VPS Hostin
 
 **Evidência:** testes LONG (target/stop) e SHORT (target/stop/liquidação) validam invariância da entrada, rejeitam cinco divergências e conservam alternativas de saída legítimas. Este gate impede **comparações sintéticas internamente inconsistentes**, não prova trajetória intrabar, preço de fill, fórmula de liquidação, funding de venue, PnL real, backtest, licença, sinal ou segurança a 50x. Não habilitar ordens/produção; issue #208 permanece aberta.
 
+## D110 — Entrada hipotética deve anteceder o primeiro candle de toque (J3 #208, 27/10/2026 UTC)
+
+**Falha corrigida:** o contrato PRE6 admitia `costs.entry_at_ms` depois de `first_candidate_open_time_ms` desde que a entrada sucedesse a criação do plano e a saída coubesse na vela. Como o OHLC não revela **quando** cada nível foi tocado, isso permitia atribuir uma saída hipotética ao intervalo da vela **anterior à abertura da posição**. A entrada compartilhada entre alternativas (D109) não elimina esse viés se todas as alternativas usarem o mesmo timestamp inválido.
+
+**Decisão:** para avaliar qualquer ramo financeiro sintético, exigir `barrier_plan.plan_created_at_ms <= costs.entry_at_ms <= observation.first_candidate_open_time_ms`. O limite inclusivo de abertura é uma **premissa temporal declarada**, não prova de execução no primeiro tick. Manter a saída explícita dentro do primeiro candle de toque e os demais contratos PRE1/PRE2. Rejeitar cenários tardios para LONG, SHORT, liquidação hipotética e múltiplas alternativas; aceitar entrada anterior ou exatamente na abertura da vela. Nenhum motor novo, rede, dados reais, inferência de trajetória, preço de fill, fórmula de liquidação, backtest financeiro aprovado ou autorização de ordens. Issue #208 segue aberta.
+
 ## D111 — Histórico de funding compartilhado antes da primeira saída hipotética (J3 #208, 27/10/2026 UTC)
 
 **Falha:** PRE6 permitia declarar eventos de funding anteriores à saída mais cedo em apenas um dos ramos STOP/TARGET/LIQUIDATION da **mesma posição sintética**, ou alterar silenciosamente ID, horário, taxa e fonte do mesmo settlement entre resultados. Isso confunde diferenças na duração da posição com históricos incompatíveis e pode distorcer `conditional_net_quote_units`.

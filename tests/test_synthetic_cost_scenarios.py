@@ -357,6 +357,80 @@ class SyntheticCostTests(unittest.TestCase):
                                  result.fees_and_slippage_units)
                 self.assertFalse(result.financial_backtest_approved)
 
+    def test_metamorphic_cost_matrix_both_sides_and_funding_signs(self):
+        """A larger adverse cost cannot improve a synthetic net outcome."""
+        for side in (L, S):
+            for funding_rate in ("-10000", "-0.000001", "0", "0.000001", "10000"):
+                for entry_notional, exit_notional in (
+                    ("0.000000000000000001", "0.000000000000000002"),
+                    ("1000", "800"),
+                    ("9999999999999999999999999", "1"),
+                ):
+                    with self.subTest(side=side, rate=funding_rate,
+                                      entry=entry_notional, exit=exit_notional):
+                        base = scenario(
+                            side=side, entry=entry_notional, exit=exit_notional,
+                            entry_fee="0", exit_fee="0",
+                            entry_slip="0", exit_slip="0",
+                            events=(funding(rate=funding_rate),),
+                        )
+                        baseline = evaluate_synthetic_costs(base)
+                        for field in (
+                            "entry_fee_bps", "exit_fee_bps",
+                            "entry_adverse_slippage_bps",
+                            "exit_adverse_slippage_bps",
+                        ):
+                            increased = replace(base, **{field: D("0.000001")})
+                            changed = evaluate_synthetic_costs(increased)
+                            self.assertGreater(
+                                changed.total_signed_cost_units,
+                                baseline.total_signed_cost_units,
+                            )
+                            self.assertEqual(
+                                changed.signed_funding_cost_units,
+                                baseline.signed_funding_cost_units,
+                            )
+                            self.assertFalse(changed.net_pnl_verified)
+
+    def test_funding_holding_window_and_duplicate_replay_matrix(self):
+        """Replay cannot move an event into a closed or unopened position."""
+        for side in (L, S):
+            for rate in ("-5", "0", "5"):
+                row = funding(rate=rate, at=START + 1)
+                with self.subTest(side=side, rate=rate):
+                    original = evaluate(side=side, events=(row,))
+                    replay = evaluate(side=side, events=(row, row))
+                    self.assertEqual(original.total_signed_cost_units,
+                                     replay.total_signed_cost_units)
+                    self.assertEqual(replay.exact_duplicate_count, 1)
+                    for start, end in ((START + 1, END), (START, START + 1)):
+                        with self.assertRaisesRegex(
+                                DataValidationError, "outside open holding"):
+                            evaluate(side=side, start=start, end=end,
+                                     events=(row,))
+
+    def test_global_decimal_precision_does_not_change_sign_or_monotonicity(self):
+        for side in (L, S):
+            original = scenario(
+                side=side, entry="123456789012345678.123456789012345678",
+                exit="987654321098765432.987654321098765432",
+                entry_fee="0.000001", exit_fee="0.000001",
+                entry_slip="0.000001", exit_slip="0.000001",
+                events=(funding(rate="-0.000001"),),
+            )
+            larger = replace(original, exit_fee_bps=D("0.000002"))
+            with localcontext() as ctx:
+                ctx.prec = 2
+                low = (evaluate_synthetic_costs(original),
+                       evaluate_synthetic_costs(larger))
+            with localcontext() as ctx:
+                ctx.prec = 400
+                high = (evaluate_synthetic_costs(original),
+                        evaluate_synthetic_costs(larger))
+            self.assertEqual(low, high)
+            self.assertGreater(low[1].total_signed_cost_units,
+                               low[0].total_signed_cost_units)
+
     def test_no_network_storage_or_live_trading_api(self):
         src = (Path(__file__).resolve().parent.parent
                / "crypto_intelligence_agent/synthetic_cost_scenarios.py").read_text()

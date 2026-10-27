@@ -318,3 +318,11 @@ Regredir LONG/SHORT com TARGET e STOP no mesmo primeiro candle: um settlement an
 ## J3/PRE6 #208 — cobertura exata sem duplicação de cenários (D112, 27/10/2026 UTC)
 
 Na mesma avaliação condicional, contar exatamente um cenário por barreira observada. Rejeitar TARGET+TARGET em observação de um nível; TARGET+STOP+TARGET ou STOP duplicado em observação de dois níveis; e duplicação do TARGET em trio SHORT com liquidação hipotética. Permutações legítimas de STOP/TARGET e trio STOP/TARGET/LIQUIDATION continuam válidas. Flags de prova financeira reais permanecem falsas. Testar em CI Linux/Windows/docs/Chrome no SHA final; não inferir peso estatístico da quantidade de ramos.
+
+## J3/PRE6 #208 — entrada não pode ocorrer após o início da vela que tocou a barreira (27/10/2026 UTC)
+
+Regressão de causalidade em `tests/test_synthetic_financial_scenarios.py`: cenários LONG e SHORT, perda hipotética de liquidação e duas alternativas de saída com **mesmo timestamp tardio** devem falhar se `entry_at_ms > first_candidate_open_time_ms`, mesmo que `exit_at_ms` caiba na vela e a entrada seja igual entre ramos. Entradas no limite exato da abertura ou anteriores continuam válidas. Verificar que a guarda PRE6 precede a contabilidade de custos; não alterar testes de stop/target, idempotência ou funding. Decisão D110. São fixtures, não prova de ordem intrabar, preenchimento, ganho, mark, liquidação ou exposição efetiva.
+
+## J3/OFFLINE #208 — matriz metamórfica de custos (27/10/2026 UTC)
+
+Ampliação de regressão **sem alterar o motor** em `tests/test_synthetic_cost_scenarios.py`: LONG/SHORT × cinco taxas de funding sintéticas (incluindo extremos e zero) × três pares de notionals assimétricos; cada aumento de fee/slippage adverso mantém funding constante e aumenta o custo líquido assinado. Replays exatos de funding preservam custo e contam duplicata, mas não autorizam eventos na entrada/saída; a mesma aritmética é testada sob precisão global Decimal 2 e 400. São fixtures sem calendário de funding de venue, preço de execução, backtest ou lucro verificado. A PR #222, que corrige entrada após início da vela de toque, é independente e ainda requer merge permitido.
