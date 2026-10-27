@@ -99,6 +99,20 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
             "reason": "Documented quote USDT/USDC; neither USD conversion nor live proof",
         },
         {
+            # A single approved public-market schema/candle sample from the
+            # owner's VPS, not a continuing data feed or live license.
+            "capability": "bybit_public_btcusdt_three_closed_1h_candles",
+            "status": "verified",
+            "evidence_kind": "owner_supplied_sanitized_ssh_output",
+            "source": "docs/J1_SOURCE_GATES.md",
+            "issue": 213,
+            "reason": (
+                "Only 3 closed 1h BTCUSDT Bybit V5 candles validated in a "
+                "single owner-run VPS probe on 2026-10-27; no storage, "
+                "historical coverage, public-data rights or trading approval"
+            ),
+        },
+        {
             "capability": "bybit_ticker_24h_units",
             "status": "blocked",
             "evidence_kind": "ticker_api_units_unattested",
@@ -112,7 +126,7 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
         },
     ]
     result = {
-        "schema_version": "j1-readiness-v2",
+        "schema_version": "j1-readiness-v3",
         "assessment_kind": "reviewed_repository_checkpoint_not_live",
         "ready_for_live_top50": False,
         "ready_for_canonical_ohlcv": False,
@@ -153,8 +167,44 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
                 "venue": "bybit_v5",
                 "market": "linear_perpetual_usdt_usdc",
                 "selection_status": "candidate_not_selected",
-                "data_conformance": "documented_schema_offline_only",
-                "last_observed_access": "first_instrument_get_restricted_no_candles",
+                "data_conformance": "one_owner_vps_btcusdt_3_closed_1h_validation",
+                "last_observed_access": "owner_vps_btcusdt_3_closed_1h_observed",
+                "previous_github_actions_public_probe": {
+                    "status": "bybit_access_or_region_restricted_no_retry",
+                    "observed_closed_candles": 0,
+                    "evidence_issue": 138,
+                    "environment": "github_actions_runner_not_owner_vps",
+                },
+                "public_market_research_observation": {
+                    "status": "private_real_bybit_base_btc_quote_usdt_observed",
+                    "observed_at_utc": "2026-10-27T13:07:29+00:00",
+                    "evidence_kind": "owner_supplied_sanitized_ssh_output",
+                    "evidence_issue": 213,
+                    "symbol": "BTCUSDT",
+                    "interval": "1h",
+                    "requests_attempted": 2,
+                    "validated_closed_candles": 3,
+                    "documented_base_unit": "BTC",
+                    "documented_turnover_quote_unit": "USDT_not_USD",
+                    "instrument_response_sha256": (
+                        "cf3fbdc4bfe2f12c191cf122ca81f2e938c11111f7d6dbb9a075e16a7cf51651"
+                    ),
+                    "kline_response_sha256": (
+                        "6e1727c293014f5aee5c596e90688ea6e6e091f21a9fbee0947862f75d7876d0"
+                    ),
+                    "registry_sha256": (
+                        "a95179a342289833f3b14f0c2442163acdcb32f1ca0c9569fa01adeaa3534746"
+                    ),
+                    "current_access_rechecked": False,
+                    "raw_market_data_stored": False,
+                    "provider_signed_provenance_verified": False,
+                    "historical_top50_approved": False,
+                    "canonical_ohlcv_approved": False,
+                    "public_or_commercial_rights_authorized": False,
+                    "ready_for_trading": False,
+                    "orders_sent": False,
+                    "credentials_used": False,
+                },
                 # This field concerns a PRIVATE GET with the owner's HMAC
                 # read-only key. It is NOT a successful PUBLIC market-data GET
                 # and does not authorize market data, trading or distribution.
