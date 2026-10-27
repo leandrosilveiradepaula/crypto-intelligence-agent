@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.market_data import DataValidationError, MarketDataError
 from crypto_intelligence_agent.offline_paper_batch import (
     MAX_NEW_STEPS, OfflinePaperBatchReport, run_durable_offline_paper_batch,
 )
@@ -145,7 +145,7 @@ class OfflinePaperBatchTests(unittest.TestCase):
         )
         for changes in cases:
             with self.subTest(changes=str(changes)[:65]), self.assertRaises(
-                (DataValidationError, ValueError)
+                (MarketDataError, ValueError)
             ):
                 self.run_batch(**changes)
             self.assertEqual(self.inventory()[0], 0)
