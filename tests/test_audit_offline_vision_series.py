@@ -101,7 +101,7 @@ class PrivateVisionSeriesAuditTests(unittest.TestCase):
         original = target.read_bytes()
         for mode in ("missing", "public", "symlink", "hardlink", "tampered"):
             with self.subTest(mode=mode):
-                target.unlink()
+                target.unlink(missing_ok=True)
                 if mode == "missing":
                     with self.assertRaises(VisionLocalAuditError):
                         self.run_audit()
@@ -120,7 +120,7 @@ class PrivateVisionSeriesAuditTests(unittest.TestCase):
                         self.run_audit()
                     if mode == "hardlink":
                         (self.root / "extra-link").unlink()
-        target.unlink()
+        target.unlink(missing_ok=True)
         target.write_bytes(original)
         target.chmod(0o600)
         self.assertEqual(self.run_audit()["archive_count"], 2)
