@@ -18,8 +18,8 @@ from crypto_intelligence_agent.offline_vision_series import assemble_offline_vis
 from scripts.audit_private_bybit_json import _read_private_file
 
 _SCHEMA = "vision-local-series-v1"
-_NAME = re.compile(r"[A-Z0-9]{2,20}USDT-1h-20[0-9]{2}-(0[1-9]|1[0-2])\\.zip\\Z")
-_HASH = re.compile(r"[a-f0-9]{64}\\Z")
+_NAME = re.compile(r"[A-Z0-9]{2,20}USDT-1h-20[0-9]{2}-(0[1-9]|1[0-2])\.zip\Z")
+_HASH = re.compile(r"[a-f0-9]{64}\Z")
 _MAX_ZIP_BYTES = 8_000_000
 _MAX_TOTAL_ZIP_BYTES = 192_000_000
 
