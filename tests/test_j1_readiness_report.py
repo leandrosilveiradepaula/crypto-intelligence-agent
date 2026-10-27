@@ -53,10 +53,12 @@ class ReadinessSnapshotTests(unittest.TestCase):
                          "first_instrument_get_restricted_no_candles")
         for row in candidates:
             self.assertEqual(row["selection_status"], "candidate_not_selected")
-            for flag in ("account_access_verified", "live_signal_approved",
-                         "automated_execution_approved", "exchange_order_adapter_live_approved",
+            for flag in ("live_signal_approved", "automated_execution_approved",
+                         "exchange_order_adapter_live_approved",
                          "order_execution_enabled"):
                 self.assertFalse(row[flag])
+        self.assertFalse(candidates[0]["account_access_verified"])
+        self.assertTrue(candidates[1]["account_access_verified"])
         self.assertFalse(report["ready_for_live_top50"])
         bybit = candidates[1]
         self.assertEqual(
@@ -66,6 +68,54 @@ class ReadinessSnapshotTests(unittest.TestCase):
         self.assertFalse(bybit["ticker_volume_unit_verified"])
         self.assertFalse(report["ready_for_canonical_ohlcv"])
         self.assertFalse(report["ready_for_public_market_data_release"])
+
+    def test_owner_auth_is_dated_not_market_data_or_trading_authorization(self):
+        report = readiness_snapshot()
+        binance, bybit = report["automated_execution_candidates"]
+        self.assertEqual(binance["last_observed_access"], "http_451_restricted")
+        self.assertEqual(bybit["last_observed_access"],
+                         "first_instrument_get_restricted_no_candles")
+        expected = (
+            (binance, "access_or_region_restricted", False),
+            (bybit, "authenticated_read_only_key_confirmed", True),
+        )
+        for candidate, status, attested in expected:
+            with self.subTest(venue=candidate["venue"]):
+                observed = candidate["private_api_auth_observation"]
+                self.assertEqual(observed["status"], status)
+                self.assertEqual(observed["observed_date_utc"], "2026-10-27")
+                self.assertEqual(observed["evidence_kind"],
+                                 "owner_supplied_sanitized_ssh_output")
+                self.assertEqual(observed["evidence_issue"], 205)
+                self.assertIs(observed["read_only_scope_attested_by_endpoint"],
+                              attested)
+                self.assertFalse(observed["current_access_rechecked"])
+                self.assertFalse(candidate["live_signal_approved"])
+                self.assertFalse(candidate["automated_execution_approved"])
+                self.assertFalse(candidate["order_execution_enabled"])
+        # Signed account authentication does NOT prove public candlesticks,
+        # ticker units, historical Top50, rights, or permission to trade.
+        self.assertFalse(report["ready_for_canonical_ohlcv"])
+        self.assertFalse(report["ready_for_live_top50"])
+        self.assertFalse(report["ready_for_public_market_data_release"])
+        self.assertFalse(report["ready_for_live_order_execution"])
+
+    def test_owner_auth_report_mutation_cannot_promote_gates(self):
+        first = readiness_snapshot()
+        first["automated_execution_candidates"][0]["private_api_auth_observation"][
+            "status"] = "authenticated_read_only_key_confirmed"
+        first["automated_execution_candidates"][1]["private_api_auth_observation"][
+            "read_only_scope_attested_by_endpoint"] = False
+        first["automated_execution_candidates"][1]["account_access_verified"] = False
+        again = readiness_snapshot()
+        self.assertEqual(again["automated_execution_candidates"][0][
+            "private_api_auth_observation"]["status"],
+                         "access_or_region_restricted")
+        self.assertTrue(again["automated_execution_candidates"][1][
+            "private_api_auth_observation"]["read_only_scope_attested_by_endpoint"])
+        self.assertTrue(again["automated_execution_candidates"][1][
+            "account_access_verified"])
+        self.assertFalse(again["ready_for_live_order_execution"])
 
     def test_mutated_candidate_cannot_change_future_gate(self):
         rows = readiness_snapshot()["automated_execution_candidates"]

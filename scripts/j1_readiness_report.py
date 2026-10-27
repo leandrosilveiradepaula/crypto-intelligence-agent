@@ -131,6 +131,17 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
                 "selection_status": "candidate_not_selected",
                 "data_conformance": "offline_fixtures_only",
                 "last_observed_access": "http_451_restricted",
+                # A separate, later PRIVATE signed GET from the owner's VPS was
+                # rejected with a sanitized status. Its HTTP code/cause is unknown.
+                # The public HTTP451 feed observation above remains independent.
+                "private_api_auth_observation": {
+                    "status": "access_or_region_restricted",
+                    "observed_date_utc": "2026-10-27",
+                    "evidence_kind": "owner_supplied_sanitized_ssh_output",
+                    "evidence_issue": 205,
+                    "read_only_scope_attested_by_endpoint": False,
+                    "current_access_rechecked": False,
+                },
                 "quote_currency": "USDT",
                 "account_access_verified": False,
                 "live_signal_approved": False,
@@ -144,11 +155,24 @@ def readiness_snapshot(*, evidence_json: str | bytes | None = None,
                 "selection_status": "candidate_not_selected",
                 "data_conformance": "documented_schema_offline_only",
                 "last_observed_access": "first_instrument_get_restricted_no_candles",
+                # This field concerns a PRIVATE GET with the owner's HMAC
+                # read-only key. It is NOT a successful PUBLIC market-data GET
+                # and does not authorize market data, trading or distribution.
+                "private_api_auth_observation": {
+                    "status": "authenticated_read_only_key_confirmed",
+                    "observed_date_utc": "2026-10-27",
+                    "evidence_kind": "owner_supplied_sanitized_ssh_output",
+                    "evidence_issue": 205,
+                    "read_only_scope_attested_by_endpoint": True,
+                    "current_access_rechecked": False,
+                },
                 "quote_currency": "USDT_or_USDC_not_USD",
                 "ticker_turnover_unit_verified": False,
                 "ticker_volume_unit_verified": False,
                 "ticker_units_evidence_scope": "v5_rest_ticker_field_not_attested",
-                "account_access_verified": False,
+                # Historical successful owner-run account-auth probe, as of the
+                # date above. NOT an assertion that the key remains valid now.
+                "account_access_verified": True,
                 "live_signal_approved": False,
                 "automated_execution_approved": False,
                 "exchange_order_adapter_live_approved": False,

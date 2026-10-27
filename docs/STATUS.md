@@ -294,3 +294,11 @@ O usuário autorizou **somente conexão de leitura** de suas contas Binance e By
 ### J1/AUTH1 — instalação offline real, autenticação pendente (26/10/2026 UTC)
 
 O titular demonstrou as duas saídas `offline_network_disabled` na VPS Hostinger e checkout SHA `3dd2980eb8d1ddb93c8d8928a3336f8aac53c00b`. Próxima entrega na issue #205 é launcher seguro de credenciais `scripts/run_private_exchange_readonly_tty.py` para **uma GET autenticada por corretora** somente após verificação de chave exclusivamente de leitura; CI/PR sob avaliação. Nenhuma solicitação autenticada, ordem, saldo ou deploy.
+
+## Checkpoint AUTH1 e J4 — 27/10/2026 UTC
+
+**Bybit:** GET assinada privada HMAC com chave somente leitura foi autenticada na VPS do titular, retornando `authenticated_read_only_key_confirmed` e flags de ordens/saldo/trading negativas. **Binance:** titular criou chave HMAC de leitura com allowlist do IP da VPS e direitos de negociação desativados na interface; GET assinada retornou `access_or_region_restricted` (erro HTTP preciso **desconhecido**; a categoria inclui 401/403/418/451). Evidências sanitizadas: issue #205. Não repetir requisição negada ou transferir segredo/identificador ao GitHub.
+
+**J1 #2 permanece BLOQUEADA:** não há GET público de candles validado nessa VPS, autorização de dados, volume canônico, universo Top50 histórico, feed operacional ou homologação financeira. Autenticação de chave Bybit ≠ validação do feed. O relatório offline J1 inclui observação de autenticação datada, sem concessão de negociação ou dados. Próximo caminho: evidência legítima de market data e direitos, mantendo regressões sintéticas independentes.
+
+**J4/J3:** PR #211 de conservação do residual e duplicatas sintéticas integrada sem produção em `552aa5cb0b5a5c10e65ddcadade226e9ae67ac5e`, com CI da PR #40426971446/#40426971471 e CI pós-merge #40505375800/#40505375696 SUCCESS. Não há ordens, deploy ou custo adicional.

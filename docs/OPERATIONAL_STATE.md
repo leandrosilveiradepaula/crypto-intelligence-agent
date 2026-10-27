@@ -331,3 +331,15 @@ Dois testes de integração em `test_synthetic_intrabar_barriers.py` mantêm sep
 ### J4/J3 OFFLINE #208 — runner residual em prefixos (26/10/2026 UTC)
 
 Dois testes metamórficos em `tests/test_synthetic_manual_exit_replay.py` verificam conservação `filled + remaining = initial` e piso residual após cada prefixo de fills sintéticos, além da neutralidade de eventos duplicados na reserva do runner. Nenhuma execução real, preço, PnL, funding, ledger persistente ou aprovação financeira. Branch `work/issue-208-j4-residual-metamorphic`; PR/CI a confirmar. #205 continua adiada durante acesso apenas móvel do PO.
+
+## Checkpoint operacional AUTH1/J1 — 27/10/2026 UTC
+
+**Jornada:** J1 #2, trilha AUTH1 #205 (aberta), dependências #19/#32/#36/#48/#196. **Bybit:** o Product Owner forneceu a saída sanitizada da execução real em SSH privado da Hostinger, `venue=bybit`, `status=authenticated_read_only_key_confirmed`, `orders_sent=false`, `balances_exported=false`, `trading_enabled=false`. O parser verifica o `readOnly=1` do endpoint privado `/v5/user/query-api`. A chamada foi realizada pelo titular, não pelo agente no VPS. A primeira chave exposta em screenshot foi declarada revogada; não publicar chave/secret, nem considerar revogação verificada via API.
+
+**Binance:** configuração HMAC `Enable Reading` e direitos de trading/saque desativados vista na interface; titular confirmou IP de VPS permitido. O mesmo diagnóstico privado (uma GET `/fapi/v1/positionSide/dual`) retornou `venue=binance`, `status=access_or_region_restricted`, com flags negativas de ordens/saldo/trading. Esse código agrega HTTP 401/403/418/451 e não confirma login, erro regional exato ou escopo da chave. **Sem retries, outros domínios/IPs, VPN ou proxy.** Issue #205 registra ambas as respostas. Nenhuma ordem, operação financeira, exposição de dados de conta ou custo.
+
+**Fato técnico separado:** conta Bybit autenticada na VPS ≠ acesso Bybit ao feed público; prova de market `instruments`/`klines`, direitos de uso, volume REST ticker 24h, identidade Top50, histórico e backtest financeiro permanecem pendentes. `scripts/j1_readiness_report.py` apresenta observação datada do titular e bloqueia automaticamente todos os indicadores live, top50, canônico e publicação. **Próximo passo autorizado:** preparar/validar fluxo de mercado somente em ambiente e finalidade permitidos, sem presumir que auth privada libera a API pública; em paralelo, testes offline e qualidade de engenharia.
+
+**Entrega independente integrada:** PR #211 (J4/J3 #208) squash merge `552aa5cb0b5a5c10e65ddcadade226e9ae67ac5e`; PR CI `40426971446` (Linux/Windows/docs) + `40426971471` (Chrome) SUCCESS, pós-merge CI `40505375800` + `40505375696` SUCCESS. Testes sobre fills **sintéticos** de conservação por prefixo e idempotência de duplicata; nenhuma posição real nem J6 homologada.
+
+**Tarefa atual:** alinhar snapshot J1 com AUTH1 em branch `work/issue-205-auth1-readiness-evidence`, submeter PR e revisar CI/SHA, sem mudanças de execução, VPS, rede, credenciais, trades ou deploy. Registrar SHA e aceite após conclusão, sem presumir PR aberta/merge antes de verificar.
