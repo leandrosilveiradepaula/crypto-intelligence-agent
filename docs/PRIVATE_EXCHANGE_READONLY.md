@@ -63,3 +63,11 @@ runuser -u cia-probe -- sh -c 'cd /home/cia-probe/agent/repo && python3 -m scrip
 ```
 
 As duas entradas são solicitadas invisivelmente em cada execução. Somente o JSON com status sanitizado pode ser comunicado. **Jamais** copiar key, secret, UID, cabeçalhos, respostas brutas, IP/hostname ou captura do terminal. Autenticar não valida dados de mercado nem habilita ordens ou deploy de trading.
+
+### AUTH1 — resultados owner-run na Hostinger (27/10/2026 UTC)
+
+O titular realizou a primeira autenticação real **somente leitura** com o launcher TTY revisado: Bybit V5 `authenticated_read_only_key_confirmed`, com todos os indicadores de ordem, saldo e trading negativos. Esse status resulta da verificação do campo inteiro `readOnly=1` pelo diagnóstico em uma única GET assinada. A evidência foi apresentada como JSON sanitizado pelo titular, **sem controle SSH direto por esta conversa**. Uma chave Bybit que apareceu em captura de tela foi reportada como excluída; o diagnóstico bem-sucedido utilizou credenciais posteriores, nunca incluídas no repositório.
+
+Na Binance USD-M, o titular reportou configuração HMAC de **leitura apenas**, permissões de trading/saque desativadas e IP da VPS autorizado; a tentativa real retornou **`access_or_region_restricted`**. O programa unifica erros HTTP 401, 403, 418 e 451 nessa classe, portanto **não é possível determinar a causa nem alegar autenticação válida**. Não repetir ou contornar o bloqueio; a autorização de conexão permanece limitada a leitura privada. A issue #205 documenta as duas evidências e continua aberta.
+
+O êxito da autenticação privada **não** constitui prova de acesso ao endpoint público de mercado, de licença de dados, qualidade/histórico do feed, execução automática ou segurança para negociar. `scripts/j1_readiness_report.py` discrimina os resultados datados, sem revalidar chaves nem habilitar gates financeiros.
