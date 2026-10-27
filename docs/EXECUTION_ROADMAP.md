@@ -66,3 +66,9 @@ Executar PAPER prospectivo com dados reais autorizados, observabilidade, replays
 ## Checkpoint executado — 26/10/2026 UTC
 
 A etapa 1, J6/PRE2 #200, teve **aceite limitado à simulação**: PR #201 / #202 / #203 integradas e CI pós-merge `5ee3312b362387a37bc3f403914741a5a33676ea` verde (runs #40392712218 e #40392711941). Não representa a conclusão da J6 épica #7. O próximo foco autorizado é **etapa 2, J1 #2**, conforme matriz WU51 em `docs/J1_SOURCE_GATES.md`, sem repetição de sondas já bloqueadas nem promoção de fonte sem comprovação.
+
+
+
+## J1/WU55 #217 — elo funcional offline arquivo -> SQLite Bybit (27/10/2026)
+
+Prioridade modificada apos encerrar #208 sinteticamente: reduzir friccao ate obter historico real legal, em vez de infinitas microbaterias J3. scripts/import_private_bybit_research.py entrega importacao de manifest+instrument+kline local POSIX 0600 para SQLiteBybitResearchStore ja existente, com 3 opt-ins explicitos, permissao 0700, auditor WU48, commit atomico, replay/quality, falha sem I/O se falta consentimento, zero HTTP e nenhum arquivo real usado. Testes offline simulam ate tres candles e replay entre sessoes; resultados nunca promovem ClosedCandle/Top50/J2/J3/ordens. FAQ oficial Bybit agora traz referencia primaria de semantica generica turnover/volume e recomendacao de cache; legal/API Terms atual continua inconclusivo. **Nao alterar rights_authorized=false, nao coletar dados reais retentivos nem executar na VPS sem gate especifico.** Issue #217 continua aberta para autorizacao legal de retenção; #196 ticker 24h necessita confirmacao endpoint-specific/real; J1 #2 e J3 #4 abertas. Testar PR SHA exato com jobs docs/windows-offline/Chrome-PAPER e conferir merge/nonprod antes de considerar entrega concluida. Nenhum custo, ordem, rede market ou deploy.
