@@ -321,3 +321,8 @@ O PO comprovou execução `offline_network_disabled` em Binance e Bybit na VPS e
 ### J3/OFFLINE #208 — regressões metamórficas de custos (26/10/2026 UTC)
 
 Em `tests/test_synthetic_cost_scenarios.py`, novas invariantes sintéticas verificam que aumentar qualquer taxa ou slippage adverso não reduz custos, funding LONG/SHORT é antissimétrico, eventos idênticos duplicados não são cobrados duas vezes e intervalo sem funding não gera custo de funding. Sem cálculo de PnL, preço de liquidação, aprovação financeira, rede ou corretora. As lacunas de intrabar/liquidação/residual ainda exigem inventário separado; não alegar cobertura de #208 completa. Dependência #205 suspensa enquanto PO está somente no celular por aproximadamente 2–3 horas a partir de 26/10/2026 22:04 UTC; não pedir SSH/chaves. Branch `work/issue-208-j3-cost-metamorphic`; CI/PR pendentes de confirmação.
+
+
+### J3/OFFLINE #208 — barreiras e custos não implicam fill (26/10/2026 UTC)
+
+Dois testes de integração em `test_synthetic_intrabar_barriers.py` mantêm separadas a observação OHLC de STOP/TARGET/LIQUIDATION e a aritmética de custos sintéticos. Custos calculados, inclusive zero, não certificam ordem intrabar, fill, preço de liquidação, PnL ou rentabilidade. A issue #208 continua aberta para cobertura residual e revisão de lacunas; #205 aguarda acesso privado do titular, que está apenas no celular. Branch `work/issue-208-j3-cross-module-invariants`; CI pendente de confirmação, sem ordens/rede/deploy.
