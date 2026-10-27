@@ -254,6 +254,27 @@ def evaluate_conditional_financial_scenarios(
         if (row.costs.entry_at_ms < barrier_plan.plan_created_at_ms
                 or not opened <= row.costs.exit_at_ms <= closed):
             raise DataValidationError("explicit exit event outside observed synthetic barrier candle")
+    # Alternative exits refer to one position. A settlement before the
+    # earliest hypothetical exit cannot disappear or change its event identity
+    # merely because STOP/TARGET/LIQUIDATION is selected afterwards. The
+    # notional itself may vary with an explicitly assumed intrabar mark path.
+    earliest_exit_at_ms = min(row.costs.exit_at_ms for row in rows)
+
+    def shared_funding_schedule(row: ConditionalFinancialScenario) -> tuple:
+        return tuple(
+            (source.event.event_id, source.event.event_at_ms,
+             source.event.signed_funding_rate_bps, source.source_id,
+             source.quote_currency, source.positive_rate_means)
+            for source in row.funding_provenance
+            if source.event.event_at_ms < earliest_exit_at_ms
+        )
+
+    schedule = shared_funding_schedule(rows[0])
+    if any(shared_funding_schedule(row) != schedule for row in rows[1:]):
+        raise DataValidationError(
+            "alternative financial branches must share funding event identity, "
+            "time, rate and source before their earliest exit"
+        )
     with localcontext(_EXACT):
         results: list[ConditionalFinancialResult] = []
         for row in rows:

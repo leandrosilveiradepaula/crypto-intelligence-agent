@@ -293,6 +293,145 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
             evaluate(alternate, (target, stop, invalid_liquidation),
                      side=SHORT, liquidation=True)
 
+    def test_shared_pre_exit_funding_schedule_long_short(self):
+        """One open position cannot silently drop a prior settlement."""
+        event = funding("5")
+        provenance = (FundingProvenance(
+            event, "fixture_source_rates", "SYNTHETIC_QUOTE"),)
+        for side, target_exit, stop_exit in (
+            (LONG, "110", "95"), (SHORT, "90", "110"),
+        ):
+            target = scenario(
+                identity="fixture_financial_target", side=side, exit=target_exit,
+                events=(event,), provenance=provenance)
+            stop = scenario(
+                identity="fixture_financial_stop", side=side, exit=stop_exit,
+                barrier=SyntheticBarrier.STOP, events=(event,),
+                provenance=provenance)
+            with self.subTest(side=side):
+                observed = observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED)
+                results = evaluate(observed, (target, stop), side=side)
+                self.assertEqual(len(results), 2)
+                self.assertEqual(
+                    results[0].costs.signed_funding_cost_units,
+                    results[1].costs.signed_funding_cost_units)
+                with self.assertRaisesRegex(DataValidationError,
+                                            "share funding event"):
+                    evaluate(observed, (target, replace(
+                        stop, costs=replace(stop.costs, funding_events=()),
+                        funding_provenance=())), side=side)
+
+    def test_pre_exit_funding_identity_rate_time_and_source_are_shared(self):
+        event = funding("5")
+        common_provenance = (FundingProvenance(
+            event, "fixture_source_rates", "SYNTHETIC_QUOTE"),)
+        target = scenario(events=(event,), provenance=common_provenance)
+        stop = scenario(
+            identity="fixture_financial_stop", exit="95",
+            barrier=SyntheticBarrier.STOP, events=(event,),
+            provenance=common_provenance)
+        observed = observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED)
+        changes = (
+            SyntheticFundingEvent(
+                "fixture_funding_different", 2_500, D("1000"), D("5")),
+            SyntheticFundingEvent(
+                "fixture_funding_a", 2_600, D("1000"), D("5")),
+            SyntheticFundingEvent(
+                "fixture_funding_a", 2_500, D("1000"), D("6")),
+        )
+        for mutated in changes:
+            with self.subTest(event=mutated):
+                alternative = replace(
+                    stop, costs=replace(stop.costs, funding_events=(mutated,)),
+                    funding_provenance=(FundingProvenance(
+                        mutated, "fixture_source_rates", "SYNTHETIC_QUOTE"),))
+                with self.assertRaisesRegex(DataValidationError,
+                                            "share funding event"):
+                    evaluate(observed, (target, alternative))
+        other_source = replace(
+            stop, funding_provenance=(FundingProvenance(
+                event, "fixture_source_other", "SYNTHETIC_QUOTE"),))
+        with self.assertRaisesRegex(DataValidationError, "share funding event"):
+            evaluate(observed, (target, other_source))
+
+    def test_funding_notional_may_vary_by_path_and_later_exit(self):
+        original = funding("5")
+        changed_notional = SyntheticFundingEvent(
+            "fixture_funding_a", 2_500, D("2000"), D("5"))
+        target = scenario(
+            events=(original,), provenance=(FundingProvenance(
+                original, "fixture_source_rates", "SYNTHETIC_QUOTE"),))
+        stop = scenario(
+            identity="fixture_financial_stop", exit="95",
+            barrier=SyntheticBarrier.STOP, events=(changed_notional,),
+            provenance=(FundingProvenance(
+                changed_notional, "fixture_source_rates", "SYNTHETIC_QUOTE"),))
+        observed = observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED)
+        results = evaluate(observed, (target, stop))
+        self.assertEqual(results[0].costs.signed_funding_cost_units, D("0.5"))
+        self.assertEqual(results[1].costs.signed_funding_cost_units, D("1"))
+        self.assertTrue(all(not row.net_pnl_verified for row in results))
+
+        after_earliest_exit = SyntheticFundingEvent(
+            "fixture_funding_later", 3_250, D("1000"), D("5"))
+        later_stop = replace(
+            scenario(identity="fixture_financial_stop", exit="95",
+                     barrier=SyntheticBarrier.STOP),
+            costs=replace(
+                stop.costs, exit_at_ms=3_500,
+                funding_events=(after_earliest_exit,)),
+            funding_provenance=(FundingProvenance(
+                after_earliest_exit, "fixture_source_rates",
+                "SYNTHETIC_QUOTE"),))
+        # The first branch exits at 3_000; an event at 3_250 only
+        # belongs to the branch still holding the hypothetical position.
+        self.assertEqual(len(evaluate(observed, (scenario(), later_stop))), 2)
+
+    def test_liquidation_branch_must_retain_prior_funding(self):
+        event = funding("5")
+        provenance = (FundingProvenance(
+            event, "fixture_source_rates", "SYNTHETIC_QUOTE"),)
+        target = scenario(
+            identity="fixture_financial_short_target", side=SHORT,
+            exit="90", events=(event,), provenance=provenance)
+        liquidation = scenario(
+            identity="fixture_financial_short_liquidation",
+            side=SHORT, resolution=ScenarioResolution.EXPLICIT_LIQUIDATION_LOSS,
+            exit=None, loss="75")
+        observed = observation(
+            ObservationKind.MULTIPLE_LEVELS_UNORDERED,
+            levels=(SyntheticBarrier.TARGET,
+                    SyntheticBarrier.HYPOTHETICAL_LIQUIDATION))
+        with self.assertRaisesRegex(DataValidationError, "share funding event"):
+            evaluate(observed, (target, liquidation),
+                     side=SHORT, liquidation=True)
+        same_history = replace(
+            liquidation, costs=replace(liquidation.costs,
+                                       funding_events=(event,)),
+            funding_provenance=provenance)
+        results = evaluate(
+            observed, (target, same_history), side=SHORT, liquidation=True)
+        self.assertEqual(len(results), 2)
+        self.assertTrue(all(not row.liquidation_formula_verified
+                            for row in results))
+
+    def test_funding_at_earliest_exit_instant_remains_conditional(self):
+        at_boundary = SyntheticFundingEvent(
+            "fixture_funding_boundary", 3_000, D("1000"), D("5"))
+        late = scenario(
+            identity="fixture_financial_stop", exit="95",
+            barrier=SyntheticBarrier.STOP, events=(at_boundary,),
+            provenance=(FundingProvenance(
+                at_boundary, "fixture_source_rates", "SYNTHETIC_QUOTE"),))
+        late = replace(late, costs=replace(late.costs, exit_at_ms=3_500))
+        result = evaluate(
+            observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED),
+            (scenario(), late))
+        self.assertEqual(len(result), 2)
+        self.assertFalse(result[1].funding_schedule_verified
+                         if hasattr(result[1], "funding_schedule_verified")
+                         else result[1].costs.funding_schedule_verified)
+
     def test_module_has_no_network_storage_or_order_surface(self):
         source = (Path(__file__).resolve().parent.parent / "crypto_intelligence_agent" / "synthetic_financial_scenarios.py").read_text()
         for forbidden in ("urllib.request", "requests.", "sqlite3", "create_order(", "send_order(", "socket", "open("):
