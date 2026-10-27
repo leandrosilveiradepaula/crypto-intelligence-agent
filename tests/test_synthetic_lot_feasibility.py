@@ -343,5 +343,37 @@ class SyntheticLotFeasibilityTests(unittest.TestCase):
             self.assertFalse(hasattr(out, field))
 
 
+    def test_leverage_and_margin_cannot_override_hypothetical_runner_minimum(self):
+        """A 50x fixture cannot bless an untradeable residual by itself."""
+        for side in (SyntheticSide.LONG, SyntheticSide.SHORT):
+            for leverage in (1, 50, 200):
+                for margin in ("1", "5"):
+                    identity = f"fixture_{side.value}_{leverage}_{margin}"
+                    with self.subTest(side=side, leverage=leverage, margin=margin):
+                        p = open_synthetic_position(
+                            fixture_position_id=identity, side=side,
+                            opened_at_ms=START, exit_plan=synthetic_plan(),
+                            synthetic_margin_units=D(margin),
+                            settings=SyntheticLeverageSettings(leverage),
+                        )
+                        fills = (
+                            fictitious_fill("a", 1, "50", identity, START+1),
+                            fictitious_fill("b", 2, "30", identity, START+2),
+                            fictitious_fill("c", 3, "14", identity, START+3),
+                        )
+                        valid = assess(pos=p, rule=lot("2", "2", "6"), events=fills)
+                        bad = assess(pos=p, rule=lot("2", "2", "7"), events=fills)
+                        self.assertTrue(valid.arithmetically_compatible)
+                        self.assertFalse(bad.arithmetically_compatible)
+                        self.assertEqual(valid.planned_remaining_units, D("6"))
+                        self.assertEqual(valid.current_remaining_units, D("6"))
+                        self.assertEqual(bad.current_remaining_units, D("6"))
+                        self.assertFalse(bad.planned_remaining_minimum_ok)
+                        self.assertFalse(bad.current_remaining_minimum_ok)
+                        self.assertFalse(valid.venue_lot_step_verified)
+                        self.assertFalse(valid.approved_for_live_use)
+                        self.assertFalse(valid.orders_sent)
+
+
 if __name__ == "__main__":
     unittest.main()
