@@ -1,6 +1,7 @@
 """WU54 adversarial offline tests: never promotes research data to financial feed."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import FrozenInstanceError
 from decimal import Decimal
 import json
@@ -45,6 +46,20 @@ def sample(*, offset=0, symbol="BTCUSDT"):
         json.dumps(prices).encode("utf-8"),
         manifest,
     )
+
+
+@contextmanager
+def db_session(path):
+    """Always CLOSE SQLite handles before TemporaryDirectory cleanup on Windows."""
+    connection = sqlite3.connect(path)
+    try:
+        yield connection
+        connection.commit()
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.close()
 
 
 class BybitResearchStoreTests(unittest.TestCase):
@@ -98,7 +113,7 @@ class BybitResearchStoreTests(unittest.TestCase):
             result.candles[0].close = Decimal(1)
 
     def test_separate_sqlite_schema_and_reject_existing_canonical_file(self):
-        with sqlite3.connect(self.db_path) as db:
+        with db_session(self.db_path) as db:
             tables = {r[0] for r in db.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )}
@@ -116,7 +131,7 @@ class BybitResearchStoreTests(unittest.TestCase):
         SQLiteMarketDataStore(path)
         with self.assertRaisesRegex(DataValidationError, "canonical"):
             SQLiteBybitResearchStore(path)
-        with sqlite3.connect(path) as db:
+        with db_session(path) as db:
             self.assertFalse(db.execute(
                 "SELECT 1 FROM sqlite_master WHERE name='bybit_research_pages'"
             ).fetchone())
@@ -131,7 +146,7 @@ class BybitResearchStoreTests(unittest.TestCase):
             start_open_ms=START + 3 * HOUR,
             end_open_ms=END + 3 * HOUR,
         ))
-        with sqlite3.connect(self.db_path) as db:
+        with db_session(self.db_path) as db:
             self.assertEqual(db.execute(
                 "SELECT COUNT(*) FROM bybit_research_pages"
             ).fetchone()[0], 2)
@@ -177,7 +192,7 @@ class BybitResearchStoreTests(unittest.TestCase):
             self.commit(sample(offset=1))
         with self.assertRaises(DataValidationError):
             self.commit(sample(offset=3), capture_environment="private_local_unverified")
-        with sqlite3.connect(self.db_path) as db:
+        with db_session(self.db_path) as db:
             self.assertEqual(db.execute(
                 "SELECT COUNT(*) FROM bybit_research_pages"
             ).fetchone()[0], 1)
@@ -199,7 +214,7 @@ class BybitResearchStoreTests(unittest.TestCase):
         self.assertFalse(quality.complete_for_offline_staging_only)
 
     def test_rollback_if_middle_candle_insert_fails(self):
-        with sqlite3.connect(self.db_path) as db:
+        with db_session(self.db_path) as db:
             db.execute(f"""
                 CREATE TRIGGER abort_middle BEFORE INSERT
                 ON bybit_research_candles
@@ -208,7 +223,7 @@ class BybitResearchStoreTests(unittest.TestCase):
             """)
         with self.assertRaises(sqlite3.IntegrityError):
             self.commit()
-        with sqlite3.connect(self.db_path) as db:
+        with db_session(self.db_path) as db:
             self.assertEqual(db.execute(
                 "SELECT COUNT(*) FROM bybit_research_pages"
             ).fetchone()[0], 0)
@@ -235,7 +250,7 @@ class BybitResearchStoreTests(unittest.TestCase):
 
     def test_corrupted_stored_row_cannot_be_replayed_as_valid(self):
         self.commit()
-        with sqlite3.connect(self.db_path) as db:
+        with db_session(self.db_path) as db:
             db.execute(
                 """UPDATE bybit_research_candles SET documented_quote_turnover=?
                    WHERE open_time_ms=?""",
