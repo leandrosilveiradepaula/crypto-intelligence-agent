@@ -444,6 +444,19 @@ class SQLiteBybitResearchStore:
                    ORDER BY c.open_time_ms""",
                 (symbol, interval, start_open_ms, end_open_ms),
             )}
+            page_windows = tuple(tuple(row) for row in db.execute(
+                """SELECT start_open_ms, end_open_ms FROM bybit_research_pages
+                   WHERE symbol=? AND interval=? AND start_open_ms<?
+                     AND end_open_ms>? ORDER BY start_open_ms""",
+                (symbol, interval, end_open_ms, start_open_ms),
+            ))
+        # A count of timestamps is not proof that persisted decimals or the
+        # page digest are intact. Validate every overlapping whole page first.
+        for begin, finish in page_windows:
+            self.replay_page(
+                symbol=symbol, interval=interval,
+                start_open_ms=begin, end_open_ms=finish,
+            )
         missing = tuple(i for i in range(
             start_open_ms, end_open_ms, interval_duration_ms(interval)
         ) if i not in found)
