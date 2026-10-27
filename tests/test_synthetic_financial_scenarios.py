@@ -445,18 +445,8 @@ class ConditionalFinancialScenarioTests(unittest.TestCase):
             ((target, extra_target), one),
             ((target, stop, extra_target), both),
             ((extra_target, stop, target), both),
-            ((stop, target, stop.__class__(
-                scenario_id="fixture_financial_stop_copy",
-                exchange=stop.exchange, symbol=stop.symbol,
-                interval=stop.interval, direction=stop.direction,
-                assumed_barrier=stop.assumed_barrier,
-                entry_price=stop.entry_price,
-                quantity_base_units=stop.quantity_base_units,
-                resolution=stop.resolution, exit_price=stop.exit_price,
-                hypothetical_liquidation_loss_quote_units=(
-                    stop.hypothetical_liquidation_loss_quote_units),
-                quote_currency=stop.quote_currency, costs=stop.costs,
-                funding_provenance=stop.funding_provenance)), both),
+            ((stop, target, replace(
+                stop, scenario_id="fixture_financial_stop_copy")), both),
         ):
             with self.subTest(identities=[r.scenario_id for r in rows]):
                 with self.assertRaisesRegex(DataValidationError,
