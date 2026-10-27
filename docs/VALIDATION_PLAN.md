@@ -326,3 +326,7 @@ Regressão de causalidade em `tests/test_synthetic_financial_scenarios.py`: cen�
 ## J3/OFFLINE #208 — matriz metamórfica de custos (27/10/2026 UTC)
 
 Ampliação de regressão **sem alterar o motor** em `tests/test_synthetic_cost_scenarios.py`: LONG/SHORT × cinco taxas de funding sintéticas (incluindo extremos e zero) × três pares de notionals assimétricos; cada aumento de fee/slippage adverso mantém funding constante e aumenta o custo líquido assinado. Replays exatos de funding preservam custo e contam duplicata, mas não autorizam eventos na entrada/saída; a mesma aritmética é testada sob precisão global Decimal 2 e 400. São fixtures sem calendário de funding de venue, preço de execução, backtest ou lucro verificado. A PR #222, que corrige entrada após início da vela de toque, é independente e ainda requer merge permitido.
+
+## J3/PRE6 #208 — ordem canônica de eventos de funding (D113, 27/10/2026 UTC)
+
+LONG/SHORT: dois eventos de funding anteriores à menor saída em ordens de inserção opostas devem produzir dois ramos válidos com mesmo custo de funding, sem exigir ordenação do chamador. Mudar a taxa de um evento no segundo ramo deve continuar falhando por divergência de histórico. Comparar chaves ordenadas por (timestamp, event_id) apenas para equivalência; não modificar o ledger de custos PRE2. CI Linux/Windows/docs/Chrome no HEAD final. Sem licença, dados de corretora ou backtest real.
