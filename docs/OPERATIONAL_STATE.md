@@ -375,3 +375,9 @@ Dois testes metamórficos em `tests/test_synthetic_manual_exit_replay.py` verifi
 ### J1/WU55-B — contrato de captura fake offline, sem rede (27/10/2026 UTC)
 
 Branch `work/issue-217-j1-offline-capture-handoff-tests`, base `b68cee4dd55312ea192da58f0fcda0a4930bb340`. Trabalho seguro independente: `tests/test_bybit_offline_capture_handoff.py` usa transporte **somente de fixtures**, fixa dois GETs em ordem, valida janela/manifesto já existentes e invoca storage WU54 existente, sem nova camada duplicada. Exercita sucesso, replay, flags de não-promoção, endpoint errado, orçamento e resposta corrompida com rollback/qualidade offline; sem market GET ou nova permissão. **Pendências:** PR/CI/revisão/SHA pós-merge a verificar; não fechar #217 porque revisão jurídica atual e consentimento retentivo seguem externos. PROIBIDO coletar BTCUSDT de novo apenas para preencher staging: o relatório WU53 guardou somente hashes, não corpos.
+
+## J3/OFFLINE #208 — cobertura adversarial de ordem intrabar (27/10/2026 UTC)
+
+**Base confirmada:** main `5ff3a93cfcda5afdcf352aacc6413bac6580e2f6`, issue #208 aberta, nenhuma PR aberta no início. Em paralelo, J1 #217 mantém retenção real Bybit bloqueada pela decisão D108, embora WU53 tenha demonstrado três candles pontuais e WU54/WU55 tenham desenvolvido staging/integração de fixtures.
+
+**Tarefa atual:** branch `work/issue-208-j3-intrabar-liquidation-order-regression`: acrescentar cinco testes sintéticos sobre `observe_synthetic_intrabar_barriers` existente, sem duplicar engine e sem inventar prioridade STOP/TARGET/LIQUIDATION. Exigir CI Linux/Windows/docs/Chrome, revisão de SHA, PR e merge não produtivo apenas após gates; registrar resultado na issue #208. Nenhum dado real, GET, licenças, ordens, exposição de conta, deploy ou gasto. Próximo passo após esta entrega: retomar #217 somente com prova contratual de direitos de retenção; avançar J3 offline independente se tal prova não existir.

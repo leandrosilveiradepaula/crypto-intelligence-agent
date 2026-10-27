@@ -322,3 +322,7 @@ A WU54 #215 foi concluída por PR #216, main `5005de6a53b5b67a65c922dbd57587a992
 ## J1/WU55-B — ensaio offline de captura e staging (27/10/2026 UTC)
 
 Branch `work/issue-217-j1-offline-capture-handoff-tests` acrescenta testes de integração simulando **duas respostas Bybit sintéticas** para `SQLiteBybitResearchStore` já implementado, com transporte fake estritamente limitado, replay e QA offline, proibição de endpoints errados e não-persistência após erro. O estudo documental de direitos da PR #218/D108 continua **sem licença de retenção privada comprovada**: não existe novo cliente live, GET, credencial, captura de candles reais ou alteração da VPS. PR/CI devem ser verificados antes de alegar aceite. J1 #2 e #217 abertas.
+
+## J3/OFFLINE #208 — regressões de ambiguidade intrabar LONG/SHORT (27/10/2026 UTC)
+
+Branch `work/issue-208-j3-intrabar-liquidation-order-regression`: cinco cenários de teste exclusivamente sintéticos sobre OHLC para STOP/TARGET/LIQUIDATION, incluindo toques múltiplos, gaps adversos e igualdade no nível. Nenhuma prioridade de fill ou precedência de liquidação é inferível de OHLC; testes mantêm flags de liquidação, fill e backtest falsas. **A issue #208 permanece aberta** para custos, risco e executabilidade real não modelados. Essa tarefa não altera J1 #2, gates de licença Bybit #217, trading, VPS ou dados reais; PR/CI e merge a verificar.
