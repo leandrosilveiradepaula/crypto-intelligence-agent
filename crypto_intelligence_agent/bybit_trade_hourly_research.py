@@ -38,6 +38,10 @@ class WeeklyTradeHourResearch:
     hours: tuple[TradeDerivedHour, ...]
     missing_hour_open_ms: tuple[int, ...]
     archive_manifest_sha256: str
+    reported_size_equals_home_trades: int = 0
+    reported_size_differs_from_home_trades: int = 0
+    reported_foreign_equals_price_times_home_trades: int = 0
+    reported_foreign_differs_from_price_times_home_trades: int = 0
     source_authenticated: bool = False
     rights_authorized: bool = False
     canonical_ohlcv_approved: bool = False
@@ -136,12 +140,25 @@ def reconstruct_weekly_trade_hours(
         * 1000
     )
     slots: dict[int, _HourBuilder] = {}
+    size_equal = 0
+    size_different = 0
+    foreign_equal = 0
+    foreign_different = 0
 
     def on_trade(time_us: int, price: Decimal, size: Decimal,
                  home: Decimal, foreign: Decimal) -> None:
         hour_ms = time_us // _HOUR_US * _HOUR_MS
         if hour_ms < start_ms or hour_ms >= start_ms + 168 * _HOUR_MS:
             raise DataValidationError("trade outside seven-day UTC window")
+        nonlocal size_equal, size_different, foreign_equal, foreign_different
+        with localcontext() as ctx:
+            ctx.prec = 96
+            size_is_home = size == home
+            foreign_is_price_times_home = foreign == price * home
+        size_equal += int(size_is_home)
+        size_different += int(not size_is_home)
+        foreign_equal += int(foreign_is_price_times_home)
+        foreign_different += int(not foreign_is_price_times_home)
         slots.setdefault(hour_ms, _HourBuilder()).add(
             time_us, price, size, home, foreign,
         )
@@ -150,6 +167,9 @@ def reconstruct_weekly_trade_hours(
         inspect_trade_archive(
             raw, archive_name=name, on_valid_trade=on_trade,
         )
+    if (size_equal + size_different != week.trades
+            or foreign_equal + foreign_different != week.trades):
+        raise DataValidationError("trade field relation sample count mismatch")
     if len(slots) != week.observed_hour_total:
         raise DataValidationError("trade/hour coverage reconciliation failed")
     expected = tuple(start_ms + i * _HOUR_MS for i in range(168))
@@ -161,4 +181,8 @@ def reconstruct_weekly_trade_hours(
         hours=observed,
         missing_hour_open_ms=missing,
         archive_manifest_sha256=week.manifest_sha256,
+        reported_size_equals_home_trades=size_equal,
+        reported_size_differs_from_home_trades=size_different,
+        reported_foreign_equals_price_times_home_trades=foreign_equal,
+        reported_foreign_differs_from_price_times_home_trades=foreign_different,
     )
