@@ -663,3 +663,8 @@ Checkpoint inicial `main=90830b2497e82a9a8c91e5660edbbffc05a690a6`; issue #286/P
 ## 28/10/2026 — J3/PRE15 #290: envelope adversarial de margem 50x
 
 Base conferida: `main=57eec4553af9df94f42469c0e31fa7ca87bd4bcb`, PR #289 e issue #288 fechadas, CI pós-merge aprovada, zero PRs abertas ao iniciar. Issue #290 e branch `work/issue-290-j3-adverse-margin-envelope`. Introduz módulo puro `synthetic_margin_envelope.py` que reutiliza PRE6, compara alternativas mutuamente exclusivas por evento, mede pior perda hipotética sobre margem solicitada, reexecuta custos sob estresse de bps e recusa moeda/exposição divergente. Testes `test_synthetic_margin_envelope.py`. Validação alvo: CI Linux/docs, Windows e Chrome no SHA exato, revisão de diff, squash merge sem produção e pós-merge. **Não há** risco de liquidação real, inferência de fill, marcação, PnL autenticado, fonte de mercado ou licença. Proibidas ordens, rede, deploy, credenciais e custo adicional; J1 #2/#217, J3 #4, J4 #5 e J6 #7 abertas.
+
+
+## J3/PRE15-B #290 — vínculo com auditoria OOS, 28/10/2026 UTC
+
+Branch `work/issue-290-j3-oos-margin-audit`, base `676ac1582493f97d1ec2ca4aa6578d053ccc2659` após PR #291 squash. `synthetic_research_cycle.audit_synthetic_oos_margin` exige termos completos de margem e estresse para cada PRE7 resolvido, reexecuta PRE6 e rejeita mutação de resultado; abstenções são reportadas isoladamente. Testes `test_synthetic_oos_margin_audit.py`. Gate: CI Linux/docs, Windows e Chrome no HEAD exato, revisão, squash merge sem produção e pós-merge; depois anotar issue #290. Sem feeds, ordens, VPS, chaves ou gasto.
