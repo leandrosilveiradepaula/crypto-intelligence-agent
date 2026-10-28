@@ -120,3 +120,8 @@ A emissão da hipótese J2 na barra fechada não é ordem nem evento financeiro.
 ## J3/PRE15 #290 — risco condicional sobre margem solicitada, não retorno
 
 O laboratório combina a razão de perda hipotética por cenário PRE6 com margem e alavancagem declaradas, não colateral da corretora. Para múltiplos níveis OHLC atingidos, o envelope avalia o pior e o melhor, sem selecionar o alvo ou somar alternativas como trades. Taxas e slippage adicionais são hipóteses adversas sobre a matemática PRE6, não fills. 50x magnifica a importância da validação; permanece proibido inferir probabilidade de liquidação, performance OOS ou pronto para live. Direito de dados, instrumento, mark, funding, manutenção e liquidação reais continuam pendentes.
+
+
+## J3/PRE16 #293 — preço de marcação versus trade em trajetória explícita
+
+Uma posição sintética a 50x pode atingir uma condição hipotética de manutenção mesmo quando o TRADE mostra alvo favorável: MARK governa equity e manutenção antes de qualquer indicação de alvo no mesmo tick. Replays usam timestamps explícitos e funding declarado estritamente anterior ao tick; STOP/TARGET no trade usa o preço declarado, nunca preço-limite inferido em gap. Caso a condição de liquidação hipotética ocorra, o motor retorna sem fill/PnL realizado. Nenhum desses sinais é equação de liquidação da Binance/Bybit nem demonstra edge; J3 financeira real depende de mark, tiers, fees, funding e preço executável verificados, dados J1 autorizados e validação OOS.
