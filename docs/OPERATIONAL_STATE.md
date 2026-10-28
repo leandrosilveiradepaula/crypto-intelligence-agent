@@ -668,3 +668,8 @@ Base conferida: `main=57eec4553af9df94f42469c0e31fa7ca87bd4bcb`, PR #289 e issue
 ## J3/PRE15-B #290 — vínculo com auditoria OOS, 28/10/2026 UTC
 
 Branch `work/issue-290-j3-oos-margin-audit`, base `676ac1582493f97d1ec2ca4aa6578d053ccc2659` após PR #291 squash. `synthetic_research_cycle.audit_synthetic_oos_margin` exige termos completos de margem e estresse para cada PRE7 resolvido, reexecuta PRE6 e rejeita mutação de resultado; abstenções são reportadas isoladamente. Testes `test_synthetic_oos_margin_audit.py`. Gate: CI Linux/docs, Windows e Chrome no HEAD exato, revisão, squash merge sem produção e pós-merge; depois anotar issue #290. Sem feeds, ordens, VPS, chaves ou gasto.
+
+
+## 28/10/2026 — J3/PRE16 #293 — replay temporal sintético, andamento
+
+`main` verificada `4576ebcab57a6b7dce9f4b5fdbf44824ce298cce`, 0 PRs abertas antes do bloco, issue #290/PRs #291/#292 encerradas e checks pós-merge verdes. Issue #293 e branch `work/issue-293-j3-temporal-mark-replay` criadas. Código `synthetic_mark_replay.py`: trajetória com MARK e TRADE separados, equity e maintenance hipotéticos, funding e custos PRE2, first-hit prioritário por condição de manutenção, sem PnL após liquidação, custo de saída apenas sob stop/target condicional. Testes `tests/test_synthetic_mark_replay.py`; decisão D146 e documentos. **Gates**: revisar diff e SHA, conferir CI Linux/docs/Windows/Chrome, squash sem deploy e CI pós-merge. J1 #2/#217, J3 #4 e J6 #7 permanecem abertas. Nenhum feed/credencial/rede/ordem/migration/gasto.
