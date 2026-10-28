@@ -553,6 +553,8 @@ class SQLitePaperOrderJournal:
             raise DataValidationError("paper event batch contains wrong type")
         cutoff = _utc_ms(as_of_ms, "as_of_ms")
         with self._transaction() as conn:
+            from .paper_open_health import _verify_locked_order_schema
+            _verify_locked_order_schema(conn)
             previous = self._checked_entry(conn, intent_id)
             if cutoff < previous.snapshot.as_of_ms:
                 raise DataValidationError("paper checkpoint cannot go backwards")
@@ -622,4 +624,6 @@ class SQLitePaperOrderJournal:
                 or len(intent_id) > 64):
             raise DataValidationError("bounded paper fixture intent ID required")
         with self._transaction() as conn:
+            from .paper_open_health import _verify_locked_order_schema
+            _verify_locked_order_schema(conn)
             return self._checked_entry(conn, intent_id)
