@@ -510,3 +510,8 @@ Com transporte falso e ZIPs sintéticos, interceptar mkdir do alvo para simular 
 ## J1/HIST #301 — homologação técnica de CSV e atomicidade
 
 Cobrir arquivo mensal com header de 12 colunas exatas e sem header, header duplicado, deslocado, BOM e coluna alterada; comparar 672/696/720/744 candles conforme mês sem gap. Para captura, reabrir disco pelo auditor Vision antes de publicar, validar SHA/mês/completude, simular concorrência em rename sem substituição (diretório rival intacto), falha de escrita/fsync e reauditoria, exigir ausência de estágio residual e nenhum dado publicado. Gate Linux/Windows/Chrome e docs no SHA exato, pós-merge e nenhuma execução real de mercado/conta em CI.
+
+
+## J1/HIST #303 — regressão do cabeçalho observado na VPS
+
+Testar três formatos: sem header, nomes longos previamente aceitos, nomes curtos exatos observados em CSV USD-M. Criar ZIPs apenas sintéticos de agosto e setembro/2026 (744 + 720 = 1.464 candles), passar SHA256, cada candle UTC, continuidade, capturador privado fake HTTP, sidecars e auditor após publicação atômica. Rejeitar aliases mistos, colunas trocadas/reordenadas, extras, header duplicado/tardio, BOM e calendário incompleto. Sinalizadores de origem, canonicidade, uso live, ordens e backtest financeiro aprovado permanecem falsos. CI docs/Linux, Windows, Chrome/PAPER SHA exato, revisão e pós-merge antes de handoff único SSH.
