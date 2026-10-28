@@ -61,9 +61,12 @@ def _verified_observation(
     elif type(observation) is PaperOperatorOverview:
         status = observation.recovery
         selected = observation.selected
-        if (type(observation.selection_verified) is not bool
+        if (type(status) is not PaperRecoveryStatus
+                or type(observation.selection_verified) is not bool
                 or type(selected) is not tuple or len(selected) > 128
                 or any(type(item) is not PaperPositionInspection for item in selected)
+                or any(item.orders_sent or item.live_trading_authorized
+                       or item.approved_for_live_use for item in selected)
                 or any(getattr(observation, field) is not False for field in (
                     "cross_database_atomic_snapshot_available", "native_stop_verified",
                     "orders_sent", "new_open_authorized", "live_trading_authorized",
