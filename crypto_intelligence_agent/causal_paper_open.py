@@ -15,6 +15,9 @@ from typing import Sequence
 from .market_data import ClosedCandle, DataValidationError
 from .paper_order_store import PaperOpenRiskReservation, SQLitePaperOrderJournal
 from .paper_open_health import PaperOpenHealth
+from .paper_margin_preflight import (
+    PaperMarginAssessment, PaperMarginPreflightRequest, assess_paper_margin_open,
+)
 from .paper_risk_gate import PaperRiskLimits, PaperRiskObservation, PaperRiskReason
 from .synthetic_entry_hypotheses import (
     CompressionBreakoutConfig, SyntheticEntryCandidate,
@@ -40,6 +43,7 @@ class CausalPaperOpening:
     reservation: PaperOpenRiskReservation | None
     health: PaperOpenHealth | None
     reason: str
+    margin_assessment: PaperMarginAssessment | None = None
 
     @property
     def mode(self) -> str:
@@ -106,6 +110,7 @@ def prepare_causal_paper_open(
     observation: PaperRiskObservation,
     decision_at_ms: int,
     close_safety_ms: int = 1_000,
+    margin_preflight: PaperMarginPreflightRequest | None = None,
 ) -> CausalPaperOpening:
     """Recompute a J2 hypothesis from the closed prefix, WITHOUT reserving.
 
@@ -121,6 +126,9 @@ def prepare_causal_paper_open(
             or type(limits) is not PaperRiskLimits
             or type(observation) is not PaperRiskObservation):
         raise DataValidationError("typed J2, PAPER venue and risk observation are required")
+    if (margin_preflight is not None
+            and type(margin_preflight) is not PaperMarginPreflightRequest):
+        raise DataValidationError("PAPER margin preflight requires typed opt-in request")
     if type(requested_units) is not Decimal:
         raise DataValidationError("explicit Decimal PAPER requested units required")
     _fixture_units(requested_units)
@@ -168,8 +176,26 @@ def prepare_causal_paper_open(
         requested_units=requested_units,
         created_at_ms=now,
     )
+    assessment = None
+    if margin_preflight is not None:
+        # Only AFTER a latest-candle hypothesis produces an OPEN intent. All
+        # checks are pure and occur before the AUTO2 reservation transaction.
+        # The journal repeats its own health and PAPER RiskGate under lock.
+        assessment = assess_paper_margin_open(
+            intent, margin_preflight.settings, margin_preflight.margin_quote,
+            margin_preflight.contract, limits, observation,
+            decision_at_ms=now,
+            max_contract_age_ms=margin_preflight.max_contract_age_ms,
+        )
+        if not assessment.allowed_for_paper_research_only:
+            return CausalPaperOpening(
+                now, candidate, None, None, None,
+                "paper_margin_denied_" + assessment.reason.value,
+                assessment,
+            )
     return CausalPaperOpening(
         now, candidate, intent, None, None, "candidate_pending_paper_risk_gate",
+        assessment,
     )
 
 
