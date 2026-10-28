@@ -12,6 +12,7 @@ import gzip
 from hashlib import sha256
 from io import BytesIO, TextIOWrapper
 import re
+from collections.abc import Callable
 
 from .market_data import DataValidationError, DataGapError
 
@@ -41,7 +42,16 @@ class TradeArchiveAudit:
     orders_sent: bool = False
 
 
-def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudit:
+def inspect_trade_archive(
+    blob: bytes, *, archive_name: str,
+    on_valid_trade: Callable[[int, Decimal, Decimal, Decimal, Decimal], None] | None = None,
+) -> TradeArchiveAudit:
+    """Validate gzip/CSV; optional in-memory research callback receives
+    timestamp MICROSECONDS and exact reported price/size/home/foreign values.
+    Never infer contract units or write any market bytes to disk.
+    """
+    if on_valid_trade is not None and not callable(on_valid_trade):
+        raise DataValidationError("invalid validated-trade callback")
     if type(blob) is not bytes or not 1 <= len(blob) <= MAX_GZIP_BYTES:
         raise DataValidationError("bounded gzip bytes required")
     match = DATE.fullmatch(archive_name) if type(archive_name) is str else None
@@ -62,7 +72,7 @@ def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudi
         reader = csv.DictReader(data.splitlines(), strict=True)
         if tuple(reader.fieldnames or ()) != FIELDS:
             raise DataValidationError("unknown exact Bybit trading CSV header")
-        count, first, previous, direction, hours = 0, None, None, 0, set()
+        count, first, previous, previous_us, direction, hours = 0, None, None, None, 0, set()
         for row in reader:
             if None in row or any(row.get(key) is None for key in FIELDS):
                 raise DataValidationError("CSV column count mismatch")
@@ -72,11 +82,12 @@ def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudi
             ts = row["timestamp"]
             if not re.fullmatch(r"[0-9]{10}(?:\.[0-9]{1,6})?", ts):
                 raise DataValidationError("invalid timestamp precision")
-            milliseconds = int(Decimal(ts) * 1000)
+            microseconds = int(Decimal(ts) * 1000000)
+            milliseconds = microseconds // 1000
             if milliseconds < first_bound or milliseconds >= last_bound:
                 raise DataValidationError("trade falls outside declared UTC day")
-            if previous is not None and milliseconds != previous:
-                step = 1 if milliseconds > previous else -1
+            if previous_us is not None and microseconds != previous_us:
+                step = 1 if microseconds > previous_us else -1
                 if direction and step != direction:
                     raise DataGapError("non-monotonic public trade archive")
                 direction = step
@@ -88,8 +99,14 @@ def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudi
                     raise DataValidationError("invalid exact trade decimal")
             if not row["trdMatchID"] or len(row["trdMatchID"]) > 128:
                 raise DataValidationError("invalid bounded trade id")
+            if on_valid_trade is not None:
+                on_valid_trade(
+                    microseconds, Decimal(row["price"]), Decimal(row["size"]),
+                    Decimal(row["homeNotional"]), Decimal(row["foreignNotional"]),
+                )
             first = milliseconds if first is None else first
             previous = milliseconds
+            previous_us = microseconds
             hours.add((milliseconds - first_bound) // 3_600_000)
         if count == 0:
             raise DataValidationError("empty archive")
