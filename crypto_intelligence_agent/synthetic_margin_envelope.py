@@ -34,7 +34,7 @@ class SyntheticMarginBasis:
         if type(self.leverage_at_intent) is not int or not 1 <= self.leverage_at_intent <= 200:
             raise DataValidationError("leverage must be an explicit bounded integer")
         if (type(self.quote_currency) is not str
-                or self.quote_currency not in ("SYNTHETIC_USDT", "SYNTHETIC_USDC")):
+                or self.quote_currency not in ("SYNTHETIC_QUOTE", "SYNTHETIC_USDT", "SYNTHETIC_USDC")):
             raise DataValidationError("synthetic quote currency required; no FX conversion")
         with localcontext(_EXACT):
             if self.requested_margin_quote * self.leverage_at_intent != self.entry_notional_quote:
