@@ -119,6 +119,8 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                         scroll_width: Math.max(doc.scrollWidth, document.body.scrollWidth),
                         state: summary && summary.getAttribute('data-state'),
                         position_count: document.querySelectorAll('.position-card').length,
+                        alert_count: document.querySelectorAll('.alert-list li').length,
+                        alert_header_visible: document.body.textContent.includes('Alertas da janela PAPER'),
                         selection_scope: (document.querySelector('.selected') || {}).dataset?.selection || null,
                         no_aggregate: document.body.textContent.includes('não existe total financeiro'),
                         skip: Boolean(skip && skip.getAttribute('href') === '#conteudo'
@@ -148,6 +150,12 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                     expected = 0 if selected is None else len(selected)
                     if observed["position_count"] != expected:
                         errors.append("selected position cards missing or duplicated")
+                    if custom_html is not None and (
+                        observed["alert_count"] != 2 or not observed["alert_header_visible"]
+                    ):
+                        errors.append("finite alert timeline missing or duplicated")
+                    if custom_html is None and observed["alert_count"] != 0:
+                        errors.append("unsolicited alert timeline")
                     if selected is not None and (
                         observed["selection_scope"] != "explicit-only"
                         or not observed["no_aggregate"]
@@ -182,6 +190,7 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                     record = {
                         "state": status.state.value, "width": width,
                         "selected_positions": expected,
+                        "alert_timeline": custom_html is not None,
                         "errors": errors, "external_requests": len(external),
                     }
                     results.append(record)
