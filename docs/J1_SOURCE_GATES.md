@@ -239,3 +239,8 @@ Existe auditor mensal de 2..24 ZIPs USD-M 1h. Com --require-local-checksum-sidec
 ## J1/HIST #297 — decisão rastreável sobre primeiro arquivo real retido
 
 **Caminho de pesquisa tecnicamente pronto:** a CLI owner-only `scripts/capture_private_vision_months.py` obtém 2 meses contíguos BTCUSDT 1h da fonte Binance Vision oficial, até 4 GETs (ZIP+CHECKSUM), com validação do parser de 1h, SHA e auditor local antes de gravar bytes em diretório novo POSIX 0700/0600. Total máximo da captura 16 MB de ZIP e 512 bytes de checksum, limites de CSV descomprimido por mês. Sem agendamento, API Binance ou Bybit, proxy, redirects, retries, credenciais ou dados no GitHub. Antes de execução REAL: o titular aceita pessoalmente termos v1.0 vigentes, confirma elegibilidade territorial e consentimento para arquivo privado (sem dados reais em CI); acesso de infraestrutura deve ser autorizado. `research_archive_available` só após prova de execução, não com CI. Permissão de dados para robô live permanece **não concedida** (§4.2); J1 #2 não homologada, Top50 #32 e direitos Bybit #217 abertos. Acesso ao domínio data.binance.vision caso recuse por região = parar, jamais contornar.
+
+
+## J1/HIST #299 — consentimento recebido, execução pendente de acesso real
+
+Aceite pessoal dos Termos Binance Vision para pesquisa não produtiva recebido no chat (28/10/2026), não equivale a prova de elegibilidade regional e não autoriza live. Não há shell SSH da VPS disponível nesta sessão; CI Windows/Linux/Chrome verifica apenas fixtures. Contrato de criação privada foi endurecido contra corrida: não apagar diretório concorrente; a presença do manifesto escrito por último é indicador de conjunto pronto, não commit cross-file atômico. Captura owner-only não foi executada. J1 não homologada.
