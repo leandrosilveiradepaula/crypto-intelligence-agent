@@ -424,3 +424,11 @@ Testes: journal vazio, cursor com 6 candles e OPEN PENDING, restart, pausa/resum
 
 
 **J1/HIST #241 — auditor local multi-mês em desenvolvimento:** novo `scripts/audit_offline_vision_series.py` valida 2..24 ZIPs já disponíveis em diretório privado, hashes, meses e fechamento de candles, com JSON sanitizado. Tests sintéticos de cadeia completa e entrada hostil; nenhuma ingestão real, rede, licença, feed J2/J3, PnL ou ordem. Verificar PR, SHA e CI antes de concluir; J1 #2 e bloqueios de direitos persistem.
+
+
+## J1/J3 #243 — diagnóstico mensal causal
+
+
+Arquivos ZIP privados previamente obtidos sob termos aplicáveis podem ser inspecionados, sem rede, pelo comando `python3 -m scripts.audit_offline_vision_series --manifest /diretorio-privado/manifest.json --allow-personal-nonproduction-research --audit-directional-oos`. O módulo puro `vision_research_oos.py` reusa `assemble_offline_vision_months`, divide calendário em meses inteiros e seleciona **continuação ou reversão de retornos de fechamento** exclusivamente pelos resultados observados em meses ANTERIORES; a direção de referência majoritária também provém somente do treino. Para cada mês OOS retorna contagens de comparações ex-post do fechamento seguinte, sem preço, ativo ou informação de conta. Nenhum par cruza a fronteira de mês e retornos zero não geram acertos fictícios. Empates entre modelos produzem abstenção. Não há otimização dinâmica, simulação de entrada no fechamento, spread, fee, funding, liquidação, riscos de 50x, PnL ou desempenho financeiro aprovado.
+
+A integridade estrutural e os hashes fornecidos pelo titular não autenticam provedor ou licença; o modo opcional não cria arquivos, não coleta mercados, não promove feed canônico ou execução, não calcula rentabilidade, não estabelece edge preditivo e não altera os bloqueios de direitos #217/#48, Top50 #2/#32 e J3 #4. `source_authenticated=false`, `dataset_rights_authorized=false`, `financial_backtest_approved=false`, `ready_for_trading=false`, `orders_sent=false`. Testes usam exclusivamente ZIPs sintéticos; CI Linux/Windows/Chrome e SHA exato exigidos para merge. Sem produção, custo, credenciais ou ordens.
