@@ -42,7 +42,7 @@ class LocalVisionSidecarParserTests(unittest.TestCase):
         wrong = (
             b"", b"\xef\xbb\xbf" + valid, b"\\" + valid,
             valid + b"\n\n", valid + b"\n" + valid,
-            valid + b"\x00", valid + b"\r" + valid,
+            valid + b"\x00", valid + b"\r", valid + b"\r" + valid,
             valid.replace(NAME.encode(), b"../" + NAME.encode()),
             valid.replace(NAME.encode(), b"OTHER-1h-2024-01.zip"),
             valid.replace(b"  ", b" \t"),
