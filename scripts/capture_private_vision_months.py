@@ -126,8 +126,12 @@ def capture_private_vision_months(
                      for name, _, _, digest in artifacts],
     }, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
     # Only now, after all downloads and checks, create the target. No overwrite.
+    # Directory publication is NOT cross-file atomic: owner-only 0700 access
+    # and a manifest written LAST are the commit marker for downstream readers.
+    created_by_this_call = False
     try:
         directory.mkdir(mode=0o700)
+        created_by_this_call = True
         if directory.stat().st_mode & 0o077:
             raise VisionCaptureError("private_directory_mode_rejected")
         for name, raw, checksum, _ in artifacts:
@@ -144,10 +148,13 @@ def capture_private_vision_months(
             os.fsync(stream.fileno())
     except Exception:
         # Target was new; do not delete any external/preexisting inputs.
-        if directory.exists():
-            for child in directory.iterdir():
-                if child.is_file() and not child.is_symlink():
-                    child.unlink()
+        if created_by_this_call:
+            # Never clean a directory created by another process in a race.
+            # Only unlink the exact names this invocation may have created.
+            for name, _, _, _ in artifacts:
+                for filename in (name, name + ".CHECKSUM"):
+                    (directory / filename).unlink(missing_ok=True)
+            (directory / "manifest.json").unlink(missing_ok=True)
             directory.rmdir()
         raise VisionCaptureError("private_archive_commit_rejected") from None
     return {
