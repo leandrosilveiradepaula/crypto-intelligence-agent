@@ -521,3 +521,8 @@ Fonte identificada: Bybit official Docs https://bybit-exchange.github.io/docs/ e
 
 
 **Sondagem owner-only J1 #250:** workflow `bybit-public-archive-week.yml` somente por comentário exato do titular, 7 GETs fixos para 2020-03-25..31, sem proxy, redirect, retry, credencial, disco ou ordem. Receipts unicamente somas de horas/trades e hashes. `rights_authorized=false`, `canonical_ohlcv_approved=false`, `financial_backtest_approved=false` e `live_trading_authorized=false`. CI sintética é pré-condição; execução real somente após revisão e merge.
+
+
+## D126 — Evidencia semanal real J1 #250
+
+Execucao GitHub Actions `40620522744` SUCCESS, 28/10/2026 UTC: 7 GETs de BTCUSDT 25–31/03/2020; 54.677 trades, 158/168 horas com trades, 10 sem trades observados, um dia parcial; manifesto SHA256 `ffb13c6d46d539628b95ed645bd760fc4f8559604e0e2970ee3e3b5371e96b70`. Dados apenas em RAM efemera, sem persistencia ou ordens. Cobertura observada nao prova feed integral; direitos de retencao/live e backtest financeiro continuam nao aprovados. J1 #2 e rights #217 permanecem abertas.
