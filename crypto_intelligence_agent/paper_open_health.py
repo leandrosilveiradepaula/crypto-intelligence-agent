@@ -142,9 +142,28 @@ def _checked_order_entries(order_connection):
     )
 
 
+def _order_margin_receipts(order_connection) -> dict[str, PaperMarginIntentReceipt]:
+    """Read validated AUTO2 receipts from this SAME order snapshot/lock."""
+    rows = order_connection.execute(
+        "SELECT key,value FROM paper_order_meta "
+        "WHERE key LIKE ? ORDER BY key LIMIT ?",
+        (META_PREFIX + "%", MAX_RECEIPTS_PER_JOURNAL + 1),
+    ).fetchall()
+    if len(rows) > MAX_RECEIPTS_PER_JOURNAL:
+        raise DataValidationError("PAPER margin receipt audit resource bound")
+    result = {}
+    for row in rows:
+        receipt = PaperMarginIntentReceipt.deserialize(row["value"])
+        if receipt.key != row["key"] or receipt.intent_id in result:
+            raise DataValidationError("invalid or duplicate PAPER margin receipt")
+        result[receipt.intent_id] = receipt
+    return result
+
+
 def _audit_with_orders(
     orders, position_journal_path: str | Path,
     *, decision_at_ms: int | None = None,
+    margin_receipts: dict[str, PaperMarginIntentReceipt] | None = None,
 ) -> PaperOpenHealth:
     """Inspect local positions; these are never exchange-native protection."""
     if decision_at_ms is not None:
@@ -208,6 +227,16 @@ def _audit_with_orders(
             fills.append(PaperOpenFillHealth(
                 entry.intent.intent_id, record.position_id, PaperProtectionState.UNKNOWN,
                 "opening_intent_or_fill_events_mismatch",
+            ))
+            continue
+        # A receipt committed atomically to an AUTO2 OPEN must be copied
+        # verbatim into its confirmed AUTO4 position. Separate files cannot
+        # be read atomically; a mismatch is UNKNOWN, never a valid stop.
+        expected_receipt = (margin_receipts or {}).get(entry.intent.intent_id)
+        if record.opening_margin_intent != expected_receipt:
+            fills.append(PaperOpenFillHealth(
+                entry.intent.intent_id, record.position_id, PaperProtectionState.UNKNOWN,
+                "opening_margin_receipt_cross_journal_mismatch",
             ))
             continue
         if entry.snapshot.requires_reconciliation:
@@ -285,6 +314,7 @@ def _audit_paper_open_health_locked(
     return _audit_with_orders(
         _checked_order_entries(order_connection), position_journal_path,
         decision_at_ms=decision_at_ms,
+        margin_receipts=_order_margin_receipts(order_connection),
     )
 
 
@@ -305,4 +335,5 @@ def audit_paper_open_health(
         return _audit_with_orders(
             _checked_order_entries(order_connection), position_journal_path,
             decision_at_ms=decision_at_ms,
+            margin_receipts=_order_margin_receipts(order_connection),
         )
