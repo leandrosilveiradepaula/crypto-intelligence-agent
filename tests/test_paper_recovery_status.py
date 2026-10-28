@@ -8,7 +8,28 @@ from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPos
 from crypto_intelligence_agent.paper_recovery_status import (
     PaperRecoveryState, inspect_local_paper_recovery_status,
 )
-from tests.test_paper_open_health import opening, fill
+from decimal import Decimal
+from crypto_intelligence_agent.synthetic_order_lifecycle import (
+    PaperOrderEffect, PaperOrderEvent, PaperOrderEventKind, PaperOrderIntent,
+    PaperOrderSide, PaperVenue,
+)
+from crypto_intelligence_agent.synthetic_position_state import SyntheticSide
+
+T = 1_700_000_000_000
+
+
+def opening():
+    return PaperOrderIntent(
+        "fixture_health_open", "fixture_health_signal", PaperVenue.BINANCE_USDM,
+        "BTCUSDT", SyntheticSide.LONG, PaperOrderSide.BUY, PaperOrderEffect.OPEN,
+        Decimal(2), T,
+    )
+
+
+def fill():
+    return PaperOrderEvent(
+        "fixture_health_fill", PaperOrderEventKind.FILL, T + 1, Decimal(2),
+    )
 
 
 class RecoveryStatusTests(unittest.TestCase):
