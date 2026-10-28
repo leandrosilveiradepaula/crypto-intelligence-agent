@@ -41,6 +41,7 @@ class PaperLinearContractFixture:
     observed_at_ms: int
     fixture_version: str
     max_leverage_assumed: int
+    price_tick_quote: Decimal
     quantity_step_base: Decimal
     min_quantity_base: Decimal
     min_notional_quote: Decimal
@@ -65,6 +66,9 @@ class PaperLinearContractFixture:
         if (type(self.max_leverage_assumed) is not int
                 or not 1 <= self.max_leverage_assumed <= 200):
             raise DataValidationError("hypothetical venue leverage cap invalid")
+        # An unverified MARK is not an order limit price. Tick is checked as
+        # metadata only; there is no order price to round or validate yet.
+        _quote(self.price_tick_quote, "price_tick_quote", allow_zero=False)
         step = _quote(self.quantity_step_base, "quantity_step_base", allow_zero=False)
         minimum = _quote(self.min_quantity_base, "min_quantity_base", allow_zero=False)
         _quote(self.min_notional_quote, "min_notional_quote", allow_zero=False)
@@ -90,6 +94,10 @@ class PaperLinearContractFixture:
 
     @property
     def funding_liquidation_verified(self) -> bool:
+        return False
+
+    @property
+    def executable_price_tick_verified(self) -> bool:
         return False
 
 
