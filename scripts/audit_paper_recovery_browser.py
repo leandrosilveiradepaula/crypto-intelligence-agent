@@ -79,10 +79,14 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
             original = _fixture_statuses()
             # Fourth case combines a blocked recovery view with two explicitly
             # selected (synthetic) position cards. No file/HTTP access in Chrome.
-            cases = tuple((status, None) for status in original) + (
-                (original[1], _local_fixture_selected()),
+            alert_report = summarize_paper_observations(
+                (original[0], original[1], original[1]),
             )
-            for status, selected in cases:
+            cases = tuple((status, None, None) for status in original) + (
+                (original[1], _local_fixture_selected(), None),
+                (alert_report.final, None, render_paper_alert_report_html(alert_report)),
+            )
+            for status, selected, custom_html in cases:
                 for width, height in VIEWPORTS:
                     context = browser.new_context(
                         viewport={"width": width, "height": height},
@@ -97,7 +101,11 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                         route.abort()
 
                     page.route("**/*", deny_request)
-                    page.set_content(render_recovery_html(status, selected=selected), wait_until="load")
+                    page.set_content(
+                        custom_html if custom_html is not None else
+                        render_recovery_html(status, selected=selected),
+                        wait_until="load",
+                    )
                     observed = page.evaluate("""() => {
                       const doc = document.documentElement;
                       const summary = document.querySelector('.summary');
