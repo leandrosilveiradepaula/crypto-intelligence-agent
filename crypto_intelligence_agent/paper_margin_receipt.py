@@ -152,8 +152,8 @@ class PaperMarginIntentReceipt:
                 or assessment.reason is not PaperMarginReason.FEASIBLE_PAPER_ONLY
                 or not assessment.allowed_for_paper_research_only
                 or assessment.risk_reason is not PaperRiskReason.OPEN_ALLOWED_PAPER_ONLY
-                or assessment.actual_intent_notional_quote.as_tuple()
-                   != assessment.assumed_notional_quote.as_tuple()):
+                or assessment.actual_intent_notional_quote
+                   != assessment.assumed_notional_quote):
             raise DataValidationError("non-admitted PAPER margin assessment cannot be persisted")
         receipt = cls(
             intent_id=intent.intent_id, intent_sha256=_intent_digest(intent),
