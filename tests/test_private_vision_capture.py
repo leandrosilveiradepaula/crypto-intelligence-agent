@@ -90,6 +90,54 @@ class VisionPrivateCaptureTests(unittest.TestCase):
             self.assertFalse(result[k])
         self.assertFalse(audit["dataset_rights_authorized"])
 
+    def test_observed_header_two_real_month_names_through_private_capture(self):
+        # No actual market bytes/network: reconstruct both calendar months with
+        # exactly the twelve field names observed in the user's SSH diagnosis.
+        from zipfile import ZIP_DEFLATED, ZipFile
+        observed_header = ("open_time,open,high,low,close,volume,close_time,"
+                           "quote_volume,count,taker_buy_volume,"
+                           "taker_buy_quote_volume,ignore")
+        self.files.clear()
+        self.names.clear()
+        self.attempts.clear()
+        for month in (8, 9):
+            blob, name, _, cutoff = synthetic_zip(year=2026, month=month)
+            with ZipFile(BytesIO(blob)) as original:
+                original_csv = original.read(name[:-4] + ".csv")
+            output = BytesIO()
+            with ZipFile(output, "w", compression=ZIP_DEFLATED) as patched:
+                patched.writestr(
+                    name[:-4] + ".csv",
+                    observed_header.encode("ascii") + b"\n" + original_csv,
+                )
+            actual = output.getvalue()
+            digest = sha256(actual).hexdigest()
+            self.names.append(name)
+            self.files[BASE + name] = actual
+            self.files[BASE + name + ".CHECKSUM"] = (
+                digest + "  " + name + "\n"
+            ).encode("ascii")
+            self.cutoff = cutoff
+
+        with patch("socket.create_connection",
+                   side_effect=AssertionError("network forbidden")):
+            stored = self.capture()
+            audited = audit_private_vision_archives(
+                manifest_path=str(self.out / "manifest.json"),
+                allow_personal_nonproduction_research=True,
+                require_local_checksum_sidecars=True,
+            )
+        self.assertEqual(stored["closed_candle_count"], 1464)
+        self.assertEqual(audited["closed_candle_count"], 1464)
+        self.assertEqual(audited["untrusted_local_checksum_sidecars_matched"], 2)
+        self.assertEqual(stored["series_manifest_sha256"],
+                         audited["local_archive_identity_manifest_sha256"])
+        self.assertEqual(len(self.attempts), 4)
+        self.assertTrue(all(path.stat().st_mode & 0o777 == 0o600
+                            for path in self.out.iterdir()))
+        self.assertFalse(stored["live_trading_authorized"])
+        self.assertFalse(audited["canonical_ohlcv_approved"])
+
     def test_no_optins_means_no_requests_or_files(self):
         for key in ("allow_public_network", "allow_personal_nonproduction_license",
                     "allow_private_archive_retention", "confirm_territory_and_access"):
