@@ -505,3 +505,8 @@ Testar fake transporte offline em quatro GETs HTTPS fixos e ordenados de duas UR
 ## J1/HIST #299 — teste de corrida de diretório privado
 
 Com transporte falso e ZIPs sintéticos, interceptar mkdir do alvo para simular outro processo criando diretório e arquivo antes de lançar FileExistsError. Verificar que o capturador falha sem apagar arquivo/dir alheio; falhas após mkdir próprio devem limpar apenas artefatos esperados. Conferir manifesto por último, opt-ins negados sem rede, fstat/permissão e ausência de preços no stdout. CI Linux/Windows/Chrome antes e depois do merge no SHA exato. Risco remanescente: publicação de múltiplos arquivos não é atomicidade cross-file.
+
+
+## J1/HIST #301 — homologação técnica de CSV e atomicidade
+
+Cobrir arquivo mensal com header de 12 colunas exatas e sem header, header duplicado, deslocado, BOM e coluna alterada; comparar 672/696/720/744 candles conforme mês sem gap. Para captura, reabrir disco pelo auditor Vision antes de publicar, validar SHA/mês/completude, simular concorrência em rename sem substituição (diretório rival intacto), falha de escrita/fsync e reauditoria, exigir ausência de estágio residual e nenhum dado publicado. Gate Linux/Windows/Chrome e docs no SHA exato, pós-merge e nenhuma execução real de mercado/conta em CI.
