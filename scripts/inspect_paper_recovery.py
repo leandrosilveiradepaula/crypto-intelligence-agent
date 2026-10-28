@@ -11,6 +11,7 @@ either journal. Output creation, if requested, is exclusive.
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal
 from html import escape
 import json
 from pathlib import Path
@@ -19,6 +20,11 @@ import sys
 
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_operator_status import PaperOperatorStatus
+from crypto_intelligence_agent.paper_operator_overview import inspect_local_paper_operator_overview
+from crypto_intelligence_agent.paper_position_inspection import PaperPositionInspection
+from scripts.inspect_paper_positions import (
+    multi_paper_snapshot, render_position_card_markup,
+)
 from crypto_intelligence_agent.paper_recovery_status import (
     PaperRecoveryState, PaperRecoveryStatus, inspect_local_paper_recovery_status,
 )
@@ -55,6 +61,10 @@ _REASON_TEXT = {
     "paper_flat_not_live_verified":
         "As posições do replay local estão ausentes ou hipoteticamente encerradas.",
     "paper_health_unverified": "A integridade do replay não foi confirmada.",
+    "paper_selected_positions_unverified":
+        "Não foi possível validar integralmente os IDs selecionados.",
+    "paper_overview_changed_during_inspection":
+        "A recuperação ou uma posição selecionada mudou durante a leitura.",
 }
 
 
@@ -81,9 +91,42 @@ def _validate_display(status: PaperRecoveryStatus) -> None:
         raise DataValidationError("blocked PAPER display requires operator evidence")
 
 
-def render_recovery_html(status: PaperRecoveryStatus) -> str:
-    """Render one static, accessible PT-BR page; never an interactive control."""
+def render_recovery_html(
+    status: PaperRecoveryStatus,
+    *, selected: tuple[PaperPositionInspection, ...] | None = None,
+) -> str:
+    """Render static PT-BR recovery and, optionally, selected PAPER positions."""
     _validate_display(status)
+    selected_section = ""
+    if selected is not None:
+        if type(selected) is not tuple or len(selected) > 128:
+            raise DataValidationError("bounded PAPER selected inspections required")
+        if status.state is PaperRecoveryState.UNVERIFIED:
+            if selected:
+                raise DataValidationError("unverified PAPER recovery cannot display positions")
+            selected_section = """
+    <section class="selected" data-selection="unverified" aria-labelledby="selected-heading">
+      <h2 id="selected-heading">Posições selecionadas</h2>
+      <p>Seleção não verificada. Nenhum saldo ou posição é exibido.</p>
+    </section>"""
+        else:
+            snapshot = multi_paper_snapshot(selected)
+            if (status.state is PaperRecoveryState.PAPER_FLAT_HYPOTHETICAL_ONLY
+                    and any(item.balance.confirmed_remaining_units != Decimal(0)
+                            for item in selected)):
+                raise DataValidationError("flat recovery conflicts with selected position")
+            cards = "\n".join(
+                render_position_card_markup(item) for item in snapshot["positions"]
+            )
+            selected_section = (
+                '<section class="selected" data-selection="explicit-only" '
+                'aria-labelledby="selected-heading">'
+                '<h2 id="selected-heading">Posições PAPER selecionadas</h2>'
+                '<p>Somente os IDs escolhidos pelo operador. Não é inventário de '
+                'todas as posições; não existe total financeiro nem soma entre contratos.</p>'
+                '<div class="selected-cards">' + cards + '</div>'
+                '</section>'
+            )
     headline, detail = _STATE_TEXT[status.state]
     reason = _REASON_TEXT.get(
         status.reason, "Este estado requer verificação local.",
