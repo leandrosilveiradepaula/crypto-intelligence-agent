@@ -432,3 +432,8 @@ Fonte identificada: Bybit official Docs https://bybit-exchange.github.io/docs/ e
 
 
 **Sondagem owner-only semanal preparada:** `scripts/probe_bybit_archive_week.py` realiza até 7 GETs sem credencial nem proxy/redirecionamento/retry de 2020-03-25 a 2020-03-31, todos de `https://public.bybit.com/trading/BTCUSDT/`, cada gzip limitado a 5 MB e 150 mil trades, com 10s de timeout, agregando somente contagens e digest; os bytes ficam somente em memória e não são enviados à UI, logs ou repo. A workflow `.github/workflows/bybit-public-archive-week.yml` requer comentário EXATO do owner na issue #250 e **não dispara em push, PR ou cron**. Um dia indisponível encerra sem buscar outro host. O recibo semanal é diagnóstico de dados reais, não licença, nem candles fechados, funding/mark, universo Top50, backtest ou ordem. Testes usam somente payload sintético/transport falso e gate permanece fechado. Executar apenas após CI/merge no SHA exato.
+
+
+## J1/HIST #253 — regressões de reconstrução horária
+
+Reutilizar fixtures gzip/CSV sintéticas em sete dias: ascendente e descendente com mesmo OHLC cronológico; tie de preços diferentes no primeiro e último microssegundo => fronteira `None`; desordem sub-milissegundo antes invisível => erro; soma de `0.000000000000000001` sem arredondamento; lacunas de 1h explícitas e soma de 168 buckets; corrupção gzip/calendário => fail closed; 7 GETs exatos fake e modo CLI legado inalterado; stdout sem preço, volume ou símbolo e flags de rights/canonical/backtest/live/order negativas. CI Linux, Windows, docs e Chrome/PAPER deve estar verde no HEAD exato antes de squash sem produção. A sondagem real owner-only, se executada, deve registrar apenas contagem de cobertura e fronteiras, nunca OHLC brutos.
