@@ -603,3 +603,8 @@ Fonte de verdade inicial `main=d96691aaff1ece7fec8f2d1fbae8e210be21f25f`, zero P
 ## J1/HIST #299 — aceite de termos e correção de segurança de captura (28/10/2026)
 
 Titular manifestou 'Li e aceito' para termos Binance Vision de pesquisa pessoal não produtiva. O ambiente ChatGPT atual não oferece SSH/shell na VPS; não inventar arquivo retido ou origem real. PR de correção da captura #298: limpeza agora só remove diretório criado pela própria execução (protege concorrente). Manifesto last-write, sem alegar transação atômica. Ainda requer confirmação territorial/acesso e execução owner-only na VPS, nunca no GitHub Actions; nenhum dataset para live (Vision §4.2). J1 #2, Bybit #217 abertas.
+
+
+## J1/HIST #301 — segurança da primeira retenção de histórico (28/10/2026)
+
+Base `main=ef3893334c690e7f1025e6066bc6a8e2eca3e910` após #300 integrada e pós-merge Linux/Windows/Chrome aprovados, zero PRs abertas na abertura. Issue #301 / branch `work/issue-301-j1-vision-real-archive-readiness`: header Vision exato opcional; estágio privado temporário, reauditoria de disco e publicação Linux atômica sem substituição. Não há acesso SSH ao VPS nem coleta real verificada nesta sessão, embora licença para pesquisa pessoal não produtiva tenha sido aceita pelo titular. J1 #2 e Bybit #217 continuam abertas; dados não são autorizados para trading live, sem deploy ou custo.
