@@ -168,11 +168,19 @@ def render_recovery_html(
     dd {{ margin: 6px 0 0; overflow-wrap: anywhere; font-weight: 600; }}
     code {{ font-size: .88rem; overflow-wrap: anywhere; }}
     .warning {{ margin-top: 18px; padding: 16px; background: #fff8eb; border-color: #ac8c4b; }}
+    .selected {{ margin: 20px 0; }}
+    .selected-cards {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }}
+    .position-card {{ background: white; border: 1px solid #cad5e0; border-radius: 12px; padding: 16px; min-width: 0; overflow-wrap: anywhere; }}
+    .position-card h3 {{ margin: 0 0 8px; font-size: 1.05rem; }}
+    .position-card p {{ font-size: .93rem; }}
+    .position-card .balances {{ display: grid; gap: 6px; margin: 12px 0; }}
+    .position-card .balances div {{ min-width: 0; }}
+    .position-card .unknown {{ font-weight: 800; color: #8a252b; }}
     footer {{ font-size: .9rem; color: #34506d; margin: 20px 0 8px; }}
     @media (max-width: 420px) {{
       .container {{ padding: 12px; }}
-      .grid {{ grid-template-columns: minmax(0, 1fr); }}
-      .summary {{ padding: 14px; }}
+      .grid, .selected-cards {{ grid-template-columns: minmax(0, 1fr); }}
+      .summary, .position-card {{ padding: 14px; }}
     }}
   </style>
 </head>
@@ -202,6 +210,7 @@ def render_recovery_html(
         <div class="tile"><dt>Execução live autorizada</dt><dd>Não</dd></div>
       </dl>
     </section>
+    {selected_section}
     <aside class="warning" aria-label="Aviso de segurança PAPER">
       <strong>ATENÇÃO: EXCLUSIVAMENTE PAPER</strong>
       <p>Mesmo um estado hipoteticamente encerrado não comprova risco, funding, liquidação, saldo, stop ou PnL de corretora. Este relatório jamais libera novas ordens.</p>
