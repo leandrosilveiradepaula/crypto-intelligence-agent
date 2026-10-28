@@ -99,7 +99,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
         values.update(change)
         return PaperRiskObservation(**values)
 
-    def run(self, *, quantity=D("2.5"), requirement=None,
+    def exercise(self, *, quantity=D("2.5"), requirement=None,
             observation=None, rows=None, now=None):
         data = self.rows if rows is None else rows
         at = data[-1].close_time_ms + 1000 if now is None else now
@@ -125,7 +125,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
         )
 
     def test_five_quote_units_at_50x_reaches_only_paper_pending(self):
-        result = self.run(requirement=self.request())
+        result = self.exercise(requirement=self.request())
         self.assertTrue(result.paper_intent_reserved)
         self.assertEqual(result.reason, "paper_open_intent_reserved_only")
         self.assertEqual(result.margin_assessment.reason,
@@ -142,7 +142,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
 
     def test_one_quote_unit_at_50x_below_assumed_minimum_reserves_nothing(self):
         old = self.count_open_intents()
-        result = self.run(
+        result = self.exercise(
             quantity=D("0.5"), requirement=self.request(margin=D(1)),
         )
         self.assertIsNone(result.intent)
@@ -156,7 +156,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
         self.assertEqual(self.count_open_intents(), old)
 
     def test_50x_does_not_auto_downgrade_if_cap_fixture_is_20x(self):
-        result = self.run(
+        result = self.exercise(
             requirement=self.request(rule=self.rule(max_leverage_assumed=20)),
         )
         self.assertEqual(result.margin_assessment.reason,
@@ -167,7 +167,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
 
     def test_kill_switch_wins_over_insufficient_notional(self):
         observation = self.observation(kill_switch_active=True)
-        result = self.run(
+        result = self.exercise(
             quantity=D("0.5"), requirement=self.request(margin=D(1)),
             observation=observation,
         )
@@ -186,7 +186,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
              PaperRiskReason.PORTFOLIO_EXPOSURE),
         ):
             with self.subTest(reason=reason):
-                result = self.run(requirement=self.request(), observation=altered)
+                result = self.exercise(requirement=self.request(), observation=altered)
                 self.assertEqual(result.margin_assessment.reason,
                                  PaperMarginReason.RISK_GATE_BLOCKED)
                 self.assertEqual(result.margin_assessment.risk_reason, reason)
@@ -196,7 +196,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
         requirement = self.request(
             rule=self.rule(now=self.now - 1001), max_age=1000,
         )
-        stale = self.run(requirement=requirement)
+        stale = self.exercise(requirement=requirement)
         self.assertEqual(stale.margin_assessment.reason,
                          PaperMarginReason.CONTRACT_FIXTURE_STALE)
         self.assertEqual(self.count_open_intents(), 0)
@@ -205,19 +205,19 @@ class CausalMarginPreflightTests(unittest.TestCase):
             quote_currency="USDC",
         ))
         with self.assertRaises(DataValidationError):
-            self.run(requirement=bad)
+            self.exercise(requirement=bad)
         self.assertEqual(self.count_open_intents(), 0)
 
     def test_no_latest_candidate_never_reserves_even_if_request_is_opted_in(self):
         source = candles()[:8]
-        result = self.run(rows=source, requirement=self.request())
+        result = self.exercise(rows=source, requirement=self.request())
         self.assertEqual(result.reason, "no_fresh_synthetic_hypothesis")
         self.assertIsNone(result.margin_assessment)
         self.assertEqual(self.count_open_intents(), 0)
 
     def test_wrong_or_partial_opt_in_rejected_not_silently_bypassed(self):
         with self.assertRaises(DataValidationError):
-            self.run(requirement={"margin_quote": "5"})
+            self.exercise(requirement={"margin_quote": "5"})
         with self.assertRaises(DataValidationError):
             self.request(margin="5")
         with self.assertRaises(DataValidationError):
@@ -225,7 +225,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
         self.assertEqual(self.count_open_intents(), 0)
 
     def test_legacy_no_opt_in_remains_unchanged_and_no_margin_claimed(self):
-        previous = self.run(quantity=D(2), requirement=None)
+        previous = self.exercise(quantity=D(2), requirement=None)
         self.assertTrue(previous.paper_intent_reserved)
         self.assertIsNone(previous.margin_assessment)
         self.assertEqual(previous.reason, "paper_open_intent_reserved_only")
@@ -253,7 +253,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
         self.orders.set_local_kill_switch(
             pause=True, expected_sequence=0, changed_at_ms=self.now,
         )
-        result = self.run(requirement=self.request())
+        result = self.exercise(requirement=self.request())
         self.assertFalse(result.paper_intent_reserved)
         self.assertIsNotNone(result.margin_assessment)
         self.assertTrue(result.margin_assessment.allowed_for_paper_research_only)
@@ -261,10 +261,10 @@ class CausalMarginPreflightTests(unittest.TestCase):
         self.assertEqual(self.count_open_intents(), 0)
 
     def test_paper_approval_never_bypasses_double_open_reservation(self):
-        first = self.run(requirement=self.request())
+        first = self.exercise(requirement=self.request())
         self.assertTrue(first.paper_intent_reserved)
         with self.assertRaises(DataValidationError):
-            self.run(requirement=self.request())
+            self.exercise(requirement=self.request())
         self.assertEqual(self.count_open_intents(), 1)
 
     def test_no_network_when_margin_preflight_blocks_or_allows(self):
@@ -272,10 +272,10 @@ class CausalMarginPreflightTests(unittest.TestCase):
                    side_effect=AssertionError("network not allowed")):
             with patch("urllib.request.urlopen",
                        side_effect=AssertionError("network not allowed")):
-                denied = self.run(
+                denied = self.exercise(
                     quantity=D("0.5"), requirement=self.request(margin=D(1)),
                 )
-                accepted = self.run(requirement=self.request())
+                accepted = self.exercise(requirement=self.request())
         self.assertFalse(denied.paper_intent_reserved)
         self.assertTrue(accepted.paper_intent_reserved)
         self.assertFalse(accepted.margin_assessment.venue_contract_verified)
