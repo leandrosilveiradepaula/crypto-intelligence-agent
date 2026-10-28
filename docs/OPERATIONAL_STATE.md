@@ -526,3 +526,8 @@ Fonte identificada: Bybit official Docs https://bybit-exchange.github.io/docs/ e
 ## D126 — Evidencia semanal real J1 #250
 
 Execucao GitHub Actions `40620522744` SUCCESS, 28/10/2026 UTC: 7 GETs de BTCUSDT 25–31/03/2020; 54.677 trades, 158/168 horas com trades, 10 sem trades observados, um dia parcial; manifesto SHA256 `ffb13c6d46d539628b95ed645bd760fc4f8559604e0e2970ee3e3b5371e96b70`. Dados apenas em RAM efemera, sem persistencia ou ordens. Cobertura observada nao prova feed integral; direitos de retencao/live e backtest financeiro continuam nao aprovados. J1 #2 e rights #217 permanecem abertas.
+
+
+## 28/10/2026 — J1/HIST #253, reconstrução 1h trade-derived
+
+Checkpoint anterior confirmado `main=01567ddf76fd4b57b553d8b14c00100b0b751603` após PR #252, CI Linux/Windows/Chrome pós-merge aprovadas. Issue #250 encerrada com evidência Actions #40620522744 (7 GETs, 54.677 trades, 158/168 horas); J1 #2 e direitos #217 permanecem abertas. **Tarefa ativa #253:** branch `work/issue-253-j1-hourly-trades-research`, novo `bybit_trade_hourly_research.py`, callback de parser baseada em microssegundos, testes regressivos de OHLC e fronteira ambígua, opção de relatório CLI e workflow owner-only. Não alegar CI nem execução real antes de resultados verificados. Próximo passo concreto: PR, revisão do diff, testes Linux/Windows/Chrome, correções, merge seguro no SHA; opcional única sonda efêmera de qualidade horária após integração. Sem armazenamento real, direitos de produção, ordem, deploy ou gasto.
