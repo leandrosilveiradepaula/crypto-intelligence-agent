@@ -390,6 +390,219 @@ class PaperRecoveryEndToEndTests(unittest.TestCase):
             before, (self.order_path.read_bytes(), self.position_path.read_bytes()),
         )
 
+    def overview(self, position_ids=("fixture_recovery_position",)):
+        from crypto_intelligence_agent.paper_operator_overview import (
+            inspect_local_paper_operator_overview,
+        )
+        return inspect_local_paper_operator_overview(
+            self.order_path, self.position_path, position_ids,
+        )
+
+    def test_overview_without_cursor_suppresses_selected_positions(self):
+        state = self.overview()
+        self.assertEqual(state.recovery.state, PaperRecoveryState.UNVERIFIED)
+        self.assertFalse(state.selection_verified)
+        self.assertEqual(state.selected, ())
+        self.assertFalse(state.new_open_authorized)
+        self.assertFalse(state.all_positions_enumerated)
+
+    def test_overview_missing_selected_id_is_fail_closed_not_partial(self):
+        self.batch(1)
+        state = self.overview(("fixture_missing_position",))
+        self.assertEqual(state.recovery.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(state.recovery.reason, "paper_selected_positions_unverified")
+        self.assertFalse(state.selection_verified)
+        self.assertEqual(state.selected, ())
+
+    def test_overview_selection_rejects_duplicate_wildcard_and_excessive_ids(self):
+        self.batch(1)
+        cases = (
+            (), ("fixture_recovery_position", "fixture_recovery_position"),
+            ("*",), ("all",), tuple(f"fixture_bad_{i}" for i in range(129)),
+        )
+        for ids in cases:
+            with self.subTest(ids=ids[:2]), self.assertRaises(DataValidationError):
+                self.overview(ids)
+
+    def test_overview_real_filled_open_displays_selected_position_but_blocks(self):
+        self.filled_open()
+        state = self.overview()
+        self.assertEqual(state.recovery.state, PaperRecoveryState.BLOCKED)
+        self.assertEqual(state.recovery.reason, "paper_open_unverified_protection")
+        self.assertTrue(state.selection_verified)
+        self.assertEqual(len(state.selected), 1)
+        self.assertEqual(state.selected[0].balance.confirmed_remaining_units, D(2))
+        self.assertFalse(state.cross_database_atomic_snapshot_available)
+        self.assertFalse(state.native_stop_verified)
+        self.assertFalse(state.new_open_authorized)
+        self.assertFalse(state.financial_pnl_available)
+
+    def test_overview_close_is_hypothetical_only_and_balances_exact(self):
+        opening, open_fill = self.filled_open()
+        self.reserve_and_fill_exit(opening, open_fill)
+        state = self.overview()
+        self.assertTrue(state.selection_verified)
+        self.assertEqual(
+            state.recovery.state, PaperRecoveryState.PAPER_FLAT_HYPOTHETICAL_ONLY,
+        )
+        self.assertEqual(state.selected[0].balance.confirmed_remaining_units, D(0))
+        self.assertFalse(state.live_trading_authorized)
+
+    def test_overview_partial_reduce_only_and_runner_stay_blocked(self):
+        opening, event = self.filled_open(runner=True)
+        self.reserve_and_fill_exit(opening, event, units=D(1), filled=D(1))
+        state = self.overview()
+        self.assertEqual(state.recovery.state, PaperRecoveryState.BLOCKED)
+        self.assertTrue(state.selection_verified)
+        self.assertEqual(state.selected[0].balance.confirmed_remaining_units, D(1))
+        self.assertEqual(state.selected[0].balance.runner_floor_units, D(1))
+
+    def test_overview_change_between_recovery_reads_drops_every_position(self):
+        import crypto_intelligence_agent.paper_operator_overview as module
+        opening, event = self.filled_open()
+        source = module.inspect_local_paper_recovery_status
+        count = 0
+
+        def change(*args, **kwargs):
+            nonlocal count
+            state = source(*args, **kwargs)
+            count += 1
+            if count == 1:
+                self.reserve_and_fill_exit(opening, event)
+            return state
+
+        with patch.object(module, "inspect_local_paper_recovery_status",
+                          side_effect=change):
+            result = self.overview()
+        self.assertEqual(count, 2)
+        self.assertEqual(result.recovery.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(
+            result.recovery.reason, "paper_overview_changed_during_inspection",
+        )
+        self.assertEqual(result.selected, ())
+        self.assertFalse(result.selection_verified)
+
+    def test_overview_selected_snapshot_diff_drops_every_position(self):
+        import crypto_intelligence_agent.paper_operator_overview as module
+        from dataclasses import replace
+        self.filled_open()
+        source = module.inspect_paper_positions
+        count = 0
+
+        def altered(*args, **kwargs):
+            nonlocal count
+            value = source(*args, **kwargs)
+            count += 1
+            if count == 2:
+                return (replace(
+                    value[0], opening_order_cross_checked=True,
+                ),)
+            return value
+
+        with patch.object(module, "inspect_paper_positions", side_effect=altered):
+            result = self.overview()
+        self.assertEqual(count, 2)
+        self.assertEqual(result.recovery.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(result.selected, ())
+
+    def test_overview_corrupt_position_blocks_every_selected_view(self):
+        self.filled_open()
+        with closing(sqlite3.connect(self.position_path)) as con, con:
+            con.execute("UPDATE paper_positions SET payload='{}'")
+        result = self.overview()
+        self.assertEqual(result.recovery.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(result.selected, ())
+        self.assertFalse(result.selection_verified)
+
+    def test_overview_cli_selected_json_and_html_are_non_authorizing(self):
+        from scripts.inspect_paper_recovery import render_recovery_html
+        from scripts.inspect_paper_positions import multi_paper_snapshot
+        self.filled_open()
+        state = self.overview()
+        out = StringIO()
+        with redirect_stdout(out):
+            exit_code = recovery_cli([
+                "--orders", str(self.order_path),
+                "--positions", str(self.position_path),
+                "--position-id", "fixture_recovery_position",
+            ])
+        self.assertEqual(exit_code, 2)
+        data = json.loads(out.getvalue())
+        self.assertEqual(data["schema_version"], "paper_operator_overview_v1")
+        self.assertEqual(data["recovery"]["state"], "BLOCKED")
+        self.assertTrue(data["selection"]["verified"])
+        self.assertEqual(data["selection"]["count"], 1)
+        self.assertFalse(data["selection"]["all_positions_enumerated"])
+        self.assertTrue(data["selection"]["no_cross_instrument_quantity_aggregation"])
+        self.assertEqual(data["selection"]["positions"][0]["confirmed_remaining_units"], "2")
+        self.assertNotIn("portfolio_total", out.getvalue())
+        self.assertNotIn(str(self.root), out.getvalue())
+        self.assertFalse(data["orders_sent"])
+        self.assertFalse(data["new_open_authorized"])
+        self.assertFalse(data["live_trading_authorized"])
+        view = render_recovery_html(state.recovery, selected=state.selected)
+        self.assertIn('data-selection="explicit-only"', view)
+        self.assertIn("fixture_recovery_position", view)
+        self.assertIn("não existe total financeiro", view)
+        self.assertIn("<dd>NÃO</dd>", view)
+        self.assertNotIn(str(self.root), view)
+        self.assertEqual(view.count("<main"), 1)
+        self.assertNotIn("<script", view)
+        self.assertNotIn("https://", view)
+        self.assertEqual(
+            multi_paper_snapshot(state.selected)["positions"][0]["confirmed_remaining_units"], "2",
+        )
+
+    def test_overview_refuses_forged_flat_with_active_position(self):
+        from dataclasses import replace
+        from scripts.inspect_paper_recovery import render_recovery_html
+        self.filled_open()
+        state = self.overview()
+        with self.assertRaises(DataValidationError):
+            render_recovery_html(
+                replace(state.recovery,
+                        state=PaperRecoveryState.PAPER_FLAT_HYPOTHETICAL_ONLY,
+                        reason="paper_flat_not_live_verified"),
+                selected=state.selected,
+            )
+
+    def test_overview_cli_exclusive_html_export_does_not_touch_journals(self):
+        self.filled_open()
+        output = self.root / "overview.html"
+        before = (self.order_path.read_bytes(), self.position_path.read_bytes())
+        args = [
+            "--orders", str(self.order_path),
+            "--positions", str(self.position_path),
+            "--position-id", "fixture_recovery_position",
+            "--format", "html", "--output", str(output),
+        ]
+        with redirect_stdout(StringIO()):
+            self.assertEqual(recovery_cli(args), 2)
+        html = output.read_text(encoding="utf-8")
+        self.assertIn('data-selection="explicit-only"', html)
+        err = StringIO()
+        from contextlib import redirect_stderr
+        with redirect_stdout(StringIO()), redirect_stderr(err):
+            self.assertEqual(recovery_cli(args), 2)
+        self.assertIn("indisponível", err.getvalue())
+        self.assertNotIn(str(self.root), err.getvalue())
+        self.assertEqual(output.read_text(encoding="utf-8"), html)
+        self.assertEqual(
+            (self.order_path.read_bytes(), self.position_path.read_bytes()), before,
+        )
+
+    def test_overview_inspection_has_zero_network(self):
+        self.filled_open()
+        old = (self.order_path.read_bytes(), self.position_path.read_bytes())
+        with patch("urllib.request.urlopen", side_effect=AssertionError("network")):
+            with patch("socket.create_connection", side_effect=AssertionError("network")):
+                result = self.overview()
+        self.assertTrue(result.selection_verified)
+        self.assertFalse(result.orders_sent)
+        self.assertEqual(
+            (self.order_path.read_bytes(), self.position_path.read_bytes()), old,
+        )
+
     def test_invalid_decision_clock_does_not_claim_recovery(self):
         self.batch(1)
         self.assertEqual(
