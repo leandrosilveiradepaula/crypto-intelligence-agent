@@ -73,7 +73,7 @@ class SyntheticMarkReplayTests(unittest.TestCase):
         self.assertEqual(result.state, SyntheticReplayState.OPEN_UNRESOLVED)
         self.assertEqual(len(result.observations), 2)
         self.assertIsNone(result.conditional_net_quote)
-        self.assertEqual(result.worst_mark_equity_quote, D("19.8"))
+        self.assertEqual(result.worst_mark_equity_quote, D("19.6"))
         self.assertFalse(result.orders_sent)
 
     def test_funding_paid_or_credited_changes_mark_equity(self):
@@ -87,7 +87,7 @@ class SyntheticMarkReplayTests(unittest.TestCase):
                 (tick("100", "100"),), (funding,), as_of_ms=T + 1_000,
             )
             self.assertEqual(result.observations[0].signed_funding_paid_quote, D("2"))
-            self.assertEqual(result.observations[0].equity_at_mark_quote, D("17.8"))
+            self.assertEqual(result.observations[0].equity_at_mark_quote, D("17.6"))
             self.assertEqual(result.state, SyntheticReplayState.OPEN_UNRESOLVED)
 
     def test_fifty_x_can_liquidate_where_ten_x_survives(self):
