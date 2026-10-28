@@ -132,20 +132,28 @@ class VisionPrivateCaptureTests(unittest.TestCase):
                 self.capture()
         self.assertFalse(self.out.exists())
 
-    def test_racing_directory_created_by_other_process_is_never_deleted(self):
-        original = Path.mkdir
-        def racing_mkdir(path, *args, **kwargs):
-            if Path(path) == self.out:
-                original(self.out, mode=0o700)
-                (self.out / "do-not-delete.txt").write_text("owned by rival")
-                raise FileExistsError("concurrent creator")
-            return original(path, *args, **kwargs)
-        with patch("scripts.capture_private_vision_months.Path.mkdir",
-                   autospec=True, side_effect=racing_mkdir):
+    def test_atomic_publication_refuses_existing_target_and_cleans_stage(self):
+        from scripts.capture_private_vision_months import _publish_noreplace
+        original = _publish_noreplace
+        def racing_publish(stage, destination):
+            self.out.mkdir(mode=0o700)
+            (self.out / "keep.txt").write_text("rival")
+            return original(stage, destination)
+        with patch("scripts.capture_private_vision_months._publish_noreplace",
+                   side_effect=racing_publish):
             with self.assertRaises(VisionCaptureError):
                 self.capture()
-        self.assertEqual((self.out / "do-not-delete.txt").read_text(),
-                         "owned by rival")
+        self.assertEqual((self.out / "keep.txt").read_text(), "rival")
+        self.assertFalse(any(p.name.startswith(".vision-staging-")
+                             for p in self.root.iterdir()))
+
+    def test_staged_reaudit_failure_leaves_no_published_or_staged_data(self):
+        with patch("scripts.capture_private_vision_months.audit_private_vision_archives",
+                   side_effect=RuntimeError("fault")):
+            with self.assertRaises(VisionCaptureError):
+                self.capture()
+        self.assertFalse(self.out.exists())
+        self.assertEqual(tuple(self.root.iterdir()), ())
 
     def test_manifest_is_written_only_after_data_files(self):
         result = self.capture()
