@@ -33,9 +33,12 @@ def parse_untrusted_local_vision_checksum(
             or type(archive_name) is not str
             or _ARCHIVE.fullmatch(archive_name) is None):
         raise DataValidationError("invalid untrusted local checksum identity")
-    line = raw[:-1] if raw.endswith(b"\n") else raw
-    if line.endswith(b"\r"):
-        line = line[:-1]
+    if raw.endswith(b"\r\n"):
+        line = raw[:-2]
+    elif raw.endswith(b"\n"):
+        line = raw[:-1]
+    else:
+        line = raw
     match = _SIDECAR.fullmatch(line)
     if (match is None or
             match.group(2) != archive_name.encode("ascii")):
