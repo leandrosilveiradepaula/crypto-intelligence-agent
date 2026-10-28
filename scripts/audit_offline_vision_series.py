@@ -15,6 +15,8 @@ import re
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.offline_vision_month import inspect_offline_vision_month
 from crypto_intelligence_agent.offline_vision_series import assemble_offline_vision_months
+from crypto_intelligence_agent.vision_research_oos import diagnose_vision_monthly_direction
+from dataclasses import asdict
 from scripts.audit_private_bybit_json import _read_private_file
 
 _SCHEMA = "vision-local-series-v1"
@@ -31,6 +33,7 @@ class VisionLocalAuditError(ValueError):
 def audit_private_vision_archives(
     *, manifest_path: str,
     allow_personal_nonproduction_research: bool = False,
+    audit_directional_oos: bool = False,
 ) -> dict[str, object]:
     """Parse and assemble a private, caller-supplied contiguous archive series.
 
@@ -39,6 +42,8 @@ def audit_private_vision_archives(
     """
     if allow_personal_nonproduction_research is not True:
         raise VisionLocalAuditError("explicit_personal_nonproduction_opt_in_required")
+    if type(audit_directional_oos) is not bool:
+        raise VisionLocalAuditError("invalid_directional_research_mode")
     if os.name != "posix":
         raise VisionLocalAuditError("private_posix_environment_required")
     try:
@@ -85,7 +90,9 @@ def audit_private_vision_archives(
         series = assemble_offline_vision_months(
             tuple(months), as_of_ms=manifest["as_of_ms"],
         )
-        return {
+        directional = (diagnose_vision_monthly_direction(tuple(months), as_of_ms=manifest["as_of_ms"])
+                       if audit_directional_oos else None)
+        report = {
             "schema_version": _SCHEMA,
             "status": "private_unverified_monthly_series_inspected",
             "archive_count": len(series.month_names),
@@ -104,6 +111,18 @@ def audit_private_vision_archives(
             "network_requests": 0,
             "data_stored": False,
         }
+        if directional is not None:
+            report["directional_oos"] = {
+                "quality": directional.quality,
+                "folds": [asdict(f) for f in directional.folds],
+                "source_authenticated": False,
+                "dataset_rights_authorized": False,
+                "financial_backtest_approved": False,
+                "out_of_sample_financial_returns_validated": False,
+                "ready_for_trading": False,
+                "orders_sent": False,
+            }
+        return report
     except Exception:
         # Never print a third-party library exception containing private data
         # or paths; callers and the CLI receive a stable sanitized error.
@@ -114,11 +133,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--allow-personal-nonproduction-research", action="store_true")
+    parser.add_argument("--audit-directional-oos", action="store_true")
     args = parser.parse_args(argv)
     try:
         report = audit_private_vision_archives(
             manifest_path=args.manifest,
             allow_personal_nonproduction_research=args.allow_personal_nonproduction_research,
+            audit_directional_oos=args.audit_directional_oos,
         )
     except Exception:
         report = {
