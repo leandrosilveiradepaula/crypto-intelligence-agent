@@ -69,7 +69,7 @@
     </aside>
     <section aria-labelledby="cartoes-title">
       <h2 id="cartoes-title">Posições PAPER selecionadas</h2>
-      <p class="note">Não existe total consolidado: cada posição tem instrumento, lado, reservas e piso residual próprios. Pedidos incertos não são preenchimentos.</p>
+      <p class="note">Não existe total consolidado: cada posição tem instrumento, lado, reservas, piso residual e configuração solicitada próprios. As margens PAPER não são somadas nem convertidas entre moedas. Pedidos incertos não são preenchimentos.</p>
       <div class="positions" data-selected-positions="{{count}}">
         {{position_cards}}
       </div>
@@ -89,7 +89,7 @@
     </section>
     <section aria-labelledby="limites-title">
       <h2 id="limites-title">Limites da leitura</h2>
-      <p class="lead">Verificação de hash é integridade local, não prova de ordens reais. Não há carteira financeira, liquidação, mark price, funding, API, stop operacional, preço, PnL ou margem. Dados, estratégia e negociação automática dependem de homologações separadas J1/J2/J3/J4/J6.</p>
+      <p class="lead">Verificação de hash é integridade local, não prova de ordens reais. Não há carteira financeira, liquidação, mark price, funding, API, stop operacional, preço, PnL ou margem efetiva confirmada da corretora. Quando disponível, a margem/alavancagem exibida é somente a solicitação original de uma intenção PAPER, jamais saldo ou contrato executável. Dados, estratégia e negociação automática dependem de homologações separadas J1/J2/J3/J4/J6.</p>
     </section>
   </main>
   <footer><div class="page">Crypto Intelligence Agent · paper_positions_snapshot_v1 · somente leitura · R$ 0,00 adicional · nenhuma operação real.</div></footer>
