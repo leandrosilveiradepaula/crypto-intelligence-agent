@@ -490,3 +490,8 @@ Auditar todos os candidatos OOS com ramos PRE6: exigir exatamente um `SyntheticM
 ## J3/PRE16 #293 — trajetória temporal sintética mark/trade
 
 Testar LONG/SHORT com MARK adverso e TRADE favorável simultaneamente: manutenção insuficiente deve prevalecer e recusar PnL/fill. Testar 50x versus 10x para exposição idêntica, stop em gap ao preço de trade declarado, alvo com taxas + slippage de entrada e saída calculados por PRE2, funding com sinal e timestamp, posição sem gatilho sem lucro realizado, relógio invertido/duplicado/futuro e funding no mesmo tick/após saída negados. Validar Decimal sob contexto global baixo, NaN/float/bool, sem rede nem storage, exact input boundaries, sem aceitação de origem de mercado, fórmula de liquidação ou live. Exigir CI Linux/Windows/docs/Chrome no SHA do PR e pós-merge; registrar evidências da issue #293.
+
+
+## J3/PRE17 #295 — matriz de risco simultâneo de portfólio sintético
+
+Validar 2..16 IDs distintos, relógio e moeda quote idênticos, posições LONG/SHORT com notional assinado líquido zero mas risco bruto >0, concentração 100% em um símbolo versus 50% em dois, cenário simultâneo LONG em manutenção insuficiente e SHORT TARGET com equity conjunta positiva sem resgate do primeiro. Testar leverage 50x versus 10x, STOP/TARGET/LIQ no mesmo tick, timestamps divergentes, IDs duplicados, preço inválido via PRE16, entradas não alinhadas, mudanças de quote, contextos Decimal, no-network, ausência de PnL/correlação/risco real e interrupção no primeiro trigger. CI Linux/docs, Windows e Chrome/PAPER no SHA exato, revisão diff, squash sem deploy e pós-merge.
