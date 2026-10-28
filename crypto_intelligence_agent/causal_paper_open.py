@@ -218,6 +218,7 @@ def _finish_causal_paper_open(
         return CausalPaperOpening(
             now, candidate, None, None, health,
             "paper_open_health_denied_" + health.reason,
+            prepared.margin_assessment,
         )
     if receipt is None:
         raise DataValidationError("health allowed without PAPER risk decision")
@@ -227,6 +228,7 @@ def _finish_causal_paper_open(
         return CausalPaperOpening(
             now, candidate, intent, receipt, health,
             "paper_risk_denied_" + receipt.decision.reason.value,
+            prepared.margin_assessment,
         )
     if (receipt.decision.reason is not PaperRiskReason.OPEN_ALLOWED_PAPER_ONLY
             or receipt.entry is None
@@ -237,6 +239,7 @@ def _finish_causal_paper_open(
         raise DataValidationError("unexpected PAPER reservation/fill state")
     return CausalPaperOpening(
         now, candidate, intent, receipt, health, "paper_open_intent_reserved_only",
+        prepared.margin_assessment,
     )
 
 
@@ -251,6 +254,7 @@ def reserve_causal_paper_open(
     position_journal_path: str | Path,
     decision_at_ms: int,
     close_safety_ms: int = 1_000,
+    margin_preflight: PaperMarginPreflightRequest | None = None,
 ) -> CausalPaperOpening:
     """Legacy AUTO7 entry point; health, risk and OPEN share AUTO2 lock."""
     if type(journal) is not SQLitePaperOrderJournal:
@@ -260,6 +264,7 @@ def reserve_causal_paper_open(
         requested_units=requested_units, limits=limits,
         observation=observation, decision_at_ms=decision_at_ms,
         close_safety_ms=close_safety_ms,
+        margin_preflight=margin_preflight,
     )
     if prepared.intent is None:
         return prepared
