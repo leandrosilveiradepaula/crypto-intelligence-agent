@@ -132,6 +132,26 @@ class VisionPrivateCaptureTests(unittest.TestCase):
                 self.capture()
         self.assertFalse(self.out.exists())
 
+    def test_racing_directory_created_by_other_process_is_never_deleted(self):
+        original = Path.mkdir
+        def racing_mkdir(path, *args, **kwargs):
+            if Path(path) == self.out:
+                original(self.out, mode=0o700)
+                (self.out / "do-not-delete.txt").write_text("owned by rival")
+                raise FileExistsError("concurrent creator")
+            return original(path, *args, **kwargs)
+        with patch("scripts.capture_private_vision_months.Path.mkdir",
+                   autospec=True, side_effect=racing_mkdir):
+            with self.assertRaises(VisionCaptureError):
+                self.capture()
+        self.assertEqual((self.out / "do-not-delete.txt").read_text(),
+                         "owned by rival")
+
+    def test_manifest_is_written_only_after_data_files(self):
+        result = self.capture()
+        self.assertEqual(result["status"], "private_nonproduction_research_archives_stored")
+        self.assertEqual(len(tuple(self.out.iterdir())), 5)
+
     def test_cli_defaults_no_network_and_no_secret_output(self):
         args = ["--first-month", self.names[0], "--second-month", self.names[1],
                 "--output-dir", str(self.out), "--as-of-ms", str(self.cutoff)]
