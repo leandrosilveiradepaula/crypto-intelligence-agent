@@ -274,3 +274,8 @@ Testes: journal vazio, cursor com 6 candles e OPEN PENDING, restart, pausa/resum
 ## J1/HIST #297 — captura de arquivo oficial para pesquisa isolada
 
 O caminho `scripts/capture_private_vision_months.py` é uma camada owner-only para adquirir arquivos históricos em dois meses contíguos usando domínio fixo Binance Vision; reutiliza `vision_checksum_sidecar.py`, `offline_vision_month.py` e `offline_vision_series.py` e gera diretório local privado 0700/0600 + manifesto para `audit_offline_vision_series.py`. Não conecta `ClosedCandle`, storage canônico, J2/J3 ou motor de ordens; não há daemon, cron, chave, banco produtivo, host alternativo ou coleta em CI. Separação por construção: histórico de pesquisa não produtivo nunca é feed de trading. A licença do dataset limita finalidade, não é substituída pela licença MIT do código.
+
+
+## J1/HIST #301 — retenção de histórico Vision em estágio privado
+
+O capturador recebe bytes fixos do host Vision somente após quatro opt-ins; primeiro os valida em memória com ZIP SHA-256 + parser estrito (com possível cabeçalho conhecido), depois grava estágio 0700 e arquivos 0600, roda `audit_private_vision_archives` nos bytes relidos, sincroniza e publica o diretório pronto via `renameat2(RENAME_NOREPLACE)` Linux. O manifesto é marcador de conteúdo completo dentro do estágio, não um sinal live. Não sobrescreve diretórios nem envia bytes a GitHub, e permanece separado dos feeds canônicos/ordens.

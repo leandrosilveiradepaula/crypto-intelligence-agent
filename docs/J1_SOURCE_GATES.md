@@ -244,3 +244,8 @@ Existe auditor mensal de 2..24 ZIPs USD-M 1h. Com --require-local-checksum-sidec
 ## J1/HIST #299 — consentimento recebido, execução pendente de acesso real
 
 Aceite pessoal dos Termos Binance Vision para pesquisa não produtiva recebido no chat (28/10/2026), não equivale a prova de elegibilidade regional e não autoriza live. Não há shell SSH da VPS disponível nesta sessão; CI Windows/Linux/Chrome verifica apenas fixtures. Contrato de criação privada foi endurecido contra corrida: não apagar diretório concorrente; a presença do manifesto escrito por último é indicador de conjunto pronto, não commit cross-file atômico. Captura owner-only não foi executada. J1 não homologada.
+
+
+## J1/HIST #301 — validação prévia à primeira coleta real privada
+
+O capturador integrado passa a aceitar apenas cabeçalho Binance Vision 12 colunas conhecido ou zero cabeçalho. Diretório 0700 criado como estágio, arquivos 0600 escritos e sincronizados, manifesto auditado integralmente de disco com o auditor offline preexistente, e publicação `renameat2(RENAME_NOREPLACE)` no mesmo filesystem: nenhum diretório publicado se reauditoria falhar. Não há fallback para `os.rename` substitutivo. O caminho é Linux/POSIX owner-only, desligado sem quatro flags de opt-in. Permanecem sem comprovação de VPS disponível e elegibilidade territorial. Execução só após verificação regional pelo titular; nenhum dado Binance Vision serve de fonte de ordens live (§4.2).
