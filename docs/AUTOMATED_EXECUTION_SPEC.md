@@ -196,3 +196,8 @@ A leitura multiposição pode receber o diário AUTO2 explicitamente e conferir 
 ## PRE15 #290 — risco condicional de margem não autoriza entrada automática
 
 O envelope PRE15 consome alternativas sintéticas PRE6 e margens quote explícitas para sinalizar que um cenário pessimista pode consumir a margem solicitada. O cálculo não modela manutenção, stop da venue, saldo nem posição financeira real; o estresse de custo não transforma candle em execução. Todas as autorizações de mercado/ordens/live permanecem falsas e a J3 #4 continua não homologada.
+
+
+## J3/PRE16 #293 — replay temporal sintético NÃO habilita executor
+
+O replay com `SyntheticMarkTick` recebe preços de fixture com MARK/TRade e funding explicitamente declarados, verifica uma condição **hipotética** de equity/manutenção e só depois o gatilho fictício STOP/TARGET. Não calcula preço real de liquidação nem envia instruções à Binance/Bybit; decisão de trade real, native stop e estado de margem de exchange continuam bloqueados. Saídas de fixture não podem alimentar `OrderExecutionEngine` live ou testnet sem gates J1/J3/J6 e autorização.

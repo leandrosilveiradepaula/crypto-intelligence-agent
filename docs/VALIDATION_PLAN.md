@@ -485,3 +485,8 @@ Exigir teste de `margin_quote × leverage_at_intent == entry_notional_quote` com
 ## J3/PRE15-B — vínculo causal PRE7/OOS
 
 Auditar todos os candidatos OOS com ramos PRE6: exigir exatamente um `SyntheticMarginBasis` e `SyntheticAdverseCostStress` por índice resolvido, comparar recálculo PRE6 idêntico ao registro PRE7, recusar mutações e moedas divergentes, limitar à janela OOS já validada. Abstenções não devem adquirir saída ou PnL. Linux/Windows/Chrome, `compileall` e SHA exato; risco é condicional, não prova financeira.
+
+
+## J3/PRE16 #293 — trajetória temporal sintética mark/trade
+
+Testar LONG/SHORT com MARK adverso e TRADE favorável simultaneamente: manutenção insuficiente deve prevalecer e recusar PnL/fill. Testar 50x versus 10x para exposição idêntica, stop em gap ao preço de trade declarado, alvo com taxas + slippage de entrada e saída calculados por PRE2, funding com sinal e timestamp, posição sem gatilho sem lucro realizado, relógio invertido/duplicado/futuro e funding no mesmo tick/após saída negados. Validar Decimal sob contexto global baixo, NaN/float/bool, sem rede nem storage, exact input boundaries, sem aceitação de origem de mercado, fórmula de liquidação ou live. Exigir CI Linux/Windows/docs/Chrome no SHA do PR e pós-merge; registrar evidências da issue #293.

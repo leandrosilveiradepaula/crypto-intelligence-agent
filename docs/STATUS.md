@@ -583,3 +583,8 @@ Base `main=57eec4553af9df94f42469c0e31fa7ca87bd4bcb` após #288/#289 integrada e
 ## J3/PRE15-B #290 — ligação de envelopes com PRE7/OOS (28/10/2026 UTC)
 
 Após PR #291 integrada em `main=676ac1582493f97d1ec2ca4aa6578d053ccc2659`, branch `work/issue-290-j3-oos-margin-audit` acrescenta auditoria causal dos eventos com resultados condicionais: requer margem e choque por candidato e revalida PRE6 contra o resultado PRE7 exato. Eventos abstidos continuam sem resultado; nenhum lucro, perda financeira real ou liquidação de exchange. Exigir CI Linux/Windows/Chrome, revisão SHA, merge seguro e pós-merge. J3 #4 permanece não homologada.
+
+
+## J3/PRE16 #293 — replay causal de mark/funding/manutenção (28/10/2026 UTC)
+
+Verificado `main=4576ebcab57a6b7dce9f4b5fdbf44824ce298cce` após duas PRs #291/#292 integradas e CI verde; nenhuma PR aberta no começo. Issue #293 e branch `work/issue-293-j3-temporal-mark-replay`: motor financeiro sintético de posição única, mark/trade distintos, manutenção hipotética, funding e custos PRE2, precedência de liquidação, gatilhos de STOP/TARGET sem inferência de OHLC. Testes adversariais e D146/arquitetura/validação. Gate para integração: CI Linux/Windows/Chrome e revisão SHA exato, squash sem produção, pós-merge. Nenhuma ordem real; J1 #2/#217, J3 #4 e J6 #7 abertas.
