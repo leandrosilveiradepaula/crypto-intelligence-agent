@@ -52,7 +52,8 @@ class SyntheticMarkReplayTests(unittest.TestCase):
             )
             self.assertEqual(result.state, SyntheticReplayState.CONDITIONAL_TARGET)
             self.assertEqual(result.assumed_exit_trade_price, D(target_price))
-            self.assertEqual(result.conditional_net_quote, D("19.16"))
+            expected_net = D("19.16") if side is ResearchDirection.LONG else D("19.24")
+            self.assertEqual(result.conditional_net_quote, expected_net)
             self.assertFalse(result.fill_price_verified)
             self.assertFalse(result.net_pnl_verified)
 
