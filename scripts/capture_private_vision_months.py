@@ -21,7 +21,7 @@ from crypto_intelligence_agent.offline_vision_month import inspect_offline_visio
 from crypto_intelligence_agent.offline_vision_series import assemble_offline_vision_months
 
 BASE = "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1h/"
-NAME = re.compile(r"BTCUSDT-1h-(20[0-9]{2})-(0[1-9]|1[0-2])\\.zip\\Z")
+NAME = re.compile(r"BTCUSDT-1h-(20[0-9]{2})-(0[1-9]|1[0-2])\.zip\Z")
 ZIP_LIMIT = 8_000_000
 CHECKSUM_LIMIT = 256
 
