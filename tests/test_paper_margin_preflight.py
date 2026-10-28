@@ -44,7 +44,8 @@ def contract(**changes):
         venue=PaperVenue.BINANCE_USDM, symbol="BTCUSDT",
         quote_currency="USDT", observed_at_ms=T,
         fixture_version="fixture_binance_assumed_v1",
-        max_leverage_assumed=75, quantity_step_base=D("0.01"),
+        max_leverage_assumed=75, price_tick_quote=D("0.01"),
+        quantity_step_base=D("0.01"),
         min_quantity_base=D("0.01"),
         min_notional_quote=D("100"), max_notional_quote=D("1000"),
     )
@@ -284,6 +285,8 @@ class PaperMarginPreflightTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(DataValidationError):
                 contract(max_leverage_assumed=value)
         for field, value in (
+            ("price_tick_quote", D("0")),
+            ("price_tick_quote", D("NaN")),
             ("quantity_step_base", D("NaN")),
             ("quantity_step_base", D("0")),
             ("min_quantity_base", D("0")),
