@@ -548,3 +548,8 @@ Checkpoint verificado: `main=8acbd4084f8fdada2b10bd47281ae13e76fa21f8`, PRs aber
 ## 28/10/2026 — J1 #256 final
 
 PR #257 merged main `04be5240db169344640e72bb313041e557171549`. Real GitHub Actions #40629733622 SUCCESS: 7 fixed BTCUSDT archive requests, 54,677 trades, 158 of 168 hours with observed trades, 13 ambiguous price boundary hours. Literal trade-field equality: size/homeNotional 54,677/54,677 and foreignNotional/(price*homeNotional) 54,677/54,677; zero observed mismatch. This is NOT a contract unit certification, V5 comparison, license, Top50 validation, financial backtest or live gate. No raw data stored, credentials, orders or spending. Evidence PR in progress for D130; next task: legitimate historical kline reference and contract identity validation; J1 #2 and rights #217 remain open.
+
+
+## 28/10/2026 — J1 #259 sidecar privado e D131
+
+Base verificada: main 945c9a3b36e7b81867ca2d65fcc196616d5a7211; PRs abertas zero. D114 já continha Binance Vision e seu parser. Issue #259 e branch work/issue-259-j1-vision-local-checksum adicionam parser estrito de ZIP.CHECKSUM e opção CLI opt-in mantendo o modo legado. Apenas fixtures sintéticas; sem acesso a ZIP real, ordens, licença aceita pelo titular ou deploy. Fonte primária Binance Vision terms v1.0 26/08/2026 §4.2 proíbe dataset em live. Próxima tarefa: PR, CI Linux/Windows/Chrome, revisão HEAD, merge sem produção e comprovação pós-merge; J1 #2 e direitos Bybit #217 ficam abertas.
