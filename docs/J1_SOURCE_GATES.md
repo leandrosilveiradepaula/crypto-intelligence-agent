@@ -218,3 +218,19 @@ Conciliador puro `bybit_trade_kline_reconciliation.py`: recebe **somente** `Week
 ## J1 #259 — checksum local Binance Vision, sem promoção
 
 Existe auditor mensal de 2..24 ZIPs USD-M 1h. Com --require-local-checksum-sidecars, exige ZIP.CHECKSUM local com única linha sha256sum, exatamente mesmo basename, ZIP/manifest/sidecar com digest idêntico e permissões privadas POSIX. Saída inclui untrusted_local_checksum_sidecars_matched e checksum_proves_provider_origin=false. Com flag ausente, modo anterior preservado. Dados reais não foram baixados; SHA local não é assinatura oficial. Terms v1.0 26/08/2026 §4.2 proíbe usar datasets Binance Vision para live proprietary trading execution. Código de pesquisa nunca libera J1, backtest financeiro ou robô live.
+
+## J1/D132 — matriz de referencia historica Bybit, sem consulta de mercado (28/10/2026)
+
+| Dado necessario para J1/J3 | Fonte oficial de schema | Evidencia historica real da MESMA janela 25–31/03/2020 | Gate |
+| --- | --- | --- | --- |
+| Trades BTCUSDT | [Recent trades e arquivo historico](https://bybit-exchange.github.io/docs/v5/market/recent-trade) | D126/D128/D130: 7 arquivos, 54.677 trades, 158/168 horas com trades; 13 fronteiras ambíguas, sem retencao | Observacional, nao OHLCV canonico |
+| Candles OHLC/volume/turnover | [V5 Kline](https://bybit-exchange.github.io/docs/v5/market/kline) | **Nenhum candle V5 real da mesma semana**; comparador so com referencia sintetica | `canonical_ohlcv_approved=false` |
+| Mark price | [V5 Mark Kline](https://bybit-exchange.github.io/docs/v5/market/mark-kline) | Nenhuma serie de 2020 coletada ou conciliada | Bloqueado para liquidacao/backtest |
+| Index price | [V5 Index Kline](https://bybit-exchange.github.io/docs/v5/market/index-kline) | Nenhuma serie de 2020 coletada ou conciliada | Bloqueado para derivativos |
+| Funding por contrato e intervalo | [V5 funding history](https://bybit-exchange.github.io/docs/v5/market/history-fund-rate) | Nenhum registro historico da semana aferido | Bloqueado para PnL liquido |
+| Contrato point-in-time (tipo, base/quote/settle, lancamento, lote) | [V5 instruments info](https://bybit-exchange.github.io/docs/v5/market/instrument) | **Nao ha snapshot real datado de marco/2020.** O exemplo `launchTime=1585526400000` representa 30/03/2020, mas D124 observou trades com simbolo BTCUSDT em 25/03/2020 | Nao inferir listagem pelo exemplo, simbolo ou snapshot atual; exigir prova independente |
+| Direitos do dataset historico | [Help Center 20/10/2026](https://www.bybit.com/en/help-center/article/API-Terms); [PDF oficial legivel](https://www.bybit.com/common-static/compliance/legal/BYBIT/df1923006718fbba8ba70d7d762b9866.pdf) | PDF com restricoes ao uso de API, mas vigencia e aplicabilidade a arquivo historico NAO demonstradas; pagina legal canonica so titulo | `rights_authorized=false` |
+
+**Consequencia tecnica:** o campo `launchTime` mostrado em exemplo documental nao e evento observado. Nao usar data de exemplo como filtro automatico para rejeitar/aprovar os 54.677 trades, nem criar supostos metadados de contrato de 2020. Press releases de 2020 sao pistas contextuais de produto, nao tabelas historicas verificaveis de contrato e unidades. Nao comparar volumes de trade com V5 antes de validar identidade historica e semantica; nao preencher lacunas nem resolver fronteiras arbitrariamente.
+
+**Acesso:** V5 foi restringida em observacoes anteriores. Nenhuma requisicao adicional, host alternativo, VPN/proxy, coleta real, ordem ou gasto nesta investigacao documental. J1 #2 e direitos #217 continuam abertos; evidencias de D132 nao movem qualquer gate para `true`.
