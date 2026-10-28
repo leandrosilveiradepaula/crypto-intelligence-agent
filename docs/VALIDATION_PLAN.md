@@ -500,3 +500,8 @@ Validar 2..16 IDs distintos, relógio e moeda quote idênticos, posições LONG/
 ## J1/HIST #297 — captura privada de 2 meses Binance Vision
 
 Testar fake transporte offline em quatro GETs HTTPS fixos e ordenados de duas URLs .CHECKSUM e dois ZIP, opt-ins independentes (rede, licença pessoal não produtiva, retenção privada e território), diretório novo POSIX 0700 fora checkout, arquivos 0600 sem sobrescrita, SHA-256 `.CHECKSUM` + ZIP, parser mensal USD-M 1h e série sem lacunas; validar replay pelo auditor privado preexistente. Falhar antes de criar alvo quando faltam opt-ins, datas erradas, ZIP corrompido, hash trocado, vela aberta ou mês incompleto. Testar rollback após falha de disco e ausência de dump de preços, caminhos, dados de conta ou rede real em CI. Com acesso recusado 401/403/418/429/451, timeout/redirect, não repetir nem fazer fallback. Pós-merge verificar Linux/docs, Windows e Chrome/PAPER no SHA exato. Mesmo com arquivos locais, dados só podem ser usados em pesquisa pessoal não produtiva, nunca live; J1/Top50, mark/liquidação e retorno OOS seguem pendentes.
+
+
+## J1/HIST #299 — teste de corrida de diretório privado
+
+Com transporte falso e ZIPs sintéticos, interceptar mkdir do alvo para simular outro processo criando diretório e arquivo antes de lançar FileExistsError. Verificar que o capturador falha sem apagar arquivo/dir alheio; falhas após mkdir próprio devem limpar apenas artefatos esperados. Conferir manifesto por último, opt-ins negados sem rede, fstat/permissão e ausência de preços no stdout. CI Linux/Windows/Chrome antes e depois do merge no SHA exato. Risco remanescente: publicação de múltiplos arquivos não é atomicidade cross-file.

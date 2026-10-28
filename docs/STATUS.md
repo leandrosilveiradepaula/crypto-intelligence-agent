@@ -598,3 +598,8 @@ Base verificada `main=8127c77f3abfa353bb98d2346fe15856bffcc7f7` (issue #293/PR #
 ## J1/HIST #297 — aquisição controlada do primeiro histórico privado (28/10/2026 UTC)
 
 Fonte de verdade inicial `main=d96691aaff1ece7fec8f2d1fbae8e210be21f25f`, zero PRs abertas; issue #297 e branch `work/issue-297-j1-private-vision-capture`. Rota escolhida **para pesquisa, não trading**: termos Binance Vision CC BY-NC-SA v1.0/26-08-2026 concedem backtest pessoal não produtivo, vedam datasets para execução live. Entregue CLI owner-only para 2 meses contíguos BTCUSDT USDT-M 1h, com 4 GETs ao host fixo (ZIP+checksum), sem retry/redirect/proxy e sem dados de mercado em log, staging privado condicionado a 4 opt-ins. CI somente com fake transporte e ZIPs sintéticos; nenhum download real, aceite contratual, criação de arquivo em VPS ou alteração de release. J1 #2 e Bybit rights #217 abertas. Próxima ação após CI/merge: execução owner-only somente com aceite pessoal de termos, território e acesso a diretório privado; reportar contagem e checksum sanitizados. Dados nunca para live.
+
+
+## J1/HIST #299 — aceite de termos e correção de segurança de captura (28/10/2026)
+
+Titular manifestou 'Li e aceito' para termos Binance Vision de pesquisa pessoal não produtiva. O ambiente ChatGPT atual não oferece SSH/shell na VPS; não inventar arquivo retido ou origem real. PR de correção da captura #298: limpeza agora só remove diretório criado pela própria execução (protege concorrente). Manifesto last-write, sem alegar transação atômica. Ainda requer confirmação territorial/acesso e execução owner-only na VPS, nunca no GitHub Actions; nenhum dataset para live (Vision §4.2). J1 #2, Bybit #217 abertas.

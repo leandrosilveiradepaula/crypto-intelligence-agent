@@ -248,3 +248,8 @@ Acesso tecnico de `public.bybit.com` nao certifica uma licenca; da mesma forma, 
 ## J1/HIST #297 — autorização limitada de pesquisa Binance Vision, sem acesso produtivo (28/10/2026 UTC)
 
 A versão 1.0 de 26/08/2026 dos [Termos Binance Vision](https://github.com/binance/binance-public-data/blob/master/TERMS_AND_CONDITIONS.md) tem concessão CC BY-NC-SA 4.0 e finalidade expressa de **backtest histórico estritamente pessoal e não produtivo**, §§3.1/4.1; §4.2 veda uso do dataset para execução proprietária ao vivo, e §§1.4/3.2 tratam acesso/download como assentimento aos termos. Não criar aceite automaticamente em nome do titular. A elegibilidade territorial e condições do usuário devem ser conferidas pessoalmente antes do primeiro download. A CLI J1 #297 não publica dados, não chama API Binance bloqueada, não contorna HTTP451 e não pode virar source de execução. `data_stored_locally` pode ser verdadeiro só em execução privada posteriormente consentida; `dataset_rights_authorized_for_live=false` e `canonical_ohlcv_approved=false` sempre. Isso **não remove** a lacuna de direitos Bybit V5/archives #217, nem permite exibir dados em painel público ou comercial.
+
+
+## J1/HIST #299 — manifestação do titular não é autorização live
+
+O titular afirmou 'Li e aceito' no chat em 28/10/2026 sobre termos Binance Vision, para pesquisa privada não produtiva. A execução real ainda depende de confirmação de elegibilidade territorial/acesso e de acesso técnico à VPS; nenhuma das duas foi comprovada por conexão neste chat. O capturador permanece offline por padrão e dataset não pode ser utilizado para execução live (§4.2); manifestação não abre direitos Bybit ou licença de redistribuição. Sem downloads reais nesta entrega.
