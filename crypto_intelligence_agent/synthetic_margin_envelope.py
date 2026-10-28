@@ -5,12 +5,18 @@ No venue mark, maintenance margin, fills, account equity, or live permissions.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
 
 from .market_data import DataValidationError
-from .synthetic_financial_scenarios import ConditionalFinancialResult
-from .synthetic_intrabar_barriers import SyntheticBarrier
+from .synthetic_financial_scenarios import (
+    ConditionalFinancialResult, ConditionalFinancialScenario,
+    evaluate_conditional_financial_scenarios,
+)
+from .synthetic_intrabar_barriers import (
+    SyntheticBarrier, SyntheticBarrierObservation, SyntheticBarrierPlan,
+)
+from .synthetic_cost_scenarios import _rate
 
 _EXACT = Context(prec=512, rounding=ROUND_HALF_EVEN)
 
@@ -127,3 +133,70 @@ def evaluate_conditional_margin_envelope(
         ),
         branch_count=len(results),
     )
+
+
+@dataclass(frozen=True)
+class SyntheticAdverseCostStress:
+    """Extra adverse bps per leg. Applied, not replacing base PRE6 costs."""
+
+    additional_entry_fee_bps: Decimal
+    additional_exit_fee_bps: Decimal
+    additional_entry_slippage_bps: Decimal
+    additional_exit_slippage_bps: Decimal
+
+    def __post_init__(self) -> None:
+        for name in (
+            "additional_entry_fee_bps", "additional_exit_fee_bps",
+            "additional_entry_slippage_bps", "additional_exit_slippage_bps",
+        ):
+            _rate(getattr(self, name), name, signed=False)
+
+
+def evaluate_stressed_conditional_margin_envelope(
+    observation: SyntheticBarrierObservation,
+    scenarios: tuple[ConditionalFinancialScenario, ...],
+    *,
+    barrier_plan: SyntheticBarrierPlan,
+    margin: SyntheticMarginBasis,
+    stress: SyntheticAdverseCostStress,
+) -> tuple[ConditionalMarginEnvelope, ConditionalMarginEnvelope]:
+    """Return baseline and adverse-cost bounds, reusing PRE6 for all economics.
+
+    Does not assume which intrabar branch happened. The margin is constrained
+    to the same quote and notional basis of every alternative.
+    """
+    if (type(stress) is not SyntheticAdverseCostStress
+            or type(scenarios) is not tuple or not scenarios):
+        raise DataValidationError("typed finite stress and PRE6 alternatives required")
+    if (any(type(row) is not ConditionalFinancialScenario for row in scenarios)
+            or any(row.quote_currency != margin.quote_currency for row in scenarios)):
+        raise DataValidationError("financial scenarios must share synthetic margin currency")
+    if any(row.costs.entry_hypothetical_notional_quote_units != margin.entry_notional_quote
+           for row in scenarios):
+        raise DataValidationError("margin must match each PRE6 entry notional")
+    baseline = evaluate_conditional_financial_scenarios(
+        observation, scenarios, barrier_plan=barrier_plan,
+    )
+    increments = (
+        ("entry_fee_bps", stress.additional_entry_fee_bps),
+        ("exit_fee_bps", stress.additional_exit_fee_bps),
+        ("entry_adverse_slippage_bps", stress.additional_entry_slippage_bps),
+        ("exit_adverse_slippage_bps", stress.additional_exit_slippage_bps),
+    )
+    stressed = []
+    for row in scenarios:
+        terms = {}
+        for field, increment in increments:
+            with localcontext(_EXACT):
+                terms[field] = getattr(row.costs, field) + increment
+            _rate(terms[field], field, signed=False)
+        stressed.append(replace(row, costs=replace(row.costs, **terms)))
+    rechecked = evaluate_conditional_financial_scenarios(
+        observation, tuple(stressed), barrier_plan=barrier_plan,
+    )
+    original = evaluate_conditional_margin_envelope(baseline, margin=margin)
+    adverse = evaluate_conditional_margin_envelope(rechecked, margin=margin)
+    if (adverse.worst_conditional_net_quote > original.worst_conditional_net_quote
+            or adverse.best_conditional_net_quote > original.best_conditional_net_quote):
+        raise DataValidationError("adverse cost increments cannot improve outcomes")
+    return original, adverse
