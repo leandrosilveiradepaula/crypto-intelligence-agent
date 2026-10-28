@@ -200,3 +200,8 @@ Testes: journal vazio, cursor com 6 candles e OPEN PENDING, restart, pausa/resum
 ## J1/HIST — primeira captura privada real BTCUSDT 1h (28/10/2026 UTC) — marco parcial da J1
 
 A coleta histórica de pesquisa ganhou um primeiro conjunto **REAL privado**, não somente fixtures: duas saídas JSON trazidas pelo operador da VPS confirmaram captura de dois meses BTCUSDT USD-M 1h, 1.464 candles, quatro GETs, manifesto SHA-256 igual no capturador e auditor read-only, dois sidecars e continuidade [2026-08-01, 2026-10-01) UTC. Código executado em `main=46e394462b2e3141f675225c5bd1c682ec7384ec` (PR #304); saída de mercado bruta permaneceu privada. **Aceite somente da subetapa de retenção histórica para pesquisa pessoal não produtiva**, não de toda J1 #2. A J1 ainda requer elegibilidade da fonte para trading live, histórico Top50 ponto-no-tempo, qualidade multiativo e persistência canônica; Bybit rights #217 aberta. Sem ordens reais ou lançamento.
+
+
+## J1/PIT1 #306 — ampliação técnica multiativo sem aprovação histórica Top50
+
+Após marco real de BTCUSDT ago/set 2026 (1.464 candles), a J1 agrega contrato que audita 1..50 manifestos de pesquisa privados existentes e compara relógios/cobertura sem download ou escrita; outro contrato ranqueia 2..50 séries sintéticas/fornecidas por volume quote USDT das 24 velas fechadas antes do instante de decisão. É **ranking da amostra**, não universo elegível completo/Top50. O primeiro conjunto real ainda contém apenas BTCUSDT; faltam status/listing point-in-time, registro crypto-only contemporâneo, mercado completo, USD comparável, direitos live e dados multivenue. J1 #2 e #32 não homologadas, nenhuma ordem ou deploy.

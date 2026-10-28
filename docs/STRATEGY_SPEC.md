@@ -130,3 +130,8 @@ Uma posição sintética a 50x pode atingir uma condição hipotética de manute
 ## J3/PRE17 #295 — exposição e concentração não equivalem a proteção
 
 Em duas posições fictícias de 200 unidades quote, uma LONG e outra SHORT no mesmo ativo, exposição líquida assinada pode ser zero, mas exposição bruta continua 400. A perda de margem hipotética de um bucket a 50x não pode ser neutralizada pela equity positiva do outro quando o modelo está explicitamente em modo isolado. Coestresse é só observação de movimentos MARK desfavoráveis simultâneos, não coeficiente de correlação, cobertura de hedge nem evidência de desempenho OOS. A simulação interrompe o conjunto no primeiro gatilho terminal, retendo estados simultâneos sem inventar PnL agregado ou futuro após encerramento.
+
+
+## J1/PIT1 #306 — proxy de volume quote não é estratégia vencedora
+
+Para pesquisa multiativo, a ordenação local de 24 candles de 1h anteriores à decisão, em quote USDT sem conversão cambial, é apenas **estatística descritiva da amostra retida**. Não usar candle que abre na hora da decisão, não classificar dados faltantes como zero, não preservar universo retroativamente a partir da lista disponível hoje e não supor que uma posição alta em volume gera compra, retorno positivo ou liquidez executável. `historical_top50_verified` e `financial_backtest_approved` continuam FALSE. Dataset Vision nunca alimenta ordens live.
