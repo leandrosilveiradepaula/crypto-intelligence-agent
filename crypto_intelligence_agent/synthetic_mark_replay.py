@@ -205,6 +205,12 @@ def replay_synthetic_mark_path(
                 equity, accrued.signed_funding_cost_units, state,
             ))
             worst = equity if worst is None else min(worst, equity)
+            if state is not SyntheticReplayState.OPEN_UNRESOLVED and any(
+                    e.event_at_ms >= tick.at_ms for e in funding_events
+                ):
+                raise DataValidationError(
+                    "funding cannot be scheduled after an already terminal fixture tick"
+                )
             if state is SyntheticReplayState.LIQUIDATION_CONDITION:
                 return SyntheticMarkReplayResult(
                     state, tuple(observations), tick.at_ms, None,
