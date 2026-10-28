@@ -57,7 +57,7 @@ class BybitResearchSeriesTests(unittest.TestCase):
         with self.assertRaises(DataGapError):
             self.series(end=END + 3*HOUR)
         with sqlite3.connect(self.db) as conn:
-            conn.execute("UPDATE bybit_research_candles SET close='999' LIMIT 1")
+            conn.execute("UPDATE bybit_research_candles SET close='999' WHERE open_time_ms=START")
         with self.assertRaises(DataGapError):
             self.series()
 
