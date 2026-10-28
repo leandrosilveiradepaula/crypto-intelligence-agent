@@ -253,3 +253,8 @@ A versão 1.0 de 26/08/2026 dos [Termos Binance Vision](https://github.com/binan
 ## J1/HIST #299 — manifestação do titular não é autorização live
 
 O titular afirmou 'Li e aceito' no chat em 28/10/2026 sobre termos Binance Vision, para pesquisa privada não produtiva. A execução real ainda depende de confirmação de elegibilidade territorial/acesso e de acesso técnico à VPS; nenhuma das duas foi comprovada por conexão neste chat. O capturador permanece offline por padrão e dataset não pode ser utilizado para execução live (§4.2); manifestação não abre direitos Bybit ou licença de redistribuição. Sem downloads reais nesta entrega.
+
+
+## J1/HIST — primeira captura privada real BTCUSDT 1h (28/10/2026 UTC) — retenção para pesquisa NÃO estende licença
+
+O titular aceitou os termos para pesquisa histórica pessoal não produtiva e executou voluntariamente a captura na VPS, marcando explicitamente a confirmação de acesso/território no CLI. O software registrou `territorial_eligibility_verified_by_software=false`; não há atestação independente de elegibilidade contratual. Captura retornou `data_stored_locally=true` e auditor read-only passou para 2 arquivos/1.464 candles, digest de manifesto `9f6a43b32573fe1aa5e80b2cf9d696d998e4d93850f9a02bcfd1397284af87a0`. Essa retenção **não** autoriza transferir, redistribuir, exibir publicamente nem conectar o dataset ao robô live; termos Binance Vision aplicáveis mantêm a separação entre pesquisa pessoal não produtiva e execução comercial/proprietária. `dataset_rights_authorized_for_live=false` e `canonical_ohlcv_approved=false`; fonte/autenticidade criptográfica não comprovadas pelo checksum. Direitos de retenção e uso Bybit para projeto operacional continuam bloqueados na #217.
