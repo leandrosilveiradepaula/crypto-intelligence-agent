@@ -83,3 +83,42 @@ class BybitResearchSeriesTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(__import__("os").name == "posix", "private CLI requires POSIX 0600")
+class BybitResearchReadOnlyCLITests(unittest.TestCase):
+    def test_private_cli_no_network_no_market_output(self):
+        import json
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from scripts.inspect_private_bybit_series import main
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            root.chmod(0o700)
+            db = root / "series.sqlite"
+            store = SQLiteBybitResearchStore(db)
+            db.chmod(0o600)
+            a, b, manifest = sample()
+            store.commit_raw_pair(instrument_raw=a, kline_raw=b, manifest=manifest)
+            args = [
+                "--database", str(db), "--symbol", "BTCUSDT",
+                "--start-open-ms", str(START), "--end-open-ms", str(END),
+                "--as-of-ms", str(manifest.capture_finished_ms + 1000),
+            ]
+            output = StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(main(args), 1)
+            self.assertFalse(json.loads(output.getvalue())["orders_sent"])
+            output = StringIO()
+            with patch("socket.create_connection", side_effect=AssertionError("network")):
+                with redirect_stdout(output):
+                    self.assertEqual(main(args + ["--allow-private-readonly-research"]), 0)
+            report = json.loads(output.getvalue())
+            self.assertEqual(report["candle_count"], 3)
+            self.assertFalse(report["rights_authorized"])
+            for forbidden in (str(root), "BTCUSDT", "100.0000000000001"):
+                self.assertNotIn(forbidden, output.getvalue())
+            db.chmod(0o644)
+            output = StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(main(args + ["--allow-private-readonly-research"]), 1)
