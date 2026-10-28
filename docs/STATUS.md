@@ -497,3 +497,8 @@ Checkpoint sincronizado: PR #260 integrada, issue #259 encerrada e `main=390ce4a
 ## J6/PRE7 #266 — matriz de recuperacao PAPER com evidencia de replay (28/10/2026)
 
 Unidade coesa: utilizar o replay duravel sintetico AUTO2 e o journal AUTO4 para cobrir sem cursor, cursor sem OPEN, OPEN pendente/UNKNOWN, FILL orfao, hipotese de posicao, REDUCE_ONLY parcial e total, runner residual, kill-switch e dados corrompidos. A API `inspect_local_paper_recovery_status` passa a comparar duas leituras read-only de cada diagnostico; qualquer divergencia observada retorna UNVERIFIED. A comparacao nao prova atomicidade entre bancos nem elimina races nao observadas. CLI preserva apenas JSON sanitizado e os gates `new_open_authorized=false`, `native_stop_verified=false`, `live_trading_authorized=false`. Issue #266; entrega sujeita a CI Linux/Windows/Chrome, revisao e merge no SHA exato. Sem ordens, mercado real, deploy ou dados autorizados de J1.
+
+
+## J5/J6/PRE8 #268 — visualizacao estatica de recuperacao PAPER no celular (28/10/2026)
+
+O diagnostico multi-journal PRE7 ganha opcao CLI HTML PT-BR com aviso de estado e gates de seguranca sempre negados, mantendo JSON anterior intacto. Documentos gerados apenas localmente: sem frontend remoto, autenticacao, servidor, JavaScript ou botao de negociacao. QA Chrome das seis dimensoes existentes para tres estados diagnosticos, testes de output exclusivo, sanitizacao e regressao de replay verdadeiro. Aceite sujeito a 3 checks de CI e merge SHA exato; o painel nao e produto pronto/live, backtest financeiro, venue ou dados legitimamente homologados.
