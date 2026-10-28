@@ -1,0 +1,31 @@
+name: J1 Bybit hourly trade research quality once
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+concurrency:
+  group: j1-bybit-hourly-research-once
+  cancel-in-progress: false
+jobs:
+  hourly-quality:
+    if: >-
+      github.event.issue.number == 253 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-bybit-hourly-research-once-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout reviewed main without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect same seven fixed daily trade archives in memory
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_bybit_archive_week \
+            --allow-public-network --allow-weekly-archive-probe --audit-hourly-quality
