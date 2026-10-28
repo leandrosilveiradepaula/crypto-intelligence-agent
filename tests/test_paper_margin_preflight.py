@@ -203,7 +203,7 @@ class PaperMarginPreflightTests(unittest.TestCase):
         tests = (
             (limits(max_order_notional_quote=D(100), max_symbol_exposure_quote=D(150)),
              mark(), PaperRiskReason.ORDER_NOTIONAL),
-            (limits(), mark(symbol_exposure_quote=D(1900)),
+            (limits(), mark(symbol_exposure_quote=D(1900), portfolio_exposure_quote=D(1900)),
              PaperRiskReason.SYMBOL_EXPOSURE),
             (limits(), mark(portfolio_exposure_quote=D(4900)),
              PaperRiskReason.PORTFOLIO_EXPOSURE),
