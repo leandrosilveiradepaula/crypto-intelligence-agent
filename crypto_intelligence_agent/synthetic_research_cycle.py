@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from typing import Mapping, Sequence
 
 from .market_data import ClosedCandle, DataValidationError
+from .synthetic_margin_envelope import (
+    SyntheticMarginBasis, SyntheticAdverseCostStress, ConditionalMarginEnvelope,
+    evaluate_stressed_conditional_margin_envelope,
+)
 from .synthetic_entry_hypotheses import CompressionBreakoutConfig
 from .synthetic_financial_scenarios import (
     MAX_SCENARIOS, ConditionalFinancialResult, ConditionalFinancialScenario,
@@ -242,3 +246,88 @@ def run_synthetic_research_cycle(
             emit(eligible, observed, results, None)
 
     return SyntheticResearchCycle(plan, purged, oos, tuple(events))
+
+
+@dataclass(frozen=True)
+class SyntheticOOSMarginAudit:
+    """One conditional envelope per resolved OOS event, not portfolio PnL."""
+
+    event_indices: tuple[int, ...]
+    baseline: tuple[ConditionalMarginEnvelope, ...]
+    stressed: tuple[ConditionalMarginEnvelope, ...]
+    refused_events: int
+
+    @property
+    def financial_backtest_approved(self) -> bool:
+        return False
+
+    @property
+    def net_pnl_verified(self) -> bool:
+        return False
+
+    @property
+    def orders_sent(self) -> bool:
+        return False
+
+    @property
+    def live_trading_authorized(self) -> bool:
+        return False
+
+
+def audit_synthetic_oos_margin(
+    cycle: SyntheticResearchCycle,
+    *,
+    margin_by_candidate: dict[int, SyntheticMarginBasis],
+    stress_by_candidate: dict[int, SyntheticAdverseCostStress],
+    barrier_plans: dict[int, SyntheticBarrierPlan],
+    financial_scenarios: dict[int, tuple[ConditionalFinancialScenario, ...]],
+) -> SyntheticOOSMarginAudit:
+    """Revalidate PRE7 conditional results against unchanged PRE6 assumptions.
+
+    All resolved candidates must be fully supplied. Refusals remain refusals;
+    no ambiguous branch is selected as an executed fill or compounded return.
+    """
+    if (type(cycle) is not SyntheticResearchCycle
+            or any(type(value) is not dict for value in (
+                margin_by_candidate, stress_by_candidate, barrier_plans,
+                financial_scenarios,
+            ))):
+        raise DataValidationError("typed OOS cycle and explicit assumption maps required")
+    resolved = tuple(e for e in cycle.events if e.conditional_results)
+    ids = {e.candidate_index for e in resolved}
+    if (set(margin_by_candidate) != ids or set(stress_by_candidate) != ids
+            or any(type(key) is not int for key in ids)):
+        raise DataValidationError("OOS margin and stress must cover every resolved event once")
+    if not ids <= set(barrier_plans) or not ids <= set(financial_scenarios):
+        raise DataValidationError("OOS stress missing original PRE6 assumption")
+    base, adverse, indices = [], [], []
+    for event in resolved:
+        idx = event.candidate_index
+        if (event.abstention_reason is not None
+                or type(event.barrier_observation) is not SyntheticBarrierObservation
+                or type(margin_by_candidate[idx]) is not SyntheticMarginBasis
+                or type(stress_by_candidate[idx]) is not SyntheticAdverseCostStress):
+            raise DataValidationError("OOS margin attempted on an unverified event")
+        results = evaluate_stressed_conditional_margin_envelope(
+            event.barrier_observation, financial_scenarios[idx],
+            barrier_plan=barrier_plans[idx], margin=margin_by_candidate[idx],
+            stress=stress_by_candidate[idx],
+        )
+        # A changed input map cannot silently substitute outcomes for the
+        # exact PRE7 evaluation. PRE6 results are Decimal and immutable.
+        from .synthetic_financial_scenarios import evaluate_conditional_financial_scenarios
+        rechecked = evaluate_conditional_financial_scenarios(
+            event.barrier_observation, financial_scenarios[idx],
+            barrier_plan=barrier_plans[idx],
+        )
+        if rechecked != event.conditional_results:
+            raise DataValidationError("OOS financial assumptions changed since PRE7")
+        indices.append(idx)
+        base.append(results[0])
+        adverse.append(results[1])
+    return SyntheticOOSMarginAudit(
+        event_indices=tuple(indices),
+        baseline=tuple(base),
+        stressed=tuple(adverse),
+        refused_events=sum(e.abstention_reason is not None for e in cycle.events),
+    )
