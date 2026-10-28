@@ -460,3 +460,8 @@ Fonte identificada: Bybit official Docs https://bybit-exchange.github.io/docs/ e
 
 
 **Sondagem owner-only semanal preparada:** `scripts/probe_bybit_archive_week.py` realiza até 7 GETs sem credencial nem proxy/redirecionamento/retry de 2020-03-25 a 2020-03-31, todos de `https://public.bybit.com/trading/BTCUSDT/`, cada gzip limitado a 5 MB e 150 mil trades, com 10s de timeout, agregando somente contagens e digest; os bytes ficam somente em memória e não são enviados à UI, logs ou repo. A workflow `.github/workflows/bybit-public-archive-week.yml` requer comentário EXATO do owner na issue #250 e **não dispara em push, PR ou cron**. Um dia indisponível encerra sem buscar outro host. O recibo semanal é diagnóstico de dados reais, não licença, nem candles fechados, funding/mark, universo Top50, backtest ou ordem. Testes usam somente payload sintético/transport falso e gate permanece fechado. Executar apenas após CI/merge no SHA exato.
+
+
+## D126 — Evidencia semanal real J1 #250
+
+Execucao GitHub Actions `40620522744` SUCCESS, 28/10/2026 UTC: 7 GETs de BTCUSDT 25–31/03/2020; 54.677 trades, 158/168 horas com trades, 10 sem trades observados, um dia parcial; manifesto SHA256 `ffb13c6d46d539628b95ed645bd760fc4f8559604e0e2970ee3e3b5371e96b70`. Dados apenas em RAM efemera, sem persistencia ou ordens. Cobertura observada nao prova feed integral; direitos de retencao/live e backtest financeiro continuam nao aprovados. J1 #2 e rights #217 permanecem abertas.
