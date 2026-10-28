@@ -101,6 +101,40 @@ class PaperLinearContractFixture:
         return False
 
 
+@dataclass(frozen=True)
+class PaperMarginPreflightRequest:
+    """Explicit, immutable opt-in for the causal PAPER OPEN preparation path.
+
+    A valid request is still a synthetic assumption, not a venue grant.
+    It never changes settings on old positions or authorizes live execution.
+    """
+
+    settings: SyntheticLeverageSettings
+    margin_quote: Decimal
+    contract: PaperLinearContractFixture
+    max_contract_age_ms: int
+
+    def __post_init__(self) -> None:
+        if (type(self.settings) is not SyntheticLeverageSettings
+                or type(self.contract) is not PaperLinearContractFixture
+                or type(self.max_contract_age_ms) is not int
+                or not 0 <= self.max_contract_age_ms <= _MAX_RULE_AGE_MS):
+            raise DataValidationError("typed bounded PAPER margin preflight required")
+        _quote(self.margin_quote, "requested_margin_quote", allow_zero=False)
+
+    @property
+    def venue_metadata_authenticated(self) -> bool:
+        return False
+
+    @property
+    def orders_sent(self) -> bool:
+        return False
+
+    @property
+    def approved_for_live_use(self) -> bool:
+        return False
+
+
 class PaperMarginReason(str, Enum):
     FEASIBLE_PAPER_ONLY = "feasible_paper_only"
     RISK_GATE_BLOCKED = "paper_risk_gate_blocked"
