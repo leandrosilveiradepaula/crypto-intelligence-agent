@@ -71,8 +71,10 @@ class BybitTradeArchiveTests(unittest.TestCase):
             rows[index][field] = value
             with self.subTest(field=field, value=value), self.assertRaises((DataValidationError, DataGapError)):
                 inspect_trade_archive(payload(rows), archive_name=NAME)
+        self.assertEqual(inspect_trade_archive(payload(list(reversed(good))), archive_name=NAME).trades, 2)
+        non_monotonic = [good[0], good[1], good[0]]
         with self.assertRaises(DataGapError):
-            inspect_trade_archive(payload(list(reversed(good))), archive_name=NAME)
+            inspect_trade_archive(payload(non_monotonic), archive_name=NAME)
 
 if __name__ == "__main__":
     unittest.main()
