@@ -201,3 +201,8 @@ O envelope PRE15 consome alternativas sintéticas PRE6 e margens quote explícit
 ## J3/PRE16 #293 — replay temporal sintético NÃO habilita executor
 
 O replay com `SyntheticMarkTick` recebe preços de fixture com MARK/TRade e funding explicitamente declarados, verifica uma condição **hipotética** de equity/manutenção e só depois o gatilho fictício STOP/TARGET. Não calcula preço real de liquidação nem envia instruções à Binance/Bybit; decisão de trade real, native stop e estado de margem de exchange continuam bloqueados. Saídas de fixture não podem alimentar `OrderExecutionEngine` live ou testnet sem gates J1/J3/J6 e autorização.
+
+
+## J3/PRE17 #295 — observação de portfólio nunca libera ordens
+
+A carteira sintética agrega somente buckets isolados de um replay PRE16 sem atomicidade com conta ou venue. Coestresse de MARK, exposição assinada e concentração por símbolo são estudos descritivos e não fornecem funding real, netting, cross-margin, correlação robusta, VaR, ordens ou PnL validado. Uma condição de manutenção insuficiente em qualquer bucket nunca é apagada pelo TARGET de outro. Sem autorização de testnet/live ou deploy.

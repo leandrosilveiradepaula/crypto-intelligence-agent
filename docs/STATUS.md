@@ -588,3 +588,8 @@ Após PR #291 integrada em `main=676ac1582493f97d1ec2ca4aa6578d053ccc2659`, bran
 ## J3/PRE16 #293 — replay causal de mark/funding/manutenção (28/10/2026 UTC)
 
 Verificado `main=4576ebcab57a6b7dce9f4b5fdbf44824ce298cce` após duas PRs #291/#292 integradas e CI verde; nenhuma PR aberta no começo. Issue #293 e branch `work/issue-293-j3-temporal-mark-replay`: motor financeiro sintético de posição única, mark/trade distintos, manutenção hipotética, funding e custos PRE2, precedência de liquidação, gatilhos de STOP/TARGET sem inferência de OHLC. Testes adversariais e D146/arquitetura/validação. Gate para integração: CI Linux/Windows/Chrome e revisão SHA exato, squash sem produção, pós-merge. Nenhuma ordem real; J1 #2/#217, J3 #4 e J6 #7 abertas.
+
+
+## J3/PRE17 #295 — coestresse, exposição e concentração em carteiras fictícias (28/10/2026 UTC)
+
+Base verificada `main=8127c77f3abfa353bb98d2346fe15856bffcc7f7` (issue #293/PR #294 integrada com CI pós-merge verde); nenhuma PR aberta antes deste bloco. Issue #295 e branch `work/issue-295-j3-portfolio-mark-risk`. Novo agregador de 2..16 posições de fixture em relógio comum que reutiliza PRE16, contém risco bruto/assinado, margem/equity/maintenance de buckets isolados, concentração e marks adversos simultâneos. Não produz PnL de carteira, correlação estatística nem fórmula de cross margin. Gates: CI pré-merge Linux/Windows/Chrome, SHA revisado, squash sem produção, CI pós-merge e evidência em issue; J1 #2/#217, J3 #4 e J6 #7 abertas.

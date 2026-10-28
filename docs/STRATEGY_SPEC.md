@@ -125,3 +125,8 @@ O laboratório combina a razão de perda hipotética por cenário PRE6 com marge
 ## J3/PRE16 #293 — preço de marcação versus trade em trajetória explícita
 
 Uma posição sintética a 50x pode atingir uma condição hipotética de manutenção mesmo quando o TRADE mostra alvo favorável: MARK governa equity e manutenção antes de qualquer indicação de alvo no mesmo tick. Replays usam timestamps explícitos e funding declarado estritamente anterior ao tick; STOP/TARGET no trade usa o preço declarado, nunca preço-limite inferido em gap. Caso a condição de liquidação hipotética ocorra, o motor retorna sem fill/PnL realizado. Nenhum desses sinais é equação de liquidação da Binance/Bybit nem demonstra edge; J3 financeira real depende de mark, tiers, fees, funding e preço executável verificados, dados J1 autorizados e validação OOS.
+
+
+## J3/PRE17 #295 — exposição e concentração não equivalem a proteção
+
+Em duas posições fictícias de 200 unidades quote, uma LONG e outra SHORT no mesmo ativo, exposição líquida assinada pode ser zero, mas exposição bruta continua 400. A perda de margem hipotética de um bucket a 50x não pode ser neutralizada pela equity positiva do outro quando o modelo está explicitamente em modo isolado. Coestresse é só observação de movimentos MARK desfavoráveis simultâneos, não coeficiente de correlação, cobertura de hedge nem evidência de desempenho OOS. A simulação interrompe o conjunto no primeiro gatilho terminal, retendo estados simultâneos sem inventar PnL agregado ou futuro após encerramento.
