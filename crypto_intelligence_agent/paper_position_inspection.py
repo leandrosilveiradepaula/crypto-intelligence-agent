@@ -120,6 +120,27 @@ def _read_database(
             connection.close()
 
 
+
+def _crosscheck_opening(conn: sqlite3.Connection, record) -> None:
+    """Check AUTO4 opening, events and optional margin receipt in AUTO2."""
+    entry = SQLitePaperOrderJournal._checked_entry(
+        conn, record.opening_intent.intent_id,
+    )
+    if (_intent_json(entry.intent) != _intent_json(record.opening_intent)
+            or entry.events != record.opening_events):
+        raise DataValidationError("AUTO2 OPEN does not match stored AUTO4 position")
+    row = conn.execute(
+        "SELECT value FROM paper_order_meta WHERE key=?",
+        (META_PREFIX + record.opening_intent.intent_id,),
+    ).fetchone()
+    margin = (None if row is None else
+              PaperMarginIntentReceipt.deserialize(row["value"]))
+    if margin is not None:
+        margin.verify_intent(entry.intent)
+    if record.opening_margin_intent != margin:
+        raise DataValidationError("PAPER position margin-intent receipt differs across journals")
+
+
 def inspect_paper_position(
     position_path: str | Path, position_id: str,
     *, opening_order_path: str | Path | None = None,
@@ -146,24 +167,7 @@ def inspect_paper_position(
         with _read_database(
             opening_order_path, _ORDER_TABLES, "paper_order_meta", _ORDER_VERSION,
         ) as conn:
-            entry = SQLitePaperOrderJournal._checked_entry(
-                conn, record.opening_intent.intent_id,
-            )
-            if (_intent_json(entry.intent) != _intent_json(record.opening_intent)
-                    or entry.events != record.opening_events):
-                raise DataValidationError("AUTO2 OPEN does not match stored AUTO4 position")
-            row = conn.execute(
-                "SELECT value FROM paper_order_meta WHERE key=?",
-                (META_PREFIX + record.opening_intent.intent_id,),
-            ).fetchone()
-            margin = (None if row is None else
-                      PaperMarginIntentReceipt.deserialize(row["value"]))
-            if margin is not None:
-                margin.verify_intent(entry.intent)
-            if record.opening_margin_intent != margin:
-                raise DataValidationError(
-                    "PAPER position margin-intent receipt differs across journals"
-                )
+            _crosscheck_opening(conn, record)
     return PaperPositionInspection(
         balance=balance,
         opening_order_cross_checked=opening_order_path is not None,
@@ -172,6 +176,7 @@ def inspect_paper_position(
 
 def inspect_paper_positions(
     position_path: str | Path, position_ids: tuple[str, ...],
+    *, opening_order_path: str | Path | None = None,
 ) -> tuple[PaperPositionInspection, ...]:
     """Read an EXPLICIT collection in ONE local SQLite read transaction.
 
@@ -200,4 +205,26 @@ def inspect_paper_positions(
             balances.append(PaperPositionInspection(
                 balance=_balance(record), opening_order_cross_checked=False,
             ))
-    return tuple(balances)
+    if opening_order_path is None:
+        return tuple(balances)
+    if _checked_path(position_path) == _checked_path(opening_order_path):
+        raise DataValidationError("order and position journals must be independent")
+    # AUTO2 and AUTO4 are different files, never an atomic cross-file snapshot.
+    # Compare every selected opening in ONE consistent AUTO2 read transaction.
+    with _read_database(
+        opening_order_path, _ORDER_TABLES, "paper_order_meta", _ORDER_VERSION,
+    ) as order_conn:
+        # Re-read selected AUTO4 rows after crosscheck to detect observed drift.
+        with _read_database(
+            position_path, _POSITION_TABLES, "paper_position_meta", _POSITION_VERSION,
+        ) as position_conn:
+            reread = []
+            for position_id in position_ids:
+                record = SQLitePaperPositionJournal._read(position_conn, position_id)
+                _crosscheck_opening(order_conn, record)
+                reread.append(_balance(record))
+    if tuple(item.balance for item in balances) != tuple(reread):
+        raise DataValidationError("PAPER positions changed during cross-journal inspection")
+    return tuple(PaperPositionInspection(
+        balance=item.balance, opening_order_cross_checked=True,
+    ) for item in balances)
