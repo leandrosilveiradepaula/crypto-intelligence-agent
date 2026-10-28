@@ -55,16 +55,16 @@ class RecoveryStatusTests(unittest.TestCase):
         self.assertFalse(status.orders_sent)
         self.assertFalse(status.live_trading_authorized)
 
-    def test_pending_open_blocks(self):
+    def test_pending_open_without_cursor_is_unverified(self):
         self.orders.reserve(opening())
         status = self.inspect()
-        self.assertEqual(status.state, PaperRecoveryState.BLOCKED)
-        self.assertEqual(status.reason, "paper_order_reconciliation_required")
+        self.assertEqual(status.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(status.reason, "paper_journal_unverified")
 
-    def test_fill_without_position_blocks(self):
+    def test_fill_without_cursor_is_unverified(self):
         self.orders.reserve(opening())
         self.orders.append_events(opening().intent_id, (fill(),), as_of_ms=opening().created_at_ms + 1)
-        self.assertEqual(self.inspect().state, PaperRecoveryState.BLOCKED)
+        self.assertEqual(self.inspect().state, PaperRecoveryState.UNVERIFIED)
 
     def test_missing_position_journal_unverified(self):
         self.positions_path.unlink()
