@@ -673,3 +673,8 @@ Branch `work/issue-290-j3-oos-margin-audit`, base `676ac1582493f97d1ec2ca4aa6578
 ## 28/10/2026 — J3/PRE16 #293 — replay temporal sintético, andamento
 
 `main` verificada `4576ebcab57a6b7dce9f4b5fdbf44824ce298cce`, 0 PRs abertas antes do bloco, issue #290/PRs #291/#292 encerradas e checks pós-merge verdes. Issue #293 e branch `work/issue-293-j3-temporal-mark-replay` criadas. Código `synthetic_mark_replay.py`: trajetória com MARK e TRADE separados, equity e maintenance hipotéticos, funding e custos PRE2, first-hit prioritário por condição de manutenção, sem PnL após liquidação, custo de saída apenas sob stop/target condicional. Testes `tests/test_synthetic_mark_replay.py`; decisão D146 e documentos. **Gates**: revisar diff e SHA, conferir CI Linux/docs/Windows/Chrome, squash sem deploy e CI pós-merge. J1 #2/#217, J3 #4 e J6 #7 permanecem abertas. Nenhum feed/credencial/rede/ordem/migration/gasto.
+
+
+## 28/10/2026 — J3/PRE17 #295 — risco temporal conjunto sintético
+
+Checkpoint GitHub `main=8127c77f3abfa353bb98d2346fe15856bffcc7f7`, 0 PRs abertas, PR #294/#293 merged/closed, checks pós-merge SUCCESS. Jornada J3, issue #295, branch `work/issue-295-j3-portfolio-mark-risk`. Implementação `synthetic_portfolio_risk.py` consumindo PRE16 por bucket, relógio compartilhado, snapshot até primeiro trigger, exposição bruta/assinada MARK, risco não compensável de bucket isolado, concentração e direção adversa por tick. `tests/test_synthetic_portfolio_risk.py` cobre hedge, LIQ vs TARGET simultâneos, 50x/10x, quote/clock/ID, precisão e no-network. Gate: CI Linux/docs/Windows/Chrome no head exato, review, squash sem deploy, pós-merge e comentário final. Bloqueios J1 #2/#217, J3 #4, J6 #7. Sem trades, conta, VPS, dados reais ou despesa.
