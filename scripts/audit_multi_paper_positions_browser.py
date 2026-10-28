@@ -27,7 +27,7 @@ D = Decimal
 T = 1792985000000
 
 
-def _local_fixture_html() -> str:
+def _local_fixture_selected():
     with tempfile.TemporaryDirectory(prefix="paper_multi_browser_") as temp:
         path = Path(temp) / "positions.sqlite"
         writer = SQLitePaperPositionJournal(path)
@@ -79,7 +79,13 @@ def _local_fixture_html() -> str:
         selected = inspect_paper_positions(
             path, ("fixture_browse_position_A", "fixture_browse_position_B"),
         )
-        return render_paper_positions(selected, TEMPLATE.read_text("utf-8"))
+        return selected
+
+
+def _local_fixture_html() -> str:
+    return render_paper_positions(
+        _local_fixture_selected(), TEMPLATE.read_text("utf-8"),
+    )
 
 
 _JS = r"""() => {

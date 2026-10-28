@@ -502,3 +502,10 @@ Unidade coesa: utilizar o replay duravel sintetico AUTO2 e o journal AUTO4 para 
 ## J5/J6/PRE8 #268 — visualizacao estatica de recuperacao PAPER no celular (28/10/2026)
 
 O diagnostico multi-journal PRE7 ganha opcao CLI HTML PT-BR com aviso de estado e gates de seguranca sempre negados, mantendo JSON anterior intacto. Documentos gerados apenas localmente: sem frontend remoto, autenticacao, servidor, JavaScript ou botao de negociacao. QA Chrome das seis dimensoes existentes para tres estados diagnosticos, testes de output exclusivo, sanitizacao e regressao de replay verdadeiro. Aceite sujeito a 3 checks de CI e merge SHA exato; o painel nao e produto pronto/live, backtest financeiro, venue ou dados legitimamente homologados.
+
+
+## J5/J6/PRE9 #270 — painel de operador PAPER com posições explicitamente selecionadas (28/10/2026 UTC)
+
+Base de código: `main=9e4a33e5961fdcd725237faccb5a028437364f92` antes da issue #270 (PR #269 integrada, CI pós-merge Linux/Windows/Chrome aprovada; zero PRs abertas). Unidade ativa `work/issue-270-j5-operator-overview`: composição read-only dos diagnósticos AUTO2/AUTO4 com posições AUTO4 apontadas via `--position-id` na CLI existente `scripts.inspect_paper_recovery`; nenhuma listagem automática ou soma entre símbolos, nenhum novo schema SQLite. O JSON sem seleção continua exatamente como PRE8; seleção gera objeto `paper_operator_overview_v1` e HTML insere cartões já suportados pelo renderizador de múltiplas posições, com aviso explícito de recorte parcial e sem autorização de ordens.
+
+Aceite requerido: teste E2E de cursor, FILL hipotético, estado BLOCKED, runner, saída encerrada, mudança entre consultas, corrupção/IDs inválidos, CLI JSON/HTML sem vazamento de caminhos, export exclusivo e proibição de rede; QA Chrome da página unificada em seis larguras, além das três condições anteriores. Validar Python/docs Linux, Windows e browser Chrome, revisar SHA exato, integrar somente com CI verde e verificar pós-merge. Não autorizar negociações ou deploy; J1 #2/#217, J3 e J6 #7 continuam independentes e bloqueadas conforme seus aceites.

@@ -16,6 +16,7 @@ from crypto_intelligence_agent.paper_recovery_status import (
     PaperRecoveryState, PaperRecoveryStatus,
 )
 from scripts.audit_paper_dashboard_browser import VIEWPORTS
+from scripts.audit_multi_paper_positions_browser import _local_fixture_selected
 from scripts.inspect_paper_recovery import render_recovery_html
 
 
@@ -73,7 +74,13 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                 channel="chrome", headless=True, args=launch_args,
             )
         try:
-            for status in _fixture_statuses():
+            original = _fixture_statuses()
+            # Fourth case combines a blocked recovery view with two explicitly
+            # selected (synthetic) position cards. No file/HTTP access in Chrome.
+            cases = tuple((status, None) for status in original) + (
+                (original[1], _local_fixture_selected()),
+            )
+            for status, selected in cases:
                 for width, height in VIEWPORTS:
                     context = browser.new_context(
                         viewport={"width": width, "height": height},
@@ -88,7 +95,7 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                         route.abort()
 
                     page.route("**/*", deny_request)
-                    page.set_content(render_recovery_html(status), wait_until="load")
+                    page.set_content(render_recovery_html(status, selected=selected), wait_until="load")
                     observed = page.evaluate("""() => {
                       const doc = document.documentElement;
                       const summary = document.querySelector('.summary');
@@ -96,11 +103,14 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                       const main = document.getElementById('conteudo');
                       const warning = document.querySelector('.warning');
                       const grid = document.querySelector('.grid');
-                      const cards = [...document.querySelectorAll('.tile, header, footer, .summary, .warning')];
+                      const cards = [...document.querySelectorAll('.tile, header, footer, .summary, .warning, .position-card')];
                       return {
                         width: innerWidth,
                         scroll_width: Math.max(doc.scrollWidth, document.body.scrollWidth),
                         state: summary && summary.getAttribute('data-state'),
+                        position_count: document.querySelectorAll('.position-card').length,
+                        selection_scope: (document.querySelector('.selected') || {}).dataset?.selection || null,
+                        no_aggregate: document.body.textContent.includes('não existe total financeiro'),
                         skip: Boolean(skip && skip.getAttribute('href') === '#conteudo'
                                       && main && main.tabIndex === -1),
                         first_tabbable: document.querySelector('a[href]') === skip,
@@ -125,6 +135,14 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                         errors.append("viewport overflow")
                     if observed["state"] != status.state.value:
                         errors.append("wrong recovery state")
+                    expected = 0 if selected is None else len(selected)
+                    if observed["position_count"] != expected:
+                        errors.append("selected position cards missing or duplicated")
+                    if selected is not None and (
+                        observed["selection_scope"] != "explicit-only"
+                        or not observed["no_aggregate"]
+                    ):
+                        errors.append("selected-only scope or no-aggregation warning missing")
                     if not observed["skip"] or not observed["first_tabbable"]:
                         errors.append("missing accessible skip link")
                     if not observed["banner_visible"]:
@@ -135,6 +153,12 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                         errors.append("clipped mobile text")
                     if width <= 420 and observed["grid_columns"] != 1:
                         errors.append("narrow viewport must have single-column cards")
+                    if selected is not None and width <= 420:
+                        card_columns = page.locator(".selected-cards").evaluate(
+                            "(el) => getComputedStyle(el).gridTemplateColumns.trim().split(/\\s+/).length"
+                        )
+                        if card_columns != 1:
+                            errors.append("selected position cards must stack on mobile")
                     page.keyboard.press("Tab")
                     focused = page.evaluate(
                         "document.activeElement.classList.contains('skip')"
@@ -147,6 +171,7 @@ def run_audit(*, out_dir: Path | None = None) -> dict[str, object]:
                             errors.append("keyboard skip did not navigate")
                     record = {
                         "state": status.state.value, "width": width,
+                        "selected_positions": expected,
                         "errors": errors, "external_requests": len(external),
                     }
                     results.append(record)

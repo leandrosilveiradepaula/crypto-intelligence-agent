@@ -11,6 +11,7 @@ either journal. Output creation, if requested, is exclusive.
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal
 from html import escape
 import json
 from pathlib import Path
@@ -19,6 +20,11 @@ import sys
 
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_operator_status import PaperOperatorStatus
+from crypto_intelligence_agent.paper_operator_overview import inspect_local_paper_operator_overview
+from crypto_intelligence_agent.paper_position_inspection import PaperPositionInspection
+from scripts.inspect_paper_positions import (
+    multi_paper_snapshot, render_position_card_markup,
+)
 from crypto_intelligence_agent.paper_recovery_status import (
     PaperRecoveryState, PaperRecoveryStatus, inspect_local_paper_recovery_status,
 )
@@ -55,6 +61,10 @@ _REASON_TEXT = {
     "paper_flat_not_live_verified":
         "As posições do replay local estão ausentes ou hipoteticamente encerradas.",
     "paper_health_unverified": "A integridade do replay não foi confirmada.",
+    "paper_selected_positions_unverified":
+        "Não foi possível validar integralmente os IDs selecionados.",
+    "paper_overview_changed_during_inspection":
+        "A recuperação ou uma posição selecionada mudou durante a leitura.",
 }
 
 
@@ -81,9 +91,42 @@ def _validate_display(status: PaperRecoveryStatus) -> None:
         raise DataValidationError("blocked PAPER display requires operator evidence")
 
 
-def render_recovery_html(status: PaperRecoveryStatus) -> str:
-    """Render one static, accessible PT-BR page; never an interactive control."""
+def render_recovery_html(
+    status: PaperRecoveryStatus,
+    *, selected: tuple[PaperPositionInspection, ...] | None = None,
+) -> str:
+    """Render static PT-BR recovery and, optionally, selected PAPER positions."""
     _validate_display(status)
+    selected_section = ""
+    if selected is not None:
+        if type(selected) is not tuple or len(selected) > 128:
+            raise DataValidationError("bounded PAPER selected inspections required")
+        if status.state is PaperRecoveryState.UNVERIFIED:
+            if selected:
+                raise DataValidationError("unverified PAPER recovery cannot display positions")
+            selected_section = """
+    <section class="selected" data-selection="unverified" aria-labelledby="selected-heading">
+      <h2 id="selected-heading">Posições selecionadas</h2>
+      <p>Seleção não verificada. Nenhum saldo ou posição é exibido.</p>
+    </section>"""
+        else:
+            snapshot = multi_paper_snapshot(selected)
+            if (status.state is PaperRecoveryState.PAPER_FLAT_HYPOTHETICAL_ONLY
+                    and any(item.balance.confirmed_remaining_units != Decimal(0)
+                            for item in selected)):
+                raise DataValidationError("flat recovery conflicts with selected position")
+            cards = "\n".join(
+                render_position_card_markup(item) for item in snapshot["positions"]
+            )
+            selected_section = (
+                '<section class="selected" data-selection="explicit-only" '
+                'aria-labelledby="selected-heading">'
+                '<h2 id="selected-heading">Posições PAPER selecionadas</h2>'
+                '<p>Somente os IDs escolhidos pelo operador. Não é inventário de '
+                'todas as posições; não existe total financeiro nem soma entre contratos.</p>'
+                '<div class="selected-cards">' + cards + '</div>'
+                '</section>'
+            )
     headline, detail = _STATE_TEXT[status.state]
     reason = _REASON_TEXT.get(
         status.reason, "Este estado requer verificação local.",
@@ -125,11 +168,19 @@ def render_recovery_html(status: PaperRecoveryStatus) -> str:
     dd {{ margin: 6px 0 0; overflow-wrap: anywhere; font-weight: 600; }}
     code {{ font-size: .88rem; overflow-wrap: anywhere; }}
     .warning {{ margin-top: 18px; padding: 16px; background: #fff8eb; border-color: #ac8c4b; }}
+    .selected {{ margin: 20px 0; }}
+    .selected-cards {{ display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }}
+    .position-card {{ background: white; border: 1px solid #cad5e0; border-radius: 12px; padding: 16px; min-width: 0; overflow-wrap: anywhere; }}
+    .position-card h3 {{ margin: 0 0 8px; font-size: 1.05rem; }}
+    .position-card p {{ font-size: .93rem; }}
+    .position-card .balances {{ display: grid; gap: 6px; margin: 12px 0; }}
+    .position-card .balances div {{ min-width: 0; }}
+    .position-card .unknown {{ font-weight: 800; color: #8a252b; }}
     footer {{ font-size: .9rem; color: #34506d; margin: 20px 0 8px; }}
     @media (max-width: 420px) {{
       .container {{ padding: 12px; }}
-      .grid {{ grid-template-columns: minmax(0, 1fr); }}
-      .summary {{ padding: 14px; }}
+      .grid, .selected-cards {{ grid-template-columns: minmax(0, 1fr); }}
+      .summary, .position-card {{ padding: 14px; }}
     }}
   </style>
 </head>
@@ -159,6 +210,7 @@ def render_recovery_html(status: PaperRecoveryStatus) -> str:
         <div class="tile"><dt>Execução live autorizada</dt><dd>Não</dd></div>
       </dl>
     </section>
+    {selected_section}
     <aside class="warning" aria-label="Aviso de segurança PAPER">
       <strong>ATENÇÃO: EXCLUSIVAMENTE PAPER</strong>
       <p>Mesmo um estado hipoteticamente encerrado não comprova risco, funding, liquidação, saldo, stop ou PnL de corretora. Este relatório jamais libera novas ordens.</p>
@@ -176,24 +228,61 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Diagnóstico local PAPER (sem ordens)")
     parser.add_argument("--orders", type=Path, required=True)
     parser.add_argument("--positions", type=Path, required=True)
+    parser.add_argument("--position-id", action="append",
+                        help="Selecione fixture_... explicitamente (1..128); repetir por posição.")
     parser.add_argument("--format", choices=("json", "html"), default="json")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
-    status = inspect_local_paper_recovery_status(args.orders, args.positions)
     try:
-        if args.format == "html":
-            payload = render_recovery_html(status)
+        if args.position_id is None:
+            status = inspect_local_paper_recovery_status(args.orders, args.positions)
+            selected = None
+            verified = False
         else:
-            payload = json.dumps({
-                "mode": "offline_paper",
-                "state": status.state.value,
-                "reason": status.reason,
-                "cross_database_atomic_snapshot_available": False,
-                "native_stop_verified": False,
-                "new_open_authorized": False,
-                "orders_sent": False,
-                "live_trading_authorized": False,
-            }, sort_keys=True) + "\n"
+            overview = inspect_local_paper_operator_overview(
+                args.orders, args.positions, tuple(args.position_id),
+            )
+            status = overview.recovery
+            selected = overview.selected
+            verified = overview.selection_verified
+        recovery = {
+            "mode": "offline_paper",
+            "state": status.state.value,
+            "reason": status.reason,
+            "cross_database_atomic_snapshot_available": False,
+            "native_stop_verified": False,
+            "new_open_authorized": False,
+            "orders_sent": False,
+            "live_trading_authorized": False,
+        }
+        if args.format == "html":
+            payload = render_recovery_html(status, selected=selected)
+        else:
+            if args.position_id is None:
+                payload_data = recovery  # Identical PRE8 JSON contract.
+            else:
+                position_rows = (
+                    multi_paper_snapshot(selected)["positions"] if verified else []
+                )
+                payload_data = {
+                    "schema_version": "paper_operator_overview_v1",
+                    "mode": "offline_paper",
+                    "recovery": recovery,
+                    "selection": {
+                        "scope": "explicit_fixture_ids_only_not_all_positions",
+                        "verified": verified,
+                        "count": len(position_rows),
+                        "all_positions_enumerated": False,
+                        "no_cross_instrument_quantity_aggregation": True,
+                        "positions": position_rows,
+                    },
+                    "orders_sent": False,
+                    "live_trading_authorized": False,
+                    "new_open_authorized": False,
+                    "financial_pnl_available": False,
+                    "cross_database_atomic_snapshot_available": False,
+                }
+            payload = json.dumps(payload_data, sort_keys=True) + "\n"
         if args.output is None:
             sys.stdout.write(payload)
         else:
