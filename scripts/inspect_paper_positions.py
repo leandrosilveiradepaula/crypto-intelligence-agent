@@ -127,6 +127,7 @@ def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
     cards, rows = [], []
     for p in snap["positions"]:
         cards.append(render_position_card_markup(p))
+        unknown = p["unknown_order_count"]
         fields = (
             p["position_id"], p["venue_candidate"] + " · " + p["symbol_fixture"]
             + " · " + p["side"], p["initial_confirmed_units"],
