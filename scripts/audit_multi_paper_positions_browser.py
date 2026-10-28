@@ -9,7 +9,9 @@ import shutil
 import sys
 import tempfile
 
+from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
+from scripts.audit_paper_position_browser import _fixture_margin_decision
 from crypto_intelligence_agent.paper_position_inspection import inspect_paper_positions
 from crypto_intelligence_agent.synthetic_order_lifecycle import (
     PaperOrderEffect, PaperOrderEvent, PaperOrderEventKind,
@@ -30,7 +32,9 @@ T = 1792985000000
 def _local_fixture_selected():
     with tempfile.TemporaryDirectory(prefix="paper_multi_browser_") as temp:
         path = Path(temp) / "positions.sqlite"
+        order_path = Path(temp) / "opening-orders.sqlite"
         writer = SQLitePaperPositionJournal(path)
+        order_writer = SQLitePaperOrderJournal(order_path)
         for suffix, venue, symbol in (
             ("A", PaperVenue.BINANCE_USDM, "BTCUSDT"),
             ("B", PaperVenue.BYBIT_V5, "ETHUSDT"),
@@ -42,13 +46,25 @@ def _local_fixture_selected():
                 position_side=SyntheticSide.LONG, side=PaperOrderSide.BUY,
                 effect=PaperOrderEffect.OPEN, requested_units=D(100), created_at_ms=T,
             )
+            opening_fill = PaperOrderEvent(
+                f"fixture_browse_fill_{suffix}",
+                PaperOrderEventKind.FILL, T + 1, D(100),
+            )
+            if suffix == "A":
+                risk_limits, observation, assessment = _fixture_margin_decision(opening)
+                health, reservation = order_writer.reserve_open_if_paper_risk_with_health(
+                    opening, risk_limits, observation, decision_at_ms=T,
+                    position_journal_path=path, margin_assessment=assessment,
+                )
+                if not health.new_open_allowed or reservation.entry is None:
+                    raise AssertionError("synthetic multi PAPER reservation rejected")
+                order_writer.append_events(
+                    opening.intent_id, (opening_fill,), as_of_ms=T + 1,
+                )
             writer.create_position(
                 position_id=f"fixture_browse_position_{suffix}",
                 opening_intent=opening,
-                opening_events=(PaperOrderEvent(
-                    f"fixture_browse_fill_{suffix}",
-                    PaperOrderEventKind.FILL, T + 1, D(100),
-                ),),
+                opening_events=(opening_fill,),
                 exit_plan=SyntheticExitPlan(
                     initial_units=D(100),
                     tranches=tuple(SyntheticExitTranche(ExitBasis.REMAINING_BALANCE, D(n))
@@ -57,6 +73,7 @@ def _local_fixture_selected():
                 ),
                 plan_version="browser-multi-v1",
                 synthetic_lot_step_units=D(1), as_of_ms=T + 1,
+                opening_order_path=order_path if suffix == "A" else None,
             )
         exit_intent = PaperOrderIntent(
             intent_id="fixture_browse_exit_B",
@@ -110,6 +127,11 @@ _JS = r"""() => {
     ids: cards.map(c => c.getAttribute('data-position')),
     unknown_on_second: cards.length === 2 && cards[1].textContent.includes('UNKNOWN: 1'),
     unknown_on_first: cards.length === 2 && cards[0].textContent.includes('UNKNOWN: 1'),
+    first_has_margin: cards.length === 2
+      && cards[0].textContent.includes('Alavancagem solicitada (PAPER): 50x')
+      && cards[0].textContent.includes('Margem solicitada (PAPER): 5 USDT'),
+    second_margin_missing: cards.length === 2
+      && cards[1].textContent.includes('não registradas'),
     explicit_no_aggregation: document.body.textContent.includes('Não existe total consolidado'),
     banner: Boolean(warning && warning.getBoundingClientRect().height > 0
                      && warning.textContent.includes('SIMULADO')),
@@ -167,6 +189,8 @@ def run_audit(out_dir: Path | None = None) -> dict[str, object]:
                     errors.append("explicit positions absent or reordered")
                 if sample["unknown_on_first"] or not sample["unknown_on_second"]:
                     errors.append("UNKNOWN state misattributed between positions")
+                if not sample["first_has_margin"] or not sample["second_margin_missing"]:
+                    errors.append("PAPER margin not isolated to matching position/legacy")
                 if not sample["explicit_no_aggregation"] or not sample["banner"]:
                     errors.append("fake portfolio aggregate or missing SIMULADO warning")
                 if not sample["table_accessible"] or not sample["skip_first"]:
