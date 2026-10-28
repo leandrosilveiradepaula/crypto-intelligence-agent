@@ -608,3 +608,8 @@ Titular manifestou 'Li e aceito' para termos Binance Vision de pesquisa pessoal 
 ## J1/HIST #301 — segurança da primeira retenção de histórico (28/10/2026)
 
 Base `main=ef3893334c690e7f1025e6066bc6a8e2eca3e910` após #300 integrada e pós-merge Linux/Windows/Chrome aprovados, zero PRs abertas na abertura. Issue #301 / branch `work/issue-301-j1-vision-real-archive-readiness`: header Vision exato opcional; estágio privado temporário, reauditoria de disco e publicação Linux atômica sem substituição. Não há acesso SSH ao VPS nem coleta real verificada nesta sessão, embora licença para pesquisa pessoal não produtiva tenha sido aceita pelo titular. J1 #2 e Bybit #217 continuam abertas; dados não são autorizados para trading live, sem deploy ou custo.
+
+
+## J1/HIST #303 — falha real de header Vision identificada em SSH (28/10/2026 UTC)
+
+Main verificada em 1a73bf7e34bee89b182555bb0151e623dcf446eb antes da branch work/issue-303-j1-vision-observed-header, com zero PRs abertas. A execução SSH do titular localizou DataValidationError em VALIDACAO_CSV no ZIP de agosto, após GET e SHA: aliases nominais curtos, não dados inválidos comprovados. Issue #303 corrige o parser de headers exatos, com regressões sintéticas e fluxo de 1.464 candles via fake HTTP. Nenhuma captura real publicada. Gates CI Linux/docs, Windows e Chrome e revisão do SHA; merge seguro sem deploy. J1 #2 e Bybit #217 seguem abertas e trading live não está autorizado.
