@@ -264,3 +264,8 @@ Testes: journal vazio, cursor com 6 candles e OPEN PENDING, restart, pausa/resum
 ## J3/PRE16 #293 — replay sintético de mark e preço negociado
 
 `crypto_intelligence_agent/synthetic_mark_replay.py` é camada pura, independente de venue e SQLite; recebe `SyntheticMarkReplayPlan`, caminho `SyntheticMarkTick` e eventos `SyntheticFundingEvent` tipados com UTC-ms. Reutiliza PRE15 `SyntheticMarginBasis`, PRE2 `evaluate_synthetic_costs` e validadores de preço. A cada tick: custo de entrada e funding ocorrido -> equity e manutenção por MARK -> condição de manutenção (precedência) -> gatilho STOP/TARGET no TRADE -> custo de saída PRE2 somente em ramo condicional. Não consome OHLC para reconstruir caminho e não reconcilia fills. Não é cliente de exchange, carteira, executor ou backtest homologado. Sem network, DDL, implantação ou integração de ordens.
+
+
+## J3/PRE17 #295 — observatório temporal de risco de portfólio fictício
+
+`synthetic_portfolio_risk.py` agrega 2..16 trilhas sintéticas com horário de entrada, moeda quote e relógio UTC idênticos. Cada trilha usa `replay_synthetic_mark_path` PRE16, que detém cálculo local de funding, equity e manutenção. A camada de portfólio apenas recorta observações até o primeiro instante terminal e descreve notional bruto/assinado, equity e manutenção de buckets isolados, concentração por símbolo e marks adversos sincronizados. Não há snapshots de ativos reais, preço/ordem compartilhados, netting de margem, posição consolidada, liquidação de corretora ou correlação estimada. Segurança, feed J1 e J3 financeira permanecem bloqueados.
