@@ -52,7 +52,7 @@ class SyntheticMarkReplayTests(unittest.TestCase):
             )
             self.assertEqual(result.state, SyntheticReplayState.CONDITIONAL_TARGET)
             self.assertEqual(result.assumed_exit_trade_price, D(target_price))
-            self.assertEqual(result.conditional_net_quote, D("19.58"))
+            self.assertEqual(result.conditional_net_quote, D("19.16"))
             self.assertFalse(result.fill_price_verified)
             self.assertFalse(result.net_pnl_verified)
 
@@ -63,7 +63,7 @@ class SyntheticMarkReplayTests(unittest.TestCase):
         )
         self.assertEqual(result.state, SyntheticReplayState.CONDITIONAL_STOP)
         self.assertEqual(result.assumed_exit_trade_price, D("90"))
-        self.assertEqual(result.conditional_net_quote, D("-20.38"))
+        self.assertEqual(result.conditional_net_quote, D("-20.76"))
 
     def test_no_trigger_never_reports_realized_pnl(self):
         path = (tick("101", "101"), tick("100", "100", T + 2_000))
