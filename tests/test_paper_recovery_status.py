@@ -46,9 +46,10 @@ class RecoveryStatusTests(unittest.TestCase):
             self.orders_path, self.positions_path,
         )
 
-    def test_empty_is_only_hypothetical_and_never_authorizes_open(self):
+    def test_empty_without_replay_is_unverified_and_never_authorizes_open(self):
         status = self.inspect()
-        self.assertEqual(status.state, PaperRecoveryState.PAPER_FLAT_HYPOTHETICAL_ONLY)
+        self.assertEqual(status.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(status.reason, "paper_replay_not_initialized")
         self.assertFalse(status.cross_database_atomic_snapshot_available)
         self.assertFalse(status.native_stop_verified)
         self.assertFalse(status.new_open_authorized)
