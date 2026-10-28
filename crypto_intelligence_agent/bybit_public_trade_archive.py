@@ -62,7 +62,7 @@ def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudi
         reader = csv.DictReader(data.splitlines(), strict=True)
         if tuple(reader.fieldnames or ()) != FIELDS:
             raise DataValidationError("unknown exact Bybit trading CSV header")
-        count, first, previous, hours = 0, None, None, set()
+        count, first, previous, direction, hours = 0, None, None, 0, set()
         for row in reader:
             if None in row or any(row.get(key) is None for key in FIELDS):
                 raise DataValidationError("CSV column count mismatch")
@@ -75,8 +75,11 @@ def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudi
             milliseconds = int(Decimal(ts) * 1000)
             if milliseconds < first_bound or milliseconds >= last_bound:
                 raise DataValidationError("trade falls outside declared UTC day")
-            if previous is not None and milliseconds < previous:
-                raise DataGapError("trade timestamps out of order")
+            if previous is not None and milliseconds != previous:
+                step = 1 if milliseconds > previous else -1
+                if direction and step != direction:
+                    raise DataGapError("non-monotonic public trade archive")
+                direction = step
             if row["symbol"] != "BTCUSDT" or row["side"] not in ("Buy", "Sell"):
                 raise DataValidationError("invalid contract identity or side")
             for key in ("size", "price", "homeNotional", "foreignNotional", "grossValue"):
@@ -90,7 +93,7 @@ def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudi
             hours.add((milliseconds - first_bound) // 3_600_000)
         if count == 0:
             raise DataValidationError("empty archive")
-        return TradeArchiveAudit(count, first, previous, len(hours), sha256(blob).hexdigest())
+        return TradeArchiveAudit(count, min(first, previous), max(first, previous), len(hours), sha256(blob).hexdigest())
     except (OSError, EOFError, UnicodeError, csv.Error, ValueError) as error:
         if isinstance(error, (DataValidationError, DataGapError)):
             raise
