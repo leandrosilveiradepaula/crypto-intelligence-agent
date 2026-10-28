@@ -10,7 +10,7 @@ import sqlite3
 
 from .bybit_research_storage import (
     SQLiteBybitResearchStore, BybitResearchStoredCandle,
-    _ALLOWED_TABLES, _check_window, _digest, SCHEMA_VERSION, INPUT_ORIGIN,
+    _ALLOWED_TABLES, _check_window, SCHEMA_VERSION, INPUT_ORIGIN,
 )
 from .market_data import DataGapError, DataValidationError, interval_duration_ms
 from .paper_position_inspection import _checked_path
@@ -85,6 +85,8 @@ def inspect_existing_bybit_research_series(
                     or meta[0]["schema_version"] != SCHEMA_VERSION
                     or meta[0]["input_origin"] != INPUT_ORIGIN):
                 raise DataValidationError("unrecognized research origin")
+            if db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise DataValidationError("orphaned research candle rows")
             pages = db.execute(
                 "SELECT * FROM bybit_research_pages WHERE symbol=? AND interval=? "
                 "AND end_open_ms>? AND start_open_ms<? ORDER BY start_open_ms",
@@ -120,26 +122,12 @@ def inspect_existing_bybit_research_series(
                         or not symbol.endswith(quote)
                         or base != symbol[:-len(quote)]):
                     raise DataValidationError("mixed research contract or origin")
-                rows = SQLiteBybitResearchStore._read_rows(db, page["id"])
-                if (_digest(rows) != page["content_sha256"]
-                        or len(rows) != (page["end_open_ms"] - cursor)
-                           // interval_duration_ms(interval)):
-                    raise DataGapError("corrupted research page digest or row count")
-                from decimal import Decimal
-                for idx, row in enumerate(rows):
-                    opened = cursor + idx * interval_duration_ms(interval)
-                    if row[0] != opened or row[1] != opened + interval_duration_ms(interval) - 1:
-                        raise DataGapError("research candle timestamp invalid")
-                    try:
-                        v = tuple(Decimal(x) for x in row[2:])
-                        if (any(not x.is_finite() or len(x.as_tuple().digits) > 40 for x in v)
-                                or min(v[:4]) <= 0 or v[1] < max(v[0], v[3])
-                                or v[2] > min(v[0], v[3])
-                                or min(v[4:]) < 0):
-                            raise ValueError("bad decimal")
-                    except (ArithmeticError, ValueError, TypeError):
-                        raise DataGapError("research decimal invalid") from None
-                    out.append(BybitResearchStoredCandle(row[0], row[1], *v))
+                # One authoritative strict replay path for all J1 readers.
+                # Execute INSIDE this existing snapshot, not in a writer store.
+                checked = SQLiteBybitResearchStore._validate_page_in_snapshot(
+                    db, page, symbol=symbol, interval=interval,
+                )
+                out.extend(checked.candles)
                 headers.append((
                     page["symbol"], page["interval"], page["start_open_ms"],
                     page["end_open_ms"], page["registry_sha256"],
