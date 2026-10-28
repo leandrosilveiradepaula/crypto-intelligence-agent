@@ -249,7 +249,7 @@ class CausalMarginPreflightTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             first.margin_assessment = None
 
-    def test_journal_health_pause_denies_after_preflight_without_losing_reason(self):
+    def test_journal_kill_switch_denies_after_preflight_without_losing_reason(self):
         self.orders.set_local_kill_switch(
             pause=True, expected_sequence=0, changed_at_ms=self.now,
         )
@@ -257,7 +257,11 @@ class CausalMarginPreflightTests(unittest.TestCase):
         self.assertFalse(result.paper_intent_reserved)
         self.assertIsNotNone(result.margin_assessment)
         self.assertTrue(result.margin_assessment.allowed_for_paper_research_only)
-        self.assertTrue(result.reason.startswith("paper_open_health_denied_"))
+        self.assertIsNotNone(result.health)
+        self.assertTrue(result.health.new_open_allowed)
+        self.assertEqual(result.reason, "paper_risk_denied_kill_switch_active")
+        self.assertEqual(result.reservation.decision.reason, PaperRiskReason.KILL_SWITCH)
+        self.assertIsNone(result.reservation.entry)
         self.assertEqual(self.count_open_intents(), 0)
 
     def test_paper_approval_never_bypasses_double_open_reservation(self):
