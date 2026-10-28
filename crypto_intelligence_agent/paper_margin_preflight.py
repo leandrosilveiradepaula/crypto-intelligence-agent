@@ -161,6 +161,8 @@ class PaperMarginAssessment:
     requested_units_base: Decimal
     quote_currency: str
     contract_fixture_version: str
+    assessed_mark_price_quote: Decimal
+    assessed_at_ms: int
 
     @property
     def orders_sent(self) -> bool:
@@ -269,4 +271,6 @@ def assess_paper_margin_open(
         requested_units_base=intent.requested_units,
         quote_currency=contract.quote_currency,
         contract_fixture_version=contract.fixture_version,
+        assessed_mark_price_quote=observation.mark_price_quote,
+        assessed_at_ms=now,
     )
