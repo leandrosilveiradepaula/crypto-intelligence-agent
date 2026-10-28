@@ -115,3 +115,8 @@ Com `close_safety_ms=1000`, a abertura da barra imediatamente posterior ocorre 1
 ## J4/AUTO7 #188 — isolamento do sinal de entrada PAPER
 
 A emissão da hipótese J2 na barra fechada não é ordem nem evento financeiro. AUTO7 recalcula a hipótese apenas sobre histórico fechado **até a última barra passada pelo chamador**, com relógio exato (`close+safety`) e nunca escolhe parâmetros pela direção futura de PRE5. Se não houver candidato na barra atual, históricos anteriores são ignorados. A proposta de intenção PAPER exige quantidade, mark, exposição, saldo de risco, janela de observação e limites **explicitamente sintéticos**; nenhuma dessas grandezas é inferida de um resultado PRE7. Sinal estável por venue para deduplicação não valida mercado real, nem é critério de trading aprovado.
+
+
+## J3/PRE15 #290 — risco condicional sobre margem solicitada, não retorno
+
+O laboratório combina a razão de perda hipotética por cenário PRE6 com margem e alavancagem declaradas, não colateral da corretora. Para múltiplos níveis OHLC atingidos, o envelope avalia o pior e o melhor, sem selecionar o alvo ou somar alternativas como trades. Taxas e slippage adicionais são hipóteses adversas sobre a matemática PRE6, não fills. 50x magnifica a importância da validação; permanece proibido inferir probabilidade de liquidação, performance OOS ou pronto para live. Direito de dados, instrumento, mark, funding, manutenção e liquidação reais continuam pendentes.

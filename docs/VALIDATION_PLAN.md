@@ -475,3 +475,8 @@ Fixtures apenas sintéticas: hash 64hex, delimitadores texto/binário, LF/CRLF e
 ## J5/J6/PRE14 #288 — validação do crosscheck de múltiplas posições PAPER
 
 Exigir IDs explícitos com 1..128 entradas; no modo padrão `opening_order_cross_checked=false` e na opção com diário AUTO2 todos os OPENs, eventos e recibos devem corresponder exatamente, ou a seleção falha inteira. Verificar dois arquivos SQLite separados, `mode=ro`, nenhuma escrita/rede, base ausente, ID ausente, segundo registro inconsistente, recibo adulterado, detecção de drift entre leituras, compatibilidade de JSON/HTML e CSP sem recursos externos. QA mobile Chrome 280..390px e Linux/Windows CI no SHA exato. Validação local não representa margem efetiva, snapshot atômico cross-file, fonte real, PnL ou live.
+
+
+## J3/PRE15 #290 — envelope adversarial de margem sintética
+
+Exigir teste de `margin_quote × leverage_at_intent == entry_notional_quote` com Decimal exato, 50x/4 quote e cenários LONG/SHORT, alvos positivos versus STOP negativo, flag de esgotamento somente hipotético, ausência de agregação/probabilidade e de inferência de preço de liquidação. Reutilizar `evaluate_conditional_financial_scenarios` para reavaliar fee/slippage acrescidos e verificar monotonicidade de todos os resultados. Invalidar floats/NaN/bool, quote/contrato divergente, branches duplicados, quantidade inválida e bps fora de bounds. CI offline Linux/Windows/Chrome, SHA exato, revisão e pós-merge; nada libera J1, J3 financeiro real ou trading.
