@@ -55,6 +55,7 @@ def multi_paper_snapshot(
             "unreserved_units": p["unreserved_units"],
             "runner_floor_units": p["runner_floor_units"],
             "margin_intent_requested": p["margin_intent_requested"],
+            "opening_order_cross_checked": single["opening_order_cross_checked"],
             "pending_or_unknown_orders": sum(
                 1 for order in orders if order["requires_reconciliation"]
             ),
@@ -90,6 +91,13 @@ def render_position_card_markup(p: dict[str, object]) -> str:
     pending = p["pending_or_unknown_orders"]
     unknown = p["unknown_order_count"]
     margin = p["margin_intent_requested"]
+    crosscheck_html = (
+        '<p class="details" data-field="opening-crosscheck">'
+        + ('Conferido entre diários locais; não é prova da corretora.'
+           if p["opening_order_cross_checked"] else
+           'Não cruzado com AUTO2; dados apenas do diário local AUTO4.')
+        + '</p>'
+    )
     if margin is None:
         margin_html = (
             '<p class="details" data-field="margin-intent">'
@@ -117,7 +125,7 @@ def render_position_card_markup(p: dict[str, object]) -> str:
         + '<div><dt>Reservado/pedidos incertos</dt><dd>' + _cell(p["reserved_unfilled_units"]) + '</dd></div>'
         + '<div><dt>Disponível não reservado</dt><dd class="accent">' + _cell(p["unreserved_units"]) + '</dd></div>'
         + '</dl>'
-        + margin_html
+        + margin_html + crosscheck_html
         + '<p class="details">Saldo confirmado: ' + _cell(p["confirmed_remaining_units"])
         + ' · piso residual: ' + _cell(p["runner_floor_units"])
         + ' · pendentes: ' + _cell(pending)
@@ -183,11 +191,16 @@ def main(argv: list[str] | None = None) -> None:
                         help="UM diário SQLite de posições fictícias já existente.")
     parser.add_argument("--position-id", action="append", required=True,
                         help="ID fictício fixture_...; repetir apenas para outras posições escolhidas.")
+    parser.add_argument("--opening-order-journal", type=Path,
+                        help="Diário AUTO2 opcional para conferir todas as aberturas PAPER.")
     parser.add_argument("--format", choices=("html", "json"), default="html")
     parser.add_argument("--output", type=Path,
                         help="Arquivo NOVO; nunca substituir resultado ou diário existente.")
     args = parser.parse_args(argv)
-    selected = inspect_paper_positions(args.journal, tuple(args.position_id))
+    selected = inspect_paper_positions(
+        args.journal, tuple(args.position_id),
+        opening_order_path=args.opening_order_journal,
+    )
     payload = (
         render_paper_positions(selected, TEMPLATE.read_text(encoding="utf-8"))
         if args.format == "html" else
