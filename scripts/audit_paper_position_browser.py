@@ -12,6 +12,10 @@ import shutil
 import sys
 import tempfile
 
+from crypto_intelligence_agent.paper_margin_preflight import (
+    PaperLinearContractFixture, assess_paper_margin_open,
+)
+from crypto_intelligence_agent.paper_risk_gate import PaperRiskLimits, PaperRiskObservation
 from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
 from crypto_intelligence_agent.paper_position_inspection import inspect_paper_position
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
@@ -22,7 +26,9 @@ from crypto_intelligence_agent.synthetic_order_lifecycle import (
 from crypto_intelligence_agent.synthetic_partial_exits import (
     ExitBasis, SyntheticExitPlan, SyntheticExitTranche,
 )
-from crypto_intelligence_agent.synthetic_position_state import SyntheticSide
+from crypto_intelligence_agent.synthetic_position_state import (
+    SyntheticLeverageSettings, SyntheticSide,
+)
 from decimal import Decimal
 from scripts.audit_paper_dashboard_browser import VIEWPORTS
 from scripts.inspect_paper_position import TEMPLATE, render_paper_position
@@ -30,6 +36,40 @@ from scripts.inspect_paper_position import TEMPLATE, render_paper_position
 
 D = Decimal
 T = 1792985000000
+
+
+def _fixture_margin_decision(opening: PaperOrderIntent):
+    """An offline quote/lot/50x hypothesis; never real venue metadata."""
+    assumption = PaperLinearContractFixture(
+        venue=opening.venue, symbol=opening.symbol,
+        quote_currency="USDT", observed_at_ms=T,
+        fixture_version="fixture_browser_margin_v1",
+        max_leverage_assumed=75, price_tick_quote=D("0.01"),
+        quantity_step_base=D(1), min_quantity_base=D(1),
+        min_notional_quote=D(100), max_notional_quote=D(1000),
+    )
+    limits = PaperRiskLimits(
+        max_order_notional_quote=D(1000), max_symbol_exposure_quote=D(2000),
+        max_portfolio_exposure_quote=D(3000),
+        max_realized_loss_today_quote=D(50),
+        max_pending_open_orders=2, max_market_age_ms=1000,
+    )
+    mark = PaperRiskObservation(
+        venue=opening.venue, symbol=opening.symbol,
+        quote_currency="USDT", observed_at_ms=T,
+        mark_price_quote=D("2.5"), symbol_exposure_quote=D(0),
+        portfolio_exposure_quote=D(0), realized_loss_today_quote=D(0),
+        pending_open_orders=0, unresolved_open_exists=False,
+        kill_switch_active=False,
+    )
+    evaluation = assess_paper_margin_open(
+        opening, SyntheticLeverageSettings(), D(5),
+        assumption, limits, mark,
+        decision_at_ms=T, max_contract_age_ms=1000,
+    )
+    if not evaluation.allowed_for_paper_research_only:
+        raise AssertionError("synthetic browser margin scenario must be feasible")
+    return limits, mark, evaluation
 
 
 def _synthetic_fixture_html() -> str:
@@ -48,10 +88,16 @@ def _synthetic_fixture_html() -> str:
         f = PaperOrderEvent(
             "fixture_browser_open_fill", PaperOrderEventKind.FILL, T + 1, D(100),
         )
-        order_store = SQLitePaperOrderJournal(order_path)
-        order_store.reserve(opening)
-        order_store.append_events(opening.intent_id, (f,), as_of_ms=T + 1)
         position_store = SQLitePaperPositionJournal(position_path)
+        order_store = SQLitePaperOrderJournal(order_path)
+        risk_limits, observation, evaluation = _fixture_margin_decision(opening)
+        health, reservation = order_store.reserve_open_if_paper_risk_with_health(
+            opening, risk_limits, observation, decision_at_ms=T,
+            position_journal_path=position_path, margin_assessment=evaluation,
+        )
+        if not health.new_open_allowed or reservation.entry is None:
+            raise AssertionError("synthetic browser OPEN must only reserve PENDING")
+        order_store.append_events(opening.intent_id, (f,), as_of_ms=T + 1)
         position_store.create_position(
             position_id="fixture_browser_position", opening_intent=opening,
             opening_events=(f,),
@@ -64,7 +110,7 @@ def _synthetic_fixture_html() -> str:
                 residual_floor_percent=D(6),
             ),
             plan_version="browser-fixture-v1", synthetic_lot_step_units=D(1),
-            as_of_ms=T + 1,
+            as_of_ms=T + 1, opening_order_path=order_path,
         )
         exit_intent = PaperOrderIntent(
             intent_id="fixture_browser_exit", fixture_signal_id="fixture_browser_exit_signal",
@@ -115,6 +161,9 @@ _JS = r"""() => {
     return {
        width: w, docWidth, overflow,
        metrics, status_unknown: document.querySelectorAll('.status-unknown').length,
+       margin_leverage: document.querySelector('[data-field="margin-leverage"]')?.textContent.trim(),
+       margin_requested: document.querySelector('[data-field="margin-requested"]')?.textContent.trim(),
+       margin_warning: document.body.textContent.includes('Não comprova margem efetiva'),
        warning_visible: Boolean(warning && warning.getBoundingClientRect().height > 0
          && warning.textContent.includes('SIMULADO')),
        has_accessible_table: Boolean(table && table.tabIndex === 0
@@ -174,6 +223,10 @@ def run_audit(out_dir: Path | None = None) -> dict[str, object]:
                     errors.append("rendered balances mismatch verified PAPER events")
                 if actual["status_unknown"] != 1:
                     errors.append("UNKNOWN PAPER exit missing from table")
+                if (actual["margin_leverage"] != "50x (PAPER)"
+                        or actual["margin_requested"] != "5 USDT"
+                        or not actual["margin_warning"]):
+                    errors.append("PAPER margin/leverage label or warning missing")
                 if not actual["warning_visible"] or not actual["has_accessible_table"]:
                     errors.append("SIMULADO banner or keyboard table missing")
                 if not actual["skip_first"]:
