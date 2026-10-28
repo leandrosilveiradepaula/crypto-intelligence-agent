@@ -80,6 +80,35 @@ def _cell(value: str | int) -> str:
     return escape(str(value), quote=True)
 
 
+def render_position_card_markup(p: dict[str, object]) -> str:
+    """Render one card from a validated multi_paper_snapshot.
+
+    Shared by the existing multi-position HTML and the operator overview.
+    The caller must first validate all selected positions.
+    """
+    pending = p["pending_or_unknown_orders"]
+    unknown = p["unknown_order_count"]
+    return (
+        '<article class="position-card" data-position="' + _cell(p["position_id"]) + '">'
+        + '<h3>' + _cell(p["position_id"]) + '</h3>'
+        + '<p class="meta">' + _cell(p["venue_candidate"]) + ' · '
+        + _cell(p["symbol_fixture"]) + ' · ' + _cell(p["side"]) + '</p>'
+        + '<dl class="balances">'
+        + '<div><dt>Abertura confirmada</dt><dd>' + _cell(p["initial_confirmed_units"]) + '</dd></div>'
+        + '<div><dt>Saídas preenchidas</dt><dd>' + _cell(p["filled_exit_units"]) + '</dd></div>'
+        + '<div><dt>Reservado/pedidos incertos</dt><dd>' + _cell(p["reserved_unfilled_units"]) + '</dd></div>'
+        + '<div><dt>Disponível não reservado</dt><dd class="accent">' + _cell(p["unreserved_units"]) + '</dd></div>'
+        + '</dl>'
+        + '<p class="details">Saldo confirmado: ' + _cell(p["confirmed_remaining_units"])
+        + ' · piso residual: ' + _cell(p["runner_floor_units"])
+        + ' · pendentes: ' + _cell(pending)
+        + ' · <span class="' + ('unknown' if unknown else 'meta') + '">UNKNOWN: '
+        + _cell(unknown) + '</span></p>'
+        + '<p class="details">Checkpoint UTC: ' + _cell(p["checkpoint_utc"])
+        + ' · somente eventos de fixture.</p></article>'
+    )
+
+
 def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
                            template: str) -> str:
     snap = multi_paper_snapshot(selected)
@@ -97,28 +126,7 @@ def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
 
     cards, rows = [], []
     for p in snap["positions"]:
-        pending = p["pending_or_unknown_orders"]
-        unknown = p["unknown_order_count"]
-        card = (
-            '<article class="position-card" data-position="' + _cell(p["position_id"]) + '">'
-            + '<h3>' + _cell(p["position_id"]) + '</h3>'
-            + '<p class="meta">' + _cell(p["venue_candidate"]) + ' · '
-            + _cell(p["symbol_fixture"]) + ' · ' + _cell(p["side"]) + '</p>'
-            + '<dl class="balances">'
-            + '<div><dt>Abertura confirmada</dt><dd>' + _cell(p["initial_confirmed_units"]) + '</dd></div>'
-            + '<div><dt>Saídas preenchidas</dt><dd>' + _cell(p["filled_exit_units"]) + '</dd></div>'
-            + '<div><dt>Reservado/pedidos incertos</dt><dd>' + _cell(p["reserved_unfilled_units"]) + '</dd></div>'
-            + '<div><dt>Disponível não reservado</dt><dd class="accent">' + _cell(p["unreserved_units"]) + '</dd></div>'
-            + '</dl>'
-            + '<p class="details">Saldo confirmado: ' + _cell(p["confirmed_remaining_units"])
-            + ' · piso residual: ' + _cell(p["runner_floor_units"])
-            + ' · pendentes: ' + _cell(pending)
-            + ' · <span class="' + ('unknown' if unknown else 'meta') + '">UNKNOWN: '
-            + _cell(unknown) + '</span></p>'
-            + '<p class="details">Checkpoint UTC: ' + _cell(p["checkpoint_utc"])
-            + ' · somente eventos de fixture.</p></article>'
-        )
-        cards.append(card)
+        cards.append(render_position_card_markup(p))
         fields = (
             p["position_id"], p["venue_candidate"] + " · " + p["symbol_fixture"]
             + " · " + p["side"], p["initial_confirmed_units"],
