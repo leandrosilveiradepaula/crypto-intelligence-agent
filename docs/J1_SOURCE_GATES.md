@@ -249,3 +249,8 @@ Aceite pessoal dos Termos Binance Vision para pesquisa não produtiva recebido n
 ## J1/HIST #301 — validação prévia à primeira coleta real privada
 
 O capturador integrado passa a aceitar apenas cabeçalho Binance Vision 12 colunas conhecido ou zero cabeçalho. Diretório 0700 criado como estágio, arquivos 0600 escritos e sincronizados, manifesto auditado integralmente de disco com o auditor offline preexistente, e publicação `renameat2(RENAME_NOREPLACE)` no mesmo filesystem: nenhum diretório publicado se reauditoria falhar. Não há fallback para `os.rename` substitutivo. O caminho é Linux/POSIX owner-only, desligado sem quatro flags de opt-in. Permanecem sem comprovação de VPS disponível e elegibilidade territorial. Execução só após verificação regional pelo titular; nenhum dado Binance Vision serve de fonte de ordens live (§4.2).
+
+
+## J1/HIST #303 — diagnóstico de primeiro GET real, esquema das colunas
+
+Evidência do operador: via SSH cia-probe, quatro HEAD oficiais agosto/setembro 2026 retornaram HTTP 200; primeiro GET de ZIP passou comparação do SHA com sidecar e alcançou VALIDACAO_CSV, recusada por nomes curtos de 12 campos. Pasta final e manifesto privados não existiam. O parser passa a reconhecer estritamente a variante observada, além da variante longa e CSV sem header, sem alterar mapeamento ordinal nem licença. Retentar somente após CI/merge e verificação de SHA na VPS; qualquer novo erro exige parar sem fallback de URL ou bypass de restrições.
