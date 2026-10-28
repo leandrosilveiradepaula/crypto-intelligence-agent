@@ -190,9 +190,12 @@ class AtomicPaperMarginReceiptTests(unittest.TestCase):
                 ("paper-margin-intent-v1:" + intent.intent_id,),
             )
             conn.commit()
-        reopened = SQLitePaperOrderJournal(self.orders_path)
+        # Reopening itself is expected to fail closed: _initialize verifies
+        # the full metadata schema, not only when inspecting one receipt.
         with self.assertRaises(DataValidationError):
-            reopened.read_margin_receipt(intent.intent_id)
+            SQLitePaperOrderJournal(self.orders_path)
+        with self.assertRaises(DataValidationError):
+            self.orders.read_margin_receipt(intent.intent_id)
         # A second intent cannot bypass the corrupt receipt via OPEN health.
         next_intent = order(
             intent_id="fixture_next_receipt",
@@ -200,7 +203,7 @@ class AtomicPaperMarginReceiptTests(unittest.TestCase):
             requested_units=D("2.5"),
         )
         with self.assertRaises(DataValidationError):
-            reopened.reserve_open_if_paper_risk_with_health(
+            self.orders.reserve_open_if_paper_risk_with_health(
                 next_intent, limits(), mark(), decision_at_ms=T,
                 position_journal_path=self.positions_path,
             )
