@@ -228,24 +228,61 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Diagnóstico local PAPER (sem ordens)")
     parser.add_argument("--orders", type=Path, required=True)
     parser.add_argument("--positions", type=Path, required=True)
+    parser.add_argument("--position-id", action="append",
+                        help="Selecione fixture_... explicitamente (1..128); repetir por posição.")
     parser.add_argument("--format", choices=("json", "html"), default="json")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
-    status = inspect_local_paper_recovery_status(args.orders, args.positions)
     try:
-        if args.format == "html":
-            payload = render_recovery_html(status)
+        if args.position_id is None:
+            status = inspect_local_paper_recovery_status(args.orders, args.positions)
+            selected = None
+            verified = False
         else:
-            payload = json.dumps({
-                "mode": "offline_paper",
-                "state": status.state.value,
-                "reason": status.reason,
-                "cross_database_atomic_snapshot_available": False,
-                "native_stop_verified": False,
-                "new_open_authorized": False,
-                "orders_sent": False,
-                "live_trading_authorized": False,
-            }, sort_keys=True) + "\n"
+            overview = inspect_local_paper_operator_overview(
+                args.orders, args.positions, tuple(args.position_id),
+            )
+            status = overview.recovery
+            selected = overview.selected
+            verified = overview.selection_verified
+        recovery = {
+            "mode": "offline_paper",
+            "state": status.state.value,
+            "reason": status.reason,
+            "cross_database_atomic_snapshot_available": False,
+            "native_stop_verified": False,
+            "new_open_authorized": False,
+            "orders_sent": False,
+            "live_trading_authorized": False,
+        }
+        if args.format == "html":
+            payload = render_recovery_html(status, selected=selected)
+        else:
+            if args.position_id is None:
+                payload_data = recovery  # Identical PRE8 JSON contract.
+            else:
+                position_rows = (
+                    multi_paper_snapshot(selected)["positions"] if verified else []
+                )
+                payload_data = {
+                    "schema_version": "paper_operator_overview_v1",
+                    "mode": "offline_paper",
+                    "recovery": recovery,
+                    "selection": {
+                        "scope": "explicit_fixture_ids_only_not_all_positions",
+                        "verified": verified,
+                        "count": len(position_rows),
+                        "all_positions_enumerated": False,
+                        "no_cross_instrument_quantity_aggregation": True,
+                        "positions": position_rows,
+                    },
+                    "orders_sent": False,
+                    "live_trading_authorized": False,
+                    "new_open_authorized": False,
+                    "financial_pnl_available": False,
+                    "cross_database_atomic_snapshot_available": False,
+                }
+            payload = json.dumps(payload_data, sort_keys=True) + "\n"
         if args.output is None:
             sys.stdout.write(payload)
         else:
