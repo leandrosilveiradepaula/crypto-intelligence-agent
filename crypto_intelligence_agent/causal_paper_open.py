@@ -272,5 +272,6 @@ def reserve_causal_paper_open(
         prepared.intent, limits, observation,
         decision_at_ms=prepared.decision_at_ms,
         position_journal_path=position_journal_path,
+        margin_assessment=prepared.margin_assessment,
     )
     return _finish_causal_paper_open(prepared, health, receipt)
