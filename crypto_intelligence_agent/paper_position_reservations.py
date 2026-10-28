@@ -16,6 +16,7 @@ import sqlite3
 from typing import Iterator
 
 from .market_data import DataValidationError
+from .paper_margin_receipt import PaperMarginIntentReceipt, META_PREFIX
 from .paper_order_store import (
     _decode_event, _decode_intent, _digest, _event_json, _intent_json,
 )
@@ -108,6 +109,7 @@ class _PaperRecord:
     plan: SyntheticExitPlan
     as_of_ms: int
     exits: tuple[_PaperExit, ...]
+    opening_margin_intent: PaperMarginIntentReceipt | None = None
 
 
 def _serialize(record: _PaperRecord) -> str:
@@ -129,6 +131,12 @@ def _serialize(record: _PaperRecord) -> str:
             for x in record.exits
         ],
     }
+    if record.opening_margin_intent is not None:
+        if type(record.opening_margin_intent) is not PaperMarginIntentReceipt:
+            raise DataValidationError("invalid PAPER opening margin receipt")
+        data["opening_margin_intent_v1"] = json.loads(
+            record.opening_margin_intent.serialize()
+        )
     value = _canonical(data)
     if len(value.encode("utf-8")) > _MAX_PAYLOAD_BYTES:
         raise DataValidationError("paper position event payload exceeds resource bound")
@@ -163,6 +171,12 @@ def _deserialize(payload: str) -> _PaperRecord:
             plan=_decode_plan(value["plan"]),
             as_of_ms=value["as_of_ms"],
             exits=exits,
+            opening_margin_intent=(
+                PaperMarginIntentReceipt.deserialize(
+                    _canonical(value["opening_margin_intent_v1"])
+                )
+                if "opening_margin_intent_v1" in value else None
+            ),
         )
         if _serialize(record) != payload:
             raise ValueError("noncanonical paper position")
@@ -209,6 +223,34 @@ class PaperPositionBalance:
     runner_floor_units: Decimal
     tranches: tuple[PaperTrancheBalance, ...]
     exit_orders: tuple[PaperExitOrderBalance, ...]
+    opening_margin_intent: PaperMarginIntentReceipt | None = None
+
+    @property
+    def leverage_at_intent(self) -> int | None:
+        return (None if self.opening_margin_intent is None
+                else self.opening_margin_intent.leverage_at_intent)
+
+    @property
+    def requested_margin_quote(self) -> Decimal | None:
+        return (None if self.opening_margin_intent is None
+                else self.opening_margin_intent.requested_margin_quote)
+
+    @property
+    def margin_quote_currency(self) -> str | None:
+        return (None if self.opening_margin_intent is None
+                else self.opening_margin_intent.quote_currency)
+
+    @property
+    def actual_position_margin_verified(self) -> bool:
+        return False
+
+    @property
+    def leverage_accepted_by_venue(self) -> bool:
+        return False
+
+    @property
+    def quote_to_usd_converted(self) -> bool:
+        return False
 
     @property
     def quality(self) -> str:
@@ -242,6 +284,10 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
     if (type(opening) is not PaperOrderIntent
             or opening.effect is not PaperOrderEffect.OPEN):
         raise DataValidationError("paper position needs explicit opening intent")
+    if record.opening_margin_intent is not None:
+        if type(record.opening_margin_intent) is not PaperMarginIntentReceipt:
+            raise DataValidationError("PAPER position margin receipt is untyped")
+        record.opening_margin_intent.verify_intent(opening)
     if _unique_events(record.opening_events) != record.opening_events:
         raise DataValidationError("duplicate entry event in durable position")
     opening_replay = replay_paper_order(opening, record.opening_events, as_of_ms=cutoff)
@@ -343,6 +389,7 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
         unreserved_units=unreserved,
         runner_floor_units=schedule.residual_floor_units,
         tranches=tuple(tranches), exit_orders=tuple(order_states),
+        opening_margin_intent=record.opening_margin_intent,
     )
 
 
@@ -460,6 +507,7 @@ class SQLitePaperPositionJournal:
         plan_version: str,
         synthetic_lot_step_units: Decimal,
         as_of_ms: int,
+        opening_order_path: str | Path | None = None,
     ) -> PaperPositionBalance:
         """Materialize position ONLY from confirmed fictitious entry fills."""
         _fixture_id(position_id)
@@ -471,9 +519,42 @@ class SQLitePaperPositionJournal:
         cleaned = _unique_events(opening_events)
         if len(cleaned) == 0:
             raise DataValidationError("paper position cannot be created from ACK only")
+        margin_receipt = None
+        if opening_order_path is not None:
+            # Cross-file read-only verification before the separate AUTO4
+            # commit. Never import untrusted margin terms from a caller.
+            # No atomic guarantee across AUTO2 and AUTO4: health will
+            # re-check both journals after restart/other modifications.
+            from .paper_position_inspection import _read_database, _checked_path
+            from .paper_order_store import (
+                _TABLES as _ORDER_TABLES, _VERSION as _ORDER_VERSION,
+                SQLitePaperOrderJournal,
+            )
+            if _checked_path(opening_order_path) == _checked_path(self._path):
+                raise DataValidationError("PAPER order and position journals must differ")
+            with _read_database(
+                opening_order_path, _ORDER_TABLES, "paper_order_meta", _ORDER_VERSION,
+            ) as order_db:
+                order_entry = SQLitePaperOrderJournal._checked_entry(
+                    order_db, opening_intent.intent_id,
+                )
+                if (_intent_json(order_entry.intent) != _intent_json(opening_intent)
+                        or order_entry.events != cleaned):
+                    raise DataValidationError(
+                        "PAPER position OPEN differs from verified AUTO2 fills"
+                    )
+                receipt_row = order_db.execute(
+                    "SELECT value FROM paper_order_meta WHERE key=?",
+                    (META_PREFIX + opening_intent.intent_id,),
+                ).fetchone()
+                if receipt_row is not None:
+                    margin_receipt = PaperMarginIntentReceipt.deserialize(
+                        receipt_row["value"]
+                    )
+                    margin_receipt.verify_intent(opening_intent)
         record = _PaperRecord(
             position_id, plan_version, synthetic_lot_step_units, opening_intent, cleaned, exit_plan,
-            cutoff, (),
+            cutoff, (), margin_receipt,
         )
         view = _balance(record)
         payload = _serialize(record)
