@@ -94,7 +94,7 @@ def render_position_card_markup(p: dict[str, object]) -> str:
         margin_html = (
             '<p class="details" data-field="margin-intent">'
             'Alavancagem/margem solicitadas (PAPER): não registradas. '
-            'Nunca presumir 50x.</p>'
+            'Nunca presumir alavancagem padrão.</p>'
         )
     else:
         margin_html = (
