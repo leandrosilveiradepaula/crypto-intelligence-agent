@@ -53,12 +53,24 @@ def inspect_local_paper_recovery_status(
         health = audit_paper_open_health(
             orders, positions, decision_at_ms=decision_at_ms,
         )
+        # Each reader has its own SQLite snapshot. Repeat both inspections
+        # and reject any observed drift; this still is NOT an atomic
+        # cross-journal snapshot and must NEVER be an OPEN authorization.
+        operator_after = inspect_local_paper_operator_status(orders)
+        health_after = audit_paper_open_health(
+            orders, positions, decision_at_ms=decision_at_ms,
+        )
     except (DataValidationError, OSError, ValueError):
         return PaperRecoveryStatus(
             PaperRecoveryState.UNVERIFIED, "paper_journal_unverified", None,
         )
     # A newly initialized journal is not evidence of a replay/restart.
     # Never advertise a flat recovered PAPER run without a durable cursor.
+    if operator != operator_after or health != health_after:
+        return PaperRecoveryStatus(
+            PaperRecoveryState.UNVERIFIED,
+            "paper_snapshot_changed_during_inspection", None,
+        )
     if not operator.durable_cursor_present:
         return PaperRecoveryStatus(
             PaperRecoveryState.UNVERIFIED, "paper_replay_not_initialized", operator,
