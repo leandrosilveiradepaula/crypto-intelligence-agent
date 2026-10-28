@@ -13,7 +13,8 @@ FIRST_DAY = date(2020, 3, 25)
 ORIGIN = "https://public.bybit.com/trading/BTCUSDT/"
 
 def probe_week(*, allow_public_network=False, allow_weekly_archive_probe=False,
-               audit_hourly_quality=False, opened=None):
+               audit_hourly_quality=False, audit_trade_field_consistency=False,
+               opened=None):
     report = {
         "status": "explicit_opt_in_required", "requests_attempted": 0,
         "data_stored": False, "orders_sent": False, "rights_authorized": False,
@@ -55,7 +56,7 @@ def probe_week(*, allow_public_network=False, allow_weekly_archive_probe=False,
         "partial_days": result.partial_days,
         "manifest_sha256":result.manifest_sha256,
     })
-    if audit_hourly_quality:
+    if audit_hourly_quality or audit_trade_field_consistency:
         from crypto_intelligence_agent.bybit_trade_hourly_research import reconstruct_weekly_trade_hours
         derived = reconstruct_weekly_trade_hours(tuple(results))
         report["hourly_research"] = {
@@ -70,6 +71,16 @@ def probe_week(*, allow_public_network=False, allow_weekly_archive_probe=False,
             "live_trading_authorized": False,
             "orders_sent": False,
         }
+    if audit_trade_field_consistency:
+        report["trade_field_consistency"] = {
+            "size_equals_home_trades": derived.reported_size_equals_home_trades,
+            "size_differs_from_home_trades": derived.reported_size_differs_from_home_trades,
+            "foreign_equals_price_times_home_trades": derived.reported_foreign_equals_price_times_home_trades,
+            "foreign_differs_from_price_times_home_trades": derived.reported_foreign_differs_from_price_times_home_trades,
+            "units_verified": False, "rights_authorized": False,
+            "canonical_ohlcv_approved": False, "financial_backtest_approved": False,
+            "live_trading_authorized": False, "orders_sent": False,
+        }
     return report
 
 def main(argv=None):
@@ -77,10 +88,12 @@ def main(argv=None):
     parser.add_argument("--allow-public-network",action="store_true")
     parser.add_argument("--allow-weekly-archive-probe",action="store_true")
     parser.add_argument("--audit-hourly-quality",action="store_true")
+    parser.add_argument("--audit-trade-field-consistency",action="store_true")
     args=parser.parse_args(argv)
     report=probe_week(allow_public_network=args.allow_public_network,
                       allow_weekly_archive_probe=args.allow_weekly_archive_probe,
-                      audit_hourly_quality=args.audit_hourly_quality)
+                      audit_hourly_quality=args.audit_hourly_quality,
+                      audit_trade_field_consistency=args.audit_trade_field_consistency)
     print(json.dumps(report,sort_keys=True,separators=(",",":")))
     return int(report["status"]!="unverified_historical_week_observed")
 
