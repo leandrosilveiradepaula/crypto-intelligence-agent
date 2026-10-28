@@ -573,3 +573,8 @@ Issue #286, branch `work/issue-286-j5-paper-margin-mobile`. Gate: testes offline
 ## J5/J6/PRE14 #288 — seleção PAPER com crosscheck local opt-in (28/10/2026 UTC)
 
 A PR #287/#286 foi integrada em `90830b2497e82a9a8c91e5660edbbffc05a690a6` com checks pré e pós-merge verdes. A branch `work/issue-288-j5-multi-paper-crosscheck` estende o leitor multiposição com conferência facultativa do AUTO2 e sinalização explícita de proveniência no mobile. Sem crosscheck o comportamento legado persiste. A conferência é all-or-nothing, estritamente local e sem atomicidade entre bancos; não autentica exchange. Aceite depende de CI Linux/docs/Windows/Chrome e SHA revisado antes do merge sem produção. J1 #2/#217, J3 #4, J4 #5, J5 #6 e J6 #7 permanecem abertas.
+
+
+## J3/PRE15 #290 — faixa condicional de risco de margem em fixtures (28/10/2026 UTC)
+
+Base `main=57eec4553af9df94f42469c0e31fa7ca87bd4bcb` após #288/#289 integrada e CI pós-merge verde, sem PRs abertas no início. Branch `work/issue-290-j3-adverse-margin-envelope`. Implementação de resultado condicional pior/melhor sobre margem fictícia em 50x e revalidação de aumento adverso de fees/slippage por PRE6, testes de precisão/ausência de FX e limites. Gatilho de possível perda acima da margem é APENAS cenário assumido, não equação de liquidação; não há backtest financeiro real ou ordem. Gates de CI Linux/Windows/Chrome e revisão SHA antes de merge sem deploy; J1 #2/#217, J3 #4, J4 #5, J6 #7 seguem abertas.
