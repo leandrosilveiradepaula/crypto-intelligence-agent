@@ -141,18 +141,26 @@ def inspect_offline_vision_month(
         raise DataValidationError("CSV must be bounded ASCII decimal data") from exc
     rows = csv.reader(StringIO(decoded, newline=""), strict=True)
     out: list[OfflineVisionCandle] = []
-    # Binance USD-M archives may have an exact 12-column CSV header.
-    # Accept only this known schema at row zero; never skip arbitrary text.
-    official_header = (
-        "open_time", "open", "high", "low", "close", "volume",
-        "close_time", "quote_asset_volume", "number_of_trades",
-        "taker_buy_base_asset_volume", "taker_buy_quote_asset_volume", "ignore",
+    # USD-M archives have two observed exact 12-column naming variants.
+    # Their ordinal fields are identical; ONLY headers differ, never values.
+    # Do not skip unrecognized text or mix aliases from different variants.
+    known_headers = (
+        (
+            "open_time", "open", "high", "low", "close", "volume",
+            "close_time", "quote_asset_volume", "number_of_trades",
+            "taker_buy_base_asset_volume", "taker_buy_quote_asset_volume", "ignore",
+        ),
+        (
+            "open_time", "open", "high", "low", "close", "volume",
+            "close_time", "quote_volume", "count", "taker_buy_volume",
+            "taker_buy_quote_volume", "ignore",
+        ),
     )
     try:
         first_row = next(rows, None)
         if first_row is None:
             raise DataValidationError("empty historical CSV")
-        if tuple(first_row) != official_header:
+        if tuple(first_row) not in known_headers:
             from itertools import chain
             rows = chain((first_row,), rows)
         for index, row in enumerate(rows):
