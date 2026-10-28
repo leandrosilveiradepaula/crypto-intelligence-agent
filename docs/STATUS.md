@@ -578,3 +578,8 @@ A PR #287/#286 foi integrada em `90830b2497e82a9a8c91e5660edbbffc05a690a6` com c
 ## J3/PRE15 #290 — faixa condicional de risco de margem em fixtures (28/10/2026 UTC)
 
 Base `main=57eec4553af9df94f42469c0e31fa7ca87bd4bcb` após #288/#289 integrada e CI pós-merge verde, sem PRs abertas no início. Branch `work/issue-290-j3-adverse-margin-envelope`. Implementação de resultado condicional pior/melhor sobre margem fictícia em 50x e revalidação de aumento adverso de fees/slippage por PRE6, testes de precisão/ausência de FX e limites. Gatilho de possível perda acima da margem é APENAS cenário assumido, não equação de liquidação; não há backtest financeiro real ou ordem. Gates de CI Linux/Windows/Chrome e revisão SHA antes de merge sem deploy; J1 #2/#217, J3 #4, J4 #5, J6 #7 seguem abertas.
+
+
+## J3/PRE15-B #290 — ligação de envelopes com PRE7/OOS (28/10/2026 UTC)
+
+Após PR #291 integrada em `main=676ac1582493f97d1ec2ca4aa6578d053ccc2659`, branch `work/issue-290-j3-oos-margin-audit` acrescenta auditoria causal dos eventos com resultados condicionais: requer margem e choque por candidato e revalida PRE6 contra o resultado PRE7 exato. Eventos abstidos continuam sem resultado; nenhum lucro, perda financeira real ou liquidação de exchange. Exigir CI Linux/Windows/Chrome, revisão SHA, merge seguro e pós-merge. J3 #4 permanece não homologada.
