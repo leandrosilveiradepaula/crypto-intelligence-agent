@@ -190,6 +190,50 @@ class SQLiteBybitResearchStore:
         finally:
             connection.close()
 
+    @contextmanager
+    def _readonly_snapshot(self) -> Iterator[sqlite3.Connection]:
+        """One strictly read-only snapshot with schema and origin checks.
+
+        Used for replay and quality; never begin a write transaction or
+        re-open the DB halfway through a multi-page quality decision.
+        """
+        original = Path(self._path)
+        if original.is_symlink():
+            raise DataValidationError("research read cannot follow symlink")
+        try:
+            source = original.resolve(strict=True)
+            if not source.is_file():
+                raise DataValidationError("existing research SQLite file required")
+        except (OSError, RuntimeError):
+            raise DataValidationError("research SQLite file unavailable") from None
+        db = None
+        try:
+            db = sqlite3.connect(source.as_uri() + "?mode=ro", uri=True, timeout=5)
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA query_only=ON")
+            db.execute("BEGIN")
+            objects = db.execute(
+                "SELECT type,name FROM sqlite_master "
+                "WHERE type IN ('table','trigger','view') "
+                "AND name NOT LIKE 'sqlite_%'"
+            ).fetchall()
+            if (any(row["type"] != "table" for row in objects)
+                    or {row["name"] for row in objects} != _ALLOWED_TABLES):
+                raise DataValidationError("unknown research SQLite schema")
+            meta = db.execute("SELECT * FROM bybit_research_meta").fetchall()
+            if (len(meta) != 1 or meta[0]["id"] != 1
+                    or meta[0]["schema_version"] != SCHEMA_VERSION
+                    or meta[0]["input_origin"] != INPUT_ORIGIN):
+                raise DataValidationError("unrecognized research schema or origin")
+            if db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise DataValidationError("orphaned research candle rows")
+            yield db
+        except sqlite3.DatabaseError:
+            raise DataValidationError("invalid read-only research SQLite") from None
+        finally:
+            if db is not None:
+                db.close()
+
     def _initialize(self) -> None:
         with self._transaction() as db:
             current = {row[0] for row in db.execute(
