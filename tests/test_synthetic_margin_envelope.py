@@ -5,7 +5,8 @@ import unittest
 
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.synthetic_margin_envelope import (
-    SyntheticMarginBasis, evaluate_conditional_margin_envelope,
+    SyntheticMarginBasis, SyntheticAdverseCostStress,
+    evaluate_conditional_margin_envelope, evaluate_stressed_conditional_margin_envelope,
 )
 from test_synthetic_financial_scenarios import (
     LONG, SHORT, SyntheticBarrier, ObservationKind, observation,
@@ -63,6 +64,42 @@ class ConditionalMarginEnvelopeTests(unittest.TestCase):
         self.assertTrue(result.conditional_margin_exhaustion_possible)
         self.assertFalse(result.hypothetical_liquidation_branch_present)
         self.assertFalse(result.liquidation_formula_verified)
+
+    def test_stress_uses_pre6_and_fees_never_improve_results(self):
+        from test_synthetic_financial_scenarios import barrier_plan
+        original = scenario()
+        expected = evaluate(observation(), (original,))[0]
+        stress = SyntheticAdverseCostStress(D("10"), D("10"), D("50"), D("50"))
+        normal, adverse = evaluate_stressed_conditional_margin_envelope(
+            observation(), (original,), barrier_plan=barrier_plan(),
+            margin=SyntheticMarginBasis(D("4"), 50, D("200"), "SYNTHETIC_QUOTE"),
+            stress=stress,
+        )
+        self.assertEqual(normal.worst_conditional_net_quote,
+                         expected.conditional_net_quote_units)
+        self.assertLess(adverse.worst_conditional_net_quote,
+                        normal.worst_conditional_net_quote)
+        self.assertEqual(normal.branch_count, adverse.branch_count)
+        self.assertFalse(adverse.financial_backtest_approved)
+
+    def test_stress_rejects_overflow_and_wrong_entry_notional(self):
+        from test_synthetic_financial_scenarios import barrier_plan
+        original = scenario()
+        stress = SyntheticAdverseCostStress(D(0), D(0), D(0), D(0))
+        with self.assertRaises(DataValidationError):
+            SyntheticAdverseCostStress(D("10000.000001"), D(0), D(0), D(0))
+        with self.assertRaises(DataValidationError):
+            evaluate_stressed_conditional_margin_envelope(
+                observation(), (original,), barrier_plan=barrier_plan(),
+                margin=SyntheticMarginBasis(D("5"), 50, D("250"), "SYNTHETIC_QUOTE"),
+                stress=stress,
+            )
+        with self.assertRaises(DataValidationError):
+            evaluate_stressed_conditional_margin_envelope(
+                observation(), (original,), barrier_plan=barrier_plan(),
+                margin=SyntheticMarginBasis(D("4"), 50, D("200"), "SYNTHETIC_USDC"),
+                stress=stress,
+            )
 
     def test_margin_guards_and_heterogeneous_quotes(self):
         for kwargs in (
