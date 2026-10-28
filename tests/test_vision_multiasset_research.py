@@ -130,8 +130,9 @@ class VisionMultiassetResearchTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             rank_observed_vision_quote_volume(
                 (btc, eth), as_of_ms=end-1, decision_at_ms=beginning+24*HOUR)
-        with self.assertRaises(DataValidationError):
-            query(btc, eth, group("BNBUSDT"))
+        three = query(btc, eth, group("BNBUSDT"))
+        self.assertEqual(three.observed_symbol_count, 3)
+        self.assertFalse(three.historical_top50_verified)
 
     def test_no_network_persistence_or_decision_authority(self):
         btc, eth = group("BTCUSDT"), group("ETHUSDT")
