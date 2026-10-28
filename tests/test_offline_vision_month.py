@@ -113,7 +113,7 @@ class OfflineVisionMonthTests(unittest.TestCase):
             out = BytesIO()
             with ZipFile(out, "w", compression=ZIP_DEFLATED) as dst:
                 dst.writestr(name[:-4] + ".csv",
-                             (prefix + csvdata + suffix).encode("ascii"))
+                             (prefix + csvdata + suffix).encode("utf-8"))
             data = out.getvalue()
             return data, sha256(data).hexdigest()
         valid, digest = modify(header + "\n")
