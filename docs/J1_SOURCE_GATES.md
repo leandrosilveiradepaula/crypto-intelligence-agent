@@ -189,3 +189,8 @@ J1 #250: one-shot week probe limited to owner-only 7 GETs, no retention, canonic
 
 
 J1 #250 real historical week: GitHub Actions run 40620522744 success, 54677 BTCUSDT trades, 158 hours observed out of 168, no raw retention. Rights, canonical and live remain unapproved.
+
+
+## J1/HIST #253 — observações OHLC horárias derivadas de trades (não canônicas)
+
+A reconciliação usa exatamente sete arquivos `BTCUSDTYYYY-MM-DD.csv.gz` consecutivos, bytes gzip/CSV limitados, timestamp UTC com microssegundos, high/low corretos sob trades observados, `open/close=None` em fronteiras de timestamp ambíguas e somas Decimal de campos originais sem conversões supostas. Horas sem trades entram como ausências, nunca forward-fill. Um intervalo com trades não prova completude de eventos. Testes inicialmente sintéticos; futuras estatísticas reais por semana só como contagens sanitizadas, sem retenção. Não promover a `ClosedCandle`, J2, J3, uso comercial, direitos de retenção, funding/mark/index/liquidação ou live.
