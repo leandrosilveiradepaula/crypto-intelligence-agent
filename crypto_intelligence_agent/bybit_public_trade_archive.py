@@ -18,8 +18,8 @@ from .market_data import DataValidationError, DataGapError
 MAX_GZIP_BYTES = 5_000_000
 MAX_CSV_BYTES = 30_000_000
 MAX_TRADES = 150_000
-DATE = re.compile(r"BTCUSDT(20[0-9]{2})-(0[1-9]|1[0-2])-([0-3][0-9])\\.csv\\.gz\\Z")
-NUMBER = re.compile(r"(?:0|[1-9][0-9]{0,19})(?:\\.[0-9]{1,18})?\\Z")
+DATE = re.compile(r"BTCUSDT(20[0-9]{2})-(0[1-9]|1[0-2])-([0-3][0-9])\.csv\.gz\Z")
+NUMBER = re.compile(r"(?:0|[1-9][0-9]{0,19})(?:\.[0-9]{1,18})?\Z")
 FIELDS = ("timestamp", "symbol", "side", "size", "price", "tickDirection",
           "trdMatchID", "grossValue", "homeNotional", "foreignNotional")
 
@@ -70,7 +70,7 @@ def inspect_trade_archive(blob: bytes, *, archive_name: str) -> TradeArchiveAudi
             if count > MAX_TRADES:
                 raise DataValidationError("trade budget exceeded")
             ts = row["timestamp"]
-            if not re.fullmatch(r"[0-9]{10}(?:\\.[0-9]{1,6})?", ts):
+            if not re.fullmatch(r"[0-9]{10}(?:\.[0-9]{1,6})?", ts):
                 raise DataValidationError("invalid timestamp precision")
             milliseconds = int(Decimal(ts) * 1000)
             if milliseconds < first_bound or milliseconds >= last_bound:
