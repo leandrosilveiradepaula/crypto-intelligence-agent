@@ -470,3 +470,8 @@ Fixtures apenas sintéticas: hash 64hex, delimitadores texto/binário, LF/CRLF e
 4. **Custos financeiros:** obter serie por contrato de mark/index/funding, tiers de risco e custos na mesma janela para habilitar pesquisa J3; schemas V5 e screenshots promocionais nao suprem as series.
 5. **Exclusoes:** nao reexecutar probes ja encerradas, nao tentar contornar restricoes V5, nao armazenar dados reais nem baixar dataset sob licenca nao aprovada, nao criar novo parser/CLI sem lacuna funcional, nao alterar `provider_usage_gate.py` por declaracoes autoafirmadas e nao ativar ordens.
 6. **Aceite da presente work unit:** revisao de fontes publicas, documentacao coerente e CI Linux/Windows/docs/Chrome no SHA exato da PR; ausencia de novos dados, codigo de mercado, troca de venue, release e gastos. Aprovar **diligencia** nao aprova J1/J3 ou negociacao.
+
+
+## J5/J6/PRE14 #288 — validação do crosscheck de múltiplas posições PAPER
+
+Exigir IDs explícitos com 1..128 entradas; no modo padrão `opening_order_cross_checked=false` e na opção com diário AUTO2 todos os OPENs, eventos e recibos devem corresponder exatamente, ou a seleção falha inteira. Verificar dois arquivos SQLite separados, `mode=ro`, nenhuma escrita/rede, base ausente, ID ausente, segundo registro inconsistente, recibo adulterado, detecção de drift entre leituras, compatibilidade de JSON/HTML e CSP sem recursos externos. QA mobile Chrome 280..390px e Linux/Windows CI no SHA exato. Validação local não representa margem efetiva, snapshot atômico cross-file, fonte real, PnL ou live.
