@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from contextlib import closing
 import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -56,7 +57,7 @@ class BybitResearchSeriesTests(unittest.TestCase):
                                    manifest=self.manifest)
         with self.assertRaises(DataGapError):
             self.series(end=END + 3*HOUR)
-        with sqlite3.connect(self.db) as conn:
+        with closing(sqlite3.connect(self.db)) as conn:
             conn.execute("UPDATE bybit_research_candles SET close=? WHERE open_time_ms=?", ("999", START))
         with self.assertRaises(DataGapError):
             self.series()
@@ -66,7 +67,7 @@ class BybitResearchSeriesTests(unittest.TestCase):
                                    manifest=self.manifest)
         with self.assertRaises(DataValidationError):
             self.series(cutoff=END)
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db:
             db.execute("CREATE VIEW untrusted AS SELECT 1")
         with self.assertRaises(DataValidationError):
             self.series()
