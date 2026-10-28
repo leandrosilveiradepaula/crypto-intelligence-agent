@@ -118,7 +118,7 @@ class OfflineVisionMonthTests(unittest.TestCase):
             return data, sha256(data).hexdigest()
         valid, digest = modify(header + "\n")
         self.assertEqual(len(parse(valid, name, digest, cutoff).candles), 672)
-        for prefix in (header + "\\n" + header + "\\n",
+        for prefix in (header + "\n" + header + "\n",
                        header.replace("volume", "size", 1) + "\n",
                        "\ufeff" + header + "\n"):
             with self.subTest(prefix=prefix[:25]):
