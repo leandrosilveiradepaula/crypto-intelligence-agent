@@ -15,9 +15,11 @@ from crypto_intelligence_agent.paper_operator_status import PaperOperatorStatus
 from crypto_intelligence_agent.paper_recovery_status import (
     PaperRecoveryState, PaperRecoveryStatus,
 )
+from crypto_intelligence_agent.paper_operator_alerts import summarize_paper_observations
 from scripts.audit_paper_dashboard_browser import VIEWPORTS
 from scripts.audit_multi_paper_positions_browser import _local_fixture_selected
 from scripts.inspect_paper_recovery import render_recovery_html
+from scripts.observe_paper_operator import render_paper_alert_report_html
 
 
 def _fixture_statuses() -> tuple[PaperRecoveryStatus, ...]:
