@@ -218,3 +218,28 @@ O schema V5 [oficial](https://bybit-exchange.github.io/docs/v5/market/kline) inf
 ## J1 #259 — Binance Vision: licença de pesquisa, não live
 
 Fonte oficial https://github.com/binance/binance-public-data/blob/master/TERMS_AND_CONDITIONS.md (v1.0 26/08/2026; blob GitHub d47bf55acfd83456d6fe57b31f400b42bda83c19): datasets sob CC BY-NC-SA 4.0 (§3.1), pesquisa pessoal estritamente não produtiva (§4.1), proibição de uso de datasets para execução de trading live (§4.2), licença comercial separada (§3.4). MIT do README de código não licencia datasets. Downloads implicam aceitação de termos (§§1.4/3.2); nenhuma aquisição real foi executada neste bloco. .CHECKSUM local apenas verifica consistência de hashes declarados, não autentica fornecedor, origem, finalidade, jurisdição nem direito. J1 #2 e Bybit #217 permanecem abertas.
+
+## J1/D132 — diligencia primaria Bybit: PDF juridico disponivel, vigencia e retencao incertas (28/10/2026)
+
+Esta e uma revisao de **documentos publicos**, nao captura de mercado, aceite de contrato ou parecer juridico.
+
+| Fonte primaria | Evidencia verificavel | Limite |
+| --- | --- | --- |
+| [Bybit Help Center API Terms](https://www.bybit.com/en/help-center/article/API-Terms) | Artigo datado 20/10/2026 aponta para a pagina legal mais recente | O artigo nao reproduz o texto aplicavel |
+| [Pagina legal canonica](https://www.bybit.com/en/legal/service-specific-terms/API-Terms) | Somente titulo `API Terms` visivel na leitura textual de 28/10/2026 | Versao e texto integral vigente nao comprovados |
+| [PDF da propria Bybit](https://www.bybit.com/common-static/compliance/legal/BYBIT/df1923006718fbba8ba70d7d762b9866.pdf) | Documento legivel de 7 paginas; §5.1: uso limitado de API para desenvolvimento/testes, sem licenca automatica sobre conteudo; §6.5: nao replicar produto; §6.7: nao revender/reempacotar API ou Service Data; §6.9: nao explorar comercialmente API; §7.1: condicoes adicionais | PDF sem versao/data comprovada e sem evidencia de que seja a atual pagina canonica; escopo direto e API, nao uma concessao expressa de uso de arquivos `public.bybit.com` |
+| [Documentacao oficial de trades](https://bybit-exchange.github.io/docs/v5/market/recent-trade) | Indica download de arquivos historicos no site | Link de arquivo nao e licenca de persistencia, redistribuicao ou uso em trading |
+
+**Matriz fail-closed por finalidade.**
+
+| Finalidade | Situacao em 28/10/2026 |
+| --- | --- |
+| Inspecao pontual efemera ja executada D124/D126/D128/D130 | Evidencia tecnica real, sem dados guardados; nao e concessao de direitos adicionais |
+| Retencao local longa de trades/candles, privada e pessoal | **NAO COMPROVADA** no PDF; exige confirmacao vigente e aplicavel a arquivos historicos |
+| Backtest local sobre serie historica retida | **NAO COMPROVADA** sob os termos atuais aplicaveis; nao promover `financial_backtest_approved` |
+| Dashboard pessoal exibindo historico | **NAO COMPROVADA** para reutilizacao/derivados; nao supor liberacao por ser privado |
+| Redistribuicao, painel para terceiros e exploracao comercial | PDF §6.7/6.9 impõe restricoes a API/Service Data; nenhuma autorizacao comercial identificada |
+| Execucao proprietaria automatica live a partir do dataset | PDF nao fornece autorizacao especifica; proibicao expressa do dataset Binance Vision nao deve ser transferida automaticamente a Bybit; **gate live permanece bloqueado** |
+| Uso em territorio/entidade do titular | **NAO COMPROVADO** sem verificar a versao legal e condicoes aplicaveis; nao inferir de IP, HTTP200 ou residencia presumida |
+
+Acesso tecnico de `public.bybit.com` nao certifica uma licenca; da mesma forma, um documento sobre APIs pode nao cobrir integralmente o arquivo historico publicado fora da V5. Nao usar o PDF para concluir nem permissao nem vedacao absoluta de todo uso pessoal. Proxima dependencia externa concreta de #217: prova primaria, vigente e aplicavel sobre **retencao privada, uso historico e posterior utilizacao proprietaria**, e escopo de arquivo vs API; manter recusa no `provider_usage_gate.py`. Nao solicitar chaves, nao disparar emails em nome do titular, nao executar GET de mercado nesta revisao.
