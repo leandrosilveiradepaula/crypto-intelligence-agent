@@ -25,7 +25,7 @@ from crypto_intelligence_agent.paper_risk_gate import (
     PaperRiskLimits, PaperRiskObservation, PaperRiskReason,
 )
 from crypto_intelligence_agent.synthetic_order_lifecycle import (
-    PaperOrderStatus, PaperVenue,
+    PaperOrderEvent, PaperOrderEventKind, PaperOrderStatus, PaperVenue,
 )
 from crypto_intelligence_agent.synthetic_position_state import SyntheticLeverageSettings
 from test_synthetic_research_cycle import candles, config
@@ -263,6 +263,29 @@ class CausalMarginPreflightTests(unittest.TestCase):
         self.assertEqual(result.reservation.decision.reason, PaperRiskReason.KILL_SWITCH)
         self.assertIsNone(result.reservation.entry)
         self.assertEqual(self.count_open_intents(), 0)
+
+    def test_filled_open_without_position_denies_new_open_after_margin_check(self):
+        first = self.exercise(requirement=self.request())
+        self.assertTrue(first.paper_intent_reserved)
+        self.orders.append_events(
+            first.intent.intent_id,
+            (PaperOrderEvent(
+                "fixture_margin_open_fill", PaperOrderEventKind.FILL,
+                self.now, D("2.5"),
+            ),),
+            as_of_ms=self.now,
+        )
+        denied = self.exercise(requirement=self.request())
+        self.assertFalse(denied.paper_intent_reserved)
+        self.assertIsNone(denied.reservation)
+        self.assertIsNotNone(denied.health)
+        self.assertFalse(denied.health.new_open_allowed)
+        self.assertEqual(denied.reason,
+                         "paper_open_health_denied_paper_open_unprotected")
+        self.assertIsNotNone(denied.margin_assessment)
+        self.assertTrue(denied.margin_assessment.allowed_for_paper_research_only)
+        self.assertEqual(self.count_open_intents(), 1)
+        self.assertFalse(denied.orders_sent)
 
     def test_paper_approval_never_bypasses_double_open_reservation(self):
         first = self.exercise(requirement=self.request())
