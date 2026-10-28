@@ -269,3 +269,8 @@ Testes: journal vazio, cursor com 6 candles e OPEN PENDING, restart, pausa/resum
 ## J3/PRE17 #295 — observatório temporal de risco de portfólio fictício
 
 `synthetic_portfolio_risk.py` agrega 2..16 trilhas sintéticas com horário de entrada, moeda quote e relógio UTC idênticos. Cada trilha usa `replay_synthetic_mark_path` PRE16, que detém cálculo local de funding, equity e manutenção. A camada de portfólio apenas recorta observações até o primeiro instante terminal e descreve notional bruto/assinado, equity e manutenção de buckets isolados, concentração por símbolo e marks adversos sincronizados. Não há snapshots de ativos reais, preço/ordem compartilhados, netting de margem, posição consolidada, liquidação de corretora ou correlação estimada. Segurança, feed J1 e J3 financeira permanecem bloqueados.
+
+
+## J1/HIST #297 — captura de arquivo oficial para pesquisa isolada
+
+O caminho `scripts/capture_private_vision_months.py` é uma camada owner-only para adquirir arquivos históricos em dois meses contíguos usando domínio fixo Binance Vision; reutiliza `vision_checksum_sidecar.py`, `offline_vision_month.py` e `offline_vision_series.py` e gera diretório local privado 0700/0600 + manifesto para `audit_offline_vision_series.py`. Não conecta `ClosedCandle`, storage canônico, J2/J3 ou motor de ordens; não há daemon, cron, chave, banco produtivo, host alternativo ou coleta em CI. Separação por construção: histórico de pesquisa não produtivo nunca é feed de trading. A licença do dataset limita finalidade, não é substituída pela licença MIT do código.
