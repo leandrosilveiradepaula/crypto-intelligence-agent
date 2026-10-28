@@ -100,6 +100,35 @@ class OfflineVisionMonthTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             parse(blob, name, digest, cutoff)
 
+    def test_exact_recent_header_only_first_row_accepted(self):
+        from io import BytesIO
+        from zipfile import ZipFile, ZIP_DEFLATED
+        header = ("open_time,open,high,low,close,volume,close_time,"
+                  "quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,"
+                  "taker_buy_quote_asset_volume,ignore")
+        blob, name, _, cutoff = synthetic_zip()
+        def modify(prefix, suffix=""):
+            with ZipFile(BytesIO(blob)) as src:
+                csvdata = src.read(name[:-4] + ".csv").decode("ascii")
+            out = BytesIO()
+            with ZipFile(out, "w", compression=ZIP_DEFLATED) as dst:
+                dst.writestr(name[:-4] + ".csv",
+                             (prefix + csvdata + suffix).encode("ascii"))
+            data = out.getvalue()
+            return data, sha256(data).hexdigest()
+        valid, digest = modify(header + "\n")
+        self.assertEqual(len(parse(valid, name, digest, cutoff).candles), 672)
+        for prefix in (header + "\\n" + header + "\\n",
+                       header.replace("volume", "size", 1) + "\n",
+                       "\ufeff" + header + "\n"):
+            with self.subTest(prefix=prefix[:25]):
+                data, d = modify(prefix)
+                with self.assertRaises(DataValidationError):
+                    parse(data, name, d, cutoff)
+        data, d = modify("", "\n" + header)
+        with self.assertRaises(DataValidationError):
+            parse(data, name, d, cutoff)
+
     def test_archive_path_and_digest_must_match(self):
         for member in ("../BTCUSDT.csv", "random.csv", "BTCUSDT-1h-2025-02.csv/"):
             blob, name, digest, cutoff = synthetic_zip(member=member)
