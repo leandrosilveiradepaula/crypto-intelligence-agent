@@ -12,7 +12,7 @@ from scripts.inspect_paper_recovery import main
 
 
 class RecoveryCLITests(unittest.TestCase):
-    def test_empty_journals_report_hypothetical_only(self):
+    def test_empty_journals_cannot_claim_recovery(self):
         with TemporaryDirectory() as root:
             orders = Path(root) / "orders.sqlite"
             positions = Path(root) / "positions.sqlite"
@@ -22,10 +22,11 @@ class RecoveryCLITests(unittest.TestCase):
             out = StringIO()
             with redirect_stdout(out):
                 code = main(["--orders", str(orders), "--positions", str(positions)])
-            self.assertEqual(code, 0)
+            self.assertEqual(code, 2)
             self.assertEqual((orders.read_bytes(), positions.read_bytes()), before)
             payload = json.loads(out.getvalue())
-            self.assertEqual(payload["state"], "PAPER_FLAT_HYPOTHETICAL_ONLY")
+            self.assertEqual(payload["state"], "UNVERIFIED")
+            self.assertEqual(payload["reason"], "paper_replay_not_initialized")
             self.assertFalse(payload["new_open_authorized"])
             self.assertFalse(payload["native_stop_verified"])
             self.assertFalse(payload["orders_sent"])

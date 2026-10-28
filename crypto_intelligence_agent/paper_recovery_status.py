@@ -57,6 +57,12 @@ def inspect_local_paper_recovery_status(
         return PaperRecoveryStatus(
             PaperRecoveryState.UNVERIFIED, "paper_journal_unverified", None,
         )
+    # A newly initialized journal is not evidence of a replay/restart.
+    # Never advertise a flat recovered PAPER run without a durable cursor.
+    if not operator.durable_cursor_present:
+        return PaperRecoveryStatus(
+            PaperRecoveryState.UNVERIFIED, "paper_replay_not_initialized", operator,
+        )
     if operator.new_paper_open_paused:
         return PaperRecoveryStatus(
             PaperRecoveryState.BLOCKED, "paper_operator_paused", operator,

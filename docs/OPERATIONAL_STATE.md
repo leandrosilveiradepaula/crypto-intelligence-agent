@@ -570,3 +570,8 @@ Base verificada: main 945c9a3b36e7b81867ca2d65fcc196616d5a7211; PRs abertas zero
 ## J6/PRE5 — diagnostico local de recuperacao PAPER (28/10/2026)
 
 Com dois journals SQLite **sinteticos** ja existentes e privados, o operador pode executar `python -m scripts.inspect_paper_recovery --orders /privado/orders.sqlite --positions /privado/positions.sqlite`. O comando compoe o contrato PRE4 existente, em modo read-only, e imprime apenas estado/motivo codificados e flags de seguranca. Exit 0 significa **somente** `PAPER_FLAT_HYPOTHETICAL_ONLY`, nunca autorizacao de OPEN, stop nativo ou operacao live; exit 2 significa `BLOCKED` ou `UNVERIFIED`. Nao imprime IDs, caminho, precos, saldos, segredos nem payloads. Sem rede, criacao de banco, cron, ordem, deploy ou migracao. Leituras AUTO2/AUTO4 nao sao atomicas entre arquivos. J1 e J6 continuam abertas ate seus aceites independentes.
+
+
+## J6/PRE6 — inicializacao PAPER nao equivale a recuperacao (28/10/2026)
+
+Correcao fail-closed do PRE4/PRE5: journals SQLite vazios e validos, mas sem cursor duravel AUTO2, retornam `UNVERIFIED / paper_replay_not_initialized` e exit 2 no CLI. Antes, a ausencia de FILL podia ser apresentada como `PAPER_FLAT_HYPOTHETICAL_ONLY`, embora nenhum replay tivesse sido comprovado. Um status FLAT so pode ser diagnostico apos cursor duravel e auditoria AUTO4; nunca e permissao de OPEN, snapshot atomico entre bancos ou protecao nativa. Testes de regressao exercitam API e CLI; sem rede, ordens ou deploy.
