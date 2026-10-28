@@ -26,7 +26,7 @@ class BybitResearchSeriesTests(unittest.TestCase):
         return inspect_existing_bybit_research_series(
             self.db, symbol="BTCUSDT", interval="1h",
             start_open_ms=START, end_open_ms=end,
-            as_of_ms=(cutoff if cutoff is not None else self.manifest.capture_finished_ms + 1000),
+            as_of_ms=(cutoff if cutoff is not None else max(self.manifest.capture_finished_ms, end) + 1000),
         )
 
     def test_multiple_pages_one_snapshot_read_only_and_replay(self):
