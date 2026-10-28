@@ -186,3 +186,6 @@ Fonte identificada: Bybit official Docs https://bybit-exchange.github.io/docs/ e
 
 
 J1 #250: one-shot week probe limited to owner-only 7 GETs, no retention, canonical=false, rights=false, live=false.
+
+
+J1 #250 real historical week: GitHub Actions run 40620522744 success, 54677 BTCUSDT trades, 158 hours observed out of 168, no raw retention. Rights, canonical and live remain unapproved.
