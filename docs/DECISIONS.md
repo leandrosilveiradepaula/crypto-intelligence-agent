@@ -788,3 +788,8 @@ Essa é uma melhoria de apresentação somente leitura: nenhum envio de ordens, 
 ## D145 — J3/PRE15 #290: envelope condicional de margem e estresse de custos (28/10/2026 UTC)
 
 A margem `Decimal` quote **sintética** e alavancagem por intenção são comparadas à exposição de entrada `margin × leverage = entry_notional`, sem FX ou arredondamento. O avaliador PRE15 recebe exclusivamente alternativas PRE6 previamente definidas, exige uma alternativa por barreira e calcula mínimo/máximo líquidos condicionais, razão perda máxima sobre margem solicitada e indicador de esgotamento **hipotético**. Um alvo favorável não cancela STOP ou LIQUIDATION concorrente no mesmo OHLC; nenhuma probabilidade é atribuída. Estresse adverso de bps acrescenta fee/slippage por perna e **reexecuta o PRE6 existente**, sem simular fill, preço de liquidação, saldo real ou resultado OOS. Essas proporções não estimam margem de manutenção da venue nem risco real. J1 #2/#217 e J3 #4 permanecem abertas.
+
+
+### D145/PRE15-B — auditoria causal OOS de margem (28/10/2026 UTC)
+
+`audit_synthetic_oos_margin` recebe o ciclo PRE7 pronto e apenas para eventos com alternativas PRE6 exige mapa completo de margem/50x, estresse e pressupostos originais. Reexecuta PRE6 e compara igualdade do resultado imutável antes de mostrar envelope, negando qualquer alteração retroativa, entrada sem margem ou evento sem plano. Abstenção nunca vira retorno, e a saída nunca agrega ramos ou inventa fill. Nenhum cálculo constitui prova OOS financeira ou resultado de corretora.

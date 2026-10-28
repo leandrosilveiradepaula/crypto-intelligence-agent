@@ -480,3 +480,8 @@ Exigir IDs explícitos com 1..128 entradas; no modo padrão `opening_order_cross
 ## J3/PRE15 #290 — envelope adversarial de margem sintética
 
 Exigir teste de `margin_quote × leverage_at_intent == entry_notional_quote` com Decimal exato, 50x/4 quote e cenários LONG/SHORT, alvos positivos versus STOP negativo, flag de esgotamento somente hipotético, ausência de agregação/probabilidade e de inferência de preço de liquidação. Reutilizar `evaluate_conditional_financial_scenarios` para reavaliar fee/slippage acrescidos e verificar monotonicidade de todos os resultados. Invalidar floats/NaN/bool, quote/contrato divergente, branches duplicados, quantidade inválida e bps fora de bounds. CI offline Linux/Windows/Chrome, SHA exato, revisão e pós-merge; nada libera J1, J3 financeiro real ou trading.
+
+
+## J3/PRE15-B — vínculo causal PRE7/OOS
+
+Auditar todos os candidatos OOS com ramos PRE6: exigir exatamente um `SyntheticMarginBasis` e `SyntheticAdverseCostStress` por índice resolvido, comparar recálculo PRE6 idêntico ao registro PRE7, recusar mutações e moedas divergentes, limitar à janela OOS já validada. Abstenções não devem adquirir saída ou PnL. Linux/Windows/Chrome, `compileall` e SHA exato; risco é condicional, não prova financeira.
