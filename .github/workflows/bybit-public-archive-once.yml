@@ -1,0 +1,31 @@
+name: J1 Bybit historical archive one-shot public probe
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+concurrency:
+  group: j1-bybit-archive-one-shot
+  cancel-in-progress: false
+jobs:
+  archive-once:
+    if: >-
+      github.event.issue.number == 247 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-bybit-archive-once-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout approved main without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect exactly one public daily archive, no retention
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_bybit_public_trade_archive \
+            --allow-public-network --allow-one-public-archive-probe
