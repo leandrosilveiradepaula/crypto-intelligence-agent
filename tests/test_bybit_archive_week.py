@@ -5,10 +5,10 @@ from crypto_intelligence_agent.bybit_archive_week import inspect_seven_daily_arc
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.bybit_public_trade_archive import FIELDS
 
-def samples():
+def samples(first_day=date(2020,4,5)):
     out=[]
     for i in range(7):
-        day=date(2020,4,5)+timedelta(days=i)
+        day=first_day+timedelta(days=i)
         stamp=str(int(datetime(day.year,day.month,day.day,tzinfo=timezone.utc).timestamp()))
         fields=(stamp,"BTCUSDT","Buy","1.25","9000.5","PlusTick",
                 "fixture","1125062500000","1.25","11250.625")
