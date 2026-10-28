@@ -186,3 +186,8 @@ O leitor read-only do diário AUTO4 pode apresentar `leverage_at_intent` e `requ
 ## PRE13 #286 — UI de solicitação de margem/50x por posição, sem confundir com colateral
 
 A leitura local de posições PAPER após AUTO10 pode exibir, quando há recibo válido, “Alavancagem solicitada (PAPER): 50x” e “Margem solicitada (PAPER): 5 USDT” como exemplos de um cenário sintético. Em registros sem recibo é “Não registrada” (nunca 50x presumidos, jamais 0 de saldo). São propriedades da intenção na abertura, não de uma posição/conta real; a UI não apresenta mark/notional, liquidação, saldo, PnL ou conta. Os cartões de diferentes posições nunca somam margens, alavancagem ou quotes, e não convertem USDC/USDT. `paper_position_snapshot_v1.position.margin_intent_requested` contém apenas termos allowlisted e flags `actual_position_margin_verified=false`, `venue_leverage_verified=false`, `orders_sent=false`, além do estado de conferência AUTO2/AUTO4 realmente executada. HTML estático PT-BR, CSP sem rede, sem JS ou controles de trade; navegador Chrome valida seis larguras e teclado. Nenhuma publicação live, credencial ou dados reais.
+
+
+## PRE14 #288 — conferência cruzada local de seleção PAPER
+
+A leitura multiposição pode receber o diário AUTO2 explicitamente e conferir todas as aberturas AUTO4 antes de marcar `opening_order_cross_checked=true`. Divergência de OPEN, evento, recibo ou estrutura invalida a seleção inteira. A leitura padrão continua sem cruzamento. Uma segunda leitura AUTO4 detecta mudanças observáveis, sem criar atomicidade entre dois bancos. Hash e recibo sintéticos não comprovam colateral, alavancagem, stop nem execução de corretora. Proibidos endpoints financeiros, dados de conta, comandos de trading, rede e produção.
