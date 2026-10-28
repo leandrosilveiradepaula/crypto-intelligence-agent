@@ -561,3 +561,10 @@ Depois da PR #283/issue #282 (`main=b4aa10e178ca16d091be2f4b187b98831ba39d7f`, C
 ## J5/PRE13 #286 — exibição móvel conservadora de margem/leverage solicitados (28/10/2026 UTC)
 
 Após #282/#284 e seus gates integrados, a leitura individual e múltipla de posições PAPER exibe os parâmetros solicitados presentes no recibo versionado, sem confundi-los com margem real aceita pela exchange. JSON v1 mantém `margin_intent_requested` allowlisted (ou `null` em posição legacy), e HTML mostra o valor 50x/5 USDT somente se registrado; “não registrada” caso contrário. Sem preço, notional, saldo, PnL, conversão entre moedas ou posição live. Testes Python e Chrome para seleção mista, ausência de rede, CSP e tamanhos mobile; revisão SHA/CI antes de merge. Issue #286, branch `work/issue-286-j5-paper-margin-mobile`. Homologações J1/J3/J4/J5/J6 ainda dependem de dados/venue/financeiro reais e gates humanos.
+
+
+## J5/PRE13 #286 — configuração de margem/alavancagem solicitadas visível em telas PAPER (28/10/2026 UTC)
+
+Após WU #284/PR #285 integrada (`main=106ebd5f14ed289238124ede56a30c232671d51a`, CI pré/pós-merge Linux/Windows/Chrome SUCCESS), a UI read-only PT-BR de posição individual e cartões de múltiplas posições passa a mostrar margem e leverage **solicitados** no recibo `opening_margin_intent_v1`, apenas de fixtures PAPER. Campos de JSON estritamente permitidos, flags de moeda e venue não verificadas; não exportar mark, PnL, saldo ou notional, não somar quotes, nem converter USD. Registros legados exibem “Não registrada”, não 50x por padrão. A visualização cross-file opcional só diz conferida se AUTO2/AUTO4 realmente comparados com D142; CSP bloqueia scripts/rede, layout responsivo e acesso por teclado mantidos.
+
+Issue #286, branch `work/issue-286-j5-paper-margin-mobile`. Gate: testes offline de JSON/HTML, negativos/legado/CSP, Chrome nas seis larguras, CI Linux/docs, Windows, revisão do diff no SHA exato, squash merge sem produção e CI pós-merge. J1 #2/#217, J3 #4, J4 #5, J6 #7 abertas; nada autoriza mercado ou ordens reais.
