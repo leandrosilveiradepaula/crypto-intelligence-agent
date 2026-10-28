@@ -100,34 +100,60 @@ class OfflineVisionMonthTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             parse(blob, name, digest, cutoff)
 
-    def test_exact_recent_header_only_first_row_accepted(self):
-        from io import BytesIO
-        from zipfile import ZipFile, ZIP_DEFLATED
-        header = ("open_time,open,high,low,close,volume,close_time,"
+    def test_exact_observed_vision_headers_and_months_accepted(self):
+        # Header-only aliases are observed from SSH; the data column order is
+        # unchanged and must still pass the canonical OHLC validator.
+        legacy = ("open_time,open,high,low,close,volume,close_time,"
                   "quote_asset_volume,number_of_trades,taker_buy_base_asset_volume,"
                   "taker_buy_quote_asset_volume,ignore")
-        blob, name, _, cutoff = synthetic_zip()
-        def modify(prefix, suffix=""):
+        observed = ("open_time,open,high,low,close,volume,close_time,"
+                    "quote_volume,count,taker_buy_volume,taker_buy_quote_volume,ignore")
+
+        def modify(year, month, prefix="", suffix=""):
+            blob, name, _, cutoff = synthetic_zip(year=year, month=month)
             with ZipFile(BytesIO(blob)) as src:
-                csvdata = src.read(name[:-4] + ".csv").decode("ascii")
-            out = BytesIO()
-            with ZipFile(out, "w", compression=ZIP_DEFLATED) as dst:
-                dst.writestr(name[:-4] + ".csv",
-                             (prefix + csvdata + suffix).encode("utf-8"))
-            data = out.getvalue()
-            return data, sha256(data).hexdigest()
-        valid, digest = modify(header + "\n")
-        self.assertEqual(len(parse(valid, name, digest, cutoff).candles), 672)
-        for prefix in (header + "\n" + header + "\n",
-                       header.replace("volume", "size", 1) + "\n",
-                       "\ufeff" + header + "\n"):
-            with self.subTest(prefix=prefix[:25]):
-                data, d = modify(prefix)
+                payload = src.read(name[:-4] + ".csv").decode("ascii")
+            output = BytesIO()
+            with ZipFile(output, "w", compression=ZIP_DEFLATED) as zf:
+                zf.writestr(name[:-4] + ".csv",
+                            (prefix + payload + suffix).encode("utf-8"))
+            data = output.getvalue()
+            return data, name, sha256(data).hexdigest(), cutoff
+
+        for year, month, count in ((2025, 2, 672), (2026, 8, 744),
+                                    (2026, 9, 720)):
+            for header in (legacy, observed):
+                with self.subTest(year=year, month=month, variant=header[60:83]):
+                    blob, name, digest, cutoff = modify(
+                        year, month, prefix=header + "\n"
+                    )
+                    report = parse(blob, name, digest, cutoff)
+                    self.assertEqual(len(report.candles), count)
+                    self.assertEqual(report.candles[0].documented_quote_volume, 1250)
+                    self.assertFalse(report.canonical_ohlcv_approved)
+                    self.assertFalse(report.live_trading_authorized)
+
+        # Never silently skip unknown/mixed headers. Numeric rows must still be
+        # exact and a known header may occur only once at the beginning.
+        malformed = (
+            observed + "\n" + observed + "\n",  # repeated header
+            observed.replace("quote_volume,count", "quote_asset_volume,count") + "\n",
+            observed.replace("quote_volume,count", "count,quote_volume") + "\n",
+            observed.replace("taker_buy_volume", "taker_buy_base_asset_volume") + "\n",
+            observed + ",extra\n",
+            observed.replace("volume", "size", 1) + "\n",
+            "\ufeff" + observed + "\n",
+        )
+        for prefix in malformed:
+            with self.subTest(bad=prefix[:50]):
+                blob, name, digest, cutoff = modify(2026, 8, prefix=prefix)
                 with self.assertRaises(DataValidationError):
-                    parse(data, name, d, cutoff)
-        data, d = modify("", "\n" + header)
-        with self.assertRaises(DataValidationError):
-            parse(data, name, d, cutoff)
+                    parse(blob, name, digest, cutoff)
+
+        for header in (legacy, observed):
+            blob, name, digest, cutoff = modify(2026, 9, suffix="\n" + header)
+            with self.assertRaises(DataValidationError):
+                parse(blob, name, digest, cutoff)
 
     def test_archive_path_and_digest_must_match(self):
         for member in ("../BTCUSDT.csv", "random.csv", "BTCUSDT-1h-2025-02.csv/"):
