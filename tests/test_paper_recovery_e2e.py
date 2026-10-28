@@ -366,6 +366,30 @@ class PaperRecoveryEndToEndTests(unittest.TestCase):
             before,
         )
 
+    def test_real_durable_replay_states_render_without_promoting_live(self):
+        from scripts.inspect_paper_recovery import render_recovery_html
+        self.batch(2)
+        pending = render_recovery_html(self.inspect())
+        self.assertIn('data-state="BLOCKED"', pending)
+        self.assertIn("Novas OPEN autorizadas por esta página", pending)
+        self.assertIn("<dd>NÃO</dd>", pending)
+        # The operator journal has a durable cursor; the pending OPEN still
+        # blocks recovery and the UI cannot turn a local plan into a stop.
+        self.assertNotIn(str(self.root), pending)
+
+    def test_real_flat_replay_html_cli_is_static_and_read_only(self):
+        from scripts.inspect_paper_recovery import render_recovery_html
+        self.batch(1)
+        status = self.inspect()
+        before = (self.order_path.read_bytes(), self.position_path.read_bytes())
+        html = render_recovery_html(status)
+        self.assertIn('data-state="PAPER_FLAT_HYPOTHETICAL_ONLY"', html)
+        self.assertIn("SIMULAÇÃO OFFLINE", html)
+        self.assertIn("<dd>NÃO</dd>", html)
+        self.assertEqual(
+            before, (self.order_path.read_bytes(), self.position_path.read_bytes()),
+        )
+
     def test_invalid_decision_clock_does_not_claim_recovery(self):
         self.batch(1)
         self.assertEqual(
