@@ -1,0 +1,32 @@
+name: J1 Bybit historical trade-field consistency once
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+concurrency:
+  group: j1-trade-fields-once
+  cancel-in-progress: false
+jobs:
+  report-only:
+    if: >-
+      github.event.issue.number == 256 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-bybit-trade-fields-once-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Checkout exact reviewed main without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check literal trade-field relations over existing seven-day archive only
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_bybit_archive_week \
+            --allow-public-network --allow-weekly-archive-probe \
+            --audit-trade-field-consistency
