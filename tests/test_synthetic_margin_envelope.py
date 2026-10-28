@@ -26,11 +26,10 @@ class ConditionalMarginEnvelopeTests(unittest.TestCase):
                         barrier=SyntheticBarrier.STOP)
         results = evaluate(observation(ObservationKind.MULTIPLE_LEVELS_UNORDERED),
                            (target, stop))
-        # PRE6 uses synthetic QUOTE; adapt only the allowed synthetic currency.
         margin = SyntheticMarginBasis(D("4"), 50, D("200"), "SYNTHETIC_QUOTE")
-        # Currency is purposely *not* in the allowlist: must fail instead.
-        with self.assertRaises(DataValidationError):
-            evaluate_conditional_margin_envelope(results, margin=margin)
+        envelope = evaluate_conditional_margin_envelope(results, margin=margin)
+        self.assertEqual(envelope.worst_barrier, SyntheticBarrier.STOP)
+        self.assertGreater(envelope.best_conditional_net_quote, D(0))
 
     def test_exact_scenarios_favorable_branch_and_downside(self):
         from crypto_intelligence_agent.synthetic_financial_scenarios import ConditionalFinancialResult
