@@ -16,6 +16,7 @@ import sqlite3
 from typing import Iterator
 
 from .market_data import DataValidationError
+from .paper_margin_receipt import PaperMarginIntentReceipt, META_PREFIX
 from .paper_order_store import (
     SQLitePaperOrderJournal, _TABLES as _ORDER_TABLES,
     _VERSION as _ORDER_VERSION, _intent_json,
@@ -151,6 +152,18 @@ def inspect_paper_position(
             if (_intent_json(entry.intent) != _intent_json(record.opening_intent)
                     or entry.events != record.opening_events):
                 raise DataValidationError("AUTO2 OPEN does not match stored AUTO4 position")
+            row = conn.execute(
+                "SELECT value FROM paper_order_meta WHERE key=?",
+                (META_PREFIX + record.opening_intent.intent_id,),
+            ).fetchone()
+            margin = (None if row is None else
+                      PaperMarginIntentReceipt.deserialize(row["value"]))
+            if margin is not None:
+                margin.verify_intent(entry.intent)
+            if record.opening_margin_intent != margin:
+                raise DataValidationError(
+                    "PAPER position margin-intent receipt differs across journals"
+                )
     return PaperPositionInspection(
         balance=balance,
         opening_order_cross_checked=opening_order_path is not None,
