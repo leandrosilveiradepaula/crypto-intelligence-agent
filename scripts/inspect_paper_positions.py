@@ -95,7 +95,7 @@ def render_position_card_markup(p: dict[str, object]) -> str:
         '<p class="details" data-field="opening-crosscheck">'
         + ('Conferido entre diários locais; não é prova da corretora.'
            if p["opening_order_cross_checked"] else
-           'Não cruzado com AUTO2; somente recibo local AUTO4.')
+           'Não cruzado com AUTO2; dados apenas do diário local AUTO4.')
         + '</p>'
     )
     if margin is None:
