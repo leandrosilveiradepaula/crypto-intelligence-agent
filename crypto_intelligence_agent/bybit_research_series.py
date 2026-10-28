@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import closing
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -68,7 +69,7 @@ def inspect_existing_bybit_research_series(
         raise DataValidationError("research series needs at least three bars")
     source = _checked_path(path)
     try:
-        with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True, timeout=1) as db:
+        with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True, timeout=1)) as db:
             db.row_factory = sqlite3.Row
             db.execute("PRAGMA query_only=ON")
             db.execute("BEGIN")
