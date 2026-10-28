@@ -575,3 +575,8 @@ Com dois journals SQLite **sinteticos** ja existentes e privados, o operador pod
 ## J6/PRE6 — inicializacao PAPER nao equivale a recuperacao (28/10/2026)
 
 Correcao fail-closed do PRE4/PRE5: journals SQLite vazios e validos, mas sem cursor duravel AUTO2, retornam `UNVERIFIED / paper_replay_not_initialized` e exit 2 no CLI. Antes, a ausencia de FILL podia ser apresentada como `PAPER_FLAT_HYPOTHETICAL_ONLY`, embora nenhum replay tivesse sido comprovado. Um status FLAT so pode ser diagnostico apos cursor duravel e auditoria AUTO4; nunca e permissao de OPEN, snapshot atomico entre bancos ou protecao nativa. Testes de regressao exercitam API e CLI; sem rede, ordens ou deploy.
+
+
+## 28/10/2026 — J6/PRE7 #266: recuperacao fim-a-fim sem declaracao de atomicidade
+
+**Base verificada:** `main=429b971d020011930e1fc693309662081a3dfa3b` (PR #265 merged, CI pos-merge docs/Windows/Chrome SUCCESS); zero PRs abertas no checkpoint inicial. **Escopo:** issue #266, branch `work/issue-266-j6-recovery-e2e`; comparar passagens observacionais AUTO2 e AUTO4, cobrindo replay duravel e ciclovida de FILL/REDUCE_ONLY com fixtures sinteticas; nenhuma contagem de passagens prova snapshot atomico entre journals. **Aceite:** CI pre-merge Linux/docs, Windows e QA mobile verdes no SHA exato; revisar diff, integrar sem producao e verificar CI pos-merge; atualizar este checkpoint com evidencias finais. J1 #2 / direitos #217 e J6 #7 permanecem abertos. `orders_sent=false`, `live_trading_authorized=false`, `financial_backtest_approved=false`; nenhum gasto, dado de mercado real ou deploy.
