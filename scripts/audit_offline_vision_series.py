@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.vision_checksum_sidecar import parse_untrusted_local_vision_checksum
 from crypto_intelligence_agent.offline_vision_month import inspect_offline_vision_month
 from crypto_intelligence_agent.offline_vision_series import assemble_offline_vision_months
 from crypto_intelligence_agent.vision_research_oos import diagnose_vision_monthly_direction
@@ -34,6 +35,7 @@ def audit_private_vision_archives(
     *, manifest_path: str,
     allow_personal_nonproduction_research: bool = False,
     audit_directional_oos: bool = False,
+    require_local_checksum_sidecars: bool = False,
 ) -> dict[str, object]:
     """Parse and assemble a private, caller-supplied contiguous archive series.
 
@@ -42,6 +44,8 @@ def audit_private_vision_archives(
     """
     if allow_personal_nonproduction_research is not True:
         raise VisionLocalAuditError("explicit_personal_nonproduction_opt_in_required")
+    if type(require_local_checksum_sidecars) is not bool:
+        raise VisionLocalAuditError("invalid_local_checksum_mode")
     if type(audit_directional_oos) is not bool:
         raise VisionLocalAuditError("invalid_directional_research_mode")
     if os.name != "posix":
@@ -74,6 +78,19 @@ def audit_private_vision_archives(
             raise VisionLocalAuditError("unsafe_private_archive_directory")
         if any((directory / name).is_symlink() for name in names):
             raise VisionLocalAuditError("unsafe_archive_symlink")
+        # Optional separate, strictly bounded local .CHECKSUM texts must agree
+        # with the manifest. Both remain locally supplied and UNAUTHENTICATED.
+        # Preflight sidecars before loading any large ZIPs.
+        if require_local_checksum_sidecars:
+            for name, digest in zip(names, expected_hashes):
+                local_text = _read_private_file(
+                    str(directory / (name + ".CHECKSUM")), max_bytes=256,
+                )
+                claim = parse_untrusted_local_vision_checksum(
+                    local_text, archive_name=name,
+                )
+                if claim != digest:
+                    raise VisionLocalAuditError("local_checksum_manifest_mismatch")
         # Check a total input budget using fstat-backed private reads; a claimed
         # SHA is checked against bytes and cannot bypass ZIP/CSV verification.
         total = 0
@@ -111,6 +128,9 @@ def audit_private_vision_archives(
             "network_requests": 0,
             "data_stored": False,
         }
+        if require_local_checksum_sidecars:
+            report["untrusted_local_checksum_sidecars_matched"] = len(names)
+            report["checksum_proves_provider_origin"] = False
         if directional is not None:
             report["directional_oos"] = {
                 "quality": directional.quality,
@@ -134,12 +154,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--allow-personal-nonproduction-research", action="store_true")
     parser.add_argument("--audit-directional-oos", action="store_true")
+    parser.add_argument("--require-local-checksum-sidecars", action="store_true")
     args = parser.parse_args(argv)
     try:
         report = audit_private_vision_archives(
             manifest_path=args.manifest,
             allow_personal_nonproduction_research=args.allow_personal_nonproduction_research,
             audit_directional_oos=args.audit_directional_oos,
+            require_local_checksum_sidecars=args.require_local_checksum_sidecars,
         )
     except Exception:
         report = {
