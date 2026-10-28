@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import Mock
+from datetime import date
 from scripts.probe_bybit_archive_week import probe_week, ORIGIN
 from test_bybit_archive_week import samples
 
@@ -21,7 +22,7 @@ class WeeklyProbeTests(unittest.TestCase):
             self.assertEqual(result["requests_attempted"],0)
 
     def test_exact_seven_gets_and_sanitized_output(self):
-        fixture=samples()
+        fixture=samples(date(2020,3,25))
         seen=[]
         def open_request(request,*,timeout):
             index=len(seen)
@@ -43,7 +44,7 @@ class WeeklyProbeTests(unittest.TestCase):
 
     def test_failure_halts_without_retry(self):
         seen=[]
-        fixture=samples()
+        fixture=samples(date(2020,3,25))
         def open_request(request,*,timeout):
             seen.append(request.full_url)
             i=len(seen)-1
