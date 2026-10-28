@@ -279,3 +279,8 @@ O caminho `scripts/capture_private_vision_months.py` é uma camada owner-only pa
 ## J1/HIST #301 — retenção de histórico Vision em estágio privado
 
 O capturador recebe bytes fixos do host Vision somente após quatro opt-ins; primeiro os valida em memória com ZIP SHA-256 + parser estrito (com possível cabeçalho conhecido), depois grava estágio 0700 e arquivos 0600, roda `audit_private_vision_archives` nos bytes relidos, sincroniza e publica o diretório pronto via `renameat2(RENAME_NOREPLACE)` Linux. O manifesto é marcador de conteúdo completo dentro do estágio, não um sinal live. Não sobrescreve diretórios nem envia bytes a GitHub, e permanece separado dos feeds canônicos/ordens.
+
+
+## J1/PIT1 #306 — observatório multiativo privado (somente pesquisa)
+
+`vision_multiasset_research.py` recebe grupos de meses `OfflineVisionMonth` já conferidos, reexecuta a validação temporal/financeira `assemble_offline_vision_months` e calcula um ranking descritivo de volume quote USDT de 24 horas **fechadas antes** de um timestamp UTC de decisão. É função pura, em memória, sem API/executor. `scripts/audit_private_vision_multiasset.py` é a porta separada de leitura owner-only de 1..50 diretórios existentes na VPS, reusando `audit_private_vision_archives` com CHECKSUMs obrigatórios e `_read_private_file` (O_NOFOLLOW, fstat, 0600). Confere janelas e duplicidade, mas não carrega preços para stdout nem gera sinais. Ambos os contratos mantêm tipos de pesquisa não canônicos; não convertem USDT/USD, não certificam listagem na época, fonte ou direitos live. Não criar rede, cron, migrations, posição ou sistema paralelo de OHLC.
