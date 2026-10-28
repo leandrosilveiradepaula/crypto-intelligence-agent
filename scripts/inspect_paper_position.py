@@ -65,6 +65,19 @@ def paper_position_snapshot(value: PaperPositionInspection) -> dict[str, object]
             or value.approved_for_live_use or value.financial_pnl_available
             or value.mode != "offline_paper"):
         raise DataValidationError("non-PAPER or unverified state cannot be presented")
+    receipt = v.opening_margin_intent
+    # Never export the fictitious mark/notional or infer account collateral.
+    # A local digest is not exchange provenance. Legacy stays explicit null.
+    margin = None if receipt is None else {
+        "leverage_at_intent": receipt.leverage_at_intent,
+        "requested_margin_quote": _units(receipt.requested_margin_quote),
+        "quote_currency": receipt.quote_currency,
+        "quality": "synthetic_requested_margin_at_intent_only",
+        "opening_order_cross_checked": value.opening_order_cross_checked,
+        "actual_position_margin_verified": False,
+        "venue_leverage_verified": False,
+        "orders_sent": False,
+    }
     return {
         "schema_version": _SCHEMA,
         "mode": value.mode,
@@ -89,6 +102,7 @@ def paper_position_snapshot(value: PaperPositionInspection) -> dict[str, object]
             "confirmed_remaining_units": _units(v.confirmed_remaining_units),
             "unreserved_units": _units(v.unreserved_units),
             "runner_floor_units": _units(v.runner_floor_units),
+            "margin_intent_requested": margin,
             "exit_orders": [
                 {
                     "tranche_step": x.tranche_step,
@@ -162,7 +176,23 @@ def render_paper_position(value: PaperPositionInspection, template: str) -> str:
             + " · ainda não alocado " + escape(row["unallocated_units"])
             + " unidades</li>"
         )
+    margin = p["margin_intent_requested"]
+    if margin is None:
+        leverage_text = "Não registrada"
+        margin_text = "Não registrada"
+        margin_source = "Sem recibo PRE11/PRE12: não presumir 50x nem zero."
+    else:
+        leverage_text = str(margin["leverage_at_intent"]) + "x (PAPER)"
+        margin_text = margin["requested_margin_quote"] + " " + margin["quote_currency"]
+        margin_source = (
+            "Conferido entre os dois diários locais; não é prova da corretora."
+            if margin["opening_order_cross_checked"] else
+            "Recibo local AUTO4; não cruzado com o diário AUTO2."
+        )
     replacement = {
+        "margin_leverage": leverage_text,
+        "margin_requested": margin_text,
+        "margin_source": margin_source,
         "initial": p["initial_confirmed_units"],
         "filled": p["filled_exit_units"],
         "reserved": p["reserved_unfilled_units"],

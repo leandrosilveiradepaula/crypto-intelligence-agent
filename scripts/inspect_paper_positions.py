@@ -54,6 +54,7 @@ def multi_paper_snapshot(
             "confirmed_remaining_units": p["confirmed_remaining_units"],
             "unreserved_units": p["unreserved_units"],
             "runner_floor_units": p["runner_floor_units"],
+            "margin_intent_requested": p["margin_intent_requested"],
             "pending_or_unknown_orders": sum(
                 1 for order in orders if order["requires_reconciliation"]
             ),
@@ -88,6 +89,23 @@ def render_position_card_markup(p: dict[str, object]) -> str:
     """
     pending = p["pending_or_unknown_orders"]
     unknown = p["unknown_order_count"]
+    margin = p["margin_intent_requested"]
+    if margin is None:
+        margin_html = (
+            '<p class="details" data-field="margin-intent">'
+            'Alavancagem/margem solicitadas (PAPER): não registradas. '
+            'Nunca presumir alavancagem padrão.</p>'
+        )
+    else:
+        margin_html = (
+            '<p class="details" data-field="margin-intent">'
+            'Alavancagem solicitada (PAPER): '
+            + _cell(margin["leverage_at_intent"]) + 'x · '
+            'Margem solicitada (PAPER): '
+            + _cell(margin["requested_margin_quote"]) + ' '
+            + _cell(margin["quote_currency"])
+            + ' · Apenas intenção simulada, sem comprovar saldo ou margem da corretora.</p>'
+        )
     return (
         '<article class="position-card" data-position="' + _cell(p["position_id"]) + '">'
         + '<h3>' + _cell(p["position_id"]) + '</h3>'
@@ -99,6 +117,7 @@ def render_position_card_markup(p: dict[str, object]) -> str:
         + '<div><dt>Reservado/pedidos incertos</dt><dd>' + _cell(p["reserved_unfilled_units"]) + '</dd></div>'
         + '<div><dt>Disponível não reservado</dt><dd class="accent">' + _cell(p["unreserved_units"]) + '</dd></div>'
         + '</dl>'
+        + margin_html
         + '<p class="details">Saldo confirmado: ' + _cell(p["confirmed_remaining_units"])
         + ' · piso residual: ' + _cell(p["runner_floor_units"])
         + ' · pendentes: ' + _cell(pending)
