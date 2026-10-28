@@ -5,6 +5,10 @@ under a new private POSIX directory outside the checkout. No market bytes in log
 """
 from __future__ import annotations
 import argparse
+import ctypes
+import errno
+import platform
+import tempfile
 from datetime import datetime, timezone
 from hashlib import sha256
 import json
@@ -19,6 +23,7 @@ from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.vision_checksum_sidecar import parse_untrusted_local_vision_checksum
 from crypto_intelligence_agent.offline_vision_month import inspect_offline_vision_month
 from crypto_intelligence_agent.offline_vision_series import assemble_offline_vision_months
+from scripts.audit_offline_vision_series import audit_private_vision_archives
 
 BASE = "https://data.binance.vision/data/futures/um/monthly/klines/BTCUSDT/1h/"
 NAME = re.compile(r"BTCUSDT-1h-(20[0-9]{2})-(0[1-9]|1[0-2])\.zip\Z")
@@ -80,6 +85,23 @@ def _new_private_directory(path: str) -> Path:
     return target
 
 
+
+def _publish_noreplace(stage: Path, destination: Path) -> None:
+    """Linux only: atomic directory publication without replacement."""
+    if platform.system() != "Linux":
+        raise VisionCaptureError("linux_atomic_publish_required")
+    libc = ctypes.CDLL(None, use_errno=True)
+    rename = getattr(libc, "renameat2", None)
+    if rename is None:
+        raise VisionCaptureError("renameat2_unavailable")
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int,
+                       ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    rc = rename(-100, os.fsencode(stage), -100, os.fsencode(destination), 1)
+    if rc != 0:
+        raise VisionCaptureError("atomic_publish_rejected")
+
+
 def capture_private_vision_months(
     *, names: tuple[str, str], output_dir: str,
     as_of_ms: int, allow_public_network: bool = False,
@@ -125,37 +147,63 @@ def capture_private_vision_months(
         "archives": [{"name": name, "sha256": digest}
                      for name, _, _, digest in artifacts],
     }, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
-    # Only now, after all downloads and checks, create the target. No overwrite.
-    # Directory publication is NOT cross-file atomic: owner-only 0700 access
-    # and a manifest written LAST are the commit marker for downstream readers.
-    created_by_this_call = False
+    # Stage under the owner-only parent, never touching final destination.
+    # A Linux renameat2(RENAME_NOREPLACE) is required: os.rename can overwrite.
+    stage = None
+    published = False
     try:
-        directory.mkdir(mode=0o700)
-        created_by_this_call = True
-        if directory.stat().st_mode & 0o077:
-            raise VisionCaptureError("private_directory_mode_rejected")
+        stage = Path(tempfile.mkdtemp(prefix=".vision-staging-", dir=directory.parent))
+        stage.chmod(0o700)
         for name, raw, checksum, _ in artifacts:
             for filename, data in ((name, raw), (name + ".CHECKSUM", checksum)):
-                fd = os.open(directory / filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+                fd = os.open(stage / filename, flags, 0o600)
                 with os.fdopen(fd, "wb") as stream:
                     stream.write(data)
                     stream.flush()
                     os.fsync(stream.fileno())
-        fd = os.open(directory / "manifest.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        fd = os.open(stage / "manifest.json",
+                     os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+                     0o600)
         with os.fdopen(fd, "wb") as stream:
             stream.write(manifest)
             stream.flush()
             os.fsync(stream.fileno())
+        # Re-read on-disk bytes and sidecars with the existing strict auditor.
+        report = audit_private_vision_archives(
+            manifest_path=str(stage / "manifest.json"),
+            allow_personal_nonproduction_research=True,
+            require_local_checksum_sidecars=True,
+        )
+        if (report["closed_candle_count"] != len(series.candles)
+                or report["local_archive_identity_manifest_sha256"]
+                != series.series_manifest_sha256
+                or report["network_requests"] != 0 or report["data_stored"] is not False):
+            raise VisionCaptureError("staged_audit_mismatch")
+        sync_fd = os.open(stage, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(sync_fd)
+        finally:
+            os.close(sync_fd)
+        _publish_noreplace(stage, directory)
+        published = True
+        # Final directory is already complete. Parent durability is best effort;
+        # do not claim rollback after a successful atomic rename.
+        try:
+            sync_fd = os.open(directory.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(sync_fd)
+            finally:
+                os.close(sync_fd)
+        except OSError:
+            pass
     except Exception:
-        # Target was new; do not delete any external/preexisting inputs.
-        if created_by_this_call:
-            # Never clean a directory created by another process in a race.
-            # Only unlink the exact names this invocation may have created.
+        if stage is not None and not published:
             for name, _, _, _ in artifacts:
                 for filename in (name, name + ".CHECKSUM"):
-                    (directory / filename).unlink(missing_ok=True)
-            (directory / "manifest.json").unlink(missing_ok=True)
-            directory.rmdir()
+                    (stage / filename).unlink(missing_ok=True)
+            (stage / "manifest.json").unlink(missing_ok=True)
+            stage.rmdir()
         raise VisionCaptureError("private_archive_commit_rejected") from None
     return {
         "status": "private_nonproduction_research_archives_stored",
