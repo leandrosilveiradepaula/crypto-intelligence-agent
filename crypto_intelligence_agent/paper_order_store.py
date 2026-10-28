@@ -17,6 +17,8 @@ import sqlite3
 from typing import Iterator
 
 from .market_data import DataValidationError
+from .paper_margin_preflight import PaperMarginAssessment
+from .paper_margin_receipt import PaperMarginIntentReceipt, META_PREFIX
 from .paper_risk_gate import (
     PaperRiskDecision, PaperRiskLimits, PaperRiskObservation, evaluate_paper_risk,
 )
@@ -324,6 +326,12 @@ class SQLitePaperOrderJournal:
         _check_digest(row["snapshot"], row["snapshot_sha256"], "checkpoint")
         if row["snapshot"] != snapshot_payload:
             raise DataValidationError("paper checkpoint disagrees with event replay")
+        margin = conn.execute(
+            "SELECT value FROM paper_order_meta WHERE key=?",
+            (META_PREFIX + intent.intent_id,),
+        ).fetchone()
+        if margin is not None:
+            PaperMarginIntentReceipt.deserialize(margin["value"]).verify_intent(intent)
         return PaperJournalEntry(intent=intent, events=tuple(events), snapshot=snapshot)
 
     @staticmethod
@@ -414,8 +422,13 @@ class SQLitePaperOrderJournal:
         self, conn: sqlite3.Connection, intent: PaperOrderIntent,
         limits: PaperRiskLimits, observation: PaperRiskObservation,
         decision_at_ms: int,
+        margin_receipt: PaperMarginIntentReceipt | None = None,
     ) -> "PaperOpenRiskReservation":
         """Single AUTO6 contract reused with and without the AUTO8 guard."""
+        if margin_receipt is not None:
+            if type(margin_receipt) is not PaperMarginIntentReceipt:
+                raise DataValidationError("typed PAPER margin receipt required")
+            margin_receipt.verify_intent(intent)
         existing = conn.execute(
             "SELECT intent_id FROM paper_order_intents WHERE intent_id=?",
             (intent.intent_id,),
@@ -445,6 +458,17 @@ class SQLitePaperOrderJournal:
                 local_unknown_before=unknown_local,
             )
         entry = self._reserve_on_connection(conn, intent)
+        if margin_receipt is not None:
+            # INSERT and OPEN share this SAME AUTO2 BEGIN IMMEDIATE. If
+            # canonical serialization or metadata insert fails, roll back
+            # the OPEN row too. No third database and no implicit upgrade.
+            try:
+                conn.execute(
+                    "INSERT INTO paper_order_meta (key, value) VALUES (?, ?)",
+                    (margin_receipt.key, margin_receipt.serialize()),
+                )
+            except sqlite3.IntegrityError as exc:
+                raise DataValidationError("conflicting durable PAPER margin receipt") from exc
         return PaperOpenRiskReservation(
             decision=decision, entry=entry, local_pending_before=pending_local,
             local_unknown_before=unknown_local,
@@ -471,6 +495,7 @@ class SQLitePaperOrderJournal:
         observation: PaperRiskObservation, *,
         decision_at_ms: int,
         position_journal_path: str | Path,
+        margin_assessment: PaperMarginAssessment | None = None,
     ) -> "tuple[PaperOpenHealth, PaperOpenRiskReservation | None]":
         """Guard health + OPEN risk + reservation under ONE order-file lock.
 
@@ -482,6 +507,10 @@ class SQLitePaperOrderJournal:
         from .paper_open_health import _audit_paper_open_health_locked
 
         self._check_paper_open_risk_inputs(intent, limits, observation)
+        margin_receipt = (
+            None if margin_assessment is None else
+            PaperMarginIntentReceipt.from_assessment(intent, margin_assessment)
+        )
         with self._transaction() as conn:
             health = _audit_paper_open_health_locked(
                 conn, self.path, position_journal_path,
@@ -491,6 +520,7 @@ class SQLitePaperOrderJournal:
                 return health, None
             receipt = self._reserve_open_risk_locked(
                 conn, intent, limits, observation, decision_at_ms,
+                margin_receipt=margin_receipt,
             )
             return health, receipt
 
@@ -523,6 +553,8 @@ class SQLitePaperOrderJournal:
             raise DataValidationError("paper event batch contains wrong type")
         cutoff = _utc_ms(as_of_ms, "as_of_ms")
         with self._transaction() as conn:
+            from .paper_open_health import _verify_locked_order_schema
+            _verify_locked_order_schema(conn)
             previous = self._checked_entry(conn, intent_id)
             if cutoff < previous.snapshot.as_of_ms:
                 raise DataValidationError("paper checkpoint cannot go backwards")
@@ -559,10 +591,39 @@ class SQLitePaperOrderJournal:
             )
             return PaperJournalEntry(previous.intent, combined, snapshot)
 
+    def read_margin_receipt(
+        self, intent_id: str,
+    ) -> PaperMarginIntentReceipt | None:
+        """Read verified PAPER intent terms in read-only SQLite snapshot.
+
+        A legacy PENDING or FILLED intent can have NO receipt. That means
+        unverified margin/leverage, not 0x or a guessed setting. Never
+        creates or upgrades a database. Independent position file is NOT
+        sampled atomically with this receipt.
+        """
+        from .paper_position_inspection import _read_database
+        if type(intent_id) is not str or not intent_id.startswith("fixture_"):
+            raise DataValidationError("bounded PAPER margin intent ID required")
+        with _read_database(
+            self.path, _TABLES, "paper_order_meta", _VERSION,
+        ) as conn:
+            entry = self._checked_entry(conn, intent_id)
+            row = conn.execute(
+                "SELECT value FROM paper_order_meta WHERE key=?",
+                (META_PREFIX + intent_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            receipt = PaperMarginIntentReceipt.deserialize(row["value"])
+            receipt.verify_intent(entry.intent)
+            return receipt
+
     def load(self, intent_id: str) -> PaperJournalEntry:
         """Reopen and verify hashes, event sequence and complete paper replay."""
         if (type(intent_id) is not str or not intent_id.startswith("fixture_")
                 or len(intent_id) > 64):
             raise DataValidationError("bounded paper fixture intent ID required")
         with self._transaction() as conn:
+            from .paper_open_health import _verify_locked_order_schema
+            _verify_locked_order_schema(conn)
             return self._checked_entry(conn, intent_id)

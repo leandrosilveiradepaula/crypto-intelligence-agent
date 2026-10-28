@@ -14,6 +14,9 @@ from enum import Enum
 from pathlib import Path
 
 from .market_data import DataValidationError
+from .paper_margin_receipt import (
+    PaperMarginIntentReceipt, META_PREFIX, MAX_RECEIPTS_PER_JOURNAL,
+)
 from .paper_order_store import (
     SQLitePaperOrderJournal, _TABLES as _ORDER_TABLES, _VERSION as _ORDER_VERSION,
     _intent_json,
@@ -93,12 +96,31 @@ def _verify_locked_order_schema(order_connection) -> None:
         "SELECT key, value FROM paper_order_meta ORDER BY key"
     ).fetchall()
     keys = {row["key"]: row["value"] for row in meta}
+    ordinary = {
+        "schema_version", "offline_paper_forward_cursor_v1",
+        "paper_operator_kill_switch_v1",
+    }
+    margin_keys = tuple(key for key in keys if key.startswith(META_PREFIX))
     if (len(keys) != len(meta) or keys.get("schema_version") != _ORDER_VERSION
-            or set(keys) - {
-                "schema_version", "offline_paper_forward_cursor_v1",
-                "paper_operator_kill_switch_v1",
-            }):
-        raise DataValidationError("incorrect PAPER order journal version")
+            or len(margin_keys) > MAX_RECEIPTS_PER_JOURNAL
+            or any(key not in ordinary and key not in margin_keys for key in keys)):
+        raise DataValidationError("incorrect PAPER order journal version or unknown meta key")
+    # Receipt-v1 shares the AUTO2 transaction with the OPEN intent. Never
+    # accept forged keys, orphaned metadata, or valid hashes bound to another
+    # venue/quantity/intention. Unkeyed SHA is only local integrity evidence.
+    for key in margin_keys:
+        receipt = PaperMarginIntentReceipt.deserialize(keys[key])
+        if receipt.key != key:
+            raise DataValidationError("PAPER margin receipt key and identity disagree")
+        order = order_connection.execute(
+            "SELECT payload,payload_sha256 FROM paper_order_intents WHERE intent_id=?",
+            (receipt.intent_id,),
+        ).fetchone()
+        if order is None:
+            raise DataValidationError("orphaned PAPER margin receipt without OPEN")
+        from .paper_order_store import _check_digest, _decode_intent
+        _check_digest(order["payload"], order["payload_sha256"], "margin receipt intent")
+        receipt.verify_intent(_decode_intent(order["payload"]))
     if "offline_paper_forward_cursor_v1" in keys:
         from .offline_paper_durable_cursor import _decode_cursor_envelope
         _decode_cursor_envelope(keys["offline_paper_forward_cursor_v1"])

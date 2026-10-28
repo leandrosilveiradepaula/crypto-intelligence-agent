@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal, localcontext
+from hashlib import sha256
 from enum import Enum
 import re
 
@@ -161,6 +162,9 @@ class PaperMarginAssessment:
     requested_units_base: Decimal
     quote_currency: str
     contract_fixture_version: str
+    assessed_mark_price_quote: Decimal
+    assessed_at_ms: int
+    intent_sha256: str
 
     @property
     def orders_sent(self) -> bool:
@@ -197,6 +201,13 @@ class PaperMarginAssessment:
     @property
     def leverage_persisted_to_position_ledger(self) -> bool:
         return False
+
+
+def _paper_intent_sha256(intent: PaperOrderIntent) -> str:
+    # Use the exact canonical persisted AUTO2 intent bytes; a receipt must
+    # never be reattached to a different signal with identical quantity.
+    from .paper_order_store import _intent_json
+    return sha256(_intent_json(intent).encode("utf-8")).hexdigest()
 
 
 def assess_paper_margin_open(
@@ -269,4 +280,7 @@ def assess_paper_margin_open(
         requested_units_base=intent.requested_units,
         quote_currency=contract.quote_currency,
         contract_fixture_version=contract.fixture_version,
+        assessed_mark_price_quote=observation.mark_price_quote,
+        assessed_at_ms=now,
+        intent_sha256=_paper_intent_sha256(intent),
     )
