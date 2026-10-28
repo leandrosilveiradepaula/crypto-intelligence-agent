@@ -129,10 +129,11 @@ class PurePaperAlertTests(unittest.TestCase):
         self.assertIn('"mode": "offline_paper"', output)
         self.assertIn('"severity": "CRITICAL"', output)
         for forbidden in (
-            "account_id", "position_id", "symbol", "price", "pnl",
+            "account_id", "position_id", "symbol", "price",
             "market_data", "credential", "API_KEY",
         ):
             self.assertNotIn(forbidden, output)
+        self.assertNotIn('"pnl":', output)  # Negative capability flag is allowed.
         self.assertFalse(paper_alert_report_json(report)["live_trading_authorized"])
 
 
