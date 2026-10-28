@@ -190,6 +190,50 @@ class SQLiteBybitResearchStore:
         finally:
             connection.close()
 
+    @contextmanager
+    def _readonly_snapshot(self) -> Iterator[sqlite3.Connection]:
+        """One strictly read-only snapshot with schema and origin checks.
+
+        Used for replay and quality; never begin a write transaction or
+        re-open the DB halfway through a multi-page quality decision.
+        """
+        original = Path(self._path)
+        if original.is_symlink():
+            raise DataValidationError("research read cannot follow symlink")
+        try:
+            source = original.resolve(strict=True)
+            if not source.is_file():
+                raise DataValidationError("existing research SQLite file required")
+        except (OSError, RuntimeError):
+            raise DataValidationError("research SQLite file unavailable") from None
+        db = None
+        try:
+            db = sqlite3.connect(source.as_uri() + "?mode=ro", uri=True, timeout=5)
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA query_only=ON")
+            db.execute("BEGIN")
+            objects = db.execute(
+                "SELECT type,name FROM sqlite_master "
+                "WHERE type IN ('table','trigger','view') "
+                "AND name NOT LIKE 'sqlite_%'"
+            ).fetchall()
+            if (any(row["type"] != "table" for row in objects)
+                    or {row["name"] for row in objects} != _ALLOWED_TABLES):
+                raise DataValidationError("unknown research SQLite schema")
+            meta = db.execute("SELECT * FROM bybit_research_meta").fetchall()
+            if (len(meta) != 1 or meta[0]["id"] != 1
+                    or meta[0]["schema_version"] != SCHEMA_VERSION
+                    or meta[0]["input_origin"] != INPUT_ORIGIN):
+                raise DataValidationError("unrecognized research schema or origin")
+            if db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise DataValidationError("orphaned research candle rows")
+            yield db
+        except sqlite3.DatabaseError:
+            raise DataValidationError("invalid read-only research SQLite") from None
+        finally:
+            if db is not None:
+                db.close()
+
     def _initialize(self) -> None:
         with self._transaction() as db:
             current = {row[0] for row in db.execute(
@@ -381,12 +425,72 @@ class SQLiteBybitResearchStore:
             end_open_ms=manifest.end_open_ms,
         )
 
+    @staticmethod
+    def _validate_page_in_snapshot(
+        db: sqlite3.Connection, page: sqlite3.Row, *,
+        symbol: str, interval: str,
+    ) -> BybitResearchStoredPage:
+        """Shared strict page replay within the CALLER's SQLite snapshot."""
+        start = page["start_open_ms"]
+        end = page["end_open_ms"]
+        expected = _check_window(symbol, interval, start, end)
+        if (page["symbol"] != symbol or page["interval"] != interval
+                or type(start) is not int or type(end) is not int):
+            raise DataGapError("invalid research page identity")
+        rows = SQLiteBybitResearchStore._read_rows(db, page["id"])
+        if len(rows) != expected or _digest(rows) != page["content_sha256"]:
+            raise DataGapError("research candle content or page digest inconsistent")
+        duration = interval_duration_ms(interval)
+        candles: list[BybitResearchStoredCandle] = []
+        try:
+            for index, row in enumerate(rows):
+                if (row[0] != start + index * duration
+                        or row[1] != row[0] + duration - 1
+                        or any(type(v) is not str for v in row[2:])):
+                    raise DataGapError("research candle timestamp or type invalid")
+                values = tuple(Decimal(value) for value in row[2:])
+                if (any(not value.is_finite() or len(value.as_tuple().digits) > 40
+                        for value in values)
+                        or min(values[:4]) <= 0
+                        or values[1] < max(values[0], values[3])
+                        or values[2] > min(values[0], values[3])
+                        or min(values[4:]) < 0):
+                    raise DataGapError("invalid replayed research OHLC/volumes")
+                candles.append(BybitResearchStoredCandle(row[0], row[1], *values))
+        except (ValueError, ArithmeticError, TypeError):
+            raise DataGapError("corrupt decimal text in research page") from None
+        digests = (
+            page["registry_sha256"],
+            page["instrument_bytes_sha256"], page["kline_bytes_sha256"],
+            page["content_sha256"],
+        )
+        if (page["quote_unit"] not in ("USDT", "USDC")
+                or not symbol.endswith(page["quote_unit"])
+                or page["base_unit"] != symbol[:-len(page["quote_unit"])]
+                or page["capture_environment"] not in _ENVIRONMENTS
+                or any(type(value) is not str or len(value) != 64
+                       or any(char not in "0123456789abcdef" for char in value)
+                       for value in digests)
+                or type(page["instrument_observed_at_ms"]) is not int
+                or type(page["kline_observed_at_ms"]) is not int
+                or page["kline_observed_at_ms"] < page["instrument_observed_at_ms"]
+                or page["kline_observed_at_ms"] < end + 1000):
+            raise DataGapError("corrupt or mixed Bybit research metadata")
+        return BybitResearchStoredPage(
+            symbol, interval, start, end,
+            page["instrument_observed_at_ms"], page["kline_observed_at_ms"],
+            page["capture_environment"], page["registry_sha256"],
+            page["base_unit"], page["quote_unit"],
+            page["instrument_bytes_sha256"], page["kline_bytes_sha256"],
+            page["content_sha256"], tuple(candles),
+        )
+
     def replay_page(
         self, *, symbol: str, interval: str,
         start_open_ms: int, end_open_ms: int,
     ) -> BybitResearchStoredPage:
-        expected = _check_window(symbol, interval, start_open_ms, end_open_ms)
-        with self._transaction() as db:
+        _check_window(symbol, interval, start_open_ms, end_open_ms)
+        with self._readonly_snapshot() as db:
             page = db.execute(
                 """SELECT * FROM bybit_research_pages
                    WHERE symbol=? AND interval=?
@@ -395,72 +499,44 @@ class SQLiteBybitResearchStore:
             ).fetchone()
             if page is None:
                 raise DataGapError("unavailable research page: no implicit fetch")
-            rows = self._read_rows(db, page["id"])
-        if len(rows) != expected or _digest(rows) != page["content_sha256"]:
-            raise DataGapError("research candle content or page digest inconsistent")
-        duration = interval_duration_ms(interval)
-        candles = []
-        try:
-            for i, values in enumerate(rows):
-                if (values[0] != start_open_ms + i * duration
-                        or values[1] != values[0] + duration - 1):
-                    raise DataGapError("research replay timestamps are inconsistent")
-                parsed = tuple(Decimal(v) for v in values[2:])
-                if (any(not v.is_finite() for v in parsed)
-                        or min(parsed[:4]) <= 0
-                        or parsed[1] < max(parsed[0], parsed[3])
-                        or parsed[2] > min(parsed[0], parsed[3])
-                        or parsed[4] < 0 or parsed[5] < 0):
-                    raise DataGapError("invalid replayed research OHLC/volumes")
-                candles.append(BybitResearchStoredCandle(values[0], values[1], *parsed))
-        except (ValueError, ArithmeticError) as exc:
-            raise DataGapError("corrupt decimal text in research page") from exc
-        if (page["quote_unit"] not in ("USDT", "USDC")
-                or not symbol.endswith(page["quote_unit"])
-                or page["base_unit"] != symbol[:-len(page["quote_unit"])]
-                or page["capture_environment"] not in _ENVIRONMENTS
-                or page["registry_sha256"] is None):
-            raise DataGapError("corrupt or mixed Bybit research metadata")
-        return BybitResearchStoredPage(
-            symbol, interval, start_open_ms, end_open_ms,
-            page["instrument_observed_at_ms"], page["kline_observed_at_ms"],
-            page["capture_environment"], page["registry_sha256"],
-            page["base_unit"], page["quote_unit"],
-            page["instrument_bytes_sha256"], page["kline_bytes_sha256"],
-            page["content_sha256"], tuple(candles),
-        )
+            return self._validate_page_in_snapshot(
+                db, page, symbol=symbol, interval=interval,
+            )
 
     def quality_report(
         self, *, symbol: str, interval: str,
         start_open_ms: int, end_open_ms: int,
     ) -> BybitResearchQualityReport:
         expected = _check_window(symbol, interval, start_open_ms, end_open_ms)
-        with self._transaction() as db:
-            found = {row[0] for row in db.execute(
-                """SELECT c.open_time_ms FROM bybit_research_candles c
-                   JOIN bybit_research_pages p ON p.id=c.page_id
-                   WHERE p.symbol=? AND p.interval=?
-                     AND c.open_time_ms>=? AND c.open_time_ms<?
-                   ORDER BY c.open_time_ms""",
-                (symbol, interval, start_open_ms, end_open_ms),
-            )}
-            page_windows = tuple(tuple(row) for row in db.execute(
-                """SELECT start_open_ms, end_open_ms FROM bybit_research_pages
+        duration = interval_duration_ms(interval)
+        found: set[int] = set()
+        with self._readonly_snapshot() as db:
+            pages = db.execute(
+                """SELECT * FROM bybit_research_pages
                    WHERE symbol=? AND interval=? AND start_open_ms<?
                      AND end_open_ms>? ORDER BY start_open_ms""",
                 (symbol, interval, end_open_ms, start_open_ms),
-            ))
-        # A count of timestamps is not proof that persisted decimals or the
-        # page digest are intact. Validate every overlapping whole page first.
-        for begin, finish in page_windows:
-            self.replay_page(
-                symbol=symbol, interval=interval,
-                start_open_ms=begin, end_open_ms=finish,
+            ).fetchall()
+            previous_end = None
+            for page in pages:
+                validated = self._validate_page_in_snapshot(
+                    db, page, symbol=symbol, interval=interval,
+                )
+                if (previous_end is not None
+                        and validated.start_open_ms < previous_end):
+                    raise DataGapError("overlapping research pages")
+                previous_end = validated.end_open_ms
+                for candle in validated.candles:
+                    if start_open_ms <= candle.open_time_ms < end_open_ms:
+                        if candle.open_time_ms in found:
+                            raise DataGapError("duplicate research candle timestamp")
+                        found.add(candle.open_time_ms)
+            missing = tuple(
+                open_time for open_time in range(
+                    start_open_ms, end_open_ms, duration,
+                ) if open_time not in found
             )
-        missing = tuple(i for i in range(
-            start_open_ms, end_open_ms, interval_duration_ms(interval)
-        ) if i not in found)
-        return BybitResearchQualityReport(
-            symbol, interval, start_open_ms, end_open_ms,
-            expected, len(found), missing,
-        )
+            return BybitResearchQualityReport(
+                symbol, interval, start_open_ms, end_open_ms,
+                expected, len(found), missing,
+            )
