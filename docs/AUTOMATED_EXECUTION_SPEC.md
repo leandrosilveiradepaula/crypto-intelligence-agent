@@ -191,3 +191,8 @@ A leitura local de posições PAPER após AUTO10 pode exibir, quando há recibo 
 ## PRE14 #288 — conferência cruzada local de seleção PAPER
 
 A leitura multiposição pode receber o diário AUTO2 explicitamente e conferir todas as aberturas AUTO4 antes de marcar `opening_order_cross_checked=true`. Divergência de OPEN, evento, recibo ou estrutura invalida a seleção inteira. A leitura padrão continua sem cruzamento. Uma segunda leitura AUTO4 detecta mudanças observáveis, sem criar atomicidade entre dois bancos. Hash e recibo sintéticos não comprovam colateral, alavancagem, stop nem execução de corretora. Proibidos endpoints financeiros, dados de conta, comandos de trading, rede e produção.
+
+
+## PRE15 #290 — risco condicional de margem não autoriza entrada automática
+
+O envelope PRE15 consome alternativas sintéticas PRE6 e margens quote explícitas para sinalizar que um cenário pessimista pode consumir a margem solicitada. O cálculo não modela manutenção, stop da venue, saldo nem posição financeira real; o estresse de custo não transforma candle em execução. Todas as autorizações de mercado/ordens/live permanecem falsas e a J3 #4 continua não homologada.
