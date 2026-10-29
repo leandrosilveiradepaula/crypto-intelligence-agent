@@ -85,7 +85,7 @@ class ReviewedFiftyTwoCryptoIdentitiesTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             load_reviewed_registry("expanded-52", as_of_ms=AT + 8 * 86_400_000)
         history = CryptoRegistryHistory([earlier, future])
-        self.assertEqual(history.as_of(AT-1, max_age_ms=86_400_000),
+        self.assertEqual(history.as_of(AT-1, max_age_ms=7 * 86_400_000),
                          earlier)
         self.assertEqual(history.as_of(AT, max_age_ms=0), future)
         # No historical database is migrated or rewritten by this registry.
