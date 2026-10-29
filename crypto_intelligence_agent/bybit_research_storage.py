@@ -35,8 +35,11 @@ _CANONICAL_TABLES = frozenset({
     "candles", "checkpoints", "contract_specs", "universe_snapshots",
     "collection_events",
 })
-_ALLOWED_TABLES = frozenset({
+_LEGACY_ALLOWED_TABLES = frozenset({
     "bybit_research_meta", "bybit_research_pages", "bybit_research_candles",
+})
+_ALLOWED_TABLES = _LEGACY_ALLOWED_TABLES | frozenset({
+    "bybit_research_pit_snapshots",
 })
 _MAX_QUALITY_CANDLES = 10_000
 
@@ -218,7 +221,8 @@ class SQLiteBybitResearchStore:
                 "AND name NOT LIKE 'sqlite_%'"
             ).fetchall()
             if (any(row["type"] != "table" for row in objects)
-                    or {row["name"] for row in objects} != _ALLOWED_TABLES):
+                    or {row["name"] for row in objects}
+                       not in (_ALLOWED_TABLES, _LEGACY_ALLOWED_TABLES)):
                 raise DataValidationError("unknown research SQLite schema")
             meta = db.execute("SELECT * FROM bybit_research_meta").fetchall()
             if (len(meta) != 1 or meta[0]["id"] != 1
@@ -278,6 +282,14 @@ class SQLiteBybitResearchStore:
                     documented_quote_turnover TEXT NOT NULL,
                     PRIMARY KEY(page_id, open_time_ms),
                     FOREIGN KEY(page_id) REFERENCES bybit_research_pages(id)
+                )
+            """)
+            db.execute("""
+                CREATE TABLE IF NOT EXISTS bybit_research_pit_snapshots (
+                    observed_at_ms INTEGER PRIMARY KEY,
+                    decision_at_ms INTEGER NOT NULL,
+                    content_json TEXT NOT NULL,
+                    content_sha256 TEXT NOT NULL
                 )
             """)
             row = db.execute("SELECT * FROM bybit_research_meta").fetchall()
