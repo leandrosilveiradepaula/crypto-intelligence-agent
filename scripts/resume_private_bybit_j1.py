@@ -22,9 +22,7 @@ from crypto_intelligence_agent.bybit_local_json_audit import audit_local_bybit_j
 from crypto_intelligence_agent.bybit_public_j1_transport import (
     BoundedBybitPublicClient, J1BybitCaptureError,
 )
-from crypto_intelligence_agent.bybit_research_cycle import (
-    BybitResearchRawPage, append_offline_bybit_hourly_update,
-)
+from crypto_intelligence_agent.bybit_research_cycle import BybitResearchRawPage
 from crypto_intelligence_agent.bybit_research_storage import SQLiteBybitResearchStore
 from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
 from crypto_intelligence_agent.private_kraken_research import _private_db_path
@@ -229,6 +227,7 @@ def owner_resume_private_j1(
                 current.decision_at_ms == previous.decision_at_ms + HOUR_MS
                 else 0)
             previous = current
+            cursors = {m.symbol: current.decision_at_ms for m in current.ranked}
             _status_event(progress, phase="current_pit_verified",
                           completed=consecutive,
                           network_gets=fetch.requests_attempted)
@@ -248,19 +247,15 @@ def owner_resume_private_j1(
             if {m.symbol for m in previous.ranked} != {
                     m.symbol for m in updated.ranked}:
                 raise J1BybitCaptureError("reviewed_sample_changed_requires_new_backfill")
-            pages = {
-                m.symbol: _page(
-                    fetch, clock, m.symbol, previous.decision_at_ms, 1
-                ) for m in updated.ranked
-            }
-            if clock() // HOUR_MS * HOUR_MS != next_decision:
-                raise J1BybitCaptureError("resume_hourly_observation_crossed_hour")
-            append_offline_bybit_hourly_update(
-                previous=previous, updated=updated, hourly_pages=pages,
-                store=store, original_history_hours=(
-                    updated.decision_at_ms - first) // HOUR_MS - 1,
-                capture_environment="private_local_unverified",
+            # This existing research DB may now exceed 720h. The original
+            # append_offline_bybit_hourly_update API is designed for an exact
+            # 720-hour fixed window, so use the verified closed-hour catch-up
+            # path here instead; it preserves the complete retained history.
+            _catchup_pages(
+                fetch, clock, previous=previous, updated=updated,
+                cursors=cursors, start=first, store=store,
             )
+            cursors = {m.symbol: updated.decision_at_ms for m in updated.ranked}
             previous = updated
             consecutive += 1
             _status_event(progress, phase="hourly_pit_verified",
