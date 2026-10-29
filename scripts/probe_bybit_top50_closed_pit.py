@@ -196,6 +196,9 @@ def main(argv: list[str] | None = None) -> int:
         }
         if client.last_provider_retcode is not None:
             result["provider_ret_code"] = client.last_provider_retcode
+        # Only bounded, whitelisted response-header integers. No API body,
+        # URL, symbol, server message, account headers or retry instructions.
+        result.update(client.sanitized_quota_fields())
     event(result)
     return (0 if result["status"] ==
             "private_j1_reviewed_closed_24h_rank_verified_not_marketwide"

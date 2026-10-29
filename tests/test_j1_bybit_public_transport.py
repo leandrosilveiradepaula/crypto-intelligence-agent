@@ -1,5 +1,7 @@
 """Offline security and request-shape regressions for J1 public GET transport."""
 import unittest
+from email.message import Message
+from urllib.error import HTTPError
 from unittest.mock import patch
 from crypto_intelligence_agent import bybit_public_j1_transport as transport_module
 from urllib.parse import parse_qs, urlsplit
@@ -7,6 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 from crypto_intelligence_agent.bybit_public_j1_transport import (
     BoundedBybitPublicClient, J1BybitCaptureError,
     MIN_PUBLIC_GET_INTERVAL_SECONDS, instruments_url, kline_url,
+    _network_get, _NetworkGetWithQuota, _read_bybit_quota_headers,
 )
 
 H = 3_600_000
@@ -126,6 +129,139 @@ class J1BybitTransportTests(unittest.TestCase):
         self.assertEqual(client.last_request_stage, "closed_kline_24h")
         self.assertNotIn("PRIVATE_PRICE", str(caught.exception))
         self.assertEqual(waits, [MIN_PUBLIC_GET_INTERVAL_SECONDS])
+
+    def test_real_http_wire_collects_only_bounded_quota_metadata(self):
+        uri = kline_url("BTCUSDT", T - 24 * H, T)
+        body = b'{"retCode":0,"result":{},"time":1793000000000}'
+        response_headers = Message()
+        response_headers["Content-Type"] = "application/json"
+        response_headers["X-Bapi-Limit"] = "10"
+        response_headers["X-Bapi-Limit-Status"] = "2"
+        response_headers["X-Bapi-Limit-Reset-Timestamp"] = "1793000001500"
+        response_headers["X-Untrusted-Api-Key"] = "SECRET_DO_NOT_SHOW"
+
+        class FakeResponse:
+            headers = response_headers
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def getcode(self):
+                return 200
+            def geturl(self):
+                return uri
+            def read(self, n):
+                return body
+
+        class FakeOpener:
+            def open(self, request, timeout):
+                self.request = request
+                self.timeout = timeout
+                return FakeResponse()
+
+        opener = FakeOpener()
+        with (patch.object(transport_module, "build_opener",
+                           return_value=opener),
+              patch.object(transport_module.time, "time",
+                           return_value=1793000000.0)):
+            wire = _network_get(uri, 131_072)
+        self.assertEqual(wire.raw, body)
+        self.assertEqual(wire.quota.sanitized_fields(), {
+            "provider_quota_headers_present": True,
+            "provider_endpoint_limit": 10,
+            "provider_endpoint_remaining": 2,
+            "provider_reset_header_delta_ms": 1500,
+        })
+        self.assertEqual(opener.request.get_method(), "GET")
+        self.assertNotIn(
+            "SECRET_DO_NOT_SHOW",
+            repr(wire.quota.sanitized_fields()),
+        )
+        # The call-site public API still returns exactly bytes and decoded
+        # JSON even when the underlying real HTTP client carries metadata.
+        with patch.object(transport_module, "_network_get",
+                          return_value=wire):
+            client = BoundedBybitPublicClient()
+            raw, data = client.get(uri)
+        self.assertEqual(raw, body)
+        self.assertEqual(data["retCode"], 0)
+        self.assertEqual(client.sanitized_quota_fields(),
+                         wire.quota.sanitized_fields())
+
+    def test_rate_limit_10006_retains_safe_numeric_quota_not_retmsg(self):
+        headers = Message()
+        headers["X-Bapi-Limit"] = "10"
+        headers["X-Bapi-Limit-Status"] = "0"
+        headers["X-Bapi-Limit-Reset-Timestamp"] = "1793000000200"
+        with patch.object(transport_module.time, "time",
+                          return_value=1793000000.0):
+            hint = _read_bybit_quota_headers(headers)
+        wire = _NetworkGetWithQuota(
+            raw=b'{"retCode":10006,"retMsg":"PRIVATE_SYMBOL_PRICE_TOKEN"}',
+            quota=hint,
+        )
+        client = BoundedBybitPublicClient()
+        with patch.object(transport_module, "_network_get",
+                          return_value=wire):
+            with self.assertRaisesRegex(
+                J1BybitCaptureError, "provider_rate_limit_no_retry",
+            ) as err:
+                client.get(kline_url("BTCUSDT", T-24*H, T))
+        self.assertEqual(client.last_provider_retcode, 10006)
+        self.assertEqual(client.requests_attempted, 1)
+        snapshot = client.sanitized_quota_fields()
+        self.assertEqual(snapshot["provider_endpoint_remaining"], 0)
+        self.assertEqual(snapshot["provider_reset_header_delta_ms"], 200)
+        self.assertNotIn("PRIVATE_SYMBOL", str(err.exception))
+        self.assertNotIn("PRIVATE_SYMBOL", str(snapshot))
+
+    def test_missing_or_malformed_quota_is_unknown_never_fake_zero(self):
+        self.assertEqual(
+            _read_bybit_quota_headers(Message()).sanitized_fields(),
+            {"provider_quota_headers_present": False},
+        )
+        forged = Message()
+        forged["X-Bapi-Limit"] = "-9"
+        forged["X-Bapi-Limit-Status"] = "1000000000000000"
+        forged["X-Bapi-Limit-Reset-Timestamp"] = "not-a-time"
+        forged["X-Sensitive"] = "PRIVATE_CREDENTIAL"
+        self.assertEqual(
+            _read_bybit_quota_headers(forged).sanitized_fields(),
+            {"provider_quota_headers_present": True},
+        )
+        inconsistent = Message()
+        inconsistent["X-Bapi-Limit"] = "3"
+        inconsistent["X-Bapi-Limit-Status"] = "5"
+        with patch.object(transport_module.time, "time",
+                          return_value=1793000000.0):
+            sane = _read_bybit_quota_headers(inconsistent).sanitized_fields()
+        self.assertEqual(sane["provider_endpoint_limit"], 3)
+        self.assertNotIn("provider_endpoint_remaining", sane)
+        # Synthetic in-memory transports must not pretend to carry HTTP
+        # headers, even if their JSON includes an untrusted retMsg.
+        client = BoundedBybitPublicClient(
+            transport=lambda url, limit: b'{"retCode":0,"result":{}}')
+        client.get(instruments_url())
+        self.assertEqual(
+            client.sanitized_quota_fields(),
+            {"provider_quota_headers_present": False},
+        )
+
+    def test_forbidden_http_status_remains_fail_closed(self):
+        uri = instruments_url()
+        class DenyOpener:
+            def open(self, request, timeout):
+                raise HTTPError(
+                    uri, 403, "SENSITIVE_FAILURE_MESSAGE",
+                    Message(), None,
+                )
+        with patch.object(transport_module, "build_opener",
+                          return_value=DenyOpener()):
+            with self.assertRaisesRegex(
+                J1BybitCaptureError, "access_region_or_rate_limit_no_retry",
+            ) as err:
+                _network_get(uri, 131_072)
+        self.assertNotIn("SENSITIVE_FAILURE_MESSAGE", str(err.exception))
 
     def test_bounded_get_fail_closed(self):
         client = BoundedBybitPublicClient(
