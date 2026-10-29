@@ -721,3 +721,8 @@ Agregador de lote finito e injetado, sem rede, para ACK, eventos kline.60 aberto
 ## J1 WS3 #332 — ACK opcional, heartbeat e janela UTC (29/10/2026)
 
 Correcao offline para aceitar `req_id` na ACK V5 documentada, heartbeat aplicativo a cada 20s apos ACK, pong estrito e sonda owner-only com janela de candle fechado, consentimento e timeout finito. Nao conecta em CI, nao guarda dados de mercado nem toca SQLite privado. Testes novos de compatibilidade, input malicioso e opt-in + regressao #328/#330. A execucao real owner-only, se desejada futuramente, depende de gate externo; #2/#319 permanecem abertas para 50 ativos e dados historicos reais.
+
+
+## J1 WS4 #334 — primeiro frame real não reconhecido (29/10/2026)
+
+A VPS executou com código `15187f34c66ab72a4b088e221ae9bc3dfc3dd910`, `websockets==15.0.1`, testes 10/10 e 7/7 PASS. A primeira sessão pública de `kline.60.BTCUSDT` recebeu 1 frame e retornou `ws_subscription_not_acknowledged`; a causa não é conhecida. Este patch adiciona diagnóstico por categorias sanitizadas, mantendo o tratamento fail-closed. Não houve candle confirmado nem escrita no banco privado; J1 #2/#319 abertas.
