@@ -30,19 +30,10 @@ from scripts.capture_private_bybit_j1 import _clock
 MAX_CENSUS_DURATION_MS = 120_000
 
 
-def owner_probe_bybit_top50_gap(
-    *, allow_public_network: bool = False,
-    confirm_region_and_personal_research: bool = False,
-    client: BoundedBybitPublicClient | None = None,
-    clock_ms: Callable[[], int] | None = None,
-    registry_variant: str = "expanded-13",
-) -> dict:
-    if (allow_public_network is not True
-            or confirm_region_and_personal_research is not True
-            or os.name != "posix"):
-        raise J1BybitCaptureError("top50_census_owner_opt_in_or_posix_required")
-    fetch = client or BoundedBybitPublicClient()
-    clock = clock_ms or _clock
+def _capture_complete_instrument_catalog(
+    fetch: BoundedBybitPublicClient, clock: Callable[[], int],
+) -> tuple[tuple[dict, ...], tuple[str | None, ...], tuple[int, ...], int]:
+    """Shared 120s/20-page bounded owner GET capture, no I/O persistence."""
     start = clock()
     pages, cursors, receipts = [], [], []
     cursor = None
@@ -74,6 +65,25 @@ def owner_probe_bybit_top50_gap(
     observed = clock()
     if observed - start > MAX_CENSUS_DURATION_MS:
         raise J1BybitCaptureError("top50_census_capture_exceeds_120s")
+    return tuple(pages), tuple(cursors), tuple(receipts), observed
+
+
+def owner_probe_bybit_top50_gap(
+    *, allow_public_network: bool = False,
+    confirm_region_and_personal_research: bool = False,
+    client: BoundedBybitPublicClient | None = None,
+    clock_ms: Callable[[], int] | None = None,
+    registry_variant: str = "expanded-13",
+) -> dict:
+    if (allow_public_network is not True
+            or confirm_region_and_personal_research is not True
+            or os.name != "posix"):
+        raise J1BybitCaptureError("top50_census_owner_opt_in_or_posix_required")
+    fetch = client or BoundedBybitPublicClient()
+    clock = clock_ms or _clock
+    pages, cursors, receipts, observed = _capture_complete_instrument_catalog(
+        fetch, clock,
+    )
     try:
         census = census_bybit_top50_identity_coverage(
             instrument_pages=tuple(pages),
