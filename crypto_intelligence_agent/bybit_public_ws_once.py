@@ -116,7 +116,7 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                     continue
                 if _check_closed(payload, received_ms=wall_ms()):
                     return WSOnceResult("ws_one_closed_hour_observed_only", frames, 1, True)
-    except (OSError, ValueError, TypeError, RuntimeError, DataValidationError):
+    except (OSError, ValueError, TypeError, RuntimeError, DataValidationError, ImportError):
         return WSOnceResult("ws_failed_closed", frames, 0, acknowledged)
     return WSOnceResult("ws_frame_budget_exhausted", frames, 0, acknowledged)
 
