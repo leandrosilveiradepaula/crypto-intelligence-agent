@@ -39,6 +39,10 @@ class FakeFeed:
                 data = instrument_page(
                     [instrument_row(symbol, launchTime=str(T - 1000*H))],
                     ms=self.observed - 40, cursor="")
+            # Production V5 example omits the two TradFi-only keys.
+            for row in data["result"]["list"]:
+                row.pop("marketRegion", None)
+                row.pop("underlyingTicker", None)
         else:
             symbol = q["symbol"][0]
             start = int(q["start"][0])
