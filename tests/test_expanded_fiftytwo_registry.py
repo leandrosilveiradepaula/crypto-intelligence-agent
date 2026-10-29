@@ -91,19 +91,23 @@ class ReviewedFiftyTwoCryptoIdentitiesTests(unittest.TestCase):
         # No historical database is migrated or rewritten by this registry.
 
     def test_new_candidates_are_seen_only_if_new_revision_explicitly_selected(self):
+        # All response/receipt times MUST be later than registry publication.
+        # A snapshot stamped 400ms BEFORE the review must not gain the new
+        # identities retroactively, even if scanned after publication.
+        market_observed = AT + 2_000
         pages = (
             instrument_page(
                 [instrument_row("NEARUSDT"),
                  instrument_row("HYPEUSDT"),
                  instrument_row("AAPLUSDT", symbolType="tradfi")],
-                ms=AT-400, cursor="",
+                ms=market_observed-400, cursor="",
             ),
         )
         params = dict(
             instrument_pages=pages,
             requested_cursors=(None,),
-            observed_at_ms=AT,
-            page_received_at_ms=(AT-100,),
+            observed_at_ms=market_observed,
+            page_received_at_ms=(market_observed-100,),
         )
         prior = scan_bybit_linear_instruments_offline(
             **params, registry_variant="expanded-13",
