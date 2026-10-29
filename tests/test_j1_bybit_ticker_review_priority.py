@@ -24,7 +24,7 @@ from test_j1_bybit_top50_coverage_census import fixture, census
 from test_j1_private_bybit_capture import FakeFeed
 
 
-def priority(rows=None, *, pages=None, received=T):
+def priority(rows=None, *, pages=None, received=T, ticker_ms=None):
     return rank_bybit_ticker_identity_review_priority(
         instrument_pages=fixture() if pages is None else pages,
         requested_cursors=(None, "more"),
@@ -36,7 +36,7 @@ def priority(rows=None, *, pages=None, received=T):
                 {"symbol": "NEARUSDT", "turnover24h": "500", "volume24h": "15"},
                 {"symbol": "UNIUSDT", "turnover24h": "300", "volume24h": "20"},
                 {"symbol": "AAPLUSDT", "turnover24h": "999999"},
-            ), ms=received-15),
+            ), ms=received-15 if ticker_ms is None else ticker_ms),
         observed_at_ms=received,
     )
 
@@ -68,9 +68,9 @@ class TickerPriorityOfflineTests(unittest.TestCase):
             result.priority_review_symbols_digest_sha256,
         )
         text = json.dumps(report, sort_keys=True)
-        for fragment in ("NEARUSDT", "AAPLUSDT", "UNIUSDT", "999999", "200"):
-            self.assertNotIn('"public_review_contract_identifiers_only"', text)
-        self.assertNotIn("NEARUSDT", text)
+        self.assertNotIn('"public_review_contract_identifiers_only"', text)
+        for public_symbol in ("NEARUSDT", "AAPLUSDT", "UNIUSDT"):
+            self.assertNotIn(public_symbol, text)
 
     def test_ties_and_zero_are_deterministic_not_fake_top50(self):
         equal = priority(rows=(
@@ -126,7 +126,7 @@ class TickerPriorityOfflineTests(unittest.TestCase):
 
     def test_future_stale_ticker_or_rank_budget_is_rejected(self):
         with self.assertRaises(DataValidationError):
-            priority(received=T+60_000)
+            priority(ticker_ms=T-30_001)
         for invalid in (49, 101, True, False, "75", 75.0, None):
             with self.subTest(value=invalid), self.assertRaises(DataValidationError):
                 rank_bybit_ticker_identity_review_priority(
@@ -176,7 +176,6 @@ class TickerPriorityOfflineTests(unittest.TestCase):
         def transport(url,limit):
             hits.append(url)
             if "/tickers?" in url:
-                from test_bybit_paginated_universe_research import instrument_page
                 return json.dumps(tickers(rows=(
                     {"symbol": "BTCUSDT", "turnover24h": "200"},
                     {"symbol": "ETHUSDT", "turnover24h": "300"},
