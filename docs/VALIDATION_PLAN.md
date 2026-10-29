@@ -586,3 +586,8 @@ Executar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.
 ## J1 WS2 #330 — testes de lote offline sem acesso ao provedor
 
 `python3 -m unittest discover -s tests -p test_j1_bybit_ws_offline_pipeline.py -q`. Teste: 2 ativos x24 candles fechados com 48 inserts, idempotência de 48 replays, captura parcial de um ativo que se abstém até receber 24 horas restantes em novo batch, gap após desconexão rejeitado sem perder rows anteriores, ACK obrigatório, JSON com chaves duplicadas rejeitado, candle aberto válido não persistido e símbolo não revisado rejeitado. Validar regressões #326/#328, compileall, Linux/docs, Windows, QA Chrome no SHA pré e pós-merge. Não gerar conexão WS real nem interface de ordens. J1 Top50 marketwide permanece false independentemente do resultado.
+
+
+## J1 WS3 #332 — suite de compatibilidade WebSocket public V5
+
+Executar `python3 -m unittest discover -s tests -p 'test_j1_bybit_ws_ack_heartbeat_schedule.py' -q` e suites regressivas #326/#328/#330. Cobrir ACK V5 com/sem `req_id`, falha de autenticacao de ACK, campos extras, tipos, pong documentado, clock de ping apos ACK, limpeza de sessao, janela UTC de fechamento, dupla confirmacao owner-only e zero rede sem flag de horario. CI Linux/docs/Windows/Chrome pre e pos-merge no SHA exato. Nao realizar socket real em testes, nem declarar historico ou Top50 marketwide autenticado.

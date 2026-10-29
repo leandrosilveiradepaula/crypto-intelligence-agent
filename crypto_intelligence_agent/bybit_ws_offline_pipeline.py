@@ -12,7 +12,7 @@ from .bybit_closed_stream_cache import (
     OfflineReviewedStreamScope, SQLiteOfflineClosedStreamJournal,
     parse_offline_confirmed_kline,
 )
-from .bybit_public_ws_once import _bounded_json
+from .bybit_public_ws_once import _bounded_json, _subscription_ack
 from .market_data import DataValidationError
 
 MAX_BATCH_FRAMES = 4096
@@ -66,10 +66,7 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
             raise DataValidationError("offline WS receive clock invalid")
         payload = _bounded_json(item[0])
         if not ack:
-            if (set(payload) != {"success", "ret_msg", "conn_id", "op"}
-                    or payload["op"] != "subscribe" or payload["success"] is not True
-                    or type(payload["ret_msg"]) is not str
-                    or type(payload["conn_id"]) is not str):
+            if not _subscription_ack(payload):
                 raise DataValidationError("offline WS subscription not acknowledged")
             ack = True
             continue
