@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import time
+from dataclasses import dataclass
 from typing import Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -60,12 +61,80 @@ class J1BybitCaptureError(ValueError):
     """Sanitized failure code; never includes URLs, symbols or raw API bodies."""
 
 
+@dataclass(frozen=True)
+class BybitQuotaObservation:
+    """Bounded numerical HTTP metadata ONLY; never retain full headers."""
+
+    headers_present: bool
+    limit: int | None
+    remaining: int | None
+    reset_wait_ms: int | None
+
+    def sanitized_fields(self) -> dict[str, bool | int]:
+        out: dict[str, bool | int] = {
+            "provider_quota_headers_present": self.headers_present,
+        }
+        if self.limit is not None:
+            out["provider_endpoint_limit"] = self.limit
+        if self.remaining is not None:
+            out["provider_endpoint_remaining"] = self.remaining
+        if self.reset_wait_ms is not None:
+            out["provider_reset_wait_ms"] = self.reset_wait_ms
+        return out
+
+
+@dataclass(frozen=True)
+class _NetworkGetWithQuota:
+    raw: bytes
+    quota: BybitQuotaObservation
+
+
+def _bounded_nonnegative_http_int(headers, key: str, upper: int) -> int | None:
+    """Treat HTTP response headers as UNTRUSTED strings, not instructions."""
+    raw = headers.get(key)
+    if (type(raw) is not str or not 1 <= len(raw) <= 13
+            or not raw.isascii() or not raw.isdecimal()):
+        return None
+    value = int(raw)
+    return value if 0 <= value <= upper else None
+
+
+def _read_bybit_quota_headers(headers) -> BybitQuotaObservation:
+    names = (
+        "X-Bapi-Limit", "X-Bapi-Limit-Status", "X-Bapi-Limit-Reset-Timestamp",
+    )
+    present = any(headers.get(name) is not None for name in names)
+    limit = _bounded_nonnegative_http_int(
+        headers, names[0], 10_000,
+    )
+    remaining = _bounded_nonnegative_http_int(
+        headers, names[1], 10_000,
+    )
+    reset_ms = _bounded_nonnegative_http_int(
+        headers, names[2], 4_000_000_000_000,
+    )
+    if limit is not None and remaining is not None and remaining > limit:
+        remaining = None
+    wait_ms = None
+    if reset_ms is not None:
+        # On successful GET the documented header may be current server
+        # time, NOT an actual cooldown. This is ONLY an observation; it
+        # never causes a new request, backoff loop or claim of a ban.
+        relative = reset_ms - int(time.time() * 1000)
+        if 0 <= relative <= 600_000:
+            wait_ms = relative
+    return BybitQuotaObservation(
+        headers_present=present, limit=limit, remaining=remaining,
+        reset_wait_ms=wait_ms,
+    )
+
+
 class _DenyRedirect(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
 
 
-def _network_get(url: str, limit: int) -> bytes:
+def _network_get(url: str, limit: int) -> _NetworkGetWithQuota:
     request = Request(url, method="GET", headers={"Accept": "application/json"})
     try:
         with build_opener(ProxyHandler({}), _DenyRedirect()).open(
@@ -75,10 +144,11 @@ def _network_get(url: str, limit: int) -> bytes:
                     or response.headers.get("Content-Type", "").split(";")[0]
                     .strip().lower() != "application/json"):
                 raise J1BybitCaptureError("origin_or_media_type_rejected")
+            quota = _read_bybit_quota_headers(response.headers)
             raw = response.read(limit + 1)
             if not 1 <= len(raw) <= limit:
                 raise J1BybitCaptureError("response_size_rejected")
-            return raw
+            return _NetworkGetWithQuota(raw=raw, quota=quota)
     except HTTPError as error:
         if error.code in (401, 403, 418, 429, 451):
             raise J1BybitCaptureError("access_region_or_rate_limit_no_retry") from None
@@ -132,6 +202,13 @@ class BoundedBybitPublicClient:
         self._last_request: float | None = None
         self.last_request_stage: str | None = None
         self.last_provider_retcode: int | None = None
+        self.last_provider_quota: BybitQuotaObservation | None = None
+
+    def sanitized_quota_fields(self) -> dict[str, bool | int]:
+        """No headers, API responses, tokens, symbols, URLs or account data."""
+        if self.last_provider_quota is None:
+            return {"provider_quota_headers_present": False}
+        return self.last_provider_quota.sanitized_fields()
 
     def get(self, url: str) -> tuple[bytes, dict]:
         parsed = urlsplit(url)
@@ -185,6 +262,7 @@ class BoundedBybitPublicClient:
             else "closed_kline_" + queries["limit"][0] + "h"
         )
         self.last_provider_retcode = None
+        self.last_provider_quota = None
         self.requests_attempted += 1
         if self.transport is None:
             # The original 160ms spacing could submit >6 GET/s and offered
@@ -203,8 +281,15 @@ class BoundedBybitPublicClient:
                 or parsed.path == "/v5/market/tickers"
             ) else 131_072
         )
-        raw = (self.transport(url, limit) if self.transport is not None
-               else _network_get(url, limit))
+        wire = (self.transport(url, limit) if self.transport is not None
+                else _network_get(url, limit))
+        if type(wire) is _NetworkGetWithQuota:
+            self.last_provider_quota = wire.quota
+            raw = wire.raw
+        else:
+            # Keep the existing injected bytes transport (all offline tests)
+            # unchanged. Never fabricate a provider rate-limit header.
+            raw = wire
         if type(raw) is not bytes or not 1 <= len(raw) <= limit:
             raise J1BybitCaptureError("response_body_type_or_size_rejected")
         try:
