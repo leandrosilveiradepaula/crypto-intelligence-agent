@@ -37,7 +37,7 @@ class ExpandedThirteenIdentityTests(unittest.TestCase):
         self.assertEqual(registry_sha256(obj), digest)
 
     def test_replay_prior_identity_without_future_injection(self):
-        self.assertEqual(REGISTRY_VARIANTS, frozenset({"btc-eth", "expanded-10", "expanded-13"}))
+        self.assertEqual(REGISTRY_VARIANTS, frozenset({"btc-eth", "expanded-10", "expanded-13", "expanded-52"}))
         old = load_reviewed_registry("expanded-10", as_of_ms=T)
         fresh = load_reviewed_registry("expanded-13", as_of_ms=T)
         self.assertEqual(len(old.assets), 10)
