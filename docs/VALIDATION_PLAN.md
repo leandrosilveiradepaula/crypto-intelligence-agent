@@ -563,3 +563,11 @@ A suíte `test_j1_bybit_cycle.py` testa o orquestrador completo: 2 símbolos, 20
 - Reprovar se qualquer perp USDT revisado com pelo menos 24h de listagem perder candles, apresentar open bar/futura, duplicata ou retorno tardio; ausência de 24h por listagem recente gera contagem explícita e reduz universo com alerta, nunca substitui valor zero. Catálogo pós captura deve manter identidade, símbolo, launchTime e filtros financeiros de todos os revisados, e hash dos candidatos não revisados.
 - Testar a diferença de limite temporal `120s` da amostra curta e `360s` do lote de 52 em ritmo real 2s/GET, servidor <=30s de recebido, exatamente mesma hora de corte UTC. Sem snapshot PIT histórico inventado.
 - CLI pública owner-only opt-in, até 500 GET, sem escrita SQLite/arquivo, sem ticker rolling, credentials, POST, proxies, ordens ou deploy. Report padrão contagens/hash; flag separada permite somente identificadores públicos. `marketwide_top50_verified=false` mesmo com 50 membros dos revisados, enquanto existirem candidatos não revisados ou faltar histórico 30 dias.
+
+
+## J1 #324 — teste de observabilidade segura de quota Bybit
+
+- HTTP simulado: código `200` JSON correto com `X-Bapi-Limit`, `X-Bapi-Limit-Status`, `X-Bapi-Limit-Reset-Timestamp`; validar parse estrito de inteiros até limites fixos, reset apenas se relativo e <=600000ms, sem adicionar retry. A API pública `BoundedBybitPublicClient.get()` permanece idêntica em bytes+dict.
+- `10006` sintético deve manter `last_provider_retcode=10006`, falhar exatamente uma vez, oferecer apenas campos numéricos e nunca `retMsg`, símbolos, URL ou headers arbitrários. `403` e cabeçalhos inválidos/ausentes continuam fail-closed; ausência de quota não é reportada como `remaining=0`.
+- CLI GET diagnóstico owner-only requer `--allow-public-network` e `--confirm-region-and-personal-research`, POSIX, 1 único GET `BTCUSDT` 1h já fechado, sem escrever banco; não declara ranking de mercado nem trading. Testes executam somente com transporte falso, sem mercado real em CI.
+- Não alterar ritmo de 2s/GET, budget 500, allowlist de host, escala do timestamp de candle, ranking por 24h fechadas nem SQLite proprietário. Após CI verde, a primeira prova real será um GET diagnóstico e NÃO uma nova varredura de 52.
