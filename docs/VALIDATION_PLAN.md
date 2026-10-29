@@ -591,3 +591,8 @@ Executar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.
 ## J1 WS3 #332 — suite de compatibilidade WebSocket public V5
 
 Executar `python3 -m unittest discover -s tests -p 'test_j1_bybit_ws_ack_heartbeat_schedule.py' -q` e suites regressivas #326/#328/#330. Cobrir ACK V5 com/sem `req_id`, falha de autenticacao de ACK, campos extras, tipos, pong documentado, clock de ping apos ACK, limpeza de sessao, janela UTC de fechamento, dupla confirmacao owner-only e zero rede sem flag de horario. CI Linux/docs/Windows/Chrome pre e pos-merge no SHA exato. Nao realizar socket real em testes, nem declarar historico ou Top50 marketwide autenticado.
+
+
+## J1 WS4 #334 — classificação fail-closed de primeira mensagem WS
+
+Rodar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q` mais regressões WS3 e WS2; validar rejeição explícita (`success=false`), envelope com campos ausentes/extras/tipos inválidos, dados antes de ACK, controle de ping antes de ACK e mensagem desconhecida. Testar não vazamento de strings similares a segredo no relatório. Nenhum dado bruto salvo, rede desligada na CI. CI Linux/docs, Windows e Chrome pré/pós-merge no SHA exato. Status Top50 mercado permanece falso.
