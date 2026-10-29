@@ -137,6 +137,24 @@ class BybitOfficialSchemaConformanceTests(unittest.TestCase):
             validate(revision="unreviewed")
         self.assertEqual(validate(revision="btc-eth").base_coin, "BTC")
 
+    def test_official_btc_instrument_omits_tradfi_only_fields(self):
+        # Official Bybit V5 BTCUSDT response example has no marketRegion and
+        # underlyingTicker keys: absence is normal, explicit null is not.
+        payload = instrument()
+        metadata = payload["result"]["list"][0]
+        metadata.pop("marketRegion")
+        metadata.pop("underlyingTicker")
+        contract = validate(payload)
+        self.assertEqual(contract.symbol, "BTCUSDT")
+        self.assertFalse(contract.live_metadata_authenticated)
+        staged = pair(metadata=payload)
+        self.assertEqual(staged.quote_turnover_unit, "USDT")
+        for key in ("marketRegion", "underlyingTicker"):
+            broken = deepcopy(payload)
+            broken["result"]["list"][0][key] = None
+            with self.assertRaises(DataValidationError):
+                validate(broken)
+
     def test_reject_spot_inverse_future_not_trading_and_prelist(self):
         alterations = [
             {"contractType": "InversePerpetual"},
