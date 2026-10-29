@@ -39,9 +39,9 @@ class Tests(unittest.TestCase):
     def test_open_stays_incomplete(self):
         x=self.call([ACK,frame(False)],max_frames=2);self.assertEqual(x["status"],"ws_frame_budget_exhausted")
     def test_failed_ack(self):
-        bad=dict(ACK,success=False);self.assertEqual(self.call([bad])["status"],"ws_subscription_not_acknowledged")
+        bad=dict(ACK,success=False);self.assertEqual(self.call([bad])["status"],"ws_subscription_explicitly_rejected")
     def test_missing_ack_rejected(self):
-        self.assertEqual(self.call([frame()])["status"],"ws_subscription_not_acknowledged")
+        self.assertEqual(self.call([frame()])["status"],"ws_market_data_before_ack")
     def test_bad_envelopes(self):
         mutations=[lambda f:f.update(topic="kline.5.BTCUSDT"), lambda f:f["data"][0].update(turnover="NaN"),
                    lambda f:f["data"][0].update(open=10.1), lambda f:f["data"][0].update(high="8"),
@@ -63,6 +63,26 @@ class Tests(unittest.TestCase):
             x=owner_probe(allow_public_websocket=False,confirm_region_and_personal_research=True)
         self.assertEqual(x["frames_seen"],0)
         self.assertEqual(x["status"],"ws_owner_opt_in_or_posix_required")
+
+    def test_first_frame_categories_never_echo_raw_fields(self):
+        samples = [
+            (dict(ACK, success=False, ret_msg="SECRET123"), "ws_subscription_explicitly_rejected"),
+            ({"op":"subscribe", "success": True}, "ws_subscription_fields_missing"),
+            (dict(ACK, surprise="SECRET123"), "ws_subscription_fields_unexpected"),
+            (dict(ACK, success="true"), "ws_subscription_fields_invalid"),
+            (frame(), "ws_market_data_before_ack"),
+            ({"op":"ping", "ret_msg":"pong"}, "ws_unexpected_control_before_ack"),
+            ({"unknown":"SECRET123"}, "ws_unexpected_first_frame"),
+        ]
+        for payload, expected in samples:
+            with self.subTest(expected=expected):
+                result = self.call([payload])
+                self.assertEqual(result["status"], expected)
+                self.assertNotIn("SECRET123", str(result))
+                self.assertFalse(result["subscription_acknowledged"])
+                self.assertEqual(result["confirmed_closed_events"], 0)
+                self.assertFalse(result["orders_sent"])
+
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
 
