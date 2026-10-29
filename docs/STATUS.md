@@ -642,3 +642,10 @@ Titular executou owner-only na VPS o codigo da PR #311, `main=b669dce6929326ee51
 No SSH sob `cia-probe`, `main=b115a760859b50d1d2462b6bf90975815604829c`: 24 testes offline (5+4+15) aprovados. Resposta do coletor real: `instrument_scan_duplicate_instrument`, com `marketwide_top50_verified=false` e `orders_sent=false`. O scan não chega à criação do SQLite. O diagnóstico atual não distingue símbolo malformado de duplicado, pois a mensagem interna antiga agrupava ambas as causas. **Não presumir duplicata real da Bybit.**
 
 Branch de correção de escopo contida na #310: permitir contratos lineares não elegíveis (futuros de vencimento, USDC, TradFi e bases desconhecidas) sem aplicar a eles o regex estrito dos perpétuos cripto, enquanto duplicata de perpétuo revisado ou identidade insegura continuam falhas. Adicionar testes regressivos, CI Linux/Windows/Chrome, revisão, merge e CI pós-merge antes da próxima captura. J1 #2 aberta; o histórico Bybit real de 30 dias, duas atualizações e universo Top50 continuam sem prova.
+
+
+## J1/EXIT #310 — falha Bybit após longa execução e preservação do progresso privado (29/10/2026 UTC)
+
+Em `main=ecc3b74707493a3114051aac155df81e57968945` o titular informou 30 testes locais aprovados (5 + 5 + 4 + 16). A captura foi iniciada por volta de 11h25 UTC, permaneceu em execução durante a espera horária e mais tarde retornou `status=provider_ret_code_failure_no_retry`, com `partial_data_may_remain=true`; o stdout não permite comprovar qual endpoint/retCode falhou, nem afirmar quantidade gravada. Como o script grava páginas e PIT antes de aguardar as horas, preservar banco privado e **auditar sem rede antes de qualquer repetição**.
+
+Uma entrega coerente na issue #310 disponibiliza relatório estritamente read-only do SQLite (schema, digests, contiguidade, 720h, snapshots) e detecção controlada do erro de API. Próximo passo depois de CI/merge e um SSH de auditoria: decidir com evidência se deve aproveitar a base existente, corrigir parâmetro, respeitar limite ou refazer somente lacunas. Sem download ou ordem real nesta entrega. Universo real Top50 e homologação J1 #2 ainda não demonstrados.
