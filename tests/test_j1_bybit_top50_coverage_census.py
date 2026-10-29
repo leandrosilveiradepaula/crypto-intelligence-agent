@@ -61,8 +61,11 @@ class Top50IdentityCoverageTests(unittest.TestCase):
         self.assertEqual(outcome.reviewed_crypto_registry_bases, 13)
         self.assertEqual(outcome.reviewed_eligible_usdt_perpetuals, 2)
         self.assertEqual(outcome.plausible_unreviewed_usdt_perpetuals, 2)
-        self.assertEqual(outcome.excluded_other_or_tradfi_rows, 4)
-        self.assertEqual(outcome.reviewed_but_noneligible_rows, 0)
+        # BTCUSDC has a *reviewed base* BTC, but the contract itself is
+        # ineligible because quote/settle are USDC. Keep it separate from
+        # unknown-base TradFi/futures/premarket exclusions.
+        self.assertEqual(outcome.excluded_other_or_tradfi_rows, 3)
+        self.assertEqual(outcome.reviewed_but_noneligible_rows, 1)
         result = outcome.sanitized_report()
         self.assertEqual(result["positive_registry_top50_capacity_gap"], 48)
         self.assertFalse(result["marketwide_top50_verified"])
