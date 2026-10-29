@@ -18,6 +18,12 @@ from .market_data import DataValidationError
 
 HOUR_MS = 3_600_000
 WINDOW_HOURS = 24
+# Strict offline/one-shot freshness stays at 30s. The only permitted longer
+# case is an owner-captured, individually timestamped paginated PIT batch:
+# pacing a reviewed multiasset ranking can exceed 30s while all bars remain
+# closed at one UTC decision cutoff. This is NOT a live trading data contract.
+DEFAULT_CONTRACT_MAX_AGE_MS = 30_000
+MAX_PIT_BATCH_CONTRACT_AGE_MS = 120_000
 _CONTEXT = Context(prec=256)
 
 
@@ -156,6 +162,7 @@ def select_bybit_reviewed_sample_pit(
     registry_variant: str = "expanded-13",
     max_candidates: int = 50,
     instrument_page_received_at_ms: tuple[int, ...] | None = None,
+    max_contract_age_ms: int = DEFAULT_CONTRACT_MAX_AGE_MS,
 ) -> BybitPITResearchSelection:
     """Rank FULL 24 hours of closed candles for every reviewed eligible base.
 
@@ -169,7 +176,12 @@ def select_bybit_reviewed_sample_pit(
             or decision_at_ms % HOUR_MS
             or decision_at_ms != (observed_at_ms // HOUR_MS) * HOUR_MS
             or observed_at_ms - decision_at_ms < 1000
-            or type(kline_pages) is not dict):
+            or type(kline_pages) is not dict
+            or type(max_contract_age_ms) is not int
+            or not 0 <= max_contract_age_ms <= MAX_PIT_BATCH_CONTRACT_AGE_MS
+            or (max_contract_age_ms > DEFAULT_CONTRACT_MAX_AGE_MS
+                and (type(instrument_page_received_at_ms) is not tuple
+                     or not instrument_page_received_at_ms))):
         raise DataValidationError("invalid point-in-time observed clock/candidate budget")
     scan = scan_bybit_linear_instruments_offline(
         instrument_pages=instrument_pages,
@@ -177,6 +189,13 @@ def select_bybit_reviewed_sample_pit(
         registry_variant=registry_variant,
         page_received_at_ms=instrument_page_received_at_ms,
     )
+    # A larger freshness allowance is justified only by a bounded REAL
+    # sequence of per-page receipt clocks, not by adjusting a stale offline
+    # fixture or inventing a receipt timestamp for an old server response.
+    if (max_contract_age_ms > DEFAULT_CONTRACT_MAX_AGE_MS
+            and observed_at_ms - instrument_page_received_at_ms[0]
+                > MAX_PIT_BATCH_CONTRACT_AGE_MS):
+        raise DataValidationError("PIT paginated capture batch exceeds 120s")
     eligible = tuple(
         item for item in scan.instruments
         if item.launch_time_ms <= decision_at_ms - WINDOW_HOURS * HOUR_MS
@@ -198,7 +217,7 @@ def select_bybit_reviewed_sample_pit(
                 contract_status="Trading",
                 contract_observed_at_ms=item.observed_at_ms,
                 observed_at_ms=observed_at_ms,
-                max_contract_age_ms=30_000,
+                max_contract_age_ms=max_contract_age_ms,
                 interval="1h",
                 start_open_ms=decision_at_ms - WINDOW_HOURS * HOUR_MS,
                 end_open_ms=decision_at_ms,
