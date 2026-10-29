@@ -103,6 +103,11 @@ def instruments_url(*, cursor: str | None = None, symbol: str | None = None) -> 
     return BASE_URL + "/v5/market/instruments-info?" + urlencode(parameters)
 
 
+def tickers_url() -> str:
+    """Only the all-linear public ticker snapshot, never a trading endpoint."""
+    return BASE_URL + "/v5/market/tickers?category=linear"
+
+
 def kline_url(symbol: str, start: int, end: int) -> str:
     hours, remainder = divmod(end - start, HOUR_MS)
     if (type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None
@@ -153,6 +158,9 @@ class BoundedBybitPublicClient:
                 )
             else:
                 allowed = False
+        elif parsed.path == "/v5/market/tickers":
+            # Only one public aggregate endpoint, no optional filter params.
+            allowed = url == tickers_url()
         elif parsed.path == "/v5/market/kline":
             allowed = (set(queries) == {
                 "category", "symbol", "interval", "start", "end", "limit"
@@ -173,6 +181,7 @@ class BoundedBybitPublicClient:
             "instrument_metadata" if parsed.path.endswith("instruments-info")
             and "symbol" in queries else
             "instrument_universe" if parsed.path.endswith("instruments-info")
+            else "ticker_review_proxy" if parsed.path.endswith("tickers")
             else "closed_kline_" + queries["limit"][0] + "h"
         )
         self.last_provider_retcode = None
@@ -188,8 +197,12 @@ class BoundedBybitPublicClient:
                 if remaining > 0:
                     time.sleep(remaining)
             self._last_request = time.monotonic()
-        limit = (MAX_RESPONSE_BYTES if queries.get("limit") == ["200"]
-                 else 131_072)
+        limit = (
+            MAX_RESPONSE_BYTES if (
+                queries.get("limit") == ["200"]
+                or parsed.path == "/v5/market/tickers"
+            ) else 131_072
+        )
         raw = (self.transport(url, limit) if self.transport is not None
                else _network_get(url, limit))
         if type(raw) is not bytes or not 1 <= len(raw) <= limit:
