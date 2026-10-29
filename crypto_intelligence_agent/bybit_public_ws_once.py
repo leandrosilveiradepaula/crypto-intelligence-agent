@@ -71,6 +71,25 @@ def _subscription_ack(payload: dict) -> bool:
     return payload["success"] is True
 
 
+
+def _classify_first_frame(payload: dict) -> str:
+    """Allowlisted reason only; never echo provider strings or identifiers."""
+    if payload.get("op") == "subscribe":
+        if payload.get("success") is False:
+            return "ws_subscription_explicitly_rejected"
+        required = {"success", "ret_msg", "conn_id", "op"}
+        if not required <= set(payload):
+            return "ws_subscription_fields_missing"
+        if set(payload) - required - {"req_id"}:
+            return "ws_subscription_fields_unexpected"
+        return "ws_subscription_fields_invalid"
+    if payload.get("topic") is not None or "data" in payload:
+        return "ws_market_data_before_ack"
+    if payload.get("op") is not None:
+        return "ws_unexpected_control_before_ack"
+    return "ws_unexpected_first_frame"
+
+
 def _public_pong(payload: dict) -> bool:
     """Recognize only a bounded heartbeat reply; not a market data frame."""
     if (not isinstance(payload, dict) or payload.get("op") != "ping"
@@ -157,7 +176,7 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                 payload = _bounded_json(raw)
                 if not acknowledged:
                     if not _subscription_ack(payload):
-                        return WSOnceResult("ws_subscription_not_acknowledged", frames, 0, False)
+                        return WSOnceResult(_classify_first_frame(payload), frames, 0, False)
                     acknowledged = True
                     continue
                 if _public_pong(payload):
