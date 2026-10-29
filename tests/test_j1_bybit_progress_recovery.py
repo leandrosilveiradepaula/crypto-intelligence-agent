@@ -49,12 +49,13 @@ class ProviderFailuresTests(unittest.TestCase):
                 )
 
     def test_stage_identifies_kline_page_sizes_without_symbol_or_url(self):
+        decision = T // H * H
         for hours, name in ((1, "closed_kline_1h"), (24, "closed_kline_24h"),
                             (72, "closed_kline_72h")):
             client = BoundedBybitPublicClient(transport=lambda url, limit: (
                 b'{"retCode":10001,"retMsg":"NO_PRIVATE_SYMBOLS_ALLOWED"}'))
             with self.assertRaises(J1BybitCaptureError):
-                client.get(kline_url("BTCUSDT", T - hours * H, T))
+                client.get(kline_url("BTCUSDT", decision - hours * H, decision))
             self.assertEqual(client.last_request_stage, name)
             self.assertNotIn("BTC", client.last_request_stage)
         self.assertEqual(classify_provider_retcode(False),
