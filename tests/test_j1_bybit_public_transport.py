@@ -170,7 +170,7 @@ class J1BybitTransportTests(unittest.TestCase):
             "provider_quota_headers_present": True,
             "provider_endpoint_limit": 10,
             "provider_endpoint_remaining": 2,
-            "provider_reset_wait_ms": 1500,
+            "provider_reset_header_delta_ms": 1500,
         })
         self.assertEqual(opener.request.get_method(), "GET")
         self.assertNotIn(
@@ -211,7 +211,7 @@ class J1BybitTransportTests(unittest.TestCase):
         self.assertEqual(client.requests_attempted, 1)
         snapshot = client.sanitized_quota_fields()
         self.assertEqual(snapshot["provider_endpoint_remaining"], 0)
-        self.assertEqual(snapshot["provider_reset_wait_ms"], 200)
+        self.assertEqual(snapshot["provider_reset_header_delta_ms"], 200)
         self.assertNotIn("PRIVATE_SYMBOL", str(err.exception))
         self.assertNotIn("PRIVATE_SYMBOL", str(snapshot))
 
