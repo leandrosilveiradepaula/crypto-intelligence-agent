@@ -4,6 +4,7 @@ All provider responses are synthetic, no real GET, storage, order or secrets.
 """
 from copy import deepcopy
 import json
+import os
 import unittest
 from unittest.mock import patch
 
@@ -98,6 +99,7 @@ class Top50IdentityCoverageTests(unittest.TestCase):
         with self.assertRaisesRegex(DataValidationError, "malformed"):
             census((a,b))
 
+    @unittest.skipUnless(os.name == "posix", "owner-only GET capture is POSIX-gated")
     def test_fake_full_scan_owner_never_persists_or_trades(self):
         feed = FakeFeed()
         client = BoundedBybitPublicClient(transport=feed.get)
@@ -124,6 +126,7 @@ class Top50IdentityCoverageTests(unittest.TestCase):
             owner_probe_bybit_top50_gap(client=client)
         self.assertEqual(client.requests_attempted, 0)
 
+    @unittest.skipUnless(os.name == "posix", "owner-only GET capture is POSIX-gated")
     def test_10006_rate_limit_stops_without_retry(self):
         client = BoundedBybitPublicClient(
             transport=lambda url,limit: (
@@ -136,6 +139,7 @@ class Top50IdentityCoverageTests(unittest.TestCase):
             )
         self.assertEqual(client.requests_attempted, 1)
 
+    @unittest.skipUnless(os.name == "posix", "owner-only GET capture is POSIX-gated")
     def test_long_census_does_not_fake_freshness(self):
         feed = FakeFeed()
         initial_get = feed.get
