@@ -284,3 +284,8 @@ Bybit publica canal linear `kline.60`/`confirm` no WebSocket V5. Esta unidade pr
 ## J1 WS2 #330 — replays de WebSocket são somente fixtures
 
 O agregador de eventos confirma apenas o funcionamento determinístico de armazenamento causal offline e sua abstenção diante de lacunas. Um ACK sintético, `confirm=true` e hashes do cache não autenticam o provedor nem demonstram cobertura da Bybit. Os direitos de dados para live, seleção dos 50 maiores de *todo o mercado* e histórico 30d point-in-time não são certificados nesta etapa; sem network, REST, contorno de 10006, ordem ou deploy. O SQLite de pesquisa real já existente na VPS deve ser preservado. #2, #319, #217 permanecem abertos.
+
+
+## J1 WS3 #332 — ACK/heartbeat realistas nao promovem fonte ao vivo
+
+A observacao WS de um topico `kline.60` sera diagnosticamente util apenas se a API V5 retornar ACK valida e um fechamento dentro de janela UTC limitada. Os testes verificam esse protocolo por frames injetados; nenhum acesso externo foi executado. `confirm=true` e ping/pong sao caracteristicas de envelope, nao prova de confiabilidade, licenciamento, marketwide Top50 ou historico 30d. Nao reutilizar dados Bybit de pesquisa privada em negociacao live sem gates especificos de #217/#319/#2. Nenhuma ordem automatica real autorizada.

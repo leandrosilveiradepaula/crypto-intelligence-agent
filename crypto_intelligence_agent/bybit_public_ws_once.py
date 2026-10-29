@@ -54,6 +54,49 @@ def _bounded_json(frame: str | bytes) -> dict:
     return value
 
 
+def _subscription_ack(payload: dict) -> bool:
+    """Only supported Bybit public subscribe ACK fields, never echo IDs."""
+    required = {"success", "ret_msg", "conn_id", "op"}
+    if (not isinstance(payload, dict) or not required <= set(payload)
+            or set(payload) - required - {"req_id"}
+            or payload.get("op") != "subscribe"
+            or type(payload.get("success")) is not bool
+            or type(payload.get("ret_msg")) is not str
+            or len(payload["ret_msg"]) > 128
+            or type(payload.get("conn_id")) is not str
+            or len(payload["conn_id"]) > 128
+            or ("req_id" in payload and
+                (type(payload["req_id"]) is not str or len(payload["req_id"]) > 128))):
+        return False
+    return payload["success"] is True
+
+
+def _public_pong(payload: dict) -> bool:
+    """Recognize only a bounded heartbeat reply; not a market data frame."""
+    if (not isinstance(payload, dict) or payload.get("op") != "ping"
+            or not {"op", "ret_msg"} <= set(payload)
+            or set(payload) - {"op", "ret_msg", "conn_id", "req_id", "success", "args"}
+            or payload.get("ret_msg") != "pong"):
+        return False
+    for key in ("conn_id", "req_id"):
+        if key in payload and (type(payload[key]) is not str or len(payload[key]) > 128):
+            return False
+    if "success" in payload and payload["success"] is not True:
+        return False
+    if "args" in payload and (type(payload["args"]) is not list
+                              or len(payload["args"]) > 1):
+        return False
+    return True
+
+
+def seconds_to_closed_hour_probe(now_ms: int) -> int:
+    """UTC scheduling: connect at most 20s before a boundary, at most once."""
+    if type(now_ms) is not int or now_ms <= 0:
+        raise DataValidationError("ws_owner_clock_invalid")
+    until_boundary_ms = HOUR_MS - now_ms % HOUR_MS
+    return max(0, (until_boundary_ms - 20_000 + 999) // 1000)
+
+
 def _check_closed(frame: dict, *, received_ms: int) -> bool:
     if set(frame) != {"topic", "type", "ts", "data"} or frame.get("topic") != TOPIC or frame.get("type") != "snapshot":
         raise DataValidationError("ws_topic_or_envelope_invalid")
@@ -94,6 +137,7 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
     frames = 0
     acknowledged = False
     started = clock()
+    last_ping = started
     try:
         with closing(session_factory()) as session:
             session.send(json.dumps({"op": "subscribe", "args": [TOPIC]}, separators=(",", ":")))
@@ -101,6 +145,10 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                 remaining = max_seconds - (clock() - started)
                 if remaining <= 0:
                     return WSOnceResult("ws_observation_timeout", frames, 0, acknowledged)
+                now = clock()
+                if acknowledged and now - last_ping >= 20:
+                    session.send('{"op":"ping"}')
+                    last_ping = now
                 try:
                     raw = session.recv(min(remaining, 5.0))
                 except TimeoutError:
@@ -108,11 +156,11 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                 frames += 1
                 payload = _bounded_json(raw)
                 if not acknowledged:
-                    if (set(payload) != {"success", "ret_msg", "conn_id", "op"}
-                            or payload["op"] != "subscribe" or payload["success"] is not True
-                            or type(payload["ret_msg"]) is not str or type(payload["conn_id"]) is not str):
+                    if not _subscription_ack(payload):
                         return WSOnceResult("ws_subscription_not_acknowledged", frames, 0, False)
                     acknowledged = True
+                    continue
+                if _public_pong(payload):
                     continue
                 if _check_closed(payload, received_ms=wall_ms()):
                     return WSOnceResult("ws_one_closed_hour_observed_only", frames, 1, True)
@@ -136,8 +184,21 @@ def _real_session_factory():
     return Adapter()
 
 
-def owner_probe(*, allow_public_websocket: bool, confirm_region_and_personal_research: bool) -> dict:
+def owner_probe(*, allow_public_websocket: bool, confirm_region_and_personal_research: bool,
+                schedule_closed_utc_hour: bool = False,
+                clock_ms: Callable[[], int] = lambda: int(time.time() * 1000),
+                sleeper: Callable[[float], None] = time.sleep) -> dict:
     if (allow_public_websocket is not True or confirm_region_and_personal_research is not True
             or os.name != "posix"):
         return WSOnceResult("ws_owner_opt_in_or_posix_required", 0, 0, False).sanitized_report()
+    if schedule_closed_utc_hour is not True:
+        return WSOnceResult("ws_closed_hour_schedule_required", 0, 0, False).sanitized_report()
+    try:
+        seconds = seconds_to_closed_hour_probe(clock_ms())
+        if seconds > 3580:
+            return WSOnceResult("ws_owner_clock_invalid", 0, 0, False).sanitized_report()
+        if seconds:
+            sleeper(seconds)
+    except (OSError, ValueError, TypeError, RuntimeError):
+        return WSOnceResult("ws_owner_clock_invalid", 0, 0, False).sanitized_report()
     return observe_once(session_factory=_real_session_factory).sanitized_report()

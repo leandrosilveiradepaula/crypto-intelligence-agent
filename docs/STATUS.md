@@ -716,3 +716,8 @@ Adicionado observador read-only com `session_factory` injetavel, CLI `scripts.pr
 ## J1 WS2 #330 — integração multiativo de fixtures WS ao SQLite causal (29/10/2026)
 
 Agregador de lote finito e injetado, sem rede, para ACK, eventos kline.60 abertos/fechados, replay idempotente e suspensão por gap. Reusa decoder de #328 e SQLite/auditoria de #326; testes de 24h/2 ativos, batch com ativo faltante, continuação explícita, replay, topic não revisado, ACK e JSON duplicado. A captura e o streaming reais não foram executados; quota 10006, cobertura de mercado e histórico 30d continuam pendentes. #2 e #319 permanecem abertos. Testes específicos locais inicialmente 7/7 PASS em ambiente com dependências simuladas; CI completa será a prova integrativa obrigatória.
+
+
+## J1 WS3 #332 — ACK opcional, heartbeat e janela UTC (29/10/2026)
+
+Correcao offline para aceitar `req_id` na ACK V5 documentada, heartbeat aplicativo a cada 20s apos ACK, pong estrito e sonda owner-only com janela de candle fechado, consentimento e timeout finito. Nao conecta em CI, nao guarda dados de mercado nem toca SQLite privado. Testes novos de compatibilidade, input malicioso e opt-in + regressao #328/#330. A execucao real owner-only, se desejada futuramente, depende de gate externo; #2/#319 permanecem abertas para 50 ativos e dados historicos reais.
