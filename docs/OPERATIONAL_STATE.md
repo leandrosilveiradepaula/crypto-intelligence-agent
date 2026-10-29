@@ -720,3 +720,12 @@ Checkpoint base: main=1a73bf7e34bee89b182555bb0151e623dcf446eb, zero PRs abertas
 ### J1/EXIT #308 — correção de CI e conclusão da vertical no mesmo bloco
 
 Antes da integração, CI docs/Linux aprovou a primeira versão; Windows detectou falha de limpeza de SQLite por conexão de teste aberta (não falha de dados) e o teste foi corrigido usando `contextlib.closing`. Pipeline `bybit_research_cycle` adicionado para ligar seleção PIT, preflight de páginas brutas, armazenamento imutável, 30d auditado e atualização incremental 1h. Contrato `LocalBybitCaptureManifest` expandido estritamente para 1..72 candles fechados (necessário ao hourly). Revalidar CI 3/3 no HEAD **final** da PR #309, revisar, squash sem produção e pós-merge. Nenhuma fonte externa acessada ou dado real retido nesta entrega.
+
+
+## 29/10/2026 — J1 #310, transporte público Bybit em preparação
+
+Após o operador confirmar na VPS (SSH sob cia-probe) fast-forward da main para \`7b743a82770ae57f36a3791ca73f8e15bd1aa769\`, Python 3.12.3, importação dos módulos J1 e **9 testes J1 passando**, a branch \`work/issue-310-j1-bybit-owner-capture\` iniciou a implementação do transporte read-only \`bybit_public_j1_transport.py\`.
+
+Este estágio tem apenas GET validado/limitado para instrument-info e kline, testes offline e nenhuma execução com rede ou armazenamento privado. **O operador NÃO deve executá-lo na VPS ainda**: faltam integração do ciclo de captura, Top50 real e aceite de CI. Issue principal J1 #2 continua aberta.
+
+O catálogo positivo \`expanded-13\` limita o universo revisado atual a 13 bases; nunca declarar Top50 de mercado a partir dessa amostra. Continuar implementação e testes na #310. Nenhum dado privado, conta, credencial, ordem real, deploy ou gasto adicional.
