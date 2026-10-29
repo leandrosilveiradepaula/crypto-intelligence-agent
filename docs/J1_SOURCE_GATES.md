@@ -279,3 +279,8 @@ Bybit V5 documenta `kline.60.<symbol>` e `confirm` (https://bybit-exchange.githu
 ## J1 #328 — diagnostico WebSocket publico nao equivale a fonte homologada
 
 Bybit publica canal linear `kline.60`/`confirm` no WebSocket V5. Esta unidade prepara apenas uma sessao curta, opt-in, single-topic, sem dados persistidos nem negociacao. `confirm=true` e sinal de fechamento no payload recebido, nao prova autenticidade do provedor, completude 24h, retencao licenciada, identidade cripto de todo o mercado, Top50, backfill 30d, direitos do painel/ordens ou validação de taxas e liquidacao. Nao usar WS alternativo para burlar HTTP 10006 ou restricoes regionais. #217 permanece gate especifico para finalidade, territorio e live; #319 e #2 permanecem abertos.
+
+
+## J1 WS2 #330 — replays de WebSocket são somente fixtures
+
+O agregador de eventos confirma apenas o funcionamento determinístico de armazenamento causal offline e sua abstenção diante de lacunas. Um ACK sintético, `confirm=true` e hashes do cache não autenticam o provedor nem demonstram cobertura da Bybit. Os direitos de dados para live, seleção dos 50 maiores de *todo o mercado* e histórico 30d point-in-time não são certificados nesta etapa; sem network, REST, contorno de 10006, ordem ou deploy. O SQLite de pesquisa real já existente na VPS deve ser preservado. #2, #319, #217 permanecem abertos.

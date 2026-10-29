@@ -581,3 +581,8 @@ Executar `python3 -m unittest discover -s tests -p test_j1_bybit_closed_stream_c
 ## J1 #328 — observador publico WS finito (offline na CI)
 
 Executar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q`, `python3 -m compileall -q crypto_intelligence_agent tests`, checks docs e conjunto completo Linux/Windows/Chrome. Testes: subscribes exatos, ACK positivo/negativo, topico invalido, candle aberto, OHLC/Decimal invalidos, JSON duplicado, tamanho>16KiB, timeout, EOF/erro, budget de 64 frames e stop apos 1 fechamento, owner sem opt-in gera zero network e zero ordens. Sem conectar a Bybit em CI, nao gravar banco do owner. Integrar somente com todas as verificacoes verdes no SHA exato, e revalidar apos merge; uma observacao WS unica nao prova historico PIT/30d nem universo Top50.
+
+
+## J1 WS2 #330 — testes de lote offline sem acesso ao provedor
+
+`python3 -m unittest discover -s tests -p test_j1_bybit_ws_offline_pipeline.py -q`. Teste: 2 ativos x24 candles fechados com 48 inserts, idempotência de 48 replays, captura parcial de um ativo que se abstém até receber 24 horas restantes em novo batch, gap após desconexão rejeitado sem perder rows anteriores, ACK obrigatório, JSON com chaves duplicadas rejeitado, candle aberto válido não persistido e símbolo não revisado rejeitado. Validar regressões #326/#328, compileall, Linux/docs, Windows, QA Chrome no SHA pré e pós-merge. Não gerar conexão WS real nem interface de ordens. J1 Top50 marketwide permanece false independentemente do resultado.

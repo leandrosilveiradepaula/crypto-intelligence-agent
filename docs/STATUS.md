@@ -711,3 +711,8 @@ Implementação isolada: eventos sintéticos Bybit V5 `kline.60` confirmados, pa
 ## J1 #328 — observacao finita de kline publico (29/10/2026 UTC)
 
 Adicionado observador read-only com `session_factory` injetavel, CLI `scripts.probe_bybit_public_ws_once` desativada sem opt-ins, no maximo 64 frames/90 segundos e limpeza de conexao, sem fallback REST. Testes de fake socket verificam ACK, close, open, duplicatas JSON, limites e erros; nenhuma conexao real nesta work unit. O binario opcional `websockets` nao faz parte de dependencies obrigatorias do projeto; sem biblioteca instalada, o diagnostico deve falhar de modo sanitizado. **J1 #2/#319 segue aberta**, 50 ativos e 30 dias de historico reais nao verificados. Sem ordens, deploy ou gasto.
+
+
+## J1 WS2 #330 — integração multiativo de fixtures WS ao SQLite causal (29/10/2026)
+
+Agregador de lote finito e injetado, sem rede, para ACK, eventos kline.60 abertos/fechados, replay idempotente e suspensão por gap. Reusa decoder de #328 e SQLite/auditoria de #326; testes de 24h/2 ativos, batch com ativo faltante, continuação explícita, replay, topic não revisado, ACK e JSON duplicado. A captura e o streaming reais não foram executados; quota 10006, cobertura de mercado e histórico 30d continuam pendentes. #2 e #319 permanecem abertos. Testes específicos locais inicialmente 7/7 PASS em ambiente com dependências simuladas; CI completa será a prova integrativa obrigatória.

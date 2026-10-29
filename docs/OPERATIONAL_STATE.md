@@ -821,3 +821,8 @@ Base inicial verificada `main=a323b857d361a6607c9467f2c86a75f3f24d8dfc`, nenhuma
 ## 29/10/2026 — J1 #328, observador publico finito WS sem execucao real
 
 Base real verificada `main=8813a8ebe1713f8390a212e670019956f7177aea`, #326 integrada/fechada e zero PRs abertas. Issue #328, branch `work/issue-328-j1-one-public-ws-probe`. Escopo: observador finito read-only para um topico Bybit 1h, transporte fake-injetavel e CLI owner-only opt-in; sem rede na CI, credenciais, ordens, persistencia no SQLite ou servidor. Testes offline iniciais 10/10 PASS em sandbox com mocks locais; exigido CI real Windows/Linux/docs/Chrome no SHA final, revisao, squash e CI pos-merge. Proxima dependencia externa, se desejada e autorizada mais tarde, e sessao diagnostica unica na VPS, sem habilitar sistema de captura operacional. #2/#319 e direitos live ainda abertos.
+
+
+## 29/10/2026 — J1 #330 WS2 agregador offline de candles confirmados
+
+Base consultada antes de agir: `main=474336acfe4899f1b1f7f94cf18accdbd7d2b43c`, PRs abertas 0, issues J1 #2/#319 abertas; #326 e #328 concluídas. Issue #330 e branch `work/issue-330-j1-ws2-offline-batch`. Lote offline injetável integra ACK/decoder estrito #328 e armazenamento/auditoria causal #326 sem outro cliente de rede. Testes locais de WS2 7/7, cache #326 13/13, observador #328 10/10 PASS em mocks; **CI GitHub real deve prevalecer antes do merge**. SQLite da VPS não foi consultado nem escrito; último checkpoint disponibilizado pelo dono tem 1446 candles/2 ativos e 3 PIT íntegros. J1 Top50 global, fonte/direitos de feed real, histórico 30d/50 ativos e quota continuam não comprovados. Próximo passo: revisar CI SHA da PR, corrigir falhas, merge squash sem deploy quando verde, validar CI pós-merge e registrar aceite.
