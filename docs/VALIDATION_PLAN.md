@@ -555,3 +555,11 @@ A suíte `test_j1_bybit_cycle.py` testa o orquestrador completo: 2 símbolos, 20
 - A versão `expanded-13` continua imutável e selecionável sem alteração dos três PIT reais da VPS. Proibir `expanded-52` para datas anteriores a `1793287659000`; requer opt-in e `as_of_ms` contemporâneo, sem reescrever SQLite privado.
 - O catálogo com >=50 identidades revisadas **não é suficiente** para considerar Top50 mercado. Exigir censo novo com versão 52, medição causal sobre TODOS os candidatos elegíveis: 24 velas UTC FECHADAS, `turnover` quote USDT, desempate fixo, sem queda silenciosa de ativos sem 24h ou listagem inferior a 30 dias. Registrar qualidade/cobertura/lacunas e preservar evidência 30d da amostra antiga.
 - Testar fail-closed para cap de GET/relógio/paginação, resposta 10006, dados incompletos, falsos crypto/TradFi, símbolo contrato com multiplicador e duas snapshots em horas distintas. Não converter mensagens de ticker rolling em candles fechados nem ordenar mercado a partir de listas pré-selecionadas.
+
+
+## J1 #319 — janela fechada de 24h para ranking dos revisados sem falso Top50
+
+- Fixture offline de todos os 52 contratos de bases `expanded-52`, catálogo completo pré e pós com horários reais, `24 x 1h` klines por ativo, turnover quote USDT, top50 dos revisados e SHA do ranking, desempates determinísticos, sem uso de ticker rolling.
+- Reprovar se qualquer perp USDT revisado com pelo menos 24h de listagem perder candles, apresentar open bar/futura, duplicata ou retorno tardio; ausência de 24h por listagem recente gera contagem explícita e reduz universo com alerta, nunca substitui valor zero. Catálogo pós captura deve manter identidade, símbolo, launchTime e filtros financeiros de todos os revisados, e hash dos candidatos não revisados.
+- Testar a diferença de limite temporal `120s` da amostra curta e `360s` do lote de 52 em ritmo real 2s/GET, servidor <=30s de recebido, exatamente mesma hora de corte UTC. Sem snapshot PIT histórico inventado.
+- CLI pública owner-only opt-in, até 500 GET, sem escrita SQLite/arquivo, sem ticker rolling, credentials, POST, proxies, ordens ou deploy. Report padrão contagens/hash; flag separada permite somente identificadores públicos. `marketwide_top50_verified=false` mesmo com 50 membros dos revisados, enquanto existirem candidatos não revisados ou faltar histórico 30 dias.
