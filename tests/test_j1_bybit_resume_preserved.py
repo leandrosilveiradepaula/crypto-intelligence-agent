@@ -69,7 +69,7 @@ class ResumePreservedBybitHistoryTests(unittest.TestCase):
             progress=events.append if events is not None else None,
         )
 
-    def test_30d_preserved_no_historical_pit_fabrication_two_future_hours(self):
+    def test_30d_preserved_no_historical_pit_fabrication_two_distinct_hours(self):
         initial = self.initial_capture()
         self.later(initial, hours=3)
         initial_sha = initial["initial_snapshot_digest_sha256"]
@@ -94,11 +94,12 @@ class ResumePreservedBybitHistoryTests(unittest.TestCase):
                    side_effect=AssertionError("no real network permitted")):
             report = self.run_resume(getter=track, events=events)
         self.assertEqual(report["status"],
-                         "private_j1_two_consecutive_updates_verified_not_top50")
+                         "private_j1_two_distinct_updates_verified_not_top50")
         self.assertEqual(report["sample_assets"], 2)
-        self.assertEqual(report["stored_closed_candles"], 1450)
-        self.assertEqual(report["immutable_pit_snapshots"], 4)
-        self.assertEqual(report["consecutive_hourly_updates_at_end"], 2)
+        self.assertEqual(report["stored_closed_candles"], 1448)
+        self.assertEqual(report["immutable_pit_snapshots"], 3)
+        self.assertEqual(report["distinct_hourly_pit_updates_after_initial"], 2)
+        self.assertEqual(report["consecutive_hourly_updates_at_end"], 1)
         self.assertGreater(ranking_24h_requests, 0)
         self.assertTrue(requested_incremental_starts)
         self.assertTrue(all(
@@ -113,12 +114,11 @@ class ResumePreservedBybitHistoryTests(unittest.TestCase):
         self.assertEqual(
             [e["phase"] for e in events],
             ["current_pit_verified", "waiting_for_next_closed_hour",
-             "hourly_pit_verified", "waiting_for_next_closed_hour",
              "hourly_pit_verified"],
         )
         # A 3h historical catch-up adds ONLY one PIT at its actual receipt
         # time; it does NOT forge PITs for the missing two past hours.
-        self.assertEqual(self.audit()["immutable_pit_snapshots"], 4)
+        self.assertEqual(self.audit()["immutable_pit_snapshots"], 3)
 
     def test_retry_after_failure_preserves_old_pit_and_does_not_start_over(self):
         initial = self.initial_capture()
@@ -143,12 +143,13 @@ class ResumePreservedBybitHistoryTests(unittest.TestCase):
             state["initial_snapshot_digest_sha256"],
             initial["initial_snapshot_digest_sha256"],
         )
-        # Resume from the last TRUE observation. Two future hourly
-        # snapshots now finish the missing consecutive proof.
+        # Resume from the last TRUE observation. The next actually observed
+        # hour is the second distinct post-initial PIT (no backfilled PIT).
         completed = self.run_resume()
-        self.assertEqual(completed["consecutive_hourly_updates_at_end"], 2)
-        self.assertEqual(completed["stored_closed_candles"], 1448)
-        self.assertEqual(completed["immutable_pit_snapshots"], 4)
+        self.assertEqual(completed["distinct_hourly_pit_updates_after_initial"], 2)
+        self.assertEqual(completed["consecutive_hourly_updates_at_end"], 1)
+        self.assertEqual(completed["stored_closed_candles"], 1446)
+        self.assertEqual(completed["immutable_pit_snapshots"], 3)
 
     def test_completed_resume_is_idempotent_without_any_network(self):
         initial = self.initial_capture()
