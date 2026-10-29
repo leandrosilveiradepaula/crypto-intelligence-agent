@@ -243,6 +243,10 @@ def main() -> int:
     parser.add_argument("--allow-private-storage", action="store_true")
     parser.add_argument("--confirm-region-and-personal-research", action="store_true")
     args = parser.parse_args()
+    # Keep the bounded transport at the CLI boundary so even a failed capture
+    # can report only a fixed request STAGE, documented retCode and GET count.
+    # Never print the actual URL, symbol, timestamp, retMsg or private path.
+    client = BoundedBybitPublicClient()
     try:
         report = owner_private_j1_capture(
             database=args.database, max_assets=args.max_assets,
@@ -250,14 +254,19 @@ def main() -> int:
             allow_public_network=args.allow_public_network,
             allow_private_storage=args.allow_private_storage,
             confirm_region_and_personal_research=args.confirm_region_and_personal_research,
+            client=client,
         )
     except Exception as exc:
         report = {
             "status": (str(exc) if type(exc) is J1BybitCaptureError
                        else "private_capture_failed_sanitized"),
+            "last_request_stage": client.last_request_stage or "before_first_get",
+            "network_gets_attempted": client.requests_attempted,
             "partial_data_may_remain": True,
             "marketwide_top50_verified": False, "orders_sent": False,
         }
+        if client.last_provider_retcode is not None:
+            report["provider_ret_code"] = client.last_provider_retcode
     print(json.dumps(report, separators=(",", ":"), sort_keys=True))
     return 0 if report["status"] == "private_reviewed_sample_complete_not_top50" else 1
 
