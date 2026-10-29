@@ -635,3 +635,10 @@ Product Owner exigiu J1 com fim definido e apontou que FAQ Bybit recomenda cache
 ## J1 #310 — primeira prova VPS interrompida em validacao de instrumentos (29/10/2026 UTC)
 
 Titular executou owner-only na VPS o codigo da PR #311, `main=b669dce6929326ee51d7e383c61db8cdbbd2bca8`. Saida sanitizada: `status=instrument_registry_or_pagination_rejected`, `partial_data_may_remain=true`, `marketwide_top50_verified=false`, `orders_sent=false`. A validacao falhou dentro do scan ANTES da chamada de criacao do banco, portanto nao ha evidencia de persistencia dessa tentativa; nao repetir a mesma coleta. Correcao de contrato/observabilidade em desenvolvimento: relogio por resposta, jitter de servidor limitado, exemplo oficial sem campos TradFi opcionais, categorias de erro sanitizadas e testes adversariais. Sem GET novo por esta revisao. J1 #2 ainda nao homologada.
+
+
+## J1/EXIT #310 — resultado real após PRs #312/#313 e correção da filtragem (29/10/2026 UTC)
+
+No SSH sob `cia-probe`, `main=b115a760859b50d1d2462b6bf90975815604829c`: 24 testes offline (5+4+15) aprovados. Resposta do coletor real: `instrument_scan_duplicate_instrument`, com `marketwide_top50_verified=false` e `orders_sent=false`. O scan não chega à criação do SQLite. O diagnóstico atual não distingue símbolo malformado de duplicado, pois a mensagem interna antiga agrupava ambas as causas. **Não presumir duplicata real da Bybit.**
+
+Branch de correção de escopo contida na #310: permitir contratos lineares não elegíveis (futuros de vencimento, USDC, TradFi e bases desconhecidas) sem aplicar a eles o regex estrito dos perpétuos cripto, enquanto duplicata de perpétuo revisado ou identidade insegura continuam falhas. Adicionar testes regressivos, CI Linux/Windows/Chrome, revisão, merge e CI pós-merge antes da próxima captura. J1 #2 aberta; o histórico Bybit real de 30 dias, duas atualizações e universo Top50 continuam sem prova.
