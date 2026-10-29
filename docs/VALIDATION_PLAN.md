@@ -530,3 +530,12 @@ Teste de cadeia paginada inteira (cursor terminal obrigatório), contratos USDT 
 ### J1/EXIT #308 — duas observações horárias e rollover de 720 para 721 horas
 
 A suíte `test_j1_bybit_cycle.py` testa o orquestrador completo: 2 símbolos, 20 páginas de histórico sintético de 72 candles cada, 1.440 velas inicialmente; retry idempotente; depois duas páginas de 1 vela e novo snapshot PIT na hora subsequente, 1.442 velas retidas e 721 por símbolo. Rejeitar atualização após perder uma hora, mudança de símbolos sem backfill, histórico truncado **antes de escrita**, extra de símbolo e corrupção. Rodar no Windows sem SQLite aberto durante limpeza; o teste de regressão foi adicionado após erro em Windows num handle não fechado. Isso valida somente engenharia offline, não 2 GETs reais, não piloto 50 ativos e não direitos de mercado ao vivo.
+
+
+## J1/TOP50 #319 — critérios adicionais de cobertura e evidência
+
+- Testar offline catalogação completa de `instruments-info?category=linear` com 2+ páginas, cursor exato e terminal, timestamp de cada GET, limite de 120s por censo, parâmetros oficiais, falha 10006 sem retry e status 0 de retorno. Um único GET não prova universo inteiro.
+- Excluir futures com vencimento, USDC, TradFi/xStocks (marketRegion/underlyingTicker/symbolType), símbolos com base e cotação inconsistentes, contratos pré-listagem, não Trading, tags de risco e duplicatas entre páginas. Os desconhecidos podem ser **apenas candidatos**, nunca `verified_crypto_bases` por aparência.
+- Testar que report de censo não revela URL, símbolo, cursor, preço, volume bruto, credenciais ou dados privados, não grava SQLite e nunca marca `marketwide_top50_verified`, `full_closed_24h_turnover_rank_verified`, direito live ou trading. Separar cadastro **13 bases** de Top50 verificado; `50 - reviewed_eligible_count` é lacuna de CAPACIDADE, não ranking nem prova de qual ativo seria Top50.
+- Homologação final exige histórico PIT de candidatos elegíveis e 24 velas fechadas por candidato com turnover quote USDT verificável, ranking determinístico completo e dados temporais/30 dias íntegros para os selecionados, além de revisão cripto independente. O censo inicial não dispensa essa etapa nem promoção arbitrária de dados brutos ao canônico.
+- Aceite anterior #310 já comprovado por owner output em 29/10/2026: 2 ativos, 1446 velas, 3 PIT, 2 atualizações, 26 páginas e auditoria SQLite/replay PASS, sem rede na auditoria. Nunca exigir recaptura dessa amostra como pré-condição para o novo censo.
