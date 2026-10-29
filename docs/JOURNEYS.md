@@ -205,3 +205,10 @@ A coleta histórica de pesquisa ganhou um primeiro conjunto **REAL privado**, n�
 ## J1/PIT1 #306 — ampliação técnica multiativo sem aprovação histórica Top50
 
 Após marco real de BTCUSDT ago/set 2026 (1.464 candles), a J1 agrega contrato que audita 1..50 manifestos de pesquisa privados existentes e compara relógios/cobertura sem download ou escrita; outro contrato ranqueia 2..50 séries sintéticas/fornecidas por volume quote USDT das 24 velas fechadas antes do instante de decisão. É **ranking da amostra**, não universo elegível completo/Top50. O primeiro conjunto real ainda contém apenas BTCUSDT; faltam status/listing point-in-time, registro crypto-only contemporâneo, mercado completo, USD comparável, direitos live e dados multivenue. J1 #2 e #32 não homologadas, nenhuma ordem ou deploy.
+
+
+## Checkpoint J1 — 29/10/2026 UTC, transição para Top50
+
+- [x] J1/EXIT #310: captura owner-only real Bybit com 30 dias, dois contratos, persistência privada local, recuperação após erros 10006/clock, dois PIT horários distintos e auditoria read-only final de 1446 velas, 26 páginas, 3 PIT, dois ativos x 723h; `RESUME_EXIT_CODE=0`, CI pós-merge PR #318 verde. Concluída para **amostra de dois ativos**; manter os dados privados na VPS.
+- [ ] J1/TOP50 #319: provar (não presumir) identidade crypto-only de ativos elegíveis fora do registro positivo atual de 13 bases, validar universo completo da exchange, ranking dinâmico em volume **USDT de 24 horas FECHADAS**, 30d/qualidade e causalidade PIT para até 50 contratos; continuar J1 #2 ABERTA.
+- Primeira entrega #319 é censo owner-only de identidade no catálogo completo (sem OHLC, escrita, ordem ou Top50 aprovado); não há novo gate humano para desenvolvimento offline, somente para execução owner-only na VPS.
