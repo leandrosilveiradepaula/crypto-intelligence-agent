@@ -19,6 +19,11 @@ BASE_URL = "https://api.bybit.com"
 MAX_GETS = 500
 MAX_RESPONSE_BYTES = 1_500_000
 TIMEOUT_SECONDS = 8
+# Intentionally slower than the provider's nominal per-second/UID budget:
+# public GET responses can share effective quotas with other activity.
+# Bounded owner-only J1: 1 GET start every 2 seconds, no retry on 10006.
+# Never treat a known public budget as a guarantee of available capacity.
+MIN_PUBLIC_GET_INTERVAL_SECONDS = 2.0
 HOUR_MS = 3_600_000
 _SYMBOL = re.compile(r"^[A-Z0-9]{2,24}USDT$")
 # Explicitly documented provider codes only. Do not print provider bodies or
@@ -117,7 +122,9 @@ class BoundedBybitPublicClient:
     def __init__(self, transport: Callable[[str, int], bytes] | None = None):
         self.transport = transport
         self.requests_attempted = 0
-        self._last_request = 0.0
+        # None means the first request is not artificially delayed. A real
+        # request always records its start *after* any required cooldown.
+        self._last_request: float | None = None
         self.last_request_stage: str | None = None
         self.last_provider_retcode: int | None = None
 
@@ -171,9 +178,15 @@ class BoundedBybitPublicClient:
         self.last_provider_retcode = None
         self.requests_attempted += 1
         if self.transport is None:
-            remaining = 0.16 - (time.monotonic() - self._last_request)
-            if remaining > 0:
-                time.sleep(remaining)
+            # The original 160ms spacing could submit >6 GET/s and offered
+            # little headroom for other applications sharing a quota.
+            # Do not retry a failing request: a 10006 always propagates and
+            # leaves the already-committed SQLite research history intact.
+            if self._last_request is not None:
+                remaining = (MIN_PUBLIC_GET_INTERVAL_SECONDS
+                             - (time.monotonic() - self._last_request))
+                if remaining > 0:
+                    time.sleep(remaining)
             self._last_request = time.monotonic()
         limit = (MAX_RESPONSE_BYTES if queries.get("limit") == ["200"]
                  else 131_072)
