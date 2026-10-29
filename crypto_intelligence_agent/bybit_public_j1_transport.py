@@ -68,7 +68,7 @@ class BybitQuotaObservation:
     headers_present: bool
     limit: int | None
     remaining: int | None
-    reset_wait_ms: int | None
+    reset_header_delta_ms: int | None
 
     def sanitized_fields(self) -> dict[str, bool | int]:
         out: dict[str, bool | int] = {
@@ -78,8 +78,8 @@ class BybitQuotaObservation:
             out["provider_endpoint_limit"] = self.limit
         if self.remaining is not None:
             out["provider_endpoint_remaining"] = self.remaining
-        if self.reset_wait_ms is not None:
-            out["provider_reset_wait_ms"] = self.reset_wait_ms
+        if self.reset_header_delta_ms is not None:
+            out["provider_reset_header_delta_ms"] = self.reset_header_delta_ms
         return out
 
 
@@ -118,14 +118,15 @@ def _read_bybit_quota_headers(headers) -> BybitQuotaObservation:
     wait_ms = None
     if reset_ms is not None:
         # On successful GET the documented header may be current server
-        # time, NOT an actual cooldown. This is ONLY an observation; it
-        # never causes a new request, backoff loop or claim of a ban.
+        # time, NOT an actual cooldown. The output name deliberately says
+        # 'header_delta', NEVER 'wait'. It is an observation only and cannot
+        # trigger a sleep, retry, ban claim, or redirect.
         relative = reset_ms - int(time.time() * 1000)
         if 0 <= relative <= 600_000:
             wait_ms = relative
     return BybitQuotaObservation(
         headers_present=present, limit=limit, remaining=remaining,
-        reset_wait_ms=wait_ms,
+        reset_header_delta_ms=wait_ms,
     )
 
 
