@@ -17,6 +17,7 @@ from typing import Callable
 from crypto_intelligence_agent.bybit_local_json_audit import LocalBybitCaptureManifest
 from crypto_intelligence_agent.bybit_paginated_universe_research import (
     MAX_PAGES, scan_bybit_linear_instruments_offline,
+    classify_bybit_instrument_scan_failure,
 )
 from crypto_intelligence_agent.bybit_pit_research import (
     HOUR_MS, select_bybit_reviewed_sample_pit,
@@ -50,13 +51,14 @@ def _observe(client, clock, max_assets):
     decision = start // HOUR_MS * HOUR_MS
     if start - decision < CLOSE_SAFETY_MS:
         raise J1BybitCaptureError("closed_hour_safety_margin_required")
-    pages, cursors = [], []
+    pages, cursors, received_at_ms = [], [], []
     cursor = None
     seen = set()
     for _ in range(MAX_PAGES):
         _, response = client.get(instruments_url(cursor=cursor))
         pages.append(response)
         cursors.append(cursor)
+        received_at_ms.append(clock())
         result = response.get("result")
         if type(result) is not dict:
             raise J1BybitCaptureError("invalid_instrument_page")
@@ -75,9 +77,12 @@ def _observe(client, clock, max_assets):
         scan = scan_bybit_linear_instruments_offline(
             instrument_pages=tuple(pages), requested_cursors=tuple(cursors),
             observed_at_ms=at_scan, registry_variant=REGISTRY,
+            page_received_at_ms=tuple(received_at_ms),
         )
-    except DataValidationError:
-        raise J1BybitCaptureError("instrument_registry_or_pagination_rejected") from None
+    except DataValidationError as exc:
+        raise J1BybitCaptureError(
+            "instrument_scan_" + classify_bybit_instrument_scan_failure(exc)
+        ) from None
     eligible = tuple(x for x in scan.instruments
                      if x.launch_time_ms <= decision - 24 * HOUR_MS)
     if not eligible:
@@ -96,9 +101,13 @@ def _observe(client, clock, max_assets):
             kline_pages=klines, observed_at_ms=observed,
             decision_at_ms=decision, registry_variant=REGISTRY,
             max_candidates=max_assets,
+            instrument_page_received_at_ms=tuple(received_at_ms),
         )
-    except (DataValidationError, DataGapError):
-        raise J1BybitCaptureError("pit_closed_24h_validation_rejected") from None
+    except (DataValidationError, DataGapError) as exc:
+        if isinstance(exc, DataValidationError):
+            reason = classify_bybit_instrument_scan_failure(exc)
+            raise J1BybitCaptureError("pit_review_" + reason) from None
+        raise J1BybitCaptureError("pit_closed_24h_coverage_rejected") from None
     return selection, scan.instrument_row_count
 
 
