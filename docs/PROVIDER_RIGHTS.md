@@ -263,3 +263,8 @@ O titular aceitou os termos para pesquisa histórica pessoal não produtiva e ex
 ## J1/PIT1 #306 — monitoramento multiativo não altera finalidade de uso
 
 As funções de ranking/inspeção privadas usam somente arquivos locais previamente fornecidos, sem fazer qualquer download ou publicação. Mesmo uma análise sobre muitos ZIPs Binance Vision não estende sua licença: uso pessoal histórico NÃO produtivo continua isolado de feed de execução automática. `dataset_rights_authorized_for_live=false` para todos os resultados. A licença de um arquivo não prova licença de terceiros; direitos Bybit V5/archives #217 e Kraken para exposição pública #48 seguem sob seus gates. Nenhuma autorização comercial, redistribuição ou conversão USDT/USD é deduzida de HTTP200/sha256.
+
+
+## J1/EXIT #308 — corrigir barreira de pesquisa indevidamente generalizada
+
+A FAQ Bybit oficial `https://bybit-exchange.github.io/docs/faq#how-can-i-ensure-i-am-using-up-to-date-data` **recomenda** salvar dados localmente em DB/cache para redundância e alívio de rate limits. Não negar essa recomendação; não invocar falta de licença de redistribuição comercial como impeditivo para escrever/testar engenharia de cache interno, validar fixtures ou fazer pesquisa pessoal conforme termos aplicáveis. Esta orientação técnica NÃO é direito universal de redistribuir dados ou de ignorar restrições regionais; `rights_for_live_authorized=false` continua explícito. Questão #217 deve documentar o escopo aplicável ao projeto, não impedir desenvolvimento do pipeline nem inferir que GET/autenticação automaticamente habilitam execução financeira. `dataset_rights_authorized_for_live=false` para Vision e Bybit sem confirmação específica, nenhuma conta/chave/ordem.
