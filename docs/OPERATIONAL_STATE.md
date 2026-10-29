@@ -831,3 +831,8 @@ Base consultada antes de agir: `main=474336acfe4899f1b1f7f94cf18accdbd7d2b43c`, 
 ## 29/10/2026 — J1/WS3 #332, correcao ACK V5 e janela finita owner-only
 
 Ponto de partida confirmado `main=b2b6822b84453ff8707e7ab7f4cf7e6cfea5e16e`, nenhuma PR aberta. Issue #332; branch `work/issue-332-j1-ws3-ack-heartbeat`. Implementado parse seguro de ACK Bybit com `req_id` opcional, pings de aplicacao apos 20s, pong e agendamento opt-in de unico diagnostico perto da virada de hora. Testes locais offline de WS3 7/7, #328 10/10 e #330 7/7 PASS em dependencias simuladas. CI do GitHub real e obrigatoria antes de merge, e deve ser registrada com SHA exato e validacao pos-merge. Nenhuma rede, dados privados, VPS, ordens, custo, migracao ou deploy. Pendencias J1 #2/#319/#217: 24h fechadas e 30d para universo completo elegivel, cobertura marketwide, acesso/termos e validacao real sem contornar API 10006.
+
+
+## 29/10/2026 — J1 WS4 #334: evidência real e próximo diagnóstico seguro
+
+O titular atualizou a VPS de `a323b857` a `15187f34c66ab72a4b088e221ae9bc3dfc3dd910`, instalou `websockets==15.0.1` em venv isolada; suites WS #328 10/10 e #332 7/7 PASS. Uma conexão Bybit real, única, retornou `frames_seen=1`, `ws_subscription_not_acknowledged`, `confirmed_closed_events=0`, `data_stored=false`, `orders_sent=false`. Não inferir bloqueio regional, causa de rate-limit ou aceitação. Issue #334 / branch `work/issue-334-j1-ws4-first-frame-diagnostics`: emitir apenas motivo categórico do primeiro frame; testes de regressão e CI real pré/pós merge exigidos. Uma nova conexão owner-only requer opt-in, SHA verificado e janela UTC; sem mudança nos 1446 candles/2 ativos/3 PIT privados.
