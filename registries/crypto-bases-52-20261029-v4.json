@@ -1,0 +1,1103 @@
+{
+  "schema_version": 1,
+  "observed_at_ms": 1793287659000,
+  "label": "crypto-bases-52-20261029-review-v4",
+  "usage_policy": "internal_research_only",
+  "assets": [
+    {
+      "base": "BTC",
+      "canonical_id": "bitcoin-mainnet",
+      "evidence": [
+        {
+          "asset_ref": "bitcoin-mainnet",
+          "observed_at_ms": 1792964997555,
+          "publisher": "bitcoin-org",
+          "url": "https://bitcoin.org/en/faq"
+        },
+        {
+          "asset_ref": "bitcoin",
+          "observed_at_ms": 1792964997555,
+          "publisher": "ecb",
+          "url": "https://www.ecb.europa.eu/ecb-and-you/explainers/tell-me/html/what-is-bitcoin.en.html"
+        }
+      ],
+      "reviewed_at_ms": 1792964997555,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ETH",
+      "canonical_id": "ethereum-native-ether",
+      "evidence": [
+        {
+          "asset_ref": "native-ether",
+          "observed_at_ms": 1792964997555,
+          "publisher": "ethereum-foundation",
+          "url": "https://ethereum.org/pt-br/what-is-ether/"
+        },
+        {
+          "asset_ref": "ethereum",
+          "observed_at_ms": 1792964997555,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/ethereum"
+        }
+      ],
+      "reviewed_at_ms": 1792964997555,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "SOL",
+      "canonical_id": "solana-native-sol",
+      "evidence": [
+        {
+          "asset_ref": "solana",
+          "observed_at_ms": 1792968148000,
+          "publisher": "solana-docs",
+          "url": "https://solana.com/learn/introduction-to-solana-tokens"
+        },
+        {
+          "asset_ref": "solana",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/solana"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "XRP",
+      "canonical_id": "xrp-ledger-native-xrp",
+      "evidence": [
+        {
+          "asset_ref": "xrp-ledger",
+          "observed_at_ms": 1792968148000,
+          "publisher": "ripple",
+          "url": "https://ripple.com/xrp/"
+        },
+        {
+          "asset_ref": "xrp",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/xrp"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ADA",
+      "canonical_id": "cardano-native-ada",
+      "evidence": [
+        {
+          "asset_ref": "cardano-ada",
+          "observed_at_ms": 1792968148000,
+          "publisher": "cardano-docs",
+          "url": "https://docs.cardano.org/about-cardano/new-to-cardano/what-is-a-cryptocurrency"
+        },
+        {
+          "asset_ref": "cardano",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/cardano"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "DOGE",
+      "canonical_id": "dogecoin-native-doge",
+      "evidence": [
+        {
+          "asset_ref": "dogecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "dogecoin-org",
+          "url": "https://dogecoin.com/"
+        },
+        {
+          "asset_ref": "dogecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/dogecoin"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "LTC",
+      "canonical_id": "litecoin-native-ltc",
+      "evidence": [
+        {
+          "asset_ref": "litecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "litecoin-org",
+          "url": "https://litecoin.org/"
+        },
+        {
+          "asset_ref": "litecoin",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/litecoin"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "AVAX",
+      "canonical_id": "avalanche-primary-native-avax",
+      "evidence": [
+        {
+          "asset_ref": "avalanche-avax",
+          "observed_at_ms": 1792968148000,
+          "publisher": "avalanche-docs",
+          "url": "https://docs.avax.network/docs/primary-network/avax-token"
+        },
+        {
+          "asset_ref": "avalanche",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/avalanche"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "LINK",
+      "canonical_id": "chainlink-link-token",
+      "evidence": [
+        {
+          "asset_ref": "chainlink-link",
+          "observed_at_ms": 1792968148000,
+          "publisher": "chainlink-org",
+          "url": "https://chain.link/economics"
+        },
+        {
+          "asset_ref": "chainlink",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/chainlink"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "DOT",
+      "canonical_id": "polkadot-native-dot",
+      "evidence": [
+        {
+          "asset_ref": "polkadot-dot",
+          "observed_at_ms": 1792968148000,
+          "publisher": "polkadot-wiki",
+          "url": "https://wiki.polkadot.com/learn/learn-dot/"
+        },
+        {
+          "asset_ref": "polkadot",
+          "observed_at_ms": 1792968148000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/polkadot"
+        }
+      ],
+      "reviewed_at_ms": 1792968148000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "XMR",
+      "canonical_id": "monero-native-xmr",
+      "evidence": [
+        {
+          "asset_ref": "monero",
+          "observed_at_ms": 1792982418000,
+          "publisher": "monero-org",
+          "url": "https://www.getmonero.org/get-started/what-is-monero/"
+        },
+        {
+          "asset_ref": "monero",
+          "observed_at_ms": 1792982418000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/monero"
+        }
+      ],
+      "reviewed_at_ms": 1792982418000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ETC",
+      "canonical_id": "ethereum-classic-native-etc",
+      "evidence": [
+        {
+          "asset_ref": "ethereum-classic",
+          "observed_at_ms": 1792982418000,
+          "publisher": "ethereum-classic-org",
+          "url": "https://ethereumclassic.org/"
+        },
+        {
+          "asset_ref": "ethereum-classic",
+          "observed_at_ms": 1792982418000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/ethereum-classic"
+        }
+      ],
+      "reviewed_at_ms": 1792982418000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ZEC",
+      "canonical_id": "zcash-native-zec",
+      "evidence": [
+        {
+          "asset_ref": "zcash",
+          "observed_at_ms": 1792982418000,
+          "publisher": "zcash-org",
+          "url": "https://z.cash/"
+        },
+        {
+          "asset_ref": "zcash",
+          "observed_at_ms": 1792982418000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/zcash"
+        }
+      ],
+      "reviewed_at_ms": 1792982418000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "HYPE",
+      "canonical_id": "hyperliquid-hype",
+      "evidence": [
+        {
+          "asset_ref": "hyperliquid",
+          "observed_at_ms": 1793287659000,
+          "publisher": "hyperliquid-docs",
+          "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/hyperevm"
+        },
+        {
+          "asset_ref": "hyperliquid",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/hyperliquid"
+        },
+        {
+          "asset_ref": "hyperliquid",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/hyperliquid/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "NEAR",
+      "canonical_id": "near-near",
+      "evidence": [
+        {
+          "asset_ref": "near",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/near"
+        },
+        {
+          "asset_ref": "near-protocol",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/near-protocol/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ENA",
+      "canonical_id": "ethena-ena",
+      "evidence": [
+        {
+          "asset_ref": "ethena",
+          "observed_at_ms": 1793287659000,
+          "publisher": "ethena-docs",
+          "url": "https://docs.ethena.fi/video-guides/how-to-stake-ena"
+        },
+        {
+          "asset_ref": "ethena",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/ethena"
+        },
+        {
+          "asset_ref": "ethena",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/ethena/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "SUI",
+      "canonical_id": "sui-sui",
+      "evidence": [
+        {
+          "asset_ref": "sui",
+          "observed_at_ms": 1793287659000,
+          "publisher": "sui-docs",
+          "url": "https://www.docs.sui.io/develop/sui-architecture/tokenomics-overview"
+        },
+        {
+          "asset_ref": "sui",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/sui"
+        },
+        {
+          "asset_ref": "sui",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/sui/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "WLD",
+      "canonical_id": "worldcoin-wld",
+      "evidence": [
+        {
+          "asset_ref": "worldcoin",
+          "observed_at_ms": 1793287659000,
+          "publisher": "world-whitepaper",
+          "url": "https://whitepaper.world.org/designing-for-scale"
+        },
+        {
+          "asset_ref": "worldcoin",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/worldcoin"
+        },
+        {
+          "asset_ref": "worldcoin-org",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/worldcoin-org/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "INIT",
+      "canonical_id": "initia-init",
+      "evidence": [
+        {
+          "asset_ref": "initia",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/initia"
+        },
+        {
+          "asset_ref": "initia",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/initia/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "BNB",
+      "canonical_id": "bnb-bnb",
+      "evidence": [
+        {
+          "asset_ref": "bnb",
+          "observed_at_ms": 1793287659000,
+          "publisher": "bnbchain-docs",
+          "url": "https://docs.bnbchain.org/bnb-smart-chain/developers/quick-guide/"
+        },
+        {
+          "asset_ref": "bnb",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/bnb"
+        },
+        {
+          "asset_ref": "bnb",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/bnb/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "AAVE",
+      "canonical_id": "aave-aave",
+      "evidence": [
+        {
+          "asset_ref": "aave",
+          "observed_at_ms": 1793287659000,
+          "publisher": "aave-docs",
+          "url": "https://www.aave.com/docs/ecosystem/aave"
+        },
+        {
+          "asset_ref": "aave",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/aave"
+        },
+        {
+          "asset_ref": "aave",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/aave/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "UNI",
+      "canonical_id": "uniswap-uni",
+      "evidence": [
+        {
+          "asset_ref": "uniswap",
+          "observed_at_ms": 1793287659000,
+          "publisher": "uniswap-developers",
+          "url": "https://developers.uniswap.org/docs/ecosystem/governance/uni"
+        },
+        {
+          "asset_ref": "uniswap",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/uniswap"
+        },
+        {
+          "asset_ref": "uniswap",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/uniswap/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ONDO",
+      "canonical_id": "ondo-ondo",
+      "evidence": [
+        {
+          "asset_ref": "ondo",
+          "observed_at_ms": 1793287659000,
+          "publisher": "ondo-foundation",
+          "url": "https://docs.ondo.foundation/ondo-token"
+        },
+        {
+          "asset_ref": "ondo",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/ondo"
+        },
+        {
+          "asset_ref": "ondo-finance",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/ondo-finance/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ZRO",
+      "canonical_id": "layerzero-zro",
+      "evidence": [
+        {
+          "asset_ref": "layerzero",
+          "observed_at_ms": 1793287659000,
+          "publisher": "layerzero-org",
+          "url": "https://www.layerzero.org/resources/zero"
+        },
+        {
+          "asset_ref": "layerzero",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/layerzero"
+        },
+        {
+          "asset_ref": "layerzero",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/layerzero/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "BCH",
+      "canonical_id": "bitcoin-cash-bch",
+      "evidence": [
+        {
+          "asset_ref": "bitcoin-cash",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/bitcoin-cash"
+        },
+        {
+          "asset_ref": "bitcoin-cash",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/bitcoin-cash/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "BLUR",
+      "canonical_id": "blur-blur",
+      "evidence": [
+        {
+          "asset_ref": "blur",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/blur"
+        },
+        {
+          "asset_ref": "blur-token",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/blur-token/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "INJ",
+      "canonical_id": "injective-inj",
+      "evidence": [
+        {
+          "asset_ref": "injective",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/injective"
+        },
+        {
+          "asset_ref": "injective",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/injective/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ARB",
+      "canonical_id": "arbitrum-arb",
+      "evidence": [
+        {
+          "asset_ref": "arbitrum",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/arbitrum"
+        },
+        {
+          "asset_ref": "arbitrum",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/arbitrum/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "TAO",
+      "canonical_id": "bittensor-tao",
+      "evidence": [
+        {
+          "asset_ref": "bittensor",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/bittensor"
+        },
+        {
+          "asset_ref": "bittensor",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/bittensor/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "TIA",
+      "canonical_id": "celestia-tia",
+      "evidence": [
+        {
+          "asset_ref": "celestia",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/celestia"
+        },
+        {
+          "asset_ref": "celestia",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/celestia/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "STRK",
+      "canonical_id": "starknet-strk",
+      "evidence": [
+        {
+          "asset_ref": "starknet",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/starknet"
+        },
+        {
+          "asset_ref": "starknet-token",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/starknet-token/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "XLM",
+      "canonical_id": "stellar-xlm",
+      "evidence": [
+        {
+          "asset_ref": "stellar",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/stellar"
+        },
+        {
+          "asset_ref": "stellar",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/stellar/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "QNT",
+      "canonical_id": "quant-qnt",
+      "evidence": [
+        {
+          "asset_ref": "quant",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/quant"
+        },
+        {
+          "asset_ref": "quant",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/quant/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "APT",
+      "canonical_id": "aptos-apt",
+      "evidence": [
+        {
+          "asset_ref": "aptos",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/aptos"
+        },
+        {
+          "asset_ref": "aptos",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/aptos/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "HBAR",
+      "canonical_id": "hedera-hbar",
+      "evidence": [
+        {
+          "asset_ref": "hedera",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/hedera"
+        },
+        {
+          "asset_ref": "hedera",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/hedera/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "OP",
+      "canonical_id": "optimism-op",
+      "evidence": [
+        {
+          "asset_ref": "optimism",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/optimism"
+        },
+        {
+          "asset_ref": "optimism-ethereum",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/optimism-ethereum/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "PENGU",
+      "canonical_id": "pudgy-penguins-pengu",
+      "evidence": [
+        {
+          "asset_ref": "pudgy-penguins",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/pudgy-penguins"
+        },
+        {
+          "asset_ref": "pudgy-penguins",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/pudgy-penguins/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "MNT",
+      "canonical_id": "mantle-mnt",
+      "evidence": [
+        {
+          "asset_ref": "mantle",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/mantle"
+        },
+        {
+          "asset_ref": "mantle",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/mantle/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "FIL",
+      "canonical_id": "filecoin-fil",
+      "evidence": [
+        {
+          "asset_ref": "filecoin",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/filecoin"
+        },
+        {
+          "asset_ref": "filecoin",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/filecoin/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "CRV",
+      "canonical_id": "curve-dao-token-crv",
+      "evidence": [
+        {
+          "asset_ref": "curve-dao-token",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/curve-dao-token"
+        },
+        {
+          "asset_ref": "curve-dao-token",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/curve-dao-token/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "SAND",
+      "canonical_id": "the-sandbox-sand",
+      "evidence": [
+        {
+          "asset_ref": "the-sandbox",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/the-sandbox"
+        },
+        {
+          "asset_ref": "the-sandbox",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/the-sandbox/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "AERO",
+      "canonical_id": "aerodrome-finance-aero",
+      "evidence": [
+        {
+          "asset_ref": "aerodrome-finance",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/aerodrome-finance"
+        },
+        {
+          "asset_ref": "aerodrome-finance",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/aerodrome-finance/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "ICP",
+      "canonical_id": "internet-computer-icp",
+      "evidence": [
+        {
+          "asset_ref": "internet-computer",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/internet-computer"
+        },
+        {
+          "asset_ref": "internet-computer",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/internet-computer/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "SEI",
+      "canonical_id": "sei-sei",
+      "evidence": [
+        {
+          "asset_ref": "sei",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/sei"
+        },
+        {
+          "asset_ref": "sei",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/sei/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "JASMY",
+      "canonical_id": "jasmycoin-jasmy",
+      "evidence": [
+        {
+          "asset_ref": "jasmycoin",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/jasmycoin"
+        },
+        {
+          "asset_ref": "jasmy",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/jasmy/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "DASH",
+      "canonical_id": "dash-dash",
+      "evidence": [
+        {
+          "asset_ref": "dash",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/dash"
+        },
+        {
+          "asset_ref": "dash",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/dash/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "STX",
+      "canonical_id": "stacks-stx",
+      "evidence": [
+        {
+          "asset_ref": "stacks",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/stacks"
+        },
+        {
+          "asset_ref": "stacks",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/stacks/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "LDO",
+      "canonical_id": "lido-dao-ldo",
+      "evidence": [
+        {
+          "asset_ref": "lido-dao",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/lido-dao"
+        },
+        {
+          "asset_ref": "lido-dao",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/lido-dao/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "PYTH",
+      "canonical_id": "pyth-network-pyth",
+      "evidence": [
+        {
+          "asset_ref": "pyth-network",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/pyth-network"
+        },
+        {
+          "asset_ref": "pyth-network",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/pyth-network/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "JUP",
+      "canonical_id": "jupiter-jup",
+      "evidence": [
+        {
+          "asset_ref": "jupiter",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/jupiter"
+        },
+        {
+          "asset_ref": "jupiter-ag",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/jupiter-ag/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "VIRTUAL",
+      "canonical_id": "virtual-protocol-virtual",
+      "evidence": [
+        {
+          "asset_ref": "virtual-protocol",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/virtual-protocol"
+        },
+        {
+          "asset_ref": "virtual-protocol",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/virtual-protocol/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    },
+    {
+      "base": "TRX",
+      "canonical_id": "tron-trx",
+      "evidence": [
+        {
+          "asset_ref": "tron",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coingecko",
+          "url": "https://www.coingecko.com/en/coins/tron"
+        },
+        {
+          "asset_ref": "tron",
+          "observed_at_ms": 1793287659000,
+          "publisher": "coinmarketcap",
+          "url": "https://coinmarketcap.com/currencies/tron/"
+        }
+      ],
+      "reviewed_at_ms": 1793287659000,
+      "reviewed_by": "assistant-technical-review"
+    }
+  ],
+  "sha256": "810e90d6fb24a3f4e7a6f402efa67abf71eb2e45a328bdfabcc7104d12537f30"
+}
