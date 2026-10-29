@@ -157,7 +157,11 @@ class BybitPITExitTests(unittest.TestCase):
             store.commit_pit_research_snapshot(first)
             self.assertEqual(store.replay_pit_research_snapshot(T), first)
             with self.assertRaises(DuplicateCandleError):
-                store.commit_pit_research_snapshot(replace(first, ranked=tuple(reversed(first.ranked))))
+                altered = replace(first, ranked=(
+                    replace(first.ranked[0], observed_turnover_24h_usdt=Decimal("999")),
+                    first.ranked[1],
+                ))
+                store.commit_pit_research_snapshot(altered)
             with self.assertRaises(DataGapError):
                 store.replay_pit_research_snapshot(T + 1)
             second = selection(at_ms=T+H, volumes=(("BTCUSDT", "30"), ("ETHUSDT", "1")))
