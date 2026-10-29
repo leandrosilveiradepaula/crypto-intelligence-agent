@@ -10,7 +10,7 @@ import sqlite3
 
 from .bybit_research_storage import (
     SQLiteBybitResearchStore, BybitResearchStoredCandle,
-    _ALLOWED_TABLES, _check_window, SCHEMA_VERSION, INPUT_ORIGIN,
+    _ALLOWED_TABLES, _LEGACY_ALLOWED_TABLES, _check_window, SCHEMA_VERSION, INPUT_ORIGIN,
 )
 from .market_data import DataGapError, DataValidationError, interval_duration_ms
 from .paper_position_inspection import _checked_path
@@ -78,7 +78,8 @@ def inspect_existing_bybit_research_series(
                 "WHERE type IN ('table','trigger','view') AND name NOT LIKE 'sqlite_%'"
             ).fetchall()
             if (any(x["type"] != "table" for x in objects)
-                    or {x["name"] for x in objects} != _ALLOWED_TABLES):
+                    or {x["name"] for x in objects}
+                       not in (_ALLOWED_TABLES, _LEGACY_ALLOWED_TABLES)):
                 raise DataValidationError("unknown research schema")
             meta = db.execute("SELECT * FROM bybit_research_meta").fetchall()
             if (len(meta) != 1 or meta[0]["id"] != 1
