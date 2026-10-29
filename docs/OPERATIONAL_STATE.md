@@ -729,3 +729,10 @@ Após o operador confirmar na VPS (SSH sob cia-probe) fast-forward da main para 
 Este estágio tem apenas GET validado/limitado para instrument-info e kline, testes offline e nenhuma execução com rede ou armazenamento privado. **O operador NÃO deve executá-lo na VPS ainda**: faltam integração do ciclo de captura, Top50 real e aceite de CI. Issue principal J1 #2 continua aberta.
 
 O catálogo positivo \`expanded-13\` limita o universo revisado atual a 13 bases; nunca declarar Top50 de mercado a partir dessa amostra. Continuar implementação e testes na #310. Nenhum dado privado, conta, credencial, ordem real, deploy ou gasto adicional.
+
+
+## 29/10/2026 — J1/EXIT #310 — recuperacao apos falha real de instrumento na VPS
+
+**Fonte de evidencia:** JSON do terminal SSH fornecido pelo titular, codigo `b669dce6929326ee51d7e383c61db8cdbbd2bca8`; erro `instrument_registry_or_pagination_rejected`, flags `marketwide_top50_verified=false`/`orders_sent=false`. O evento ocorreu em `_observe` durante `scan_bybit_linear_instruments_offline`, antes de `_create_private_file` ou do backfill; nenhuma captura real de 30 dias foi declarada. A causa exata foi apagada pelo sanitizador antigo e nao pode ser presumida.
+
+**Bloco de correcao:** issue #310, branch `work/issue-310-j1-instrument-cause` baseada na `main=b669dce...`; ampliar validacao de paginas com tempo individual de recebimento e jitter pequeno somente neste modo; parser passa a aceitar ausencia dos dois campos opcionais TradFi previstos pelo exemplo oficial, sem aceitar `null`/nonempty; adicionar categorizacao estanque do motivo e testes offline de duracao, cursor, regressao de parametros e fluxo inteiro. **Proximo gate:** PR, CI Linux/Windows/Chrome no HEAD exato, revisao, squash sem producao e CI pos-merge; depois UM owner-run SSH no SHA revisado, sem repetir versao anterior. Sem SSH pelo assistente, rede real feita pelo agente ou negociacao; J1 #2 permanece aberta e Top50 nao comprovado.

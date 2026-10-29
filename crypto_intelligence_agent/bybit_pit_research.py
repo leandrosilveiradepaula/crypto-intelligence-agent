@@ -155,6 +155,7 @@ def select_bybit_reviewed_sample_pit(
     decision_at_ms: int,
     registry_variant: str = "expanded-13",
     max_candidates: int = 50,
+    instrument_page_received_at_ms: tuple[int, ...] | None = None,
 ) -> BybitPITResearchSelection:
     """Rank FULL 24 hours of closed candles for every reviewed eligible base.
 
@@ -174,6 +175,7 @@ def select_bybit_reviewed_sample_pit(
         instrument_pages=instrument_pages,
         requested_cursors=requested_cursors, observed_at_ms=observed_at_ms,
         registry_variant=registry_variant,
+        page_received_at_ms=instrument_page_received_at_ms,
     )
     eligible = tuple(
         item for item in scan.instruments

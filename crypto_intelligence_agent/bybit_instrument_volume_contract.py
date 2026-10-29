@@ -151,8 +151,11 @@ def validate_bybit_linear_instrument(
         raise DataValidationError("Bybit is not exact trading linear crypto perpetual")
     # Official V5 now also carries TradFi perps. Empty region/underlying are
     # mandatory positive checks, NOT absence-of-evidence passed as crypto.
-    if (row.get("symbolType") != "" or row.get("marketRegion") != ""
-            or row.get("underlyingTicker") != ""
+    # Bybit's official BTCUSDT example omits the TradFi-only marketRegion
+    # and underlyingTicker fields; missing is equivalent to not applicable.
+    # Explicit null and nonempty values remain rejected (never infer crypto).
+    if (row.get("symbolType") != "" or row.get("marketRegion", "") != ""
+            or row.get("underlyingTicker", "") != ""
             or row.get("tags") != []
             or row.get("isPreListing") is not False
             or row.get("preListingInfo") is not None
