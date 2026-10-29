@@ -1,0 +1,179 @@
+"""J1/EXIT: deterministic point-in-time Bybit perpetual research selection.
+
+Uses existing validated complete paginated instrument scan and official V5
+closed-1h kline quote turnover (USDT). No network, cache, licensing grant,
+historical market-wide Top50 assertion, canonical feed or order execution.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Context, Decimal, localcontext
+from hashlib import sha256
+import json
+from typing import Mapping
+
+from .bybit_linear_candle_research import stage_bybit_linear_kline
+from .bybit_paginated_universe_research import scan_bybit_linear_instruments_offline
+from .market_data import DataValidationError
+
+HOUR_MS = 3_600_000
+WINDOW_HOURS = 24
+_CONTEXT = Context(prec=256)
+
+
+@dataclass(frozen=True)
+class BybitPITMember:
+    rank_in_reviewed_sample: int
+    symbol: str
+    base_unit: str
+    quote_unit: str
+    observed_turnover_24h_usdt: Decimal
+
+
+@dataclass(frozen=True)
+class BybitPITResearchSelection:
+    observed_at_ms: int
+    decision_at_ms: int
+    registry_sha256: str
+    instrument_page_count: int
+    all_instrument_row_count: int
+    reviewed_contract_count: int
+    insufficient_listing_history_count: int
+    candidates_with_full_24h_count: int
+    ranked: tuple[BybitPITMember, ...]
+
+    @property
+    def quote_turnover_unit(self) -> str:
+        return "USDT_not_USD"
+
+    @property
+    def historical_universe_complete(self) -> bool:
+        return False
+
+    @property
+    def verified_market_top50(self) -> bool:
+        return False
+
+    @property
+    def point_in_time_source_authenticated(self) -> bool:
+        return False
+
+    @property
+    def rights_for_live_authorized(self) -> bool:
+        return False
+
+    @property
+    def canonical_ohlcv_approved(self) -> bool:
+        return False
+
+    @property
+    def orders_sent(self) -> bool:
+        return False
+
+    def canonical_json(self) -> str:
+        """Stable immutable research claim; no provenance attestation."""
+        return json.dumps({
+            "schema_version": "j1-bybit-pit-reviewed-sample-v1",
+            "observed_at_ms": self.observed_at_ms,
+            "decision_at_ms": self.decision_at_ms,
+            "registry_sha256": self.registry_sha256,
+            "instrument_page_count": self.instrument_page_count,
+            "all_instrument_row_count": self.all_instrument_row_count,
+            "reviewed_contract_count": self.reviewed_contract_count,
+            "insufficient_listing_history_count": self.insufficient_listing_history_count,
+            "candidates_with_full_24h_count": self.candidates_with_full_24h_count,
+            "ranked": [{
+                "rank": m.rank_in_reviewed_sample,
+                "symbol": m.symbol,
+                "base": m.base_unit,
+                "quote": m.quote_unit,
+                "turnover_24h_usdt": format(m.observed_turnover_24h_usdt, "f"),
+            } for m in self.ranked],
+            "market_wide_top50_verified": False,
+            "source_authenticated": False,
+            "rights_for_live_authorized": False,
+        }, separators=(",", ":"), sort_keys=True, ensure_ascii=True)
+
+    @property
+    def content_sha256(self) -> str:
+        return sha256(self.canonical_json().encode("ascii")).hexdigest()
+
+
+def select_bybit_reviewed_sample_pit(
+    *,
+    instrument_pages: tuple[dict, ...],
+    requested_cursors: tuple[str | None, ...],
+    kline_pages: Mapping[str, dict],
+    observed_at_ms: int,
+    decision_at_ms: int,
+    registry_variant: str = "expanded-13",
+    max_candidates: int = 50,
+) -> BybitPITResearchSelection:
+    """Rank FULL 24 hours of closed candles for every reviewed eligible base.
+
+    A reviewed crypto identity registry is necessarily incomplete (currently 13
+    bases). We do not pretend this is the historical top 50 of the exchange.
+    All required klines must exist or the whole observation fails closed.
+    """
+    if (type(observed_at_ms) is not int or type(decision_at_ms) is not int
+            or observed_at_ms <= 0 or type(max_candidates) is not int
+            or not 1 <= max_candidates <= 50
+            or decision_at_ms % HOUR_MS
+            or decision_at_ms != (observed_at_ms // HOUR_MS) * HOUR_MS
+            or observed_at_ms - decision_at_ms < 1000
+            or type(kline_pages) is not dict):
+        raise DataValidationError("invalid point-in-time observed clock/candidate budget")
+    scan = scan_bybit_linear_instruments_offline(
+        instrument_pages=instrument_pages,
+        requested_cursors=requested_cursors, observed_at_ms=observed_at_ms,
+        registry_variant=registry_variant,
+    )
+    eligible = tuple(
+        item for item in scan.instruments
+        if item.launch_time_ms <= decision_at_ms - WINDOW_HOURS * HOUR_MS
+    )
+    expected = {item.symbol for item in eligible}
+    if (not expected or set(kline_pages) != expected
+            or any(type(s) is not str or type(page) is not dict
+                   for s, page in kline_pages.items())):
+        raise DataValidationError("full reviewed-sample closed-kline coverage required")
+
+    totals: list[tuple[str, str, Decimal]] = []
+    with localcontext(_CONTEXT):
+        for item in eligible:
+            page = stage_bybit_linear_kline(
+                kline_pages[item.symbol],
+                symbol=item.symbol,
+                quote_currency=item.quote_coin,
+                contract_type="LinearPerpetual",
+                contract_status="Trading",
+                contract_observed_at_ms=item.observed_at_ms,
+                observed_at_ms=observed_at_ms,
+                max_contract_age_ms=30_000,
+                interval="1h",
+                start_open_ms=decision_at_ms - WINDOW_HOURS * HOUR_MS,
+                end_open_ms=decision_at_ms,
+                close_safety_ms=1000,
+                max_candles=WINDOW_HOURS,
+            )
+            if len(page.candles) != WINDOW_HOURS:
+                raise DataValidationError("missing closed hourly kline")
+            total = sum((c.documented_quote_turnover for c in page.candles), Decimal(0))
+            if not total.is_finite() or total < 0:
+                raise DataValidationError("invalid quote turnover")
+            totals.append((item.symbol, item.base_coin, total))
+        totals.sort(key=lambda x: (-x[2], x[0]))
+    members = tuple(BybitPITMember(
+        i + 1, sym, base, "USDT", total,
+    ) for i, (sym, base, total) in enumerate(totals[:max_candidates]))
+    return BybitPITResearchSelection(
+        observed_at_ms=observed_at_ms,
+        decision_at_ms=decision_at_ms,
+        registry_sha256=scan.registry_sha256,
+        instrument_page_count=scan.page_count,
+        all_instrument_row_count=scan.instrument_row_count,
+        reviewed_contract_count=len(scan.instruments),
+        insufficient_listing_history_count=len(scan.instruments) - len(eligible),
+        candidates_with_full_24h_count=len(eligible),
+        ranked=members,
+    )
