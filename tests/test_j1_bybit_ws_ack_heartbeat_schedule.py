@@ -50,13 +50,13 @@ class Tests(unittest.TestCase):
         self.assertEqual(seconds_to_closed_hour_probe(FIRST+1_000),3579)
         with self.assertRaises(DataValidationError): seconds_to_closed_hour_probe(True)
     def test_owner_requires_schedule_no_network(self):
-        with patch('crypto_intelligence_agent.bybit_public_ws_once._real_session_factory',side_effect=AssertionError('network')):
+        with patch('crypto_intelligence_agent.bybit_public_ws_once.os.name','posix'), patch('crypto_intelligence_agent.bybit_public_ws_once._real_session_factory',side_effect=AssertionError('network')):
             res=owner_probe(allow_public_websocket=True,confirm_region_and_personal_research=True)
         self.assertEqual(res['status'],'ws_closed_hour_schedule_required')
     def test_owner_scheduled_exactly_once(self):
         calls=[]
         sock=Socket([dict(ACK,req_id='x'),frame()])
-        with patch('crypto_intelligence_agent.bybit_public_ws_once._real_session_factory',side_effect=lambda:(calls.append(1) or sock)):
+        with patch('crypto_intelligence_agent.bybit_public_ws_once.os.name','posix'), patch('crypto_intelligence_agent.bybit_public_ws_once._real_session_factory',side_effect=lambda:(calls.append(1) or sock)):
             with patch('crypto_intelligence_agent.bybit_public_ws_once.observe_once',return_value=type('R',(),{'sanitized_report':lambda self:{'status':'ok'}})()):
                 res=owner_probe(allow_public_websocket=True,confirm_region_and_personal_research=True,
                                 schedule_closed_utc_hour=True,clock_ms=lambda:FIRST+1000,sleeper=lambda t:calls.append(t))
