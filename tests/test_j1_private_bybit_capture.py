@@ -77,6 +77,28 @@ class OwnerJ1CaptureTests(unittest.TestCase):
             self.assertTrue(db.is_file())
             self.assertEqual(db.stat().st_mode & 0o777, 0o600)
 
+    def test_one_run_30d_and_two_distinct_hourly_updates(self):
+        fake = FakeFeed()
+        def advance(seconds):
+            fake.observed += int(seconds * 1000) + 100
+        with TemporaryDirectory() as tmp:
+            directory = Path(tmp) / "private"
+            directory.mkdir(mode=0o700)
+            report = owner_private_j1_capture(
+                database=directory / "research.sqlite", max_assets=2,
+                two_hourly_updates=True,
+                allow_public_network=True, allow_private_storage=True,
+                confirm_region_and_personal_research=True,
+                client=BoundedBybitPublicClient(transport=fake.get),
+                clock_ms=fake.now, sleep=advance,
+            )
+            self.assertEqual(report["consecutive_hourly_updates"], 2)
+            self.assertEqual(report["pit_snapshot_count"], 3)
+            self.assertEqual(report["closed_candles"], 1444)
+            self.assertEqual(report["requests_attempted"], 57)
+            self.assertTrue(report["quality_and_readonly_replay"])
+            self.assertFalse(report["marketwide_top50_verified"])
+
     def test_fail_closed_without_opt_in(self):
         with TemporaryDirectory() as tmp:
             directory = Path(tmp) / "private"
