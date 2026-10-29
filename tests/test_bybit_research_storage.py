@@ -119,7 +119,7 @@ class BybitResearchStoreTests(unittest.TestCase):
             )}
             self.assertEqual(tables, {
                 "bybit_research_meta", "bybit_research_pages",
-                "bybit_research_candles",
+                "bybit_research_candles", "bybit_research_pit_snapshots",
             })
             meta = db.execute(
                 "SELECT schema_version, input_origin FROM bybit_research_meta"

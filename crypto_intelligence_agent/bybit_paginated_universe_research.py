@@ -12,7 +12,9 @@ from decimal import Decimal
 import re
 from typing import Any
 
-from .bybit_instrument_volume_contract import validate_bybit_linear_instrument
+from .bybit_instrument_volume_contract import (
+    BybitLinearInstrumentResearch, validate_bybit_linear_instrument,
+)
 from .market_data import DataValidationError
 from .research_registry_catalog import load_reviewed_registry
 
@@ -132,41 +134,54 @@ def _quantity(value: Any, field: str) -> Decimal:
     return number
 
 
-def audit_bybit_linear_universe_offline(
-    *,
-    instrument_pages: tuple[dict, ...],
+
+@dataclass(frozen=True)
+class BybitInstrumentScanResearch:
+    """Full asserted cursor traversal, restricted to reviewed crypto bases."""
+
+    observed_at_ms: int
+    registry_sha256: str
+    page_count: int
+    instrument_row_count: int
+    last_server_time_ms: int
+    instruments: tuple[BybitLinearInstrumentResearch, ...]
+
+    @property
+    def historical_top50_verified(self) -> bool:
+        return False
+
+    @property
+    def provider_authenticated(self) -> bool:
+        return False
+
+    @property
+    def rights_authorized(self) -> bool:
+        return False
+
+
+def scan_bybit_linear_instruments_offline(
+    *, instrument_pages: tuple[dict, ...],
     requested_cursors: tuple[str | None, ...],
-    tickers_payload: dict,
     observed_at_ms: int,
     registry_variant: str = "expanded-13",
-    max_symbols: int = 50,
     max_capture_age_ms: int = _MAX_CAPTURE_AGE_MS,
-) -> BybitPaginatedUniverseResearch:
-    """Rank RAW ticker turnover values for USDT-quoted crypto perps in fixtures.
-
-    A second/subsequent page is accepted only when the caller supplies the
-    exact prior returned cursor. The terminal page MUST expose an empty
-    nextPageCursor. Cursors and timestamps are *claims*, not server proof.
-    The ticker endpoint documents raw 24h turnover but NOT its unit; the
-    separate kline endpoint\'s explicit quote units do NOT transfer to it.
-    Never promote returned members into a validated Top50 universe or OHLCV.
-    """
+) -> BybitInstrumentScanResearch:
+    """Validate all pages/cursors once; no ticker-unit inference or network."""
     if (type(observed_at_ms) is not int or observed_at_ms <= 0
-            or type(max_symbols) is not int or not 1 <= max_symbols <= 50
             or type(max_capture_age_ms) is not int
             or not 0 <= max_capture_age_ms <= _MAX_CAPTURE_AGE_MS):
-        raise DataValidationError("Bybit universe UTC decision and resource limits invalid")
-    if (type(instrument_pages) is not tuple or not 1 <= len(instrument_pages) <= MAX_PAGES
+        raise DataValidationError("invalid Bybit instrument scan clock/budget")
+    if (type(instrument_pages) is not tuple
+            or not 1 <= len(instrument_pages) <= MAX_PAGES
             or type(requested_cursors) is not tuple
             or len(requested_cursors) != len(instrument_pages)
             or requested_cursors[0] is not None):
-        raise DataValidationError("all Bybit instrument pages and first cursor are required")
-
+        raise DataValidationError("complete instrument page chain required")
     registry = load_reviewed_registry(registry_variant, as_of_ms=observed_at_ms)
     expected_cursor: str | None = None
     seen_cursors: set[str] = set()
     seen_instruments: set[str] = set()
-    candidate_bases: dict[str, str] = {}
+    accepted: dict[str, BybitLinearInstrumentResearch] = {}
     previous_server_time = 0
     total_rows = 0
     for page_index, page in enumerate(instrument_pages):
@@ -227,7 +242,55 @@ def audit_bybit_linear_universe_offline(
                 )
             except DataValidationError:
                 continue  # Non-trading/TradFi/invalid contract is NOT eligible.
-            candidate_bases[checked.symbol] = checked.base_coin
+            accepted[checked.symbol] = checked
+
+    return BybitInstrumentScanResearch(
+        observed_at_ms, registry.sha256_digest, len(instrument_pages),
+        total_rows, previous_server_time,
+        tuple(accepted[key] for key in sorted(accepted)),
+    )
+
+
+def audit_bybit_linear_universe_offline(
+    *,
+    instrument_pages: tuple[dict, ...],
+    requested_cursors: tuple[str | None, ...],
+    tickers_payload: dict,
+    observed_at_ms: int,
+    registry_variant: str = "expanded-13",
+    max_symbols: int = 50,
+    max_capture_age_ms: int = _MAX_CAPTURE_AGE_MS,
+) -> BybitPaginatedUniverseResearch:
+    """Rank RAW ticker turnover values for USDT-quoted crypto perps in fixtures.
+
+    A second/subsequent page is accepted only when the caller supplies the
+    exact prior returned cursor. The terminal page MUST expose an empty
+    nextPageCursor. Cursors and timestamps are *claims*, not server proof.
+    The ticker endpoint documents raw 24h turnover but NOT its unit; the
+    separate kline endpoint\'s explicit quote units do NOT transfer to it.
+    Never promote returned members into a validated Top50 universe or OHLCV.
+    """
+    if (type(observed_at_ms) is not int or observed_at_ms <= 0
+            or type(max_symbols) is not int or not 1 <= max_symbols <= 50
+            or type(max_capture_age_ms) is not int
+            or not 0 <= max_capture_age_ms <= _MAX_CAPTURE_AGE_MS):
+        raise DataValidationError("Bybit universe UTC decision and resource limits invalid")
+    if (type(instrument_pages) is not tuple or not 1 <= len(instrument_pages) <= MAX_PAGES
+            or type(requested_cursors) is not tuple
+            or len(requested_cursors) != len(instrument_pages)
+            or requested_cursors[0] is not None):
+        raise DataValidationError("all Bybit instrument pages and first cursor are required")
+
+    scan = scan_bybit_linear_instruments_offline(
+        instrument_pages=instrument_pages,
+        requested_cursors=requested_cursors,
+        observed_at_ms=observed_at_ms,
+        registry_variant=registry_variant,
+        max_capture_age_ms=max_capture_age_ms,
+    )
+    candidate_bases = {item.symbol: item.base_coin for item in scan.instruments}
+    previous_server_time = scan.last_server_time_ms
+    total_rows = scan.instrument_row_count
 
     _, tickers, ticker_time = _response(
         tickers_payload, label="Bybit tickers", at_ms=observed_at_ms,
@@ -274,8 +337,8 @@ def audit_bybit_linear_universe_offline(
     )
     return BybitPaginatedUniverseResearch(
         observed_at_ms=observed_at_ms,
-        registry_sha256=registry.sha256_digest,
-        instrument_page_count=len(instrument_pages),
+        registry_sha256=scan.registry_sha256,
+        instrument_page_count=scan.page_count,
         instrument_row_count=total_rows,
         candidate_contract_count=len(candidate_bases),
         ticker_row_count=len(ticker_rows),

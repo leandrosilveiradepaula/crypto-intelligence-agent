@@ -35,8 +35,11 @@ _CANONICAL_TABLES = frozenset({
     "candles", "checkpoints", "contract_specs", "universe_snapshots",
     "collection_events",
 })
-_ALLOWED_TABLES = frozenset({
+_LEGACY_ALLOWED_TABLES = frozenset({
     "bybit_research_meta", "bybit_research_pages", "bybit_research_candles",
+})
+_ALLOWED_TABLES = _LEGACY_ALLOWED_TABLES | frozenset({
+    "bybit_research_pit_snapshots",
 })
 _MAX_QUALITY_CANDLES = 10_000
 
@@ -218,7 +221,8 @@ class SQLiteBybitResearchStore:
                 "AND name NOT LIKE 'sqlite_%'"
             ).fetchall()
             if (any(row["type"] != "table" for row in objects)
-                    or {row["name"] for row in objects} != _ALLOWED_TABLES):
+                    or {row["name"] for row in objects}
+                       not in (_ALLOWED_TABLES, _LEGACY_ALLOWED_TABLES)):
                 raise DataValidationError("unknown research SQLite schema")
             meta = db.execute("SELECT * FROM bybit_research_meta").fetchall()
             if (len(meta) != 1 or meta[0]["id"] != 1
@@ -278,6 +282,14 @@ class SQLiteBybitResearchStore:
                     documented_quote_turnover TEXT NOT NULL,
                     PRIMARY KEY(page_id, open_time_ms),
                     FOREIGN KEY(page_id) REFERENCES bybit_research_pages(id)
+                )
+            """)
+            db.execute("""
+                CREATE TABLE IF NOT EXISTS bybit_research_pit_snapshots (
+                    observed_at_ms INTEGER PRIMARY KEY,
+                    decision_at_ms INTEGER NOT NULL,
+                    content_json TEXT NOT NULL,
+                    content_sha256 TEXT NOT NULL
                 )
             """)
             row = db.execute("SELECT * FROM bybit_research_meta").fetchall()
@@ -540,3 +552,105 @@ class SQLiteBybitResearchStore:
                 symbol, interval, start_open_ms, end_open_ms,
                 expected, len(found), missing,
             )
+
+
+    def commit_pit_research_snapshot(self, snapshot) -> None:
+        """Append exactly one immutable research-only point-in-time claim.
+
+        This is NOT a canonical universe snapshot or authenticated source.
+        """
+        from .bybit_pit_research import BybitPITResearchSelection
+
+        if type(snapshot) is not BybitPITResearchSelection:
+            raise DataValidationError("typed reviewed-sample PIT snapshot required")
+        data = snapshot.canonical_json()
+        digest = snapshot.content_sha256
+        with self._transaction() as db:
+            row = db.execute(
+                "SELECT * FROM bybit_research_pit_snapshots WHERE observed_at_ms=?",
+                (snapshot.observed_at_ms,),
+            ).fetchone()
+            if row is not None:
+                if (row["decision_at_ms"] != snapshot.decision_at_ms
+                        or row["content_json"] != data
+                        or row["content_sha256"] != digest):
+                    raise DuplicateCandleError("conflicting immutable PIT research snapshot")
+            else:
+                newest = db.execute(
+                    "SELECT MAX(observed_at_ms) FROM bybit_research_pit_snapshots"
+                ).fetchone()[0]
+                if newest is not None and snapshot.observed_at_ms < newest:
+                    raise DataValidationError("PIT research timestamps cannot be backfilled")
+                db.execute(
+                    """INSERT INTO bybit_research_pit_snapshots
+                       (observed_at_ms, decision_at_ms, content_json, content_sha256)
+                       VALUES (?, ?, ?, ?)""",
+                    (snapshot.observed_at_ms, snapshot.decision_at_ms, data, digest),
+                )
+        if self.replay_pit_research_snapshot(snapshot.observed_at_ms) != snapshot:
+            raise DataGapError("PIT research snapshot replay mismatch")
+
+    def replay_pit_research_snapshot(self, observed_at_ms: int):
+        """Read one PIT claim, verify digest, shape, and exact economic ranks."""
+        from .bybit_pit_research import BybitPITMember, BybitPITResearchSelection
+
+        if type(observed_at_ms) is not int or observed_at_ms <= 0:
+            raise DataValidationError("positive PIT observation UTC ms required")
+        with self._readonly_snapshot() as db:
+            row = db.execute(
+                "SELECT * FROM bybit_research_pit_snapshots WHERE observed_at_ms=?",
+                (observed_at_ms,),
+            ).fetchone()
+            if row is None:
+                raise DataGapError("unavailable PIT research snapshot")
+            payload, digest = row["content_json"], row["content_sha256"]
+            if (type(payload) is not str or type(digest) is not str
+                    or sha256(payload.encode("utf-8")).hexdigest() != digest):
+                raise DataGapError("corrupted PIT research digest")
+            try:
+                obj = json.loads(payload)
+                if (type(obj) is not dict
+                        or obj.get("schema_version") != "j1-bybit-pit-reviewed-sample-v1"
+                        or obj.get("market_wide_top50_verified") is not False
+                        or obj.get("source_authenticated") is not False
+                        or obj.get("rights_for_live_authorized") is not False
+                        or type(obj.get("ranked")) is not list
+                        or not 1 <= len(obj["ranked"]) <= 50):
+                    raise ValueError("invalid PIT shape")
+                members = tuple(BybitPITMember(
+                    x["rank"], x["symbol"], x["base"], x["quote"],
+                    Decimal(x["turnover_24h_usdt"]),
+                ) for x in obj["ranked"])
+                result = BybitPITResearchSelection(
+                    observed_at_ms=obj["observed_at_ms"],
+                    decision_at_ms=obj["decision_at_ms"],
+                    registry_sha256=obj["registry_sha256"],
+                    instrument_page_count=obj["instrument_page_count"],
+                    all_instrument_row_count=obj["all_instrument_row_count"],
+                    reviewed_contract_count=obj["reviewed_contract_count"],
+                    insufficient_listing_history_count=obj["insufficient_listing_history_count"],
+                    candidates_with_full_24h_count=obj["candidates_with_full_24h_count"],
+                    ranked=members,
+                )
+                amounts = [(m.observed_turnover_24h_usdt, m.symbol) for m in members]
+                if (type(result.observed_at_ms) is not int
+                        or result.observed_at_ms != observed_at_ms
+                        or result.decision_at_ms != row["decision_at_ms"]
+                        or type(result.decision_at_ms) is not int
+                        or result.decision_at_ms % 3_600_000
+                        or not result.decision_at_ms < observed_at_ms
+                        or type(result.registry_sha256) is not str
+                        or len(result.registry_sha256) != 64
+                        or any(type(m.rank_in_reviewed_sample) is not int
+                               or m.rank_in_reviewed_sample != i + 1
+                               or m.quote_unit != "USDT"
+                               or m.base_unit + "USDT" != m.symbol
+                               or not m.observed_turnover_24h_usdt.is_finite()
+                               or m.observed_turnover_24h_usdt < 0
+                               for i, m in enumerate(members))
+                        or amounts != sorted(amounts, key=lambda x: (-x[0], x[1]))
+                        or result.canonical_json() != payload):
+                    raise ValueError("PIT economic or chronology mismatch")
+                return result
+            except (TypeError, ValueError, KeyError, ArithmeticError, OverflowError):
+                raise DataGapError("invalid immutable PIT research snapshot") from None

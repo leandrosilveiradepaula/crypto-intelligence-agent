@@ -61,11 +61,11 @@ class LocalBybitCaptureManifest:
         if (
             self.end_open_ms <= self.start_open_ms
             or (self.end_open_ms - self.start_open_ms) % period != 0
-            or not 3 <= (self.end_open_ms - self.start_open_ms) // period <= MAX_WINDOW_CANDLES
+            or not 1 <= (self.end_open_ms - self.start_open_ms) // period <= MAX_WINDOW_CANDLES
             or (self.start_open_ms % period) != 0
             or (self.end_open_ms % period) != 0
         ):
-            raise DataValidationError("local Bybit window requires 3..72 contiguous UTC hours")
+            raise DataValidationError("local Bybit window requires 1..72 contiguous UTC hours")
         if not (
             self.capture_started_ms <= self.instrument_received_ms
             <= self.kline_received_ms <= self.capture_finished_ms
