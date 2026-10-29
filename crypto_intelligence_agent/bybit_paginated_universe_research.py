@@ -26,6 +26,9 @@ MAX_INSTRUMENT_ROWS = 10_000
 MAX_TICKERS = 10_000
 _MAX_CAPTURE_AGE_MS = 30_000
 _SYMBOL = re.compile(r"[A-Z0-9]{5,40}")
+# The linear instrument list also covers contracts other than eligible USDT
+# crypto perpetuals. Only these exact symbols can enter this research sample.
+_RESEARCH_PERP_SYMBOL = re.compile(r"[A-Z0-9]{2,24}USDT")
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,22})(?:\.[0-9]{1,20})?")
 
 
@@ -191,7 +194,7 @@ def scan_bybit_linear_instruments_offline(
     registry = load_reviewed_registry(registry_variant, as_of_ms=observed_at_ms)
     expected_cursor: str | None = None
     seen_cursors: set[str] = set()
-    seen_instruments: set[str] = set()
+    seen_target_instruments: set[str] = set()
     accepted: dict[str, BybitLinearInstrumentResearch] = {}
     previous_server_time = 0
     total_rows = 0
@@ -237,15 +240,34 @@ def scan_bybit_linear_instruments_offline(
             if type(row) is not dict:
                 raise DataValidationError("Bybit instrument row must be an object")
             symbol = row.get("symbol")
-            if (type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None
-                    or symbol in seen_instruments):
-                raise DataValidationError("Bybit instrument symbol malformed or duplicated")
-            seen_instruments.add(symbol)
-            if not symbol.endswith("USDT"):
-                continue  # No USDC->USDT or USD normalization, ever.
-            base = symbol[:-4]
-            if base not in registry.verified_crypto_bases:
+            # Validate transport-level identity without mistaking a legitimate
+            # OTHER linear contract (e.g. an expiry containing a dash) for a
+            # malformed crypto perpetual. Do not print symbol values anywhere.
+            if (type(symbol) is not str or not 1 <= len(symbol) <= 80
+                    or not symbol.isascii() or not symbol.isprintable()
+                    or any(character.isspace() for character in symbol)):
+                raise DataValidationError("Bybit instrument symbol missing or unsafe")
+
+            # The list is broader than Trading/USDT/LinearPerpetual. Exclude
+            # USDC, futures, inactive/TradFi and other product rows BEFORE
+            # applying the restricted crypto research symbol syntax.
+            if (row.get("contractType") != "LinearPerpetual"
+                    or row.get("quoteCoin") != "USDT"
+                    or row.get("settleCoin") != "USDT"):
                 continue
+            claimed_base = row.get("baseCoin")
+            if (type(claimed_base) is not str
+                    or claimed_base not in registry.verified_crypto_bases):
+                continue
+            if (symbol != claimed_base + "USDT"
+                    or _RESEARCH_PERP_SYMBOL.fullmatch(symbol) is None):
+                raise DataValidationError("Bybit reviewed crypto symbol malformed")
+            # A duplicate *eligible* instrument is still a hard failure. Do
+            # not silently deduplicate; pagination may have changed mid-scan.
+            if symbol in seen_target_instruments:
+                raise DataValidationError("Bybit reviewed crypto symbol duplicated")
+            seen_target_instruments.add(symbol)
+            base = claimed_base
             # Reuse the existing strict single-instrument contract, using a
             # local subview of the SAME untrusted page (not a fabricated GET).
             row_view = {
@@ -381,9 +403,10 @@ def classify_bybit_instrument_scan_failure(exc: DataValidationError) -> str:
         return "page_capture_clock"
     if "cursor" in description or "pagination" in description or "terminal" in description:
         return "cursor_chain"
-    if "duplicated" in description:
+    if "symbol duplicated" in description:
         return "duplicate_instrument"
-    if "symbol malformed" in description:
+    if ("symbol malformed" in description
+            or "symbol missing or unsafe" in description):
         return "malformed_symbol"
     if "page size" in description or "page chain" in description:
         return "page_size_or_budget"

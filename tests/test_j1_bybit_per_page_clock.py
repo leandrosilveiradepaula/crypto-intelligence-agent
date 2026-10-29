@@ -82,7 +82,9 @@ class BybitPerPageCaptureClockTests(unittest.TestCase):
             "Bybit pagination server timestamps are noncausal": "cross_page_server_clock",
             "Bybit instrument page cursor chain is incomplete": "cursor_chain",
             "Bybit repeated pagination request cursor": "cursor_chain",
-            "Bybit instrument symbol malformed or duplicated": "duplicate_instrument",
+            "Bybit reviewed crypto symbol duplicated": "duplicate_instrument",
+            "Bybit reviewed crypto symbol malformed": "malformed_symbol",
+            "Bybit instrument symbol missing or unsafe": "malformed_symbol",
             "Bybit instruments category or capture clock is invalid": "page_capture_clock",
             "requested crypto registry revision was not yet known": "crypto_registry_or_asof",
         }
