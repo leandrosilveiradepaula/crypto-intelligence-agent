@@ -83,6 +83,24 @@ def census_bybit_top50_identity_coverage(
     page_received_at_ms: tuple[int, ...] | None = None,
     registry_variant: str = "expanded-13",
 ) -> BybitMarketwideCoverageCensus:
+    """Public aggregate census; no private candidate symbol output."""
+    report, _, _ = _census_with_review_candidates(
+        instrument_pages=instrument_pages,
+        requested_cursors=requested_cursors,
+        observed_at_ms=observed_at_ms,
+        page_received_at_ms=page_received_at_ms,
+        registry_variant=registry_variant,
+    )
+    return report
+
+
+def _census_with_review_candidates(
+    *, instrument_pages: tuple[dict, ...],
+    requested_cursors: tuple[str | None, ...],
+    observed_at_ms: int,
+    page_received_at_ms: tuple[int, ...] | None = None,
+    registry_variant: str = "expanded-13",
+) -> tuple[BybitMarketwideCoverageCensus, tuple[str, ...], tuple[str, ...]]:
     """Count reviewed + unreviewed, without silently promoting the latter.
 
     A row enters the unreviewed plausible group only if all of the Bybit
@@ -145,7 +163,7 @@ def census_bybit_top50_identity_coverage(
     digest = sha256(
         "\n".join(sorted(plausible_unreviewed)).encode("ascii")
     ).hexdigest()
-    return BybitMarketwideCoverageCensus(
+    census = BybitMarketwideCoverageCensus(
         observed_at_ms=observed_at_ms,
         registry_sha256=scan.registry_sha256,
         scanned_pages=scan.page_count,
@@ -157,3 +175,4 @@ def census_bybit_top50_identity_coverage(
         reviewed_but_noneligible_rows=noneligible_reviewed,
         plausible_candidate_symbol_digest_sha256=digest,
     )
+    return census, tuple(sorted(known)), tuple(sorted(plausible_unreviewed))
