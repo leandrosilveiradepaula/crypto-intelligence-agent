@@ -42,6 +42,53 @@ class BybitPITResearchSelection:
     candidates_with_full_24h_count: int
     ranked: tuple[BybitPITMember, ...]
 
+    def __post_init__(self) -> None:
+        if (type(self.observed_at_ms) is not int
+                or type(self.decision_at_ms) is not int
+                or self.decision_at_ms <= 0
+                or self.decision_at_ms % HOUR_MS
+                or not self.decision_at_ms + 1000 <= self.observed_at_ms
+                       < self.decision_at_ms + HOUR_MS
+                or type(self.registry_sha256) is not str
+                or len(self.registry_sha256) != 64
+                or any(c not in "0123456789abcdef" for c in self.registry_sha256)
+                or any(type(v) is not int or v < 0 for v in (
+                    self.instrument_page_count, self.all_instrument_row_count,
+                    self.reviewed_contract_count,
+                    self.insufficient_listing_history_count,
+                    self.candidates_with_full_24h_count))
+                or self.instrument_page_count < 1
+                or self.all_instrument_row_count < self.reviewed_contract_count
+                or self.reviewed_contract_count != (
+                    self.insufficient_listing_history_count
+                    + self.candidates_with_full_24h_count)
+                or type(self.ranked) is not tuple
+                or not 1 <= len(self.ranked) <= 50
+                or len(self.ranked) > self.candidates_with_full_24h_count):
+            raise DataValidationError("invalid research PIT selection identity or bounds")
+        seen = set()
+        amounts = []
+        for index, member in enumerate(self.ranked):
+            if (type(member) is not BybitPITMember
+                    or type(member.rank_in_reviewed_sample) is not int
+                    or member.rank_in_reviewed_sample != index + 1
+                    or type(member.symbol) is not str
+                    or not member.symbol.isascii()
+                    or not member.symbol.endswith("USDT")
+                    or not member.symbol.isupper()
+                    or member.symbol in seen
+                    or type(member.base_unit) is not str
+                    or member.symbol != member.base_unit + "USDT"
+                    or member.quote_unit != "USDT"
+                    or type(member.observed_turnover_24h_usdt) is not Decimal
+                    or not member.observed_turnover_24h_usdt.is_finite()
+                    or member.observed_turnover_24h_usdt < 0):
+                raise DataValidationError("invalid reviewed-sample PIT ranking member")
+            seen.add(member.symbol)
+            amounts.append((member.observed_turnover_24h_usdt, member.symbol))
+        if amounts != sorted(amounts, key=lambda x: (-x[0], x[1])):
+            raise DataValidationError("PIT rank must be monotonic and deterministic")
+
     @property
     def quote_turnover_unit(self) -> str:
         return "USDT_not_USD"
