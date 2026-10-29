@@ -4,6 +4,7 @@ Strict fixtures imitate GET responses; they are never provider observations.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from copy import deepcopy
 from dataclasses import replace
 from decimal import Decimal
@@ -170,8 +171,9 @@ class BybitPITExitTests(unittest.TestCase):
             self.assertEqual([x.symbol for x in second.ranked], ["BTCUSDT", "ETHUSDT"])
             with self.assertRaises(DataValidationError):
                 store.commit_pit_research_snapshot(selection(at_ms=T-H))
-            with sqlite3.connect(db_file) as db:
+            with closing(sqlite3.connect(db_file)) as db:
                 db.execute("UPDATE bybit_research_pit_snapshots SET content_json='{}' WHERE observed_at_ms=?", (T,))
+                db.commit()
             with self.assertRaises(DataGapError):
                 store.replay_pit_research_snapshot(T)
 
