@@ -137,8 +137,44 @@ class PrivateVisionSeriesAuditTests(unittest.TestCase):
             self.assertEqual(main(args + ["--allow-personal-nonproduction-research"]), 0)
         report = json.loads(out.getvalue())
         self.assertEqual(report["archive_count"], 2)
-        for secret in (str(self.root), self.entries[0]["name"], "BTCUSDT", "1250"):
+        # Parse the contract rather than matching decimal fragments inside a
+        # SHA-256. A digest may legally contain "1250" by coincidence; no
+        # price or path field is allowed in this privacy-restricted report.
+        allowed = {
+            "schema_version", "status", "archive_count",
+            "closed_candle_count", "first_open_ms", "end_open_exclusive_ms",
+            "local_archive_identity_manifest_sha256",
+            "source_authenticated", "dataset_rights_authorized",
+            "canonical_ohlcv_approved", "historical_top50_approved",
+            "financial_backtest_approved", "ready_for_trading",
+            "live_trading_authorized", "orders_sent", "network_requests",
+            "data_stored",
+        }
+        self.assertEqual(set(report), allowed)
+        self.assertRegex(
+            report["local_archive_identity_manifest_sha256"], r"^[a-f0-9]{64}$")
+        self.assertTrue(all(
+            type(value) in (str, int, bool) for value in report.values()))
+        for secret in (str(self.root), self.entries[0]["name"], "BTCUSDT"):
             self.assertNotIn(secret, out.getvalue())
+
+        # Regression for the CI flake: "1250" in a hash is not a leaked
+        # OHLC price. Still enforce the strict output schema and no paths.
+        sample = dict(report)
+        sample["local_archive_identity_manifest_sha256"] = (
+            "a" * 30 + "1250" + "b" * 30)
+        simulated = StringIO()
+        with patch(
+            "scripts.audit_offline_vision_series.audit_private_vision_archives",
+            return_value=sample,
+        ), redirect_stdout(simulated):
+            self.assertEqual(
+                main(args + ["--allow-personal-nonproduction-research"]), 0)
+        recovered = json.loads(simulated.getvalue())
+        self.assertEqual(set(recovered), allowed)
+        self.assertIn("1250", recovered["local_archive_identity_manifest_sha256"])
+        for secret in (str(self.root), self.entries[0]["name"], "BTCUSDT"):
+            self.assertNotIn(secret, simulated.getvalue())
 
 
 if __name__ == "__main__":
