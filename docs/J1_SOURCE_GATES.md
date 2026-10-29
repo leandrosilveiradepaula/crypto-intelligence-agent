@@ -274,3 +274,8 @@ BTCUSDT ago/set2026 com 1.464 velas e manifesto íntegro é **amostra local real
 ## J1 #326 — WebSocket público: somente desenho e pesquisa offline
 
 Bybit V5 documenta `kline.60.<symbol>` e `confirm` (https://bybit-exchange.github.io/docs/v5/websocket/public/kline). `confirm=true` atesta apenas o campo de fechamento do envelope, não origem criptograficamente autenticada, completude de 24h, ranking de todos elegíveis, retenção comercial nem direito a execução live. O experimento #326 aceita **fixtures em memória** de um contrato revisado, gera apenas um journal SQLite temporário isolado, recusa dados abertos ou anômalos; não estabelece socket real. Após queda, não imputar hora faltante, não realizar REST automático para recuperar lacuna e não contornar 10006/403/451. Backfill 30d, identidade de todo mercado, coleção de snapshots PIT e custódia de dados comerciais ficam para prova separada de acesso/termos apropriados. #217 continua aberto para autorização por finalidade e território; `rights_for_live_authorized=false`.
+
+
+## J1 #328 — diagnostico WebSocket publico nao equivale a fonte homologada
+
+Bybit publica canal linear `kline.60`/`confirm` no WebSocket V5. Esta unidade prepara apenas uma sessao curta, opt-in, single-topic, sem dados persistidos nem negociacao. `confirm=true` e sinal de fechamento no payload recebido, nao prova autenticidade do provedor, completude 24h, retencao licenciada, identidade cripto de todo o mercado, Top50, backfill 30d, direitos do painel/ordens ou validação de taxas e liquidacao. Nao usar WS alternativo para burlar HTTP 10006 ou restricoes regionais. #217 permanece gate especifico para finalidade, territorio e live; #319 e #2 permanecem abertos.
