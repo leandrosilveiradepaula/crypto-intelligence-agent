@@ -73,13 +73,21 @@ class ResumePreservedBybitHistoryTests(unittest.TestCase):
         initial = self.initial_capture()
         self.later(initial, hours=3)
         initial_sha = initial["initial_snapshot_digest_sha256"]
-        requested_historical_start = []
+        requested_incremental_starts = []
+        ranking_24h_requests = 0
         events = []
 
         def track(url, limit):
+            nonlocal ranking_24h_requests
             if "/kline" in url:
-                start = int(parse_qs(urlsplit(url).query)["start"][0])
-                requested_historical_start.append(start)
+                params = parse_qs(urlsplit(url).query)
+                start = int(params["start"][0])
+                if params["limit"] == ["24"]:
+                    # A fresh 24h PIT turnover ranking re-reads overlapping
+                    # closed bars; that is NOT the 720h research backfill.
+                    ranking_24h_requests += 1
+                else:
+                    requested_incremental_starts.append(start)
             return self.feed.get(url, limit)
 
         with patch("socket.create_connection",
@@ -91,9 +99,11 @@ class ResumePreservedBybitHistoryTests(unittest.TestCase):
         self.assertEqual(report["stored_closed_candles"], 1450)
         self.assertEqual(report["immutable_pit_snapshots"], 4)
         self.assertEqual(report["consecutive_hourly_updates_at_end"], 2)
+        self.assertGreater(ranking_24h_requests, 0)
+        self.assertTrue(requested_incremental_starts)
         self.assertTrue(all(
             start >= initial["last_pit_decision_ms"]
-            for start in requested_historical_start
+            for start in requested_incremental_starts
         ))
         self.assertTrue(report["sqlite_integrity"])
         self.assertTrue(report["old_720h_history_preserved"])
