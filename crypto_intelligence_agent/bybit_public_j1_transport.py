@@ -21,6 +21,34 @@ MAX_RESPONSE_BYTES = 1_500_000
 TIMEOUT_SECONDS = 8
 HOUR_MS = 3_600_000
 _SYMBOL = re.compile(r"^[A-Z0-9]{2,24}USDT$")
+# Explicitly documented provider codes only. Do not print provider bodies or
+# retMsg (which might contain a symbol or untrusted arbitrary text).
+_KNOWN_PROVIDER_CODES = frozenset({
+    -1, 429, 10000, 10001, 10003, 10004, 10005, 10006, 10007,
+    10008, 10009, 10014, 10016, 10017, 10024, 10027, 10029,
+})
+
+
+def classify_provider_retcode(code: object) -> str:
+    """Stable human-actionable class from official Bybit V5 retCodes."""
+    if type(code) is not int:
+        return "provider_retcode_invalid_no_retry"
+    if code in (10009, 10024):
+        return "provider_region_restriction"
+    if code == 10006:
+        return "provider_rate_limit_no_retry"
+    if code == 10001:
+        return "provider_request_parameters_rejected_no_retry"
+    if code in (10000, 10016, 429):
+        return "provider_server_unavailable_no_retry"
+    if code in (10017, 10029):
+        return "provider_route_or_symbol_unavailable_no_retry"
+    if code in (10003, 10004, 10005, 10007, 10008, 10027):
+        return "provider_access_or_permission_denied_no_retry"
+    if code in (-1, 10014):
+        return "provider_request_identity_rejected_no_retry"
+    return "provider_unclassified_ret_code_no_retry"
+
 
 
 class J1BybitCaptureError(ValueError):
@@ -90,6 +118,8 @@ class BoundedBybitPublicClient:
         self.transport = transport
         self.requests_attempted = 0
         self._last_request = 0.0
+        self.last_request_stage: str | None = None
+        self.last_provider_retcode: int | None = None
 
     def get(self, url: str) -> tuple[bytes, dict]:
         parsed = urlsplit(url)
@@ -132,6 +162,13 @@ class BoundedBybitPublicClient:
             allowed = False
         if not allowed:
             raise J1BybitCaptureError("unexpected_market_data_query_rejected")
+        self.last_request_stage = (
+            "instrument_metadata" if parsed.path.endswith("instruments-info")
+            and "symbol" in queries else
+            "instrument_universe" if parsed.path.endswith("instruments-info")
+            else "closed_kline_" + queries["limit"][0] + "h"
+        )
+        self.last_provider_retcode = None
         self.requests_attempted += 1
         if self.transport is None:
             remaining = 0.16 - (time.monotonic() - self._last_request)
@@ -148,8 +185,11 @@ class BoundedBybitPublicClient:
             payload = decode_public_market_json_exact(raw, max_bytes=limit)
         except DataValidationError:
             raise J1BybitCaptureError("invalid_provider_json") from None
-        if type(payload.get("retCode")) is not int or payload["retCode"] != 0:
-            if payload.get("retCode") in (10009, 10024):
-                raise J1BybitCaptureError("provider_region_restriction")
-            raise J1BybitCaptureError("provider_ret_code_failure_no_retry")
+        ret_code = payload.get("retCode")
+        if type(ret_code) is not int or ret_code != 0:
+            # An unknown numeric code is deliberately not reflected, while
+            # documented codes can be safely reported as a single integer.
+            if type(ret_code) is int and ret_code in _KNOWN_PROVIDER_CODES:
+                self.last_provider_retcode = ret_code
+            raise J1BybitCaptureError(classify_provider_retcode(ret_code))
         return raw, payload
