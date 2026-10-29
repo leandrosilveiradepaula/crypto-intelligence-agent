@@ -19,6 +19,8 @@ from .market_data import DataValidationError
 from .research_registry_catalog import load_reviewed_registry
 
 MAX_PAGES = 20
+# Bounded jitter permitted ONLY when each real page has its own receive clock.
+MAX_RECEIVED_PAGE_SERVER_JITTER_MS = 2_000
 MAX_ROWS_PER_PAGE = 1000
 MAX_INSTRUMENT_ROWS = 10_000
 MAX_TICKERS = 10_000
@@ -165,6 +167,7 @@ def scan_bybit_linear_instruments_offline(
     observed_at_ms: int,
     registry_variant: str = "expanded-13",
     max_capture_age_ms: int = _MAX_CAPTURE_AGE_MS,
+    page_received_at_ms: tuple[int, ...] | None = None,
 ) -> BybitInstrumentScanResearch:
     """Validate all pages/cursors once; no ticker-unit inference or network."""
     if (type(observed_at_ms) is not int or observed_at_ms <= 0
@@ -177,6 +180,14 @@ def scan_bybit_linear_instruments_offline(
             or len(requested_cursors) != len(instrument_pages)
             or requested_cursors[0] is not None):
         raise DataValidationError("complete instrument page chain required")
+    if page_received_at_ms is not None:
+        if (type(page_received_at_ms) is not tuple
+                or len(page_received_at_ms) != len(instrument_pages)
+                or any(type(t) is not int or t <= 0 or t > observed_at_ms
+                       for t in page_received_at_ms)
+                or any(a > b for a, b in zip(
+                    page_received_at_ms, page_received_at_ms[1:]))):
+            raise DataValidationError("invalid ordered per-page receive timestamps")
     registry = load_reviewed_registry(registry_variant, as_of_ms=observed_at_ms)
     expected_cursor: str | None = None
     seen_cursors: set[str] = set()
@@ -185,13 +196,20 @@ def scan_bybit_linear_instruments_offline(
     previous_server_time = 0
     total_rows = 0
     for page_index, page in enumerate(instrument_pages):
+        # Each GET has its own receive time: measuring all pages against the
+        # final scan clock spuriously rejects valid paginated responses when a
+        # scan takes >30s. Legacy offline callers retain their strict behavior.
+        received_at = (observed_at_ms if page_received_at_ms is None
+                       else page_received_at_ms[page_index])
         _, result, server_ms = _response(
-            page, label="Bybit instruments", at_ms=observed_at_ms,
+            page, label="Bybit instruments", at_ms=received_at,
             age_ms=max_capture_age_ms,
         )
-        if server_ms < previous_server_time:
+        jitter = (0 if page_received_at_ms is None
+                  else MAX_RECEIVED_PAGE_SERVER_JITTER_MS)
+        if server_ms + jitter < previous_server_time:
             raise DataValidationError("Bybit pagination server timestamps are noncausal")
-        previous_server_time = server_ms
+        previous_server_time = max(previous_server_time, server_ms)
         requested = requested_cursors[page_index]
         if requested != expected_cursor:
             raise DataValidationError("Bybit instrument page cursor chain is incomplete")
@@ -344,3 +362,31 @@ def audit_bybit_linear_universe_offline(
         ticker_row_count=len(ticker_rows),
         selected=selected,
     )
+
+
+def classify_bybit_instrument_scan_failure(exc: DataValidationError) -> str:
+    """Stable, raw-data-free rejection category for private owner diagnostics.
+
+    A provider payload, symbol or URL must never appear in this result.
+    Only parser-controlled message fragments can authorize a category.
+    """
+    if not isinstance(exc, DataValidationError):
+        return "unclassified"
+    description = str(exc)
+    if "registry" in description or "revision" in description or "history" in description:
+        return "crypto_registry_or_asof"
+    if "noncausal" in description:
+        return "cross_page_server_clock"
+    if "timestamp" in description or "clock" in description or "stale" in description:
+        return "page_capture_clock"
+    if "cursor" in description or "pagination" in description or "terminal" in description:
+        return "cursor_chain"
+    if "duplicated" in description:
+        return "duplicate_instrument"
+    if "symbol malformed" in description:
+        return "malformed_symbol"
+    if "page size" in description or "page chain" in description:
+        return "page_size_or_budget"
+    if "category" in description or "shape" in description:
+        return "response_category_or_schema"
+    return "other_schema_rejection"
