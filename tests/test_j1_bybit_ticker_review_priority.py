@@ -199,6 +199,53 @@ class TickerPriorityOfflineTests(unittest.TestCase):
         self.assertFalse(out["marketwide_top50_verified"])
 
     @unittest.skipUnless(os.name == "posix", "owner-only public probe POSIX")
+    def test_owner_review_opt_in_exposes_only_public_identifiers_not_values(self):
+        # Complete two-page public catalog. No exchange network or SQLite.
+        def run(emit):
+            feed = FakeFeed()
+            instrument_pages = fixture()
+            ticker = tickers(rows=(
+                {"symbol": "NEARUSDT", "turnover24h": "500"},
+                {"symbol": "UNIUSDT", "turnover24h": "300"},
+                {"symbol": "ETHUSDT", "turnover24h": "600"},
+                {"symbol": "BTCUSDT", "turnover24h": "200"},
+                {"symbol": "AAPLUSDT", "turnover24h": "999999"},
+            ), ms=T-15)
+            response_list = [
+                json.dumps(instrument_pages[0]).encode("ascii"),
+                json.dumps(instrument_pages[1]).encode("ascii"),
+                json.dumps(ticker).encode("ascii"),
+            ]
+            calls = []
+            def transport(url, limit):
+                calls.append(url)
+                return response_list[len(calls)-1]
+            with patch("socket.create_connection",
+                       side_effect=AssertionError("no real network")):
+                report = owner_prioritize_bybit_top50_review(
+                    allow_public_network=True,
+                    confirm_region_and_personal_research=True,
+                    emit_public_review_symbols=emit,
+                    client=BoundedBybitPublicClient(transport=transport),
+                    clock_ms=feed.now,
+                )
+            self.assertEqual(len(calls), 3)
+            self.assertIn("/v5/market/tickers?", calls[-1])
+            return report
+
+        default = run(False)
+        self.assertNotIn("public_review_contract_identifiers_only", default)
+        enabled = run(True)
+        self.assertEqual(
+            enabled["public_review_contract_identifiers_only"],
+            ["NEARUSDT", "UNIUSDT"],
+        )
+        self.assertEqual(enabled["unreviewed_in_priority_queue"], 2)
+        self.assertFalse(enabled["marketwide_top50_verified"])
+        for raw_value in ("999999", '"turnover24h"', '"lastPrice"'):
+            self.assertNotIn(raw_value, json.dumps(enabled))
+
+    @unittest.skipUnless(os.name == "posix", "owner-only public probe POSIX")
     def test_rate_limit_10006_at_ticker_stops_with_no_retry(self):
         feed = FakeFeed()
         hits=[]
