@@ -706,3 +706,8 @@ Work unit segura: instrumentar apenas headers numéricos sanitizados de rate-lim
 ## J1 #326 — cache WS confirmado somente em fixtures (29/10/2026)
 
 Implementação isolada: eventos sintéticos Bybit V5 `kline.60` confirmados, parser reuse de candle e contratos cripto revisados, journal SQLite exclusivo sem sobrescrever banco privado, auditoria RO que se abstém em lacunas e jamais afirma Top50 global. CLI `python3 -m scripts.probe_offline_bybit_closed_stream` e `--inject-disconnect` usam somente fixture temporária, sem GET/sockets/ordens. Testes `tests/test_j1_bybit_closed_stream_cache.py`; resultados locais iniciais 13/13 PASS em sandbox com stubs dos contratos (CI deve validar módulos reais). Isso não resolve quota anterior 10006 (um GET diagnóstico devolveu cabeçalhos ausentes), histórico de 30d de 50 elegíveis ou direitos live. #2/#319 continuam abertas; não coletar dado real por esta entrega.
+
+
+## J1 #328 — observacao finita de kline publico (29/10/2026 UTC)
+
+Adicionado observador read-only com `session_factory` injetavel, CLI `scripts.probe_bybit_public_ws_once` desativada sem opt-ins, no maximo 64 frames/90 segundos e limpeza de conexao, sem fallback REST. Testes de fake socket verificam ACK, close, open, duplicatas JSON, limites e erros; nenhuma conexao real nesta work unit. O binario opcional `websockets` nao faz parte de dependencies obrigatorias do projeto; sem biblioteca instalada, o diagnostico deve falhar de modo sanitizado. **J1 #2/#319 segue aberta**, 50 ativos e 30 dias de historico reais nao verificados. Sem ordens, deploy ou gasto.
