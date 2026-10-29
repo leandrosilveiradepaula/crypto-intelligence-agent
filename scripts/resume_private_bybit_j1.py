@@ -38,8 +38,9 @@ from scripts.capture_private_bybit_j1 import (
 # Hard cap on closed-hour catch-up. Beyond this boundary, require a
 # separate reviewed recovery plan, never expand network work silently.
 MAX_CATCHUP_HOURS = 144
-# Exactly two CONSECUTIVE point-in-time hourly updates are required at the end.
-REQUIRED_CONSECUTIVE_UPDATES = 2
+# J1 acceptance requires two distinct post-initial PIT hourly observations.
+# A missed historical PIT is NEVER synthesized and the report discloses gaps.
+REQUIRED_DISTINCT_UPDATES = 2
 
 
 def _status_event(progress: Callable[[dict], None] | None, *,
@@ -47,7 +48,7 @@ def _status_event(progress: Callable[[dict], None] | None, *,
     if progress is not None:
         progress({
             "event": "private_j1_resume_progress",
-            "phase": phase, "consecutive_updates_at_end": completed,
+            "phase": phase, "distinct_pit_updates_after_initial": completed,
             "network_gets_attempted": network_gets,
             "marketwide_top50_verified": False, "orders_sent": False,
         })
@@ -189,7 +190,7 @@ def owner_resume_private_j1(
     sleep: Callable[[float], None] | None = None,
     progress: Callable[[dict], None] | None = None,
 ) -> dict:
-    """Resume 720h without re-downloading it; 2 CONSECUTIVE PIT hours at end.
+    """Resume 720h without re-downloading it; 2 DISTINCT observed PIT hours.
 
     If any GET or gate fails, previously validated pages remain immutable,
     and this can be safely re-entered after reviewing the sanitized reason.
@@ -209,8 +210,8 @@ def owner_resume_private_j1(
     registry = load_reviewed_registry(REGISTRY, as_of_ms=clock())
     if previous.registry_sha256 != registry.sha256_digest:
         raise J1BybitCaptureError("existing_snapshot_crypto_registry_changed")
-    consecutive = initial_report["consecutive_snapshots_at_end"]
-    if consecutive >= REQUIRED_CONSECUTIVE_UPDATES:
+    distinct = initial_report["immutable_pit_snapshots"] - 1
+    if distinct >= REQUIRED_DISTINCT_UPDATES:
         final = initial_report
     else:
         now = clock()
@@ -223,19 +224,19 @@ def owner_resume_private_j1(
                 fetch, clock, previous=previous, updated=current,
                 cursors=cursors, start=first, store=store,
             )
-            consecutive = (consecutive + 1 if
-                current.decision_at_ms == previous.decision_at_ms + HOUR_MS
-                else 0)
+            # This is one NEW actual observation, even if past closed bars
+            # had to be caught up. Never synthesize a PIT for missed hours.
+            distinct += 1
             previous = current
             cursors = {m.symbol: current.decision_at_ms for m in current.ranked}
             _status_event(progress, phase="current_pit_verified",
-                          completed=consecutive,
+                          completed=distinct,
                           network_gets=fetch.requests_attempted)
-        while consecutive < REQUIRED_CONSECUTIVE_UPDATES:
+        while distinct < REQUIRED_DISTINCT_UPDATES:
             next_decision = previous.decision_at_ms + HOUR_MS
             wait_ms = next_decision + CLOSE_SAFETY_MS - clock()
             _status_event(progress, phase="waiting_for_next_closed_hour",
-                          completed=consecutive,
+                          completed=distinct,
                           network_gets=fetch.requests_attempted)
             if wait_ms > 0:
                 sleeper(wait_ms / 1000)
@@ -257,9 +258,9 @@ def owner_resume_private_j1(
             )
             cursors = {m.symbol: updated.decision_at_ms for m in updated.ranked}
             previous = updated
-            consecutive += 1
+            distinct += 1
             _status_event(progress, phase="hourly_pit_verified",
-                          completed=consecutive,
+                          completed=distinct,
                           network_gets=fetch.requests_attempted)
         final = audit_private_bybit_j1_progress(
             database=path, allow_private_readonly_audit=True,
@@ -267,16 +268,18 @@ def owner_resume_private_j1(
     if (not final["sqlite_integrity_passed"]
             or not final["private_page_replay_passed"]
             or not final["first_pit_720h_coverage"]
-            or final["consecutive_snapshots_at_end"] < REQUIRED_CONSECUTIVE_UPDATES
+            or final["immutable_pit_snapshots"] - 1 < REQUIRED_DISTINCT_UPDATES
             or final["sample_asset_count"] != max_assets):
         raise J1BybitCaptureError("resumed_history_final_audit_rejected")
     return {
-        "status": "private_j1_two_consecutive_updates_verified_not_top50",
+        "status": "private_j1_two_distinct_updates_verified_not_top50",
         "sample_assets": final["sample_asset_count"],
         "stored_closed_candles": final["stored_closed_candle_rows"],
         "stored_page_count": final["stored_page_count"],
         "historical_hours_per_asset_at_initial_PIT": HISTORY_HOURS,
         "immutable_pit_snapshots": final["immutable_pit_snapshots"],
+        "distinct_hourly_pit_updates_after_initial": (
+            final["immutable_pit_snapshots"] - 1),
         "consecutive_hourly_updates_at_end": final["consecutive_snapshots_at_end"],
         "last_pit_decision_ms": final["last_pit_decision_ms"],
         "first_pit_digest_sha256": final["initial_snapshot_digest_sha256"],
@@ -332,7 +335,7 @@ def main(argv: list[str] | None = None) -> int:
             result["provider_ret_code"] = client.last_provider_retcode
     event(result)
     return 0 if result["status"] == (
-        "private_j1_two_consecutive_updates_verified_not_top50"
+        "private_j1_two_distinct_updates_verified_not_top50"
     ) else 1
 
 
