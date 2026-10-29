@@ -20,7 +20,8 @@ from crypto_intelligence_agent.bybit_paginated_universe_research import (
     classify_bybit_instrument_scan_failure,
 )
 from crypto_intelligence_agent.bybit_pit_research import (
-    HOUR_MS, select_bybit_reviewed_sample_pit,
+    HOUR_MS, MAX_PIT_BATCH_CONTRACT_AGE_MS,
+    select_bybit_reviewed_sample_pit,
 )
 from crypto_intelligence_agent.bybit_public_j1_transport import (
     BoundedBybitPublicClient, J1BybitCaptureError, instruments_url, kline_url,
@@ -93,6 +94,12 @@ def _observe(client, clock, max_assets):
             item.symbol, decision - 24 * HOUR_MS, decision))
         klines[item.symbol] = data
     observed = clock()
+    # With conservative 2s GET pacing, even a complete 13-base ranking may
+    # take >30s. Restrict the TOTAL transaction to two minutes rather than
+    # incorrectly interpreting every earlier instrument as just received.
+    # Do not relax each instrument page's separate 30s server/receive check.
+    if observed - start > MAX_PIT_BATCH_CONTRACT_AGE_MS:
+        raise J1BybitCaptureError("pit_paged_observation_exceeds_120s")
     if observed // HOUR_MS * HOUR_MS != decision:
         raise J1BybitCaptureError("snapshot_crossed_hour_boundary")
     try:
@@ -102,6 +109,7 @@ def _observe(client, clock, max_assets):
             decision_at_ms=decision, registry_variant=REGISTRY,
             max_candidates=max_assets,
             instrument_page_received_at_ms=tuple(received_at_ms),
+            max_contract_age_ms=MAX_PIT_BATCH_CONTRACT_AGE_MS,
         )
     except (DataValidationError, DataGapError) as exc:
         if isinstance(exc, DataValidationError):
