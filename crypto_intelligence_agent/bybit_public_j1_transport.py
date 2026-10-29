@@ -101,20 +101,21 @@ class BoundedBybitPublicClient:
                 or queries.get("category") != ["linear"]):
             raise J1BybitCaptureError("origin_or_get_budget_rejected")
         if parsed.path == "/v5/market/instruments-info":
-            allowed = (
-                queries.get("limit") in (["1"], ["200"])
-                and (("symbol" in queries) != ("cursor" in queries))
-                if queries.get("limit") == ["1"] else
-                ("symbol" not in queries and set(queries) <= {
-                    "category", "limit", "cursor",
-                })
-            )
-            if "symbol" in queries:
+            if (set(queries) == {"category", "symbol", "limit"}
+                    and queries.get("limit") == ["1"]
+                    and _SYMBOL.fullmatch(queries["symbol"][0]) is not None):
+                allowed = url == instruments_url(symbol=queries["symbol"][0])
+            elif (set(queries) in (
+                    {"category", "limit"},
+                    {"category", "limit", "cursor"},
+                ) and queries.get("limit") == ["200"]):
+                cursor = queries.get("cursor", [None])[0]
                 allowed = (
-                    allowed and queries.get("limit") == ["1"]
-                    and set(queries) == {"category", "symbol", "limit"}
-                    and _SYMBOL.fullmatch(queries["symbol"][0]) is not None
+                    (cursor is None or (len(cursor) > 0 and len(cursor) <= 300))
+                    and url == instruments_url(cursor=cursor)
                 )
+            else:
+                allowed = False
         elif parsed.path == "/v5/market/kline":
             allowed = (set(queries) == {
                 "category", "symbol", "interval", "start", "end", "limit"
@@ -125,7 +126,7 @@ class BoundedBybitPublicClient:
                 try:
                     start, end = int(queries["start"][0]), int(queries["end"][0]) + 1
                     allowed = url == kline_url(queries["symbol"][0], start, end)
-                except (ValueError, IndexError, TypeError):
+                except (ValueError, IndexError, TypeError, J1BybitCaptureError):
                     allowed = False
         else:
             allowed = False
