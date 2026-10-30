@@ -326,3 +326,8 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J3/PRE18 — calendário sintético separado da aritmética de funding
 
 `synthetic_funding_calendar.py` contém somente grade temporal tipada e checagem de cobertura; não calcula taxas, não obtém calendário da exchange nem persiste. `synthetic_mark_replay.py` exige a grade apenas quando `funding_calendar` é informado. Dedução e sinais LONG/SHORT permanecem na calculadora `synthetic_cost_scenarios.py`, sem duplicação de motor ou acoplamento à J1. Contrato completo em `docs/J3_PRE18_FUNDING_CALENDAR.md`.
+
+
+## J3/PRE19 — agregação isolada de carteira sintética
+
+`synthetic_portfolio_replay.py` recebe legs imutáveis com um relógio UTC comum e reutiliza `replay_synthetic_mark_path` (incluindo tiers PIT e calendário opcional de funding). Não duplica motor de custo ou execução. Expõe equity, drawdown prefixo, exposição assinada/bruta, concentração e correlação descritiva de retornos mark; global PnL fica nulo após qualquer liquidação proxy sem saída verificável. Sem armazenamento, troca de moeda, cross-margin ou dados live. Ver `docs/J3_PRE19_PORTFOLIO_REPLAY.md`.
