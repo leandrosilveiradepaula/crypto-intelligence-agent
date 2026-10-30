@@ -596,3 +596,8 @@ Executar `python3 -m unittest discover -s tests -p 'test_j1_bybit_ws_ack_heartbe
 ## J1 WS4 #334 — classificação fail-closed de primeira mensagem WS
 
 Rodar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q` mais regressões WS3 e WS2; validar rejeição explícita (`success=false`), envelope com campos ausentes/extras/tipos inválidos, dados antes de ACK, controle de ping antes de ACK e mensagem desconhecida. Testar não vazamento de strings similares a segredo no relatório. Nenhum dado bruto salvo, rede desligada na CI. CI Linux/docs, Windows e Chrome pré/pós-merge no SHA exato. Status Top50 mercado permanece falso.
+
+
+## J1 WS5 #336 — validação de sequência pre-ACK
+
+Executar suíte `test_j1_bybit_public_ws_once.py` e regressões `test_j1_bybit_ws_ack_heartbeat_schedule.py`, `test_j1_bybit_ws_offline_pipeline.py`. Testar candle fechado antes de ACK válido, aberto antes de ACK seguido de fechado, rejeição explícita após pré-ACK, tópico malicioso, frame budget (8 pre-ACK) e falta de ACK sem aprovação; nenhuma cópia de OHLCV/ID ou acesso real na CI. SHA da PR e CI Linux/docs/Windows/Chrome antes e depois de squash merge. J1 marketwide false.
