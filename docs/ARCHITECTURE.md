@@ -351,3 +351,8 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J4/RUNNER1 — observação conservadora do runner PAPER
 
 `paper_runner_trailing.py` depende de `PaperPositionBalance` de AUTO4 e eventos de preços mark tipados, sem acoplamento a REST/WS, banco de mercado J1 ou adaptadores de ordens. O monitor é funcional, limita 256 ticks por janela, valida cronologia/staleness e emite estado/digest sanitizado. Nenhuma transação, endpoint, persistência do stop ou ordens. Não confundir gatilho do replay com instalação de stop nativo. Issue #383, docs/J4_RUNNER1_PAPER_TRAILING.md.
+
+
+## J5/PRE14 — status do runner na leitura RO mobile
+
+`scripts.inspect_paper_positions.multi_paper_snapshot` acrescenta status por posição usando o `PaperPositionBalance` já lido via `mode=ro` e replay validado, sem novos acessos ao SQLite. O renderizador HTML compartilha o cartão com a tela de recuperação e fornece label controlada em PT-BR e coluna na tabela; não injeta marcação/fills/stop. O esquema JSON v1 recebe campos aditivos sem mudar contratos anteriores e mantém flags live falsas. `tests/test_paper_runner_mobile.py` e Chrome/PAPER testam resultado sem rede.
