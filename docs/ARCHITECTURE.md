@@ -369,3 +369,7 @@ AUTO4 preserva o ledger existente e usa `tranche_step=0` para a parcela residual
 
 ### J5/PRE16 — leitura de status do residual de posições PAPER
 A interface `scripts.inspect_paper_positions` consome somente `PaperPositionBalance` já validado por SQLite AUTO4 RO. O novo passo zero do runner define estados PENDING/UNKNOWN, cancelado, parcialmente preenchido e encerrado a partir do ledger; nunca tenta deduzir stop nativo ou proteção financeira por flags do RUNNER2. Campos aditivos em `paper_positions_snapshot_v1` são quantidades por instrumento, sem consolidação/FX. Ver `docs/J5_PRE16_RUNNER_EXIT_MOBILE.md`.
+
+
+### J6/PRE4 — primeira orquestração PAPER do fechamento residual
+`step_durable_paper_runner_close` coordena, sob opt-in da chamada local, um preview RUNNER2 read-only e uma reserva AUTO4 `tranche_step=0` no mesmo SQLite de posições, mantendo a idempotência de intent ID e `BEGIN IMMEDIATE` já existentes. Em restart, um estado runner pré-existente em AUTO4 substitui a leitura do diário de marks anterior. Não usa transportes, FILL sintético adicional, stop native ou testnet. Não existe transação atômica cruzada entre journals. Ver `docs/J6_PRE4_PAPER_RUNNER_CLOSE_STEP.md`.
