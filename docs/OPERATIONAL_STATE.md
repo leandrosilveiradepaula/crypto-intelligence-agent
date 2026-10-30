@@ -922,3 +922,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## #359 — acesso explícito ao stress OOS no auditor privado (30/10/2026)
 
 A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-stress` com os 9 parâmetros completos `--stress-margin-quote`, `--stress-leverage`, `--stress-stop-fraction`, `--stress-target-fraction`, `--stress-maintenance-bps`, `--stress-fee-bps`, `--stress-slippage-bps`, `--stress-funding-bps` e `--stress-selection-cost-bps`; recusa parâmetros parciais ou sem opt-in, só lê os manifest/ZIPs privados já existentes, valida antes de calcular, e emite unicamente agregados anonimizados de stress e digest. Alavancagem e margem são hipóteses, não aprovação da corretora; não autentica dados, não prova trajetória intrabar/mark/funding ou liquidação real. Nenhuma ordem, credencial, escrita, rede, deploy ou lucro validado. A CI é requisito antes de merge.
+
+
+## Checkpoint ativo 30/10/2026 — J3/ROBUST1 #367
+
+`main` inspecionada em `3efccdd275dd838673b64984a271612ed379021c` (PR #366), sem PRs abertas naquele instante. CI pós-merge não obtida via consulta; CI pré-merge do head da #366 SUCCESS em docs/Linux, Windows/offline e Chrome/PAPER. Issue #363 fechada após PRs #364–#366; J3 #4 permanece aberta. **Jornada ativa atual**: #367, branch `work/j3-robust1-sensitivity`, pesquisa adversa offline OOS com custo, slippage, manutenção e funding hipotético. Sem PR ou CI da #367 confirmada neste checkpoint; próximo passo é testar, revisar, corrigir CI e integrar somente com head SHA exato verificado. Sem rede a exchanges, credenciais, VPS, ordens/testnet/live, deploy ou gasto. J1 #2/#217/#319 e D177 mantidas. `docs/J3_ROBUST1.md` contém escopo, critérios e gates.
