@@ -294,3 +294,8 @@ A observacao WS de um topico `kline.60` sera diagnosticamente util apenas se a A
 ## J1 WS5 #336 — frame antecipado não é assinatura autenticada
 
 `confirm=true` no tópico esperado prova somente o campo de fechamento do envelope. Frames anteriores à ACK positiva ficam estritamente pendentes e limitados na memória, nunca persistidos ou promovidos para trading. ACK negativa, ausente ou qualquer mensagem inválida impede sucesso. O código é testado offline, sem contornar `10006`, capturar credenciais ou modificar histórico privado. #2/#319/#217 abertas.
+
+
+## WS6 #338 — confirmação temporal não autentica a fonte (30/10/2026)
+
+`confirm=true` recebido após o fim da hora pelo relógio do provedor permite análise de fechamento com tolerância limitada ao desvio do relógio do host. Não equivale a assinatura criptográfica do feed, direitos de uso para live, ranking global Top50, histórico 30d ou operação financeira. Nova categoria de falha não registra mensagens brutas, timestamps, OHLCV ou IDs; acesso real continua owner-only e opt-in, sem contorno de bloqueios.
