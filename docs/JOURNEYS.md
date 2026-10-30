@@ -269,3 +269,8 @@ Requisito de J1: Top50 muda a cada hora de decisão conforme as 24h fechadas; al
 ## J4/RUNNER1 #383 — monitoramento read-only de runner confirmado
 
 O módulo separado PAPER observa mark em série causal após todas as parciais do journal e emite estado de trailing LONG/SHORT, sem ordens, alteração de stop na venue ou PnL. O estado não é durável após restart: requisito futuro de J4/J6 continua pendente. Contrato `docs/J4_RUNNER1_PAPER_TRAILING.md` e testes no repositório. J1 owner-run na VPS ficou estacionado por solicitação do usuário; outras jornadas podem continuar sem ele.
+
+
+## J5/PRE14 #385 — runner móvel sem prometer proteção
+
+A tela PAPER de posições selecionadas passa a identificar o runner residual a partir dos fills e reservas do próprio journal, com quatro estados PT-BR e `trailing_stop_active=false` sempre. A confirmação do runner exige que não haja UNKNOWN/reserva pendente; mesmo confirmado não comprova que existe stop nativo na corretora. Sem dependência da VPS/J1 e sem controle de ordens reais. Testes e gate CI antes de integrar.
