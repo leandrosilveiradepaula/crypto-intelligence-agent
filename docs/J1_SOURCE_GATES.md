@@ -334,3 +334,8 @@ A API oficial V5 Kline admite até 1.000 candles 1h por chamada. A implementaç�
 ## J1 #351 — censo Bybit com limite oficial de 1000 por página (30/10/2026)
 
 O cliente GET de instrumentos reduz o limite artificial de 200 para 1000 linhas por página, mantendo validação de cursor, limite de bytes, sem redirect, origem fixa e sem retries. Um censo de 921 linhas pode, em tese, caber numa única página, mas tamanho de resposta, disponibilidade da fonte e 10006 não estão comprovados por nova execução. Chamada por símbolo conserva limit=1. Teste adversarial rejeita limit=200/1001 injetados. A triagem de identidades sem atribuição indevida de Top50 permanece como etapa separada na issue #351; nada autoriza live ou prova ranking 24h fechado. Sem rede real ou alteração em dados privados.
+
+
+## J1 #351 — triagem de identidades não revisadas por proxy móvel, offline (30/10/2026)
+
+`bybit_top50_identity_priority.py` usa somente catálogo paginado completo já validado e um ticker público fornecido pelo chamador. Para cada candidato plausível sem identidade revisada exige ticker único, fresco, Decimal e valor/volume coerentes; qualquer falta/corrupção aborta a fila inteira. Ordena somente para priorizar revisão independente de identidade, inclusive símbolos potencialmente TradFi: **não concede classificação crypto**, não autentica fonte, unidade do ticker ou ranking de 24 horas FECHADAS. Relatório padrão contém contagens, digest e flags negativas; listagem de símbolos públicos somente com `include_public_symbols=True`. `marketwide_top50_verified=false` incondicional. Sem rede, SQLite, credencial, deploy ou ordens; #319/#2/#217 continuam bloqueadas até observação real autorizada e validação.
