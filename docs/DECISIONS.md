@@ -1084,3 +1084,8 @@ A carteira de pesquisa acompanha mudanças naturais entre os 50 membros escolhid
 ## D186 — J4/RUNNER1: trailing de runner PAPER somente sobre saldo confirmado (30/10/2026)
 
 Monitorar avanço favorável de mark sintético para runner residual **após** todas as saídas parciais confirmadas e nenhuma reserva/UNKNOWN pendente. Distância de trailing, ativação, intervalo e staleness são Decimal/tempo explícitos, não parâmetros supostamente seguros. Stop LONG só aumenta e SHORT só diminui; gatilho usa stop conhecido antes do tick, sem inventar preço de fill, proteção de exchange ou execução. A série de ticks inicia após checkpoint do diário, com primeiro mark apenas como referência hipotética. Monitor é read-only, em memória, sem persistência nem ordens; restart sem a série completa não preserva pico. Isso prepara J4, não autoriza testnet/live. Contrato `docs/J4_RUNNER1_PAPER_TRAILING.md`, issue #383.
+
+
+## D187 — J5/PRE14: mostrar runner PAPER confirmado sem afirmar stop instalado (30/10/2026)
+
+O painel de posições PAPER selecionadas distingue `NO_RESIDUAL_RUNNER_CONFIGURED`, `PENDING_EXIT_RECONCILIATION`, `WAITING_FOR_PARTIAL_FILLS` e `RUNNER_CONFIRMED_NOT_PROTECTED`, derivados somente de `PaperPositionInspection.balance` read-only, sem dados de mark, ordens ou PnL. O status de runner confirmado exige saldo exato igual ao piso residual, todas as tranches preenchidas e nenhuma reserva/UNKNOWN. Mesmo assim `trailing_stop_active=false` e `native_stop_verified=false`, pois J4/RUNNER1 calcula somente gatilho hipotético em memória. PT-BR mobile exibe aviso de stop não instalado; posições são independentes, nunca somar quantidades de instrumentos. Sem mudanças de schema ou arquivos em modo write, issue #385.
