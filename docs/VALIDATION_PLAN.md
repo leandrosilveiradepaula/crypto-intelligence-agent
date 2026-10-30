@@ -737,3 +737,7 @@ Regressões `test_paper_runner_mobile.py` + `test_paper_margin_mobile.py` + QA C
 ## J4/RUNNER2 #387 — sobrevivência a restart e falhas de journal
 
 Em `tests/test_paper_runner_journal.py`, criar posição PAPER com fills 50/30/14 e runner 6, iniciar journal separado, adicionar marks 100→102→103→102, reabrir em outra conexão, conferir stop hipotético monotônico e `TRIGGERED_HYPOTHETICAL_ONLY` terminal sem ordens. Exercitar replay de último tick exato, conflito de preço com mesmo timestamp, gap/staleness, identidade ou política divergentes, arquivo ausente, hash adulterado, tabela estrangeira, posição ainda com parciais não confirmadas e conservação do banco AUTO4. Rede desabilitada, nenhuma integração Binance/Bybit. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final, revisão e merge seguro sem produção.
+
+
+### J4/RUNNER3 #391 — critérios adicionais
+Exigir regressões offline do runner residual: proibição antes de preencher parciais, conservação de unidades inicial/runner, `tranche_step=0` só para residual, no-overfill/dupla reserva, UNKNOWN retém quantidade, cancel libera só parte não preenchida, replay idempotente, gatilho RUNNER2 stale/corrompido negado, LONG/SHORT, fail-closed após deriva de checkpoint, ausência de GET/POST, e nenhum stop nativo ou order sender. Validar docs/Linux, Windows/offline e Chrome/PAPER em head SHA exato, rever diff e integrar só sem produção. Mesmo sucesso total não libera J1/J4/J6, dados de mercado ou trading real.
