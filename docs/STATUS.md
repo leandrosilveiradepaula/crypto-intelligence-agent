@@ -741,3 +741,8 @@ Terceiro teste real na VPS: 16/16 + 7/7 testes offline PASS; ACK reconhecido, 19
 ## J1 WS7 #340 — envelope real ainda não validado (30/10/2026)
 
 Owner executou um WS público real após 19+7 testes PASS, recebeu 21 frames com ACK positiva, mas `failure_category=kline_envelope`; nenhum candle validado. Implementação offline diferencia chaves raiz, tópico, tipo, rows e campos, reconhece variantes de controle público documentadas sem credenciais; nenhuma nova sonda real nesta entrega. J1 #319/#2 e direitos live permanecem abertos; não afirmar Top50 marketwide.
+
+
+## J1 WS8 #342 — cardinalidade de linhas Kline (30/10/2026 UTC)
+
+Sonda pública owner-only confirmou ACK e 19 frames, mas falhou `kline_rows` sem candle validado. A implementação offline deixa de exigir exatamente um registro em `data`, valida lotes limitados com rejeição total em caso de linha inválida e ignora lista vazia sem sucesso. A causa real ainda depende de uma única observação futura com SHA homologado. J1 #2/#319/#217 abertas.
