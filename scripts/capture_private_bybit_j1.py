@@ -191,7 +191,7 @@ def owner_private_j1_capture(
             or registry_variant not in ("expanded-13", "expanded-52")
             or (registry_variant == "expanded-13" and max_assets > 13)
             or (registry_variant == "expanded-52"
-                and (history_page_hours != 720 or two_hourly_updates))
+                and history_page_hours != 720)
             or type(two_hourly_updates) is not bool or os.name != "posix"):
         raise J1BybitCaptureError("owner_opt_in_or_posix_requirement_failed")
     target = _private_db_path(database)
