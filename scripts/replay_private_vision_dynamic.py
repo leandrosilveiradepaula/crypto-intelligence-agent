@@ -15,6 +15,7 @@ from crypto_intelligence_agent.offline_vision_month import inspect_offline_visio
 from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginBasis
 from crypto_intelligence_agent.vision_intrabar_stress import VisionStressAssumptions
 from crypto_intelligence_agent.vision_stress_oos import audit_costed_vision_intrabar_oos
+from crypto_intelligence_agent.vision_costed_oos import costed_vision_monthly_oos
 from crypto_intelligence_agent.vision_dynamic_replay import replay_offline_vision_dynamic_ranking,HOUR_MS
 from scripts.audit_private_vision_multiasset import audit_private_vision_multiasset_coverage
 from scripts.audit_private_bybit_json import _read_private_file
@@ -32,7 +33,8 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
     first_decision_ms:int,last_decision_ms:int,
     step_hours:int=24,max_candidates:int=50,
     stress_assumptions:VisionStressAssumptions|None=None,
-    stress_selection_cost_bps:Decimal=Decimal(0))->dict:
+    stress_selection_cost_bps:Decimal=Decimal(0),
+    costed_oos_bps:Decimal|None=None)->dict:
     if allow_personal_nonproduction_research is not True or os.name!="posix":
         raise VisionReplayPrivateError("owner_only_research_opt_in_required")
     if type(manifest_paths) is not tuple or not 2<=len(manifest_paths)<=50:
@@ -73,6 +75,11 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
             last_decision_ms=last_decision_ms,
             step_hours=step_hours,max_candidates=max_candidates)
         report=result.sanitized_report()
+        if costed_oos_bps is not None:
+            costed=costed_vision_monthly_oos(tuple(data),
+                as_of_ms=checked["end_open_exclusive_ms"]+HOUR_MS,
+                cost_bps_per_side=costed_oos_bps)
+            report["hypothetical_costed_oos"]=costed.sanitized_report()
         if stress_assumptions is not None:
             stress=audit_costed_vision_intrabar_oos(
                 tuple(data),as_of_ms=checked["end_open_exclusive_ms"]+HOUR_MS,
@@ -95,6 +102,8 @@ def main(argv:list[str]|None=None)->int:
     parser.add_argument("--step-hours",type=int,default=24)
     parser.add_argument("--max-candidates",type=int,default=50)
     parser.add_argument("--audit-intrabar-stress",action="store_true")
+    parser.add_argument("--costed-oos",action="store_true")
+    parser.add_argument("--oos-cost-bps",type=Decimal)
     parser.add_argument("--stress-margin-quote",type=Decimal)
     parser.add_argument("--stress-leverage",type=int)
     parser.add_argument("--stress-stop-fraction",type=Decimal)
@@ -125,13 +134,16 @@ def main(argv:list[str]|None=None)->int:
             cost=args.stress_selection_cost_bps
         elif any(x is not None for x in raw):
             raise VisionReplayPrivateError("stress fields without opt-in")
+        if args.costed_oos != (args.oos_cost_bps is not None):
+            raise VisionReplayPrivateError("explicit costed OOS opt-in and cost required")
         report=private_vision_dynamic_replay(
             manifest_paths=tuple(args.manifest),
             allow_personal_nonproduction_research=args.allow_personal_nonproduction_research,
             first_decision_ms=args.first_decision_ms,
             last_decision_ms=args.last_decision_ms,
             step_hours=args.step_hours,max_candidates=args.max_candidates,
-            stress_assumptions=stress,stress_selection_cost_bps=cost)
+            stress_assumptions=stress,stress_selection_cost_bps=cost,
+            costed_oos_bps=args.oos_cost_bps if args.costed_oos else None)
     except Exception:
         report={"schema_version":"vision-private-dynamic-replay-v1",
                 "status":"private_vision_dynamic_replay_rejected",
