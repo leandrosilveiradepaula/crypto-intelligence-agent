@@ -450,6 +450,11 @@ def diagnose_shape_once(*, session_factory: Callable[[], StreamSession],
                            else "strict_valid_open_frames"] += 1
     except (OSError, ValueError, TypeError, RuntimeError, ImportError):
         stopped = "ws_shape_diagnostic_transport_stopped"
+    if stopped == "ws_shape_diagnostic_complete":
+        if not acknowledged:
+            stopped = "ws_shape_diagnostic_no_ack"
+        elif counts["target_market_frames"] == 0:
+            stopped = "ws_shape_diagnostic_no_market_frames"
     return report()
 
 def _real_session_factory():
