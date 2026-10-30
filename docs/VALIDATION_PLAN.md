@@ -749,3 +749,7 @@ Reproduzir em SQLite real de fixture: runner 6 unidades após saídas 50/30/14, 
 
 ### J6/PRE4 #395 — recuperação causal PAPER após gatilho fictício
 Cenários com SQLite de fixture e sem chamada de corretora: gatilho ausente bloqueia criação, gatilho comprovado reserva `tranche_step=0` uma vez, crash/restart conserva apenas PENDING e ID, UNKNOWN/partial/cancelled nunca retentam, fechamento após FILL PAPER explícito, ambos lados LONG/SHORT, concorrência com uma reserva, corrupção/stale antes da escrita, no-network e ausência de atualizações em RUNNER2. Todos os resultados `orders_sent=false`, `native_stop_verified=false`. CI docs/Linux/Windows/Chrome, revisão SHA final e squash sem produção; não autorizar J6 de mercado real.
+
+
+### J6/PRE5 #397 — demonstração operacional isolada
+Executar `python -m scripts.demo_paper_runner_close_flow` somente com fixtures locais, verificar contabilidade 100=94+6, reserva PENDING 6 sem FILL, restart sem segundo ID, FILL explícito final 6, saldo 0 e UI J5 refletindo encerramento PAPER. Testes determinísticos em duas execuções, bloqueio de socket/urllib, limpeza TEMP, stdout sanitizado e rejeição de parâmetros de endpoint/credencial. CI docs/Linux, Windows/offline e Chrome/PAPER SHA exato mais revisão; nenhuma autenticação, dados de mercado, lucro ou ordem real decorrem da demonstração.

@@ -373,3 +373,7 @@ A interface `scripts.inspect_paper_positions` consome somente `PaperPositionBala
 
 ### J6/PRE4 — primeira orquestração PAPER do fechamento residual
 `step_durable_paper_runner_close` coordena, sob opt-in da chamada local, um preview RUNNER2 read-only e uma reserva AUTO4 `tranche_step=0` no mesmo SQLite de posições, mantendo a idempotência de intent ID e `BEGIN IMMEDIATE` já existentes. Em restart, um estado runner pré-existente em AUTO4 substitui a leitura do diário de marks anterior. Não usa transportes, FILL sintético adicional, stop native ou testnet. Não existe transação atômica cruzada entre journals. Ver `docs/J6_PRE4_PAPER_RUNNER_CLOSE_STEP.md`.
+
+
+### J6/PRE5 — laboratório local executável do ciclo runner
+O CLI `scripts.demo_paper_runner_close_flow` usa os módulos de produção já auditados de AUTO4, RUNNER2, J6/PRE4 e leitura J5 dentro de um diretório temporário. O cenário injeta eventos FILL **somente de fixture**, demonstra restart e idempotência sem gateway externo, e remove arquivos após terminar. O JSON público tem apenas estágios e flags negativas para live/ordens. Contrato `docs/J6_PRE5_PAPER_RUNNER_E2E_DEMO.md`.
