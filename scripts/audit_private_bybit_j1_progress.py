@@ -140,7 +140,7 @@ def audit_private_bybit_j1_progress(
             registry.add(reviewed.registry_sha256)
             volumes[symbol] += len(reviewed.candles)
             closed_candle_rows += len(reviewed.candles)
-        if len(registry) != 1 or len(windows) > 50:
+        if len(registry) != 1 or len(windows) > 52:
             raise BybitProgressAuditError("private_research_registry_or_scope_mixed")
         pit_rows = db.execute(
             "SELECT observed_at_ms,decision_at_ms,content_json,content_sha256 "
@@ -152,6 +152,7 @@ def audit_private_bybit_j1_progress(
         pit_digests = []
         decisions = []
         first_pit_members = set()
+        pit_member_sets = []
         for i, pit in enumerate(pit_rows):
             payload, digest = pit["content_json"], pit["content_sha256"]
             if (type(payload) is not str or type(digest) is not str
@@ -181,12 +182,14 @@ def audit_private_bybit_j1_progress(
                 raise BybitProgressAuditError("private_pit_replay_rejected")
             if i == 0:
                 first_pit_members = symbols
-                if not all(
-                    windows[s][0] <= pit["decision_at_ms"] - 720 * HOUR_MS
-                    and windows[s][1] >= pit["decision_at_ms"]
-                    for s in symbols
-                ):
-                    raise BybitProgressAuditError("first_snapshot_lacks_720h_coverage")
+            if (len(symbols) != len(first_pit_members)
+                    or not all(
+                        windows[s][0] <= pit_rows[0]["decision_at_ms"] - 720 * HOUR_MS
+                        and windows[s][1] >= pit["decision_at_ms"]
+                        for s in symbols
+                    )):
+                raise BybitProgressAuditError("pit_selected_history_incomplete")
+            pit_member_sets.append(symbols)
             prior_observed, prior_decision = pit["observed_at_ms"], pit["decision_at_ms"]
             decisions.append(pit["decision_at_ms"])
             pit_digests.append(digest)
@@ -201,13 +204,9 @@ def audit_private_bybit_j1_progress(
                 _FILES["expanded-52"].read_bytes()).sha256_digest
             if (registry != {verified_registry}
                     or not first_pit_members
-                    or first_pit_members != set(windows)):
+                    or set().union(*pit_member_sets) != set(windows)):
                 raise BybitProgressAuditError("private_research_registry_or_scope_mixed")
-        if any(
-            set(item["symbol"] for item in json.loads(pit["content_json"])["ranked"])
-                != first_pit_members
-            for pit in pit_rows[1:]
-        ):
+        elif any(members != first_pit_members for members in pit_member_sets):
             raise BybitProgressAuditError("private_research_pit_membership_changed")
         extensions = 0
         for current, earlier in zip(reversed(decisions[1:]), reversed(decisions[:-1])):
@@ -219,6 +218,9 @@ def audit_private_bybit_j1_progress(
             "sqlite_integrity_passed": True,
             "private_page_replay_passed": True,
             "sample_asset_count": len(windows),
+            "distinct_stored_asset_count": len(windows),
+            "latest_selected_asset_count": len(pit_member_sets[-1])
+                if pit_member_sets else 0,
             "stored_page_count": len(pages),
             "stored_closed_candle_rows": closed_candle_rows,
             "immutable_pit_snapshots": len(pit_rows),

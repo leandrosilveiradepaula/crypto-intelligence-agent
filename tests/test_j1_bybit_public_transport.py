@@ -27,13 +27,14 @@ class J1BybitTransportTests(unittest.TestCase):
             instruments_url(),
             instruments_url(cursor="abc/+=="),
             instruments_url(symbol="BTCUSDT"),
+            kline_url("BTCUSDT", T-2*H, T),
             kline_url("BTCUSDT", T-24*H, T),
             kline_url("BTCUSDT", T-72*H, T),
             kline_url("BTCUSDT", T-720*H, T),
         ):
             self.assertEqual(client.get(url)[1]["retCode"], 0)
-        self.assertEqual(client.requests_attempted, 6)
-        self.assertEqual(len(urls), 6)
+        self.assertEqual(client.requests_attempted, 7)
+        self.assertEqual(len(urls), 7)
         self.assertEqual(
             parse_qs(urlsplit(urls[1]).query)["cursor"], ["abc/+=="])
 
@@ -51,6 +52,18 @@ class J1BybitTransportTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(J1BybitCaptureError):
                 c.get(bad)
         self.assertEqual(c.requests_attempted, 0)
+
+    def test_catalog_1000_uses_bounded_large_response_budget(self):
+        budgets=[]
+        def fake(url,limit):
+            budgets.append(limit)
+            return b'{"retCode":0,"result":{},"time":1793000000000}'
+        c=BoundedBybitPublicClient(transport=fake)
+        c.get(instruments_url())
+        c.get(instruments_url(symbol="BTCUSDT"))
+        c.get(kline_url("BTCUSDT",T-H,T))
+        self.assertEqual(budgets,[1_500_000,131_072,131_072])
+        self.assertEqual(c.requests_attempted,3)
 
     def test_malformed_origin_or_extra_arguments_rejected_without_io(self):
         client = BoundedBybitPublicClient(
@@ -290,7 +303,7 @@ class J1BybitTransportTests(unittest.TestCase):
         with self.assertRaises(J1BybitCaptureError):
             bad.get(instruments_url())
         with self.assertRaises(J1BybitCaptureError):
-            kline_url("BTCUSDT", T, T + 2*H)
+            kline_url("BTCUSDT", T, T + 3*H)
 
 
 if __name__ == "__main__":

@@ -847,3 +847,8 @@ A captura anterior não conectava `expanded-52` ao validador de manifesto, e usa
 ## J1/EXIT3 #379 — conclusão de ciclo único 50×722, ainda requer owner-run
 
 A PR #378 integrada corrigiu time budget de 6min e manifesto `expanded-52`, com 1.618 testes Linux PASS. O novo bloco #379 habilita `--two-hourly-updates` no modo 50×720h, mantendo cliente com cap 500 GET e falhas seguras; teste completo fake calcula 36.100 velas em novo SQLite privado e 3 PIT consecutivos. Não transformar o resultado fake em prova de Top50 real. O único owner-run na VPS deve ser realizado após CI/merge, em DB novo sob diretório 0700, sem tocar banco existente de 2 ativos ou habilitar ordens.
+
+
+## J1/EXIT4 #381 — Top50 dinâmico em desenvolvimento, 30/10/2026
+
+Após PRs #378 e #380 integradas em `main=667045a3d18e703f382e28a87fc45c0153e96ea2`, corrigir causa real adicional: seleção Top50 entre três PIT não deve exigir mesma composição, pois entrada/saída de um ativo é normal. Branch `work/j1-exit4-dynamic-top50-pit`: captura incremental por cursor, backfill somente de novo integrante, replay de retornante, auditor por PIT para até 52 históricos, testes adversariais e D185. Sem CI/merge desta issue até verificação; nenhum download real, acesso VPS, ordem ou gasto. #2/#319 continuam abertas até o owner-run comprovado.

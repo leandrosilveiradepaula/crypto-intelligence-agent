@@ -172,6 +172,89 @@ def _page(client, clock, symbol, first, hours, registry_variant=REGISTRY):
     return BybitResearchRawPage(meta_raw, candle_raw, manifest)
 
 
+def _append_dynamic_research_hour(
+    *, previous, updated, store, fetch, clock, start, cursors,
+):
+    """Append selected PIT members, backfilling only newly needed bars.
+
+    Previously selected members never re-download initial 720h. Entrants
+    receive those 720h plus closed hours since initial PIT. Returned members
+    receive only their contiguous missing suffix.
+    """
+    from crypto_intelligence_agent.bybit_local_json_audit import audit_local_bybit_json
+
+    if (updated.registry_sha256 != previous.registry_sha256
+            or updated.decision_at_ms != previous.decision_at_ms + HOUR_MS
+            or len(updated.ranked) != len(previous.ranked)
+            or updated.observed_at_ms <= previous.observed_at_ms
+            or len(cursors) > 52):
+        raise J1BybitCaptureError("dynamic_pit_identity_or_time_rejected")
+    target = updated.decision_at_ms
+    pending = {}
+    for member in updated.ranked:
+        cursor = cursors.get(member.symbol, start)
+        if (cursor < start or cursor > previous.decision_at_ms
+                or (cursor - start) % HOUR_MS):
+            raise J1BybitCaptureError("dynamic_stored_cursor_invalid")
+        pages = []
+        if cursor == start:
+            pages.append(_page(
+                fetch, clock, member.symbol, start, HISTORY_HOURS,
+                "expanded-52"))
+            cursor += HISTORY_HOURS * HOUR_MS
+        missing_hours = (target - cursor) // HOUR_MS
+        if not 1 <= missing_hours <= 2:
+            raise J1BybitCaptureError("dynamic_missing_hours_out_of_scope")
+        pages.append(_page(
+            fetch, clock, member.symbol, cursor, missing_hours,
+            "expanded-52"))
+        pending[member.symbol] = tuple(pages)
+
+    # Entire update preflight before any write. No partial new PIT on 10006,
+    # malformed pages, missing hours or drift.
+    for pages in pending.values():
+        for page in pages:
+            try:
+                inspected = audit_local_bybit_json(
+                    instrument_raw=page.instrument_raw,
+                    kline_raw=page.kline_raw,
+                    manifest=page.manifest,
+                )
+            except (DataValidationError, DataGapError):
+                raise J1BybitCaptureError(
+                    "dynamic_page_preflight_rejected") from None
+            if (inspected["status"] !=
+                    "offline_schema_conformance_passed_origin_unverified"
+                    or inspected["registry_sha256"] != updated.registry_sha256
+                    or inspected["documented_quote_turnover_unit"] != "USDT"
+                    or inspected["closed_candle_count"] != (
+                        page.manifest.end_open_ms
+                        - page.manifest.start_open_ms) // HOUR_MS):
+                raise J1BybitCaptureError("dynamic_page_preflight_rejected")
+    if clock() // HOUR_MS * HOUR_MS != target:
+        raise J1BybitCaptureError("dynamic_update_hour_expired_before_write")
+    for symbol, pages in pending.items():
+        for page in pages:
+            store.commit_raw_pair(
+                instrument_raw=page.instrument_raw,
+                kline_raw=page.kline_raw,
+                manifest=page.manifest,
+                capture_environment="private_local_unverified",
+            )
+        cursors[symbol] = target
+    for member in updated.ranked:
+        checked = store.quality_report(
+            symbol=member.symbol, interval="1h",
+            start_open_ms=start, end_open_ms=target,
+        )
+        if (not checked.complete_for_offline_staging_only
+                or checked.persisted_candles != (target-start)//HOUR_MS):
+            raise J1BybitCaptureError("dynamic_updated_history_gap")
+    if clock() // HOUR_MS * HOUR_MS != target:
+        raise J1BybitCaptureError("dynamic_update_hour_expired_after_write")
+    store.commit_pit_research_snapshot(updated)
+
+
 def owner_private_j1_capture(
     *, database: str | Path, max_assets: int = 2,
     history_page_hours: int = PAGE_HOURS,
@@ -224,6 +307,7 @@ def owner_private_j1_capture(
             capture_environment="private_local_unverified",
         )
         previous = original
+        cursors = {m.symbol: original.decision_at_ms for m in original.ranked}
         for _ in range(2 if two_hourly_updates else 0):
             next_hour = previous.decision_at_ms + HOUR_MS
             remaining_ms = next_hour + CLOSE_SAFETY_MS - clock()
@@ -234,20 +318,27 @@ def owner_private_j1_capture(
             updated, _ = _observe(fetch, clock, max_assets, registry_variant)
             if updated.decision_at_ms != next_hour:
                 raise J1BybitCaptureError("nonconsecutive_hourly_snapshot")
-            if {x.symbol for x in previous.ranked} != {
-                    x.symbol for x in updated.ranked}:
-                raise J1BybitCaptureError("sample_changed_requires_new_backfill")
-            hourly_pages = {
-                m.symbol: _page(fetch, clock, m.symbol,
-                                previous.decision_at_ms, 1, registry_variant)
-                for m in updated.ranked
-            }
-            append_offline_bybit_hourly_update(
-                previous=previous, updated=updated,
-                hourly_pages=hourly_pages, store=store,
-                original_history_hours=HISTORY_HOURS,
-                capture_environment="private_local_unverified",
-            )
+            if registry_variant == "expanded-52":
+                _append_dynamic_research_hour(
+                    previous=previous, updated=updated, store=store,
+                    fetch=fetch, clock=clock, start=start, cursors=cursors,
+                )
+            else:
+                if {x.symbol for x in previous.ranked} != {
+                        x.symbol for x in updated.ranked}:
+                    raise J1BybitCaptureError(
+                        "sample_changed_requires_new_backfill")
+                hourly_pages = {
+                    m.symbol: _page(fetch, clock, m.symbol,
+                                    previous.decision_at_ms, 1, registry_variant)
+                    for m in updated.ranked
+                }
+                append_offline_bybit_hourly_update(
+                    previous=previous, updated=updated,
+                    hourly_pages=hourly_pages, store=store,
+                    original_history_hours=HISTORY_HOURS,
+                    capture_environment="private_local_unverified",
+                )
             previous = updated
         updates = (previous.decision_at_ms - original.decision_at_ms) // HOUR_MS
         for m in previous.ranked:
@@ -266,8 +357,12 @@ def owner_private_j1_capture(
             "instrument_rows": instrument_rows,
             "reviewed_eligible_ranked_count": original.candidates_with_full_24h_count,
             "selected_assets": len(original.ranked),
+            "distinct_stored_assets": len(cursors),
+            "latest_selected_assets": len(previous.ranked),
             "closed_candles": initial.validated_closed_1h_rows
-                + len(original.ranked) * updates,
+                + len(original.ranked) * updates
+                if registry_variant != "expanded-52" else
+                sum((cursors[s] - start) // HOUR_MS for s in cursors),
             "historical_hours_per_asset": HISTORY_HOURS,
             "consecutive_hourly_updates": updates,
             "pit_snapshot_count": updates + 1,

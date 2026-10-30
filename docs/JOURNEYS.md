@@ -259,3 +259,8 @@ Comportamento alvo: 52 identidades crypto-base revisadas disponíveis no registr
 ## J1/EXIT3 #379 — PIT multiativo 50 sem intervenção entre horas
 
 O CLI owner-only permite operação autônoma de pesquisa privada por uma única invocação: coletar ranking 24h fechado de 52 revisados, backfill exato 50×720h em novo SQLite e duas novas atualizações horárias de 50 membros se identidades permanecerem estáveis. Critério de engenharia: 3 PIT reais quando executado na VPS, integridade 36.100 candles e relatório privado. Diferenças de membros, rate limit e janelas perdidas abortam sem reescrever o histórico. Avaliação Top50 marketwide exige censo real com identidade integral; não inventar confiança com fixtures.
+
+
+## J1/EXIT4 #381 — universo dinâmico sem perder histórico
+
+Requisito de J1: Top50 muda a cada hora de decisão conforme as 24h fechadas; alteração do conjunto não invalida dados já persistidos nem obriga recapturar 720h de membro retornante. Entrantes recebem backfill exato desde T0-720h, ex-membros permanecem cacheados e a auditoria lê cada snapshot imutável PIT no seu contexto. Pesquisa pessoal offline com um único owner-run, sem comportamento live. Aceite de engenharia depende de testes e CI; aceite de J1 mercado depende de coleta real e denominador completo.

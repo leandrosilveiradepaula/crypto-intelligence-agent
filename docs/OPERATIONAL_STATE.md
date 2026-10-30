@@ -962,3 +962,13 @@ Repositório `leandrosilveiradepaula/crypto-intelligence-agent`, início `main=1
 ## J1/EXIT3 #379 — regressão encontrada na CI e corrigida
 
 A primeira CI do head `ac47356023dc5530b1746d39eadd7ecbfd6209a2` identificou `private_research_registry_or_scope_mixed` **após** o teste concluir a captura simulada 50×722: o auditor read-only ainda restringia `len(windows)<=13`. A correção específica em `scripts/audit_private_bybit_j1_progress.py` amplia até 50, exige registry SHA do manifesto versionado `expanded-52` para escopo >13, mantém verificação SQLite/page/PIT e exige conjunto de membros estável entre três observações; não reescreve SQLite. Nova CI no SHA atualizado deve ser verificada antes de merge. Esta evidência é de fixture POSIX, não da VPS real.
+
+
+## J1/EXIT4 #381 — 30/10/2026
+
+Verificado `main=667045a3d18e703f382e28a87fc45c0153e96ea2`, zero PRs abertas no início. Issue #381, branch `work/j1-exit4-dynamic-top50-pit`. Escopo: preservar 720h das 50 primeiras, tratar seleção 50/51 variável nas duas PIT seguintes, baixar somente 720h para novos e 1..2h de sufixo para retornantes, manter os símbolos saídos e validar PIT por conjunto ativo. Auditor suporta 51/52 históricos somente no registro expanded-52. Testar regressão dinâmica 36.821 velas/464 GETs fake/3 PIT, CI Linux+Windows+Chrome, rever SHA final, merge sem produção; depois owner-run em VPS, que não pode ser executado via GitHub. Sem ordens, acesso SSH, network exchange, migração ou gasto nesta sessão.
+
+
+## J1/EXIT4 #381 — dois problemas adicionais reais da CI/transporte
+
+A primeira CI do head #382 encontrou incompatibilidade de `kline_url` com janela de 2h necessária ao retorno de membro; helper GET e whitelist foram ajustados estritamente para 2h (continuam recusando 3h). A próxima execução de Linux evidenciou teste legado que esperava 2h proibido; regressão corrigida para esperar 3h proibido. Revisão de código também constatou cliente com catálogo `limit=1000` e limite de corpo de apenas 131.072 bytes (a condição de 1,5MB ainda exigia `limit=200` obsoleto). O teto de 1,5MB já existente no cliente passa a valer apenas para a varredura completa de 1000 linhas, enquanto consulta individual e Kline mantêm 131.072; novo teste registra limites por endpoint. Nenhuma chamada de rede foi feita; a CI do SHA final é requisito antes de merge.
