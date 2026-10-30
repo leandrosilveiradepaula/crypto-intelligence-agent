@@ -46,6 +46,42 @@ class VisionStressOOSTests(unittest.TestCase):
         self.assertNotIn("ETHUSDT",str(result))
 
 
+    def test_fee_deterioration_and_folds_are_sanitized(self):
+        a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
+        end=a[-1].end_open_exclusive_ms+3600000
+        baseline=audit_costed_vision_intrabar_oos(
+            (a,b),as_of_ms=end,cost_bps_per_side=D("0"),assumptions=terms(fee="0"))
+        stressed=audit_costed_vision_intrabar_oos(
+            (a,b),as_of_ms=end,cost_bps_per_side=D("0"),assumptions=terms(fee="10"))
+        self.assertLessEqual(stressed.benchmark_best_net_quote,baseline.benchmark_best_net_quote)
+        self.assertLessEqual(stressed.benchmark_worst_net_quote,baseline.benchmark_worst_net_quote)
+        self.assertLessEqual(stressed.best_net_quote,baseline.best_net_quote)
+        self.assertLessEqual(stressed.worst_net_quote,baseline.worst_net_quote)
+        self.assertNotEqual(stressed.digest_sha256,baseline.digest_sha256)
+        report=stressed.sanitized_report()
+        self.assertEqual(len(report["fold_coverage"]),len(stressed.fold_reports))
+        self.assertNotIn("BTCUSDT",str(report))
+        self.assertNotIn("ETHUSDT",str(report))
+        self.assertFalse(report["financial_backtest_approved"])
+        self.assertFalse(report["orders_sent"])
+        self.assertEqual(report["network_requests"],0)
+
+    def test_no_training_lookahead_in_fold_selection(self):
+        from dataclasses import replace
+        a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
+        end=a[-1].end_open_exclusive_ms+3600000
+        baseline=audit_costed_vision_intrabar_oos(
+            (a,b),as_of_ms=end,cost_bps_per_side=D("0"),assumptions=terms())
+        changed=list(a[-1].candles)
+        row=changed[50]
+        changed[50]=replace(row,documented_quote_volume=row.documented_quote_volume+D("1"))
+        other=a[:-1]+(replace(a[-1],candles=tuple(changed)),)
+        later=audit_costed_vision_intrabar_oos(
+            (other,b),as_of_ms=end,cost_bps_per_side=D("0"),assumptions=terms())
+        self.assertEqual(baseline.fold_reports[0].bars_scored,
+                         later.fold_reports[0].bars_scored)
+        self.assertEqual(baseline.stressed_count,later.stressed_count)
+
     def test_requires_explicit_and_valid_stress_terms(self):
         a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
         end=a[-1].end_open_exclusive_ms+3600000
