@@ -145,14 +145,22 @@ class RunnerClosePaperTests(unittest.TestCase):
         self.assertEqual(final.runner_filled_units, D(6))
 
     def test_runner_unavailable_until_all_tranches_complete(self):
-        store = SQLitePaperPositionJournal(self.fixture.position_path)
-        early = exit_order("early_runner", "6", 4, cap="100")
-        before = self.fixture.position_path.read_bytes()
-        with self.assertRaises(DataValidationError):
-            store.reserve_exit(self.fixture.id, 0, early, as_of_ms=T+4)
-        self.assertEqual(before, self.fixture.position_path.read_bytes())
-        with self.assertRaises(DataValidationError):
-            store.reserve_exit(self.fixture.id, -1, early, as_of_ms=T+4)
+        with tempfile.TemporaryDirectory() as folder:
+            position_path = Path(folder) / "unfinished.sqlite"
+            store = SQLitePaperPositionJournal(position_path)
+            store.create_position(
+                position_id="fixture_unfinished_runner",
+                opening_intent=opened_order(),
+                opening_events=(e("unfinished_open", PaperOrderEventKind.FILL, 1, "100"),),
+                exit_plan=plan(), plan_version="fixture_unfinished_plan",
+                synthetic_lot_step_units=D(1), as_of_ms=T+1)
+            early = exit_order("early_runner", "6", 1, cap="100")
+            before = position_path.read_bytes()
+            with self.assertRaises(DataValidationError):
+                store.reserve_exit("fixture_unfinished_runner", 0, early, as_of_ms=T+1)
+            self.assertEqual(before, position_path.read_bytes())
+            with self.assertRaises(DataValidationError):
+                store.reserve_exit("fixture_unfinished_runner", -1, early, as_of_ms=T+1)
 
     def test_no_preview_without_genuine_local_trigger_or_with_stale_cutoff(self):
         with self.assertRaises(DataValidationError):
