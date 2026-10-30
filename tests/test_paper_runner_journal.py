@@ -1,6 +1,7 @@
 """J4 #387: durable PAPER runner recovery, no venue/exchange writes."""
 from decimal import Decimal as D
 from pathlib import Path
+import os
 import sqlite3
 import tempfile
 import unittest
@@ -153,7 +154,8 @@ class DurablePaperRunnerTests(unittest.TestCase):
             self.append("102",1)
             self.load(1)
         self.assertEqual(before,self.position.load(self.id))
-        self.assertEqual(self.path.stat().st_mode & 0o777,0o600)
+        if os.name == "posix":
+            self.assertEqual(self.path.stat().st_mode & 0o777,0o600)
 
     def test_unconfirmed_runner_never_creates_db(self):
         with tempfile.TemporaryDirectory() as folder:
