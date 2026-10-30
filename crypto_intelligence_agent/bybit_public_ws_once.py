@@ -148,7 +148,9 @@ def _safe_failure_category(error: Exception, stage: str) -> str:
         "ws_kline_root_keys_invalid": "kline_root_keys",
         "ws_kline_topic_invalid": "kline_topic",
         "ws_kline_type_invalid": "kline_type",
-        "ws_kline_shape_invalid": "kline_rows",
+        "ws_kline_rows_type_invalid": "kline_rows_type",
+        "ws_kline_rows_nonobject_invalid": "kline_rows_nonobject",
+        "ws_kline_rows_overflow_invalid": "kline_rows_overflow",
         "ws_kline_fields_invalid": "kline_fields",
     }
     for prefix, category in mapping.items():
@@ -173,13 +175,28 @@ def _check_closed(frame: dict, *, received_ms: int) -> bool:
     if frame.get("type") != "snapshot":
         raise DataValidationError("ws_kline_type_invalid")
     rows = frame.get("data")
-    if type(rows) is not list or len(rows) != 1 or type(rows[0]) is not dict:
-        raise DataValidationError("ws_kline_shape_invalid")
-    row = rows[0]
+    if type(rows) is not list:
+        raise DataValidationError("ws_kline_rows_type_invalid")
+    if len(rows) > 8:
+        raise DataValidationError("ws_kline_rows_overflow_invalid")
+    if any(type(row) is not dict for row in rows):
+        raise DataValidationError("ws_kline_rows_nonobject_invalid")
+    # Validate every row before approving any closed candle.
+    return any_closed_after_full_validation(rows, frame["ts"], received_ms)
+
+
+def any_closed_after_full_validation(rows: list, server: int, received_ms: int) -> bool:
+    any_closed = False
+    for row in rows:
+        any_closed = _validate_one_kline_row(row, server, received_ms) or any_closed
+    return any_closed
+
+
+def _validate_one_kline_row(row: dict, server: int, received_ms: int) -> bool:
     expected = {"start", "end", "interval", "open", "high", "low", "close", "volume", "turnover", "confirm", "timestamp"}
     if set(row) != expected:
         raise DataValidationError("ws_kline_fields_invalid")
-    start, end, stamp, server = row["start"], row["end"], row["timestamp"], frame["ts"]
+    start, end, stamp = row["start"], row["end"], row["timestamp"]
     if any(type(v) is not int for v in (start, end, stamp, server, received_ms)):
         raise DataValidationError("ws_time_type_invalid")
     if (row["interval"] != "60" or start <= 0 or start % HOUR_MS or end != start + HOUR_MS - 1
