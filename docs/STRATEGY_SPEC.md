@@ -187,3 +187,8 @@ Para long e short simultâneos, exposição bruta por marcação permanece alta 
 ## J4/RUNNER1 — trailing do runner residual (somente PAPER)
 
 Depois de preenchimentos confirmados das tranches e sem reservas/UNKNOWN, a parcela residual configurada pode ser observada por trailing sobre mark sintético. LONG ratcheteia stop para cima com máximo favorável; SHORT para baixo com mínimo favorável. A ação resultante é sinal de pesquisa `TRIGGERED_HYPOTHETICAL_ONLY` e não ordem, fill, PnL ou stop garantido. Antes de confirmar runner, status `WAITING_FOR_CONFIRMED_RUNNER`. A política não altera posição, margem, alavancagem, ledger, nem autoriza capital real.
+
+
+## J5/PRE14 — apresentação de runner não altera a estratégia
+
+Mostrar se as parciais foram preenchidas o suficiente para deixar o runner residual no PAPER; em qualquer caso informar ausência de stop confirmado. A UI não calcula preço de disparo, não altera percentuais, não reativa trailing após restart e não pode transformar status confirmado do runner em permissão de trading. O cálculo J4/RUNNER1 permanece separado e puramente hipotético.
