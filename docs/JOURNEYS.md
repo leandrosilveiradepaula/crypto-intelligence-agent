@@ -254,3 +254,8 @@ Reutilização do replay de carteira PRE19 para avaliar margem total/por leg, ex
 ## J1/EXIT2 #377 — fechar bloqueios de captura privada dos 50 candidatos
 
 Comportamento alvo: 52 identidades crypto-base revisadas disponíveis no registro → censo pre/post completo → 24 velas fechadas por elegível → 50 maiores do conjunto revisado → 720 candles por ativo em banco SQLite **novo** sem sobrescrever histórico anterior. Guardas de 6min, manifesto 52, falha antes de criar DB se faltar cobertura, CI e replay garantem preparo técnico. O proprietário executará pesquisa pessoal na VPS somente após CI/merge, preservando direitos e limitações de dados live. A J1 épica #2 e o censo de todos contratos #319 exigem aceitação real posterior, sem inventar ranking marketwide.
+
+
+## J1/EXIT3 #379 — PIT multiativo 50 sem intervenção entre horas
+
+O CLI owner-only permite operação autônoma de pesquisa privada por uma única invocação: coletar ranking 24h fechado de 52 revisados, backfill exato 50×720h em novo SQLite e duas novas atualizações horárias de 50 membros se identidades permanecerem estáveis. Critério de engenharia: 3 PIT reais quando executado na VPS, integridade 36.100 candles e relatório privado. Diferenças de membros, rate limit e janelas perdidas abortam sem reescrever o histórico. Avaliação Top50 marketwide exige censo real com identidade integral; não inventar confiança com fixtures.
