@@ -47,7 +47,41 @@ def _clock() -> int:
     return time.time_ns() // 1_000_000
 
 
+def _observe_large(client, clock, max_assets):
+    """Reuse PREVIOUSLY reviewed 52-base, six-minute causal rank.
+
+    The small-sample 120s PIT contract is intentionally untouched.
+    No market-wide assertion; missing ranked assets fail before storage.
+    """
+    from crypto_intelligence_agent.bybit_pit_research import (
+        BybitPITMember, BybitPITResearchSelection,
+    )
+    from scripts.probe_bybit_top50_closed_pit import (
+        observe_reviewed_closed_24h_rank,
+    )
+    ranked = observe_reviewed_closed_24h_rank(fetch=client, clock=clock)
+    if len(ranked.ranked) < max_assets:
+        raise J1BybitCaptureError("reviewed_closed_24h_rank_below_requested_assets")
+    selection = BybitPITResearchSelection(
+        observed_at_ms=ranked.observed_at_ms,
+        decision_at_ms=ranked.closed_hour_decision_ms,
+        registry_sha256=ranked.registry_sha256,
+        instrument_page_count=ranked.instrument_pages_scanned,
+        all_instrument_row_count=ranked.complete_catalog_instrument_rows,
+        reviewed_contract_count=ranked.reviewed_eligible_contracts,
+        insufficient_listing_history_count=ranked.reviewed_insufficient_listing_history,
+        candidates_with_full_24h_count=ranked.verified_24h_window_count,
+        ranked=tuple(BybitPITMember(
+            i, member.symbol, member.base, "USDT",
+            member.turnover_24_closed_hours_usdt,
+        ) for i, member in enumerate(ranked.ranked[:max_assets], 1)),
+    )
+    return selection, ranked.complete_catalog_instrument_rows
+
+
 def _observe(client, clock, max_assets, registry_variant=REGISTRY):
+    if registry_variant == "expanded-52":
+        return _observe_large(client, clock, max_assets)
     start = clock()
     decision = start // HOUR_MS * HOUR_MS
     if start - decision < CLOSE_SAFETY_MS:
@@ -156,6 +190,8 @@ def owner_private_j1_capture(
             or history_page_hours not in (72, 720)
             or registry_variant not in ("expanded-13", "expanded-52")
             or (registry_variant == "expanded-13" and max_assets > 13)
+            or (registry_variant == "expanded-52"
+                and (history_page_hours != 720 or two_hourly_updates))
             or type(two_hourly_updates) is not bool or os.name != "posix"):
         raise J1BybitCaptureError("owner_opt_in_or_posix_requirement_failed")
     target = _private_db_path(database)
