@@ -867,3 +867,7 @@ J4/RUNNER1 #383/PR #384 integrada na `main` em `08cae66c40779562fa15a07e5be77fce
 ## 30/10/2026 — J4/RUNNER2 #387, persistência offline sem VPS
 
 Base confirmada `main=1f15409e09c9f3072cf4c526dd57edf90b085e80`, PRs abertas zero no início. Issue #387 e branch `work/j4-runner2-durable-paper-trailing` introduzem SQLite separado de eventos mark sintéticos, leitura RO do diário de posições e replay monotônico via RUNNER1. Os cenários de recuperação, corrupção, idempotência e staleness foram codificados em testes; CI/merge devem ser verificados. A coleta J1 #2/#319 segue pendente de ação externa quando possível, sem solicitar VPS agora. Nenhuma API financeira, ordem, credencial ou custo.
+
+
+## J5/PRE15 #389 — recuperação de trailing PAPER no painel (30/10/2026)
+Base confirmada: J4/RUNNER2 #387/PR #388 integrada em main SHA `125c5c8a30d20f6f3c479ca64bea654bd48a4051`, J5/PRE14 #385/PR #386 já integrada. Branch `work/j5-pre15-durable-runner-mobile` implementa visualização local RO opt-in dos estados hipotéticos recuperados RUNNER2, com policy completa, posição explicitamente selecionada, teste de drift e JSON/HTML aditivos. Nova issue #389, testes `test_paper_runner_recovery_mobile.py`. PR, CI e merge desta unidade exigem confirmação independente; nenhuma VPS, dados novos J1, stop nativo, ordem, lucro ou deploy. J1 #2/#319 permanecem pendentes de owner-run adiado por decisão do PO.
