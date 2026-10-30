@@ -726,3 +726,8 @@ Correcao offline para aceitar `req_id` na ACK V5 documentada, heartbeat aplicati
 ## J1 WS4 #334 — primeiro frame real não reconhecido (29/10/2026)
 
 A VPS executou com código `15187f34c66ab72a4b088e221ae9bc3dfc3dd910`, `websockets==15.0.1`, testes 10/10 e 7/7 PASS. A primeira sessão pública de `kline.60.BTCUSDT` recebeu 1 frame e retornou `ws_subscription_not_acknowledged`; a causa não é conhecida. Este patch adiciona diagnóstico por categorias sanitizadas, mantendo o tratamento fail-closed. Não houve candle confirmado nem escrita no banco privado; J1 #2/#319 abertas.
+
+
+## J1 WS5 #336 — dado antecipado e ACK tardia (29/10/2026)
+
+Última sonda owner-only na VPS sob SHA `4a6a28d5b6d528a437e6d6e9bb3239d9faa914fd`: 11/11 e 7/7 testes PASS, `frames_seen=1`, `status=ws_market_data_before_ack`, zero candles aprovados/ordens, dados locais preservados. Correção: kline pré-ACK estrita é apenas pendente e não dá sucesso até ACK válida; sem confirmação permanece recusada. #2/#319 seguem abertos.

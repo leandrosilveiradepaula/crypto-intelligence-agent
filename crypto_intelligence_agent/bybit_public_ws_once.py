@@ -157,13 +157,15 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
     acknowledged = False
     started = clock()
     last_ping = started
+    preack_frames = 0
+    preack_closed = False
     try:
         with closing(session_factory()) as session:
             session.send(json.dumps({"op": "subscribe", "args": [TOPIC]}, separators=(",", ":")))
             while frames < max_frames:
                 remaining = max_seconds - (clock() - started)
                 if remaining <= 0:
-                    return WSOnceResult("ws_observation_timeout", frames, 0, acknowledged)
+                    return WSOnceResult("ws_unacknowledged_market_data" if preack_frames and not acknowledged else "ws_observation_timeout", frames, 0, acknowledged)
                 now = clock()
                 if acknowledged and now - last_ping >= 20:
                     session.send('{"op":"ping"}')
@@ -175,9 +177,20 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                 frames += 1
                 payload = _bounded_json(raw)
                 if not acknowledged:
+                    if payload.get("topic") is not None or "data" in payload:
+                        # A pre-ACK frame is never accepted without a later valid ACK.
+                        # Do not retain the payload or any market value.
+                        closed = _check_closed(payload, received_ms=wall_ms())
+                        preack_frames += 1
+                        if preack_frames > 8:
+                            return WSOnceResult("ws_preack_frame_limit", frames, 0, False)
+                        preack_closed = preack_closed or closed
+                        continue
                     if not _subscription_ack(payload):
                         return WSOnceResult(_classify_first_frame(payload), frames, 0, False)
                     acknowledged = True
+                    if preack_closed:
+                        return WSOnceResult("ws_one_closed_hour_observed_only", frames, 1, True)
                     continue
                 if _public_pong(payload):
                     continue
@@ -185,7 +198,7 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                     return WSOnceResult("ws_one_closed_hour_observed_only", frames, 1, True)
     except (OSError, ValueError, TypeError, RuntimeError, DataValidationError, ImportError):
         return WSOnceResult("ws_failed_closed", frames, 0, acknowledged)
-    return WSOnceResult("ws_frame_budget_exhausted", frames, 0, acknowledged)
+    return WSOnceResult("ws_unacknowledged_market_data" if preack_frames and not acknowledged else "ws_frame_budget_exhausted", frames, 0, acknowledged)
 
 
 def _real_session_factory():

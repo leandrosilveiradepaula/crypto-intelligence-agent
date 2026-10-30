@@ -289,3 +289,8 @@ O agregador de eventos confirma apenas o funcionamento determinístico de armaze
 ## J1 WS3 #332 — ACK/heartbeat realistas nao promovem fonte ao vivo
 
 A observacao WS de um topico `kline.60` sera diagnosticamente util apenas se a API V5 retornar ACK valida e um fechamento dentro de janela UTC limitada. Os testes verificam esse protocolo por frames injetados; nenhum acesso externo foi executado. `confirm=true` e ping/pong sao caracteristicas de envelope, nao prova de confiabilidade, licenciamento, marketwide Top50 ou historico 30d. Nao reutilizar dados Bybit de pesquisa privada em negociacao live sem gates especificos de #217/#319/#2. Nenhuma ordem automatica real autorizada.
+
+
+## J1 WS5 #336 — frame antecipado não é assinatura autenticada
+
+`confirm=true` no tópico esperado prova somente o campo de fechamento do envelope. Frames anteriores à ACK positiva ficam estritamente pendentes e limitados na memória, nunca persistidos ou promovidos para trading. ACK negativa, ausente ou qualquer mensagem inválida impede sucesso. O código é testado offline, sem contornar `10006`, capturar credenciais ou modificar histórico privado. #2/#319/#217 abertas.
