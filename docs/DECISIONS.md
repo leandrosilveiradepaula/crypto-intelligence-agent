@@ -1054,3 +1054,8 @@ No replay mark/trade (issue #369), níveis de manutenção passam a poder variar
 ## D180 — J3/PRE18: cobertura explícita de funding sintético (30/10/2026)
 
 O motor de replay mark/trade pode exigir um `SyntheticFundingCalendar` opt-in que determina somente horários fictícios; cada vencimento na janela exige evento `SyntheticFundingEvent` com taxa/nocional explícitos, sem preenchimento zero quando ausente. Instantes de funding coincidentes com ticks são ambíguos e falham. Nenhum calendário real da exchange pode ser inferido por default, e nenhuma taxa é gerada automaticamente. O caminho legado permanece intacto. Ver issue #371 e `docs/J3_PRE18_FUNDING_CALENDAR.md`; a decisão D77 de produto final automático não autoriza ordens.
+
+
+## D181 — J3/PRE19: carteira sintética sem PnL fictício após liquidação (30/10/2026)
+
+O agregador `synthetic_portfolio_replay.py` usa somente resultados do replay mark/trade existente, exige calendário UTC comum, moeda sintética igual, identidade de posição única e margem isolada por leg. Stop/target fecham apenas condicionalmente, sem preenchimento certificado; liquidação sem PnL verificado deixa equity, PnL e exposição **indefinidos** a partir do evento, não presume limite de perda nem liberação de capital. Drawdown cobre apenas prefixo com equity conhecida. Correlação de mark é descritiva após observação e nunca indicador causal de sinal. Issue #373 e contrato `docs/J3_PRE19_PORTFOLIO_REPLAY.md`. Não autoriza ordens reais.
