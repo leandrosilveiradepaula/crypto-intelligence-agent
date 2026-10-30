@@ -717,3 +717,8 @@ Executar `tests/test_j1_private_bybit_capture.py` e `tests/test_j1_bybit_top50_c
 ## J1/EXIT3 #379 — teste único de continuidade PIT em 50 ativos
 
 Com transporte inteiramente injetado, executar 52 identidades revisadas com 50 selecionadas; 50×720 velas fechadas iniciais, mais 2×50 velas futuras em duas janelas UTC consecutivas. Verificar 3 PIT com horários observados distintos, 36.100 candles, auditor independente `audit_private_bybit_j1_progress`, integridade SQLite, replay dos pages, modo 0600 e 462 GETs sem rede. 462 fica abaixo do cap estrito 500 do transport, não é estimativa de consumo garantido no mercado. Testar risco de mudança de ranking (falha antes de append inválido), opt-in, restrições de tempo, 10006, legado. CI Linux/docs, Windows/offline e Chrome/PAPER SHA final, revisão e merge sem produção.
+
+
+## J1/EXIT4 #381 — teste adversarial de churn
+
+Além da fixture estável de 52→50→36.100 velas/3 PIT, variar classificação das 24h fechadas: T0 exclui um candidato; T1 esse candidato sobe, desloca o membro número 50 e é backfilled 720+1 horas; T2 membro removido retorna, preenchendo só lacuna de 2h (nunca 720h novamente). Auditor deve encontrar 51 membros historicamente armazenados, 50 ativos em cada PIT, replay íntegro, total condicional 36.821 velas, 464 GETs injetados (<500) e zero sockets. Testar falha de GET/10006 ou página contaminada antes do PIT, sem limpar DB. Manter regressões antigas de 13 e de 50 estáveis; aceitar apenas com CI docs/Linux, Windows e Chrome no SHA final, revisão e merge sem produção.
