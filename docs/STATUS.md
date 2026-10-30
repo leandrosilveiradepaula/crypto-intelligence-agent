@@ -812,3 +812,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## #359 — acesso explícito ao stress OOS no auditor privado (30/10/2026)
 
 A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-stress` com os 9 parâmetros completos `--stress-margin-quote`, `--stress-leverage`, `--stress-stop-fraction`, `--stress-target-fraction`, `--stress-maintenance-bps`, `--stress-fee-bps`, `--stress-slippage-bps`, `--stress-funding-bps` e `--stress-selection-cost-bps`; recusa parâmetros parciais ou sem opt-in, só lê os manifest/ZIPs privados já existentes, valida antes de calcular, e emite unicamente agregados anonimizados de stress e digest. Alavancagem e margem são hipóteses, não aprovação da corretora; não autentica dados, não prova trajetória intrabar/mark/funding ou liquidação real. Nenhuma ordem, credencial, escrita, rede, deploy ou lucro validado. A CI é requisito antes de merge.
+
+
+## J3/ROBUST1 #367 — pacote de robustez proposto (30/10/2026)
+
+Após #363/PRs #364–#366 integradas, a nova issue #367 implementa comparação de quatro cenários condicionais em dados históricos Vision já privados, com choques explícitos de taxa, slippage, manutenção e funding, sem alteração do calendário OOS ou suposta liquidação real. Arquivos `crypto_intelligence_agent/vision_risk_sensitivity.py`, `tests/test_vision_risk_sensitivity.py`, CLI e docs/J3_ROBUST1.md em branch de revisão `work/j3-robust1-sensitivity`; **não afirmar aceite até teste/CI e merge**. Nenhuma conta, API, ordem, VPS, credencial, deploy ou gasto. J1 #2/#217/#319 e J3 #4 abertas.

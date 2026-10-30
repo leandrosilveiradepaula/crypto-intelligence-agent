@@ -157,3 +157,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## #359 — ligação de stress à seleção mensal OOS sem refitting (30/10/2026)
 
 `vision_stress_oos.audit_costed_vision_intrabar_oos` chama o avaliador causal mensal de J2/J3 para congelar a regra exclusivamente treinada no mês anterior e, no mês OOS, estressa o candle selecionado com os limites condicionais OHLC adverso/favorável da etapa STRESS1. Retorna contagens agregadas de exposições, toques ambiguamente ordenados, condições de liquidação hipotética e resultados condicionais quote do modelo (sem garantia de perda executável). Não refaz ranking com futuro, não otimiza parâmetros no mês de teste, não publica OHLC/ativos ou preços. Não é backtest financeiramente homologado, execução, feed live, autenticação Binance nem validação Top50. A CLI privada ainda não publica a nova modalidade; issue #359 continua aberta até integração final e gates.
+
+
+## J3/ROBUST1 #367 — sensibilidade de risco OOS em cenários privados
+
+A auditoria `vision_risk_sensitivity.py` reutiliza a mesma seleção mensal OOS causal e compara base, custos/manutenção adversos e duas hipóteses de funding assinado. As quatro saídas são ramos de **simulação**, não quatro operações ou previsões. Uma alta de taxas não deve melhorar o envelope sob funding constante; funding com sinais opostos pode favorecer LONG e SHORT de modo diferente, logo não se conclui monotonicidade universal. Sem mark, ordem intrabar, preço executável, financiamento liquidado ou tier real de margem, não promover resultado a PnL, retorno esperado ou sinal live. Contrato e CLI opt-in em `docs/J3_ROBUST1.md`.

@@ -682,3 +682,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## #359 — acesso explícito ao stress OOS no auditor privado (30/10/2026)
 
 A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-stress` com os 9 parâmetros completos `--stress-margin-quote`, `--stress-leverage`, `--stress-stop-fraction`, `--stress-target-fraction`, `--stress-maintenance-bps`, `--stress-fee-bps`, `--stress-slippage-bps`, `--stress-funding-bps` e `--stress-selection-cost-bps`; recusa parâmetros parciais ou sem opt-in, só lê os manifest/ZIPs privados já existentes, valida antes de calcular, e emite unicamente agregados anonimizados de stress e digest. Alavancagem e margem são hipóteses, não aprovação da corretora; não autentica dados, não prova trajetória intrabar/mark/funding ou liquidação real. Nenhuma ordem, credencial, escrita, rede, deploy ou lucro validado. A CI é requisito antes de merge.
+
+
+## J3/ROBUST1 #367 — regressões de sensibilidade e integridade temporal
+
+Executar `tests/test_vision_risk_sensitivity.py` e a suíte POSIX privada `test_replay_private_vision_dynamic.py` no mesmo SHA: custo/manutenção adversos não melhoram resultados condicionais sob funding constante, seleção OOS congelada, funding +/- mantidos como alternativas não monotônicas, digest dependente dos parâmetros, 50x vs 1x, perturbação da ordem da amostra, contexto Decimal, inputs inválidos, opt-in completo, nenhum símbolo/ZIP/caminho privado em report, rede e ordens zeradas. Exigir CI Linux/docs, Windows/offline e Chrome/PAPER; nenhum teste local deve ser alegado se não executado. J1/J3 financeiros não homologados.
