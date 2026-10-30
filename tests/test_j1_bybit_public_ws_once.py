@@ -124,7 +124,7 @@ class Tests(unittest.TestCase):
         self.assertNotIn("BTCUSDT",str(report))
 
     def test_post_ack_error_categories_are_sanitized(self):
-        cases=[(dict(frame(),type="delta"),"kline_envelope"),
+        cases=[(dict(frame(),type="delta"),"kline_type"),
                (dict(frame(),ts=FIRST+HOUR_MS+9000),"kline_clock"),
                (dict(frame(),data=[dict(frame()["data"][0],turnover="NaN")]),"kline_decimal")]
         for bad,expected in cases:
@@ -135,6 +135,37 @@ class Tests(unittest.TestCase):
                 self.assertEqual(report["status"],"ws_failed_closed")
                 self.assertEqual(report["failure_category"],expected)
                 self.assertTrue(sock.closed)
+
+    def test_documented_public_pong_shapes_and_open_kline(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import _is_public_pong
+        self.assertTrue(_is_public_pong({"success":True,"ret_msg":"pong","conn_id":"private","req_id":"","op":"ping"}))
+        self.assertTrue(_is_public_pong({"op":"pong","args":["1672916271846"]}))
+        self.assertFalse(_is_public_pong({"op":"pong","args":["not_timestamp"]}))
+        self.assertFalse(_is_public_pong({"op":"pong","args":["1672916271846"],"data":[1]}))
+        self.assertFalse(_is_public_pong({"op":"pong","args":["1672916271846"],"extra":"private"}))
+        x=self.call([ACK,frame(False),{"success":True,"ret_msg":"pong","conn_id":"private","req_id":"","op":"ping"},frame()],max_frames=4)
+        self.assertEqual(x["status"],"ws_one_closed_hour_observed_only")
+
+    def test_alternative_pong_and_control_fail_closed(self):
+        x=self.call([ACK,{"op":"pong","args":["1672916271846"]},frame()],max_frames=3)
+        self.assertEqual(x["confirmed_closed_events"],1)
+        x=self.call([ACK,{"op":"pong","args":["bad"]}],max_frames=2)
+        self.assertEqual(x["failure_category"],"unexpected_control")
+        self.assertFalse(x["confirmed_closed_events"])
+
+    def test_kline_failure_categories_are_disjoint(self):
+        cases=[(dict(frame(),surprise="private"),"kline_root_keys"),
+               (dict(frame(),topic="kline.60.OTHERUSDT"),"kline_topic"),
+               (dict(frame(),type="delta"),"kline_type"),
+               (dict(frame(),data=[]),"kline_rows"),
+               (dict(frame(),data=[dict(frame()["data"][0],surprise="private")]),"kline_fields")]
+        for bad,expected in cases:
+            with self.subTest(expected=expected):
+                sock=Socket([ACK,bad])
+                x=observe_once(session_factory=lambda:sock,wall_ms=lambda:FIRST+HOUR_MS+2000,clock=lambda:0,max_frames=2,max_seconds=2).sanitized_report()
+                self.assertEqual(x["failure_category"],expected)
+                self.assertEqual(x["confirmed_closed_events"],0)
+                self.assertNotIn("private",str(x))
 
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
