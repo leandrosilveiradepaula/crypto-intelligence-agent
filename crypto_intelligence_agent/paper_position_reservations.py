@@ -224,6 +224,9 @@ class PaperPositionBalance:
     tranches: tuple[PaperTrancheBalance, ...]
     exit_orders: tuple[PaperExitOrderBalance, ...]
     opening_margin_intent: PaperMarginIntentReceipt | None = None
+    runner_filled_units: Decimal = Decimal(0)
+    runner_reserved_unfilled_units: Decimal = Decimal(0)
+    runner_unallocated_units: Decimal = Decimal(0)
 
     @property
     def leverage_at_intent(self) -> int | None:
@@ -315,13 +318,20 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
             raise DataValidationError("too many paper exit intents")
         filled = [Decimal(0) for _ in schedule.allocations]
         reserved = [Decimal(0) for _ in schedule.allocations]
+        runner_filled = Decimal(0)
+        runner_reserved = Decimal(0)
+        runner_order_seen = False
         seen_orders = {opening.intent_id}
         seen_events = {e.event_id for e in record.opening_events}
         order_states: list[PaperExitOrderBalance] = []
         count = len(record.opening_events)
         for x in record.exits:
-            if type(x.tranche_step) is not int or not 1 <= x.tranche_step <= len(filled):
-                raise DataValidationError("paper exit references unplanned tranche")
+            if (type(x.tranche_step) is not int or
+                    not 0 <= x.tranche_step <= len(filled) or
+                    (x.tranche_step == 0 and schedule.residual_floor_units == 0)):
+                raise DataValidationError("paper exit references unplanned tranche or runner")
+            if runner_order_seen and x.tranche_step != 0:
+                raise DataValidationError("planned tranches cannot follow a runner exit")
             order = x.intent
             if (type(order) is not PaperOrderIntent
                     or order.effect is not PaperOrderEffect.REDUCE_ONLY
@@ -352,9 +362,14 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
                 raise DataValidationError("paper position exceeds total event budget")
             replay = replay_paper_order(order, x.events, as_of_ms=x.as_of_ms)
             outstanding = replay.unfilled_units if replay.requires_reconciliation else Decimal(0)
-            i = x.tranche_step - 1
-            filled[i] += replay.filled_total_units
-            reserved[i] += outstanding
+            if x.tranche_step == 0:
+                runner_order_seen = True
+                runner_filled += replay.filled_total_units
+                runner_reserved += outstanding
+            else:
+                i = x.tranche_step - 1
+                filled[i] += replay.filled_total_units
+                reserved[i] += outstanding
             order_states.append(PaperExitOrderBalance(
                 x.tranche_step, order, x.events, replay, outstanding,
             ))
@@ -367,13 +382,22 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
                 i + 1, allocation.basis, allocation.exit_units,
                 filled[i], reserved[i], allocation.exit_units - used,
             ))
-        total_filled = sum(filled, Decimal(0))
-        outstanding_all = sum(reserved, Decimal(0))
+        if runner_order_seen and (
+                any(t.filled_units != t.target_units or
+                    t.reserved_unfilled_units != 0 for t in tranches)
+                or any(o.tranche_step != 0 and o.snapshot.requires_reconciliation
+                       for o in order_states)):
+            raise DataValidationError("runner exit requires fully reconciled partial exits")
+        if runner_filled + runner_reserved > schedule.residual_floor_units:
+            raise DataValidationError("paper runner exit exceeds original runner allocation")
+        total_filled = sum(filled, Decimal(0)) + runner_filled
+        outstanding_all = sum(reserved, Decimal(0)) + runner_reserved
         remaining = initial - total_filled
         unreserved = remaining - outstanding_all
-        if (unreserved < schedule.residual_floor_units
-                or remaining < 0
-                or total_filled + outstanding_all > initial):
+        if (unreserved < 0 or remaining < 0
+                or total_filled + outstanding_all > initial
+                or (not runner_order_seen
+                    and unreserved < schedule.residual_floor_units)):
             raise DataValidationError("paper exits exceed confirmed quantity or runner floor")
     return PaperPositionBalance(
         position_id=record.position_id,
@@ -390,6 +414,10 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
         runner_floor_units=schedule.residual_floor_units,
         tranches=tuple(tranches), exit_orders=tuple(order_states),
         opening_margin_intent=record.opening_margin_intent,
+        runner_filled_units=runner_filled,
+        runner_reserved_unfilled_units=runner_reserved,
+        runner_unallocated_units=(
+            schedule.residual_floor_units - runner_filled - runner_reserved),
     )
 
 
@@ -622,6 +650,19 @@ class SQLitePaperPositionJournal:
                     or intent.max_reducible_units is None
                     or intent.max_reducible_units > original.confirmed_remaining_units):
                 raise DataValidationError("paper exit cannot reverse or exceed confirmed position")
+            if tranche_step == 0:
+                if (original.runner_floor_units <= 0
+                        or not original.tranches
+                        or any(t.filled_units != t.target_units or
+                               t.reserved_unfilled_units != 0 for t in original.tranches)
+                        or any(x.snapshot.requires_reconciliation
+                               for x in original.exit_orders)
+                        or original.runner_reserved_unfilled_units != 0
+                        or intent.requested_units > original.runner_unallocated_units
+                        or intent.requested_units > original.unreserved_units):
+                    raise DataValidationError("PAPER runner is incomplete, uncertain or exhausted")
+            elif type(tranche_step) is not int or not 1 <= tranche_step <= len(original.tranches):
+                raise DataValidationError("unplanned PAPER partial exit")
             if len(current.exits) >= _MAX_EXITS:
                 raise DataValidationError("paper position exit order budget exceeded")
             candidate = replace(
