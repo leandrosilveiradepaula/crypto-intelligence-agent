@@ -274,3 +274,8 @@ O módulo separado PAPER observa mark em série causal após todas as parciais d
 ## J5/PRE14 #385 — runner móvel sem prometer proteção
 
 A tela PAPER de posições selecionadas passa a identificar o runner residual a partir dos fills e reservas do próprio journal, com quatro estados PT-BR e `trailing_stop_active=false` sempre. A confirmação do runner exige que não haja UNKNOWN/reserva pendente; mesmo confirmado não comprova que existe stop nativo na corretora. Sem dependência da VPS/J1 e sem controle de ordens reais. Testes e gate CI antes de integrar.
+
+
+## J4/RUNNER2 #387 — replay durável de trailing PAPER
+
+O estado de trailing pode ser reconstruído após reinício por marks sintéticos duráveis em journal **separado**, sem recalcular extremos somente de uma janela truncada. A posição de runner permanece ancorada a um checkpoint validado e ao policy hash; mudanças na posição ou política falham sem rearmar silenciosamente. Estados hipotéticos terminais não são fills nem stops da exchange. J1 continua pendente na VPS por solicitação do proprietário, mas J4 progride offline.
