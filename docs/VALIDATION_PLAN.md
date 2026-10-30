@@ -601,3 +601,8 @@ Rodar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py 
 ## J1 WS5 #336 — validação de sequência pre-ACK
 
 Executar suíte `test_j1_bybit_public_ws_once.py` e regressões `test_j1_bybit_ws_ack_heartbeat_schedule.py`, `test_j1_bybit_ws_offline_pipeline.py`. Testar candle fechado antes de ACK válido, aberto antes de ACK seguido de fechado, rejeição explícita após pré-ACK, tópico malicioso, frame budget (8 pre-ACK) e falta de ACK sem aprovação; nenhuma cópia de OHLCV/ID ou acesso real na CI. SHA da PR e CI Linux/docs/Windows/Chrome antes e depois de squash merge. J1 marketwide false.
+
+
+## J1 WS6 #338 — clock e categorias de falha pós-ACK
+
+Executar testes `test_j1_bybit_public_ws_once.py` e regressões `test_j1_bybit_ws_ack_heartbeat_schedule.py`, `test_j1_bybit_ws_offline_pipeline.py`, `test_j1_bybit_closed_stream_cache.py`; validar `confirm=true` +100ms após fim da hora, skew local dentro de 5s, rejeição de skew >5s, candle falso, OHLC/decimal, schema e category allowlist sem dados. CI Linux/docs/Windows/Chrome pré/pós-merge. Sem WS real nos testes, ordens, migração ou alterações ao SQLite owner.
