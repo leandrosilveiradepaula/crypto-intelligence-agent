@@ -70,6 +70,57 @@ class VisionReplayCLI(unittest.TestCase):
             self.assertFalse(extra["orders_sent"])
             self.assertNotIn("BTCUSDT",str(stressed))
 
+            from crypto_intelligence_agent.vision_risk_sensitivity import VisionRiskShocks
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                sensitivity=private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    stress_assumptions=terms(),
+                    stress_selection_cost_bps=Decimal("0"),
+                    risk_shocks=VisionRiskShocks(*[Decimal("5") for _ in range(6)]))
+            self.assertIn("hypothetical_risk_sensitivity",sensitivity)
+            self.assertEqual(len(sensitivity["hypothetical_risk_sensitivity"]["scenarios"]),4)
+            self.assertNotIn("BTCUSDT",json.dumps(sensitivity))
+            self.assertNotIn(str(root),json.dumps(sensitivity))
+            with redirect_stdout(StringIO()) as sensitivity_output:
+                rc_sensitivity=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-intrabar-stress",
+                    "--stress-margin-quote","2","--stress-leverage","50",
+                    "--stress-stop-fraction","0.01",
+                    "--stress-target-fraction","0.03",
+                    "--stress-maintenance-bps","0",
+                    "--stress-fee-bps","0",
+                    "--stress-slippage-bps","0",
+                    "--stress-funding-bps","0",
+                    "--stress-selection-cost-bps","0",
+                    "--audit-stress-sensitivity",
+                    "--risk-extra-entry-fee-bps","5",
+                    "--risk-extra-exit-fee-bps","5",
+                    "--risk-extra-entry-slippage-bps","5",
+                    "--risk-extra-exit-slippage-bps","5",
+                    "--risk-extra-maintenance-bps","5",
+                    "--risk-funding-shock-bps","20"])
+            self.assertEqual(rc_sensitivity,0)
+            self.assertIn("hypothetical_risk_sensitivity",sensitivity_output.getvalue())
+            self.assertNotIn("BTCUSDT",sensitivity_output.getvalue())
+            self.assertNotIn(str(root),sensitivity_output.getvalue())
+            with redirect_stdout(StringIO()) as forbidden_output:
+                forbidden=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-stress-sensitivity",
+                    "--risk-extra-entry-fee-bps","5"])
+            self.assertEqual(forbidden,1)
+            self.assertEqual(json.loads(forbidden_output.getvalue())["status"],
+                             "private_vision_dynamic_replay_rejected")
+
             with patch("socket.create_connection",side_effect=AssertionError("network")):
                 baseline=private_vision_dynamic_replay(
                     manifest_paths=tuple(manifests),
