@@ -131,6 +131,8 @@ def audit_synthetic_portfolio_risk(
         prior_violations = set(initial)
         unknown = False
         rows = []
+        peak = allocated
+        prefix_drawdown = _ZERO
         for checkpoint in portfolio.checkpoints:
             if checkpoint.unresolved_liquidation_count:
                 unknown = True
@@ -151,11 +153,13 @@ def audit_synthetic_portfolio_risk(
                 if (concentration is not None and
                         concentration > limits.max_open_concentration_fraction):
                     codes.add("open_concentration_exceeded")
-                # This drawdown is calculated only from the known prefix.
-                if -portfolio.known_prefix_drawdown_quote > limits.max_known_prefix_drawdown_quote:
-                    # An aggregate prefix drawdown can include later observations.
-                    # Do not use it to "predict" an earlier checkpoint breach.
-                    pass
+                equity = checkpoint.hypothetical_equity_quote
+                if equity is None:
+                    raise DataValidationError("known checkpoint requires defined equity")
+                peak = max(peak, equity)
+                prefix_drawdown = min(prefix_drawdown, equity-peak)
+                if -prefix_drawdown > limits.max_known_prefix_drawdown_quote:
+                    codes.add("known_prefix_drawdown_exceeded")
                 state = "limits_exceeded" if codes else "within_limits"
                 prior_violations = codes
             else:
@@ -164,18 +168,14 @@ def audit_synthetic_portfolio_risk(
                 state = "unknown_due_to_liquidation"
                 prior_violations = codes
             rows.append(SyntheticPortfolioRiskCheckpoint(
-                checkpoint.tick_number, state, tuple(sorted(codes)), False))
-        # Drawdown is an aggregate diagnostic, not causally assigned backward.
-        if -portfolio.known_prefix_drawdown_quote > limits.max_known_prefix_drawdown_quote:
-            prior_violations.add("known_prefix_drawdown_exceeded")
-            rows[-1] = SyntheticPortfolioRiskCheckpoint(
-                rows[-1].tick_number,
-                ("unknown_due_to_liquidation" if unknown else "limits_exceeded"),
-                tuple(sorted(prior_violations)), False)
+                checkpoint.tick_number, state, tuple(sorted(codes)),
+                state == "within_limits"))
+        if prefix_drawdown != portfolio.known_prefix_drawdown_quote:
+            raise DataValidationError("portfolio prefix drawdown disagreement")
         final_state = ("unknown_due_to_liquidation" if unknown
                        else "limits_exceeded" if prior_violations else "within_limits")
-        # These are OPEN synthetic positions, not orders or unused capacity.
-        # Never issue an "allowed" decision from this retrospective audit.
+        # Research eligibility is retrospective and advisory only. It cannot
+        # authorize, prepare, or send an order in any trading environment.
         digest = sha256(json.dumps({
             "schema": "synthetic-portfolio-risk-v1",
             "portfolio": portfolio.digest_sha256,
@@ -184,4 +184,5 @@ def audit_synthetic_portfolio_risk(
             "states": [(r.tick_number,r.state,r.violation_codes) for r in rows],
         }, separators=(",", ":"), sort_keys=True).encode("ascii")).hexdigest()
         return SyntheticPortfolioRiskAudit(
-            tuple(sorted(initial)), tuple(rows), final_state, False, digest)
+            tuple(sorted(initial)), tuple(rows), final_state,
+            final_state == "within_limits", digest)
