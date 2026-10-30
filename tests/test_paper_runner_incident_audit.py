@@ -134,7 +134,7 @@ class PaperRunnerIncidentAuditTests(unittest.TestCase):
         def changing_reader(path, position_id):
             nonlocal calls
             calls += 1
-            if calls == 3:
+            if calls == 2:
                 return newer
             return original_inspect(path, position_id)
         with patch("crypto_intelligence_agent.paper_runner_incident_audit.inspect_paper_position",
