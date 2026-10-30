@@ -750,3 +750,8 @@ Sonda pública owner-only confirmou ACK e 19 frames, mas falhou `kline_rows` sem
 ## J1 WS8 — auditoria estrutural sem candles aprovados (30/10/2026)
 
 A PR #343 incorpora uma sonda `--diagnostic-only` separada do observador fail-closed, sem persistência: em uma única conexão com orçamento máximo de 64 frames/90s mede somente histogramas de formato `data` (ausente, nulo, escalar, objeto, array 0/1/2..8/>8), itens objeto, `confirm` booleano, erros sanitizados e fase relativa à virada UTC. O modo diagnóstico não certifica nem armazena candles; continua após mensagem inválida apenas para investigar formas, mantendo ACK e o escopo do tópico, sem retransmissões ou novas conexões. O formato oficial V5 define `data` como array e o SDK pybit repassa Kline sem remodelar, porém NENHUMA ocorrência real de lote com 0 ou >1 linha foi ainda provada. Uma futura execução depende de CI/merge e opt-in e visa esclarecer o frame `kline_rows` de 19 mensagens. O pipeline offline e cache SQLite ainda exigem exatamente uma linha; não conectar o diagnóstico aos dois nem promover feed real antes de corrigir o contrato de ponta a ponta. J1 #2/#319 continuam abertas.
+
+
+## J1 WS9 #344 — prova real de array múltiplo e integração offline (30/10/2026)
+
+Owner VPS: 27/27 + 7/7 PASS, 64 frames, ACK=true, 61 eventos de mercado; `data_array_1=60`, `data_array_2_to_8=1`, um `confirm=true`, `first_validation_failure=kline_clock`, `strict_rejected_frames=1`, sem aprovar candles/ordens/storage. Corrigido ingresso do pipeline offline de array V5 e granularizadas causas de relógio no observador. Próxima evidência: CI e review no SHA da PR #344, sem sondagem repetitiva até necessário. J1 #319/#2 e direitos #217 abertas.
