@@ -968,3 +968,8 @@ A ACK Bybit V5 publica admite `req_id` opcional; validar quatro campos obrigator
 ## D170 — Diagnóstico do primeiro frame WS sem vazamento (29/10/2026)
 
 A primeira sonda real Bybit V5, após 17 testes offline na VPS, retornou `frames_seen=1`, `ws_subscription_not_acknowledged`, zero candles e zero ordens. Essa evidência não separa rejeição explícita de divergência de schema. Passamos a classificar *exclusivamente por status estático* sete categorias fail-closed (rejeição explícita, campo obrigatório ausente, campo inesperado, tipo inválido, mercado pré-ACK, controle pré-ACK, desconhecido), sem registrar `ret_msg`, `conn_id`, tópico, preço ou frame bruto. O ACK válido permanece inalterado e estrito; nenhum retry, alteração de host, bypass da quota 10006, persistência ou negociação. Uma segunda sonda owner-only só após gates de CI e opt-ins específicos.
+
+
+## D171 — J1 WS5: kline antes de ACK continua sem autoridade (29/10/2026 UTC)
+
+Duas sondagens reais de um tópico Bybit, sem dados armazenados, retornaram primeiro frame sem ACK; a última classificou `ws_market_data_before_ack`. O programa agora valida estritamente frames de kline antecipados, mantém somente estado booleano efêmero/contagem até limite de 8 e aguarda na mesma conexão ACK positiva antes de promover um candle confirmado; ACK negativa ou inexistente falha fechado. Não reter preços/payload. Isto não demonstra origem, Top50, qualidade ou direitos live. Sem retry/REST/ordem/deploy.
