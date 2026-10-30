@@ -30,7 +30,7 @@ class VisionReplayCLI(unittest.TestCase):
                     blob,name,digest,cutoff=synthetic_zip(year=y,month=m,symbol=sym)
                     raw=folder/name;raw.write_bytes(blob);raw.chmod(0o600)
                     check=folder/(name+".CHECKSUM")
-                    check.write_text(digest+"  "+name+"\\n",encoding="ascii");check.chmod(0o600)
+                    check.write_text(digest+"  "+name+"\n",encoding="ascii");check.chmod(0o600)
                     archives.append({"name":name,"sha256":digest})
                 manifest=folder/"manifest.json"
                 manifest.write_text(json.dumps({"schema_version":"vision-local-series-v1",
