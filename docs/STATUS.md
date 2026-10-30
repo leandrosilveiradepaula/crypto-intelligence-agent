@@ -875,3 +875,7 @@ Base confirmada: J4/RUNNER2 #387/PR #388 integrada em main SHA `125c5c8a30d20f6f
 
 ## J4/RUNNER3 #391 — fechamento da alocação runner PAPER, 30/10/2026
 Base auditada: `main=2ec2025b2a2f0673024ee79ea0c0fec1b2048ad7`, PR #390 integrada e #389 fechada; nenhuma PR aberta ao iniciar. Issue #391, branch `work/j4-runner3-residual-paper-reduce-only`. Implementado saldo residual como passo zero de EXIT REDUCE_ONLY somente PAPER em AUTO4 com conservação e rollback, e preview puro após gatilho RUNNER2. `tests/test_paper_runner_close.py` inclui LONG/SHORT, parcial/UNKNOWN/cancel/overfill, restart e no-network. O código ainda exige PR, revisão e CI SHA final; não presumir merge ou homologação. J1 #2/#319 continua pendente do owner-run VPS adiado. Sem stop nativo, ordens, deploy, nova despesa ou promessa de lucro.
+
+
+## J5/PRE16 #393 — visualização do fechamento runner PAPER, 30/10/2026
+Confirmado `main=60f9ec4aaf41a05495b25c56085f6ac1d096054c` após squash merge de J4 RUNNER3 #391/PR #392, issue #391 encerrada com CI 41137713503 Linux/Windows e 41137713508 Chrome/PAPER SUCCESS, review #5719329610. Issue #393 e branch `work/j5-pre16-runner-exit-mobile-status` distinguem runner PAPER pendente, parcial, cancelado e encerrado na UI, mantendo status e flag de stop real falsos. Testes SQLite e docs D191 adicionados; PR/CI/merge desta etapa ainda precisam ser verificados. J1/Top50 VPS owner-run continua adiado pelo PO, sem credenciais, trades ou deploy.

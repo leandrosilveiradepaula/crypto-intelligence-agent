@@ -741,3 +741,7 @@ Em `tests/test_paper_runner_journal.py`, criar posição PAPER com fills 50/30/1
 
 ### J4/RUNNER3 #391 — critérios adicionais
 Exigir regressões offline do runner residual: proibição antes de preencher parciais, conservação de unidades inicial/runner, `tranche_step=0` só para residual, no-overfill/dupla reserva, UNKNOWN retém quantidade, cancel libera só parte não preenchida, replay idempotente, gatilho RUNNER2 stale/corrompido negado, LONG/SHORT, fail-closed após deriva de checkpoint, ausência de GET/POST, e nenhum stop nativo ou order sender. Validar docs/Linux, Windows/offline e Chrome/PAPER em head SHA exato, rever diff e integrar só sem produção. Mesmo sucesso total não libera J1/J4/J6, dados de mercado ou trading real.
+
+
+### J5/PRE16 #393 — regressões de estados pós-RUNNER3
+Reproduzir em SQLite real de fixture: runner 6 unidades após saídas 50/30/14, reserva RUNNER3, UNKNOWN, CANCEL, parcial 2, cancelamento residual, FILL4 e fechamento. Validar prioridade da reconciliação, quantidades Decimal e sinais de stop/ordem sempre false, ausência de consolidação ou rede, semantic HTML/CSP PT-BR e preservação do caminho legado sem runner. Testar long/short e recusar evidência RUNNER2 de checkpoint anterior. Gates: CI docs/Linux, Windows/offline, Chrome/PAPER no head SHA, revisão e merge não produtivo; sem J1/live.
