@@ -852,3 +852,8 @@ A PR #378 integrada corrigiu time budget de 6min e manifesto `expanded-52`, com 
 ## J1/EXIT4 #381 — Top50 dinâmico em desenvolvimento, 30/10/2026
 
 Após PRs #378 e #380 integradas em `main=667045a3d18e703f382e28a87fc45c0153e96ea2`, corrigir causa real adicional: seleção Top50 entre três PIT não deve exigir mesma composição, pois entrada/saída de um ativo é normal. Branch `work/j1-exit4-dynamic-top50-pit`: captura incremental por cursor, backfill somente de novo integrante, replay de retornante, auditor por PIT para até 52 históricos, testes adversariais e D185. Sem CI/merge desta issue até verificação; nenhum download real, acesso VPS, ordem ou gasto. #2/#319 continuam abertas até o owner-run comprovado.
+
+
+## 30/10/2026 — J4/RUNNER1 #383 em implementação, independente da VPS
+
+J1 EXIT4 (#381/PR #382) integrada em `main=c58c6845d5f1be97cf27ec1ffb50a54d4a9704ca`; execução owner-only de captura na VPS adiada pelo proprietário e registrada em #2/#319, sem solicitar ações repetidas. Jornada ativa J4 #5: issue #383 e branch `work/j4-runner1-offline-trailing` implementam observação de trailing para runner PAPER após fills confirmados, com estados e teste sem rede. `docs/J4_RUNNER1_PAPER_TRAILING.md` e D186 definem limitações: sem persistência de stop, fill, ordens ou lucro real. Testes, CI, merge e fechamento somente após verificação real do head SHA; R$0 extra.
