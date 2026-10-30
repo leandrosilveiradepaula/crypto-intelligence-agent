@@ -108,7 +108,7 @@ def inspect_paper_runner_trail(
             balance.approved_for_live_use):
         raise DataValidationError("PAPER runner must not represent live execution")
     if (balance.as_of_ms > as_of_ms or
-            not balance.opened_at_ms <= marks[0].at_ms or
+            not balance.as_of_ms <= marks[0].at_ms or
             marks[-1].at_ms > as_of_ms or
             as_of_ms - marks[-1].at_ms > policy.max_last_tick_age_ms or
             any(x.symbol != balance.symbol for x in marks)):
