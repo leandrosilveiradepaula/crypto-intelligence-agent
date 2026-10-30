@@ -114,7 +114,16 @@ def audit_synthetic_portfolio_risk(
             max_risk_snapshot_age_ms=max_risk_snapshot_age_ms)
         allocated = sum((leg.plan.margin.requested_margin_quote for leg in legs), _ZERO)
         entry_gross = sum((leg.plan.margin.entry_notional_quote for leg in legs), _ZERO)
+        entry_signed = sum((
+            leg.plan.margin.entry_notional_quote
+            if leg.plan.direction.value == "long"
+            else -leg.plan.margin.entry_notional_quote for leg in legs), _ZERO)
+        entry_largest = max(leg.plan.margin.entry_notional_quote for leg in legs)
         initial = set()
+        if abs(entry_signed) > limits.max_abs_open_net_notional_quote:
+            initial.add("entry_abs_net_notional_exceeded")
+        if entry_largest / entry_gross > limits.max_open_concentration_fraction:
+            initial.add("entry_concentration_exceeded")
         if allocated > limits.max_allocated_margin_quote:
             initial.add("allocated_margin_exceeded")
         if any(leg.plan.margin.requested_margin_quote > limits.max_margin_per_position_quote
