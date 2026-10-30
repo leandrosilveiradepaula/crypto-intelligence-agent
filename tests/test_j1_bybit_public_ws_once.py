@@ -213,6 +213,23 @@ class Tests(unittest.TestCase):
         self.assertEqual(report["shape_counts"]["strict_valid_closed_candidates"],1)
         self.assertEqual(report["confirmed_closed_events"],0)
 
+    def test_diagnostic_no_ack_is_not_success(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        sock=Socket([frame()])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=1,max_seconds=3)
+        self.assertEqual(report["status"],"ws_shape_diagnostic_no_ack")
+        self.assertFalse(report["subscription_acknowledged"])
+        self.assertEqual(report["confirmed_closed_events"],0)
+
+    def test_diagnostic_ack_only_is_not_success(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        sock=Socket([ACK])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=1,max_seconds=3)
+        self.assertEqual(report["status"],"ws_shape_diagnostic_no_market_frames")
+        self.assertTrue(report["subscription_acknowledged"])
+
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
 
