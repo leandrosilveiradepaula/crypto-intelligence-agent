@@ -304,3 +304,8 @@ A observacao WS de um topico `kline.60` sera diagnosticamente util apenas se a A
 ## J1 WS7 #340 — um heartbeat válido não prova cobertura Kline
 
 Resposta de controle sem dados (`pong`) não equivale a candle, autorização de assinatura ou prova de qualidade. Somente ACK válida e Kline com schema/tempo/confirm estritos permitem `ws_one_closed_hour_observed_only`, ainda sem persistência ou mercado Top50 global. Diagnósticos sanitizados nunca incluem `ret_msg`, símbolos, IDs, timestamps ou OHLCV reais; condições de #2/#319/#217 e limite REST `10006` permanecem independentes.
+
+
+## J1 WS8 #342 — cardinalidade array não é prova de qualidade
+
+Reconhecer `data` como array é compatibilidade de transporte, não evidência de autenticidade, completude de 24h, 30d de 50 integrantes ou autorização live. A promoção de candle exige ACK válido, tempo, OHLCV, `confirm=true` e todas as linhas de um frame válidas; `data=[]` ou entrada inválida nunca gera candle aprovado. J1 #2/#319/#217 seguem gates pendentes, sem contornar limites REST ou modificar dataset privado.
