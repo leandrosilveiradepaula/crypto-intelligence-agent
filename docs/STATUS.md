@@ -857,3 +857,8 @@ Após PRs #378 e #380 integradas em `main=667045a3d18e703f382e28a87fc45c0153e96e
 ## 30/10/2026 — J4/RUNNER1 #383 em implementação, independente da VPS
 
 J1 EXIT4 (#381/PR #382) integrada em `main=c58c6845d5f1be97cf27ec1ffb50a54d4a9704ca`; execução owner-only de captura na VPS adiada pelo proprietário e registrada em #2/#319, sem solicitar ações repetidas. Jornada ativa J4 #5: issue #383 e branch `work/j4-runner1-offline-trailing` implementam observação de trailing para runner PAPER após fills confirmados, com estados e teste sem rede. `docs/J4_RUNNER1_PAPER_TRAILING.md` e D186 definem limitações: sem persistência de stop, fill, ordens ou lucro real. Testes, CI, merge e fechamento somente após verificação real do head SHA; R$0 extra.
+
+
+## 30/10/2026 — J5/PRE14 #385, sem VPS
+
+J4/RUNNER1 #383/PR #384 integrada na `main` em `08cae66c40779562fa15a07e5be77fce157d5c51` após CI docs/Linux, Windows e Chrome/PAPER verdes. Na J5 #6, issue #385 e branch `work/j5-pre14-paper-runner-state-mobile` mostram no cartão mobile e tabela o estado do runner obtido somente do ledger PAPER: aguardando parcial, reconciliar ordem incerta, sem runner ou runner confirmado sem stop verificado. Sem consultar marcação do mercado nem presumir trailing ativo. CI e merge desta nova work unit ainda sujeitos a confirmação. J1 #2/#319 continuam com execução owner-run na VPS explicitamente adiada; nenhuma nova solicitação ao proprietário.
