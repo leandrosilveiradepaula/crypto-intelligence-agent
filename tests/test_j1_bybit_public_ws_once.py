@@ -41,7 +41,7 @@ class Tests(unittest.TestCase):
     def test_failed_ack(self):
         bad=dict(ACK,success=False);self.assertEqual(self.call([bad])["status"],"ws_subscription_explicitly_rejected")
     def test_missing_ack_rejected(self):
-        self.assertEqual(self.call([frame()])["status"],"ws_market_data_before_ack")
+        self.assertEqual(self.call([frame()],max_frames=1)["status"],"ws_unacknowledged_market_data")
     def test_bad_envelopes(self):
         mutations=[lambda f:f.update(topic="kline.5.BTCUSDT"), lambda f:f["data"][0].update(turnover="NaN"),
                    lambda f:f["data"][0].update(open=10.1), lambda f:f["data"][0].update(high="8"),
@@ -70,7 +70,7 @@ class Tests(unittest.TestCase):
             ({"op":"subscribe", "success": True}, "ws_subscription_fields_missing"),
             (dict(ACK, surprise="SECRET123"), "ws_subscription_fields_unexpected"),
             (dict(ACK, success="true"), "ws_subscription_fields_invalid"),
-            (frame(), "ws_market_data_before_ack"),
+            
             ({"op":"ping", "ret_msg":"pong"}, "ws_unexpected_control_before_ack"),
             ({"unknown":"SECRET123"}, "ws_unexpected_first_frame"),
         ]
@@ -82,6 +82,27 @@ class Tests(unittest.TestCase):
                 self.assertFalse(result["subscription_acknowledged"])
                 self.assertEqual(result["confirmed_closed_events"], 0)
                 self.assertFalse(result["orders_sent"])
+
+
+    def test_preack_closed_then_ack_promotes_only_after_ack(self):
+        self.assertEqual(self.call([frame(), ACK])["confirmed_closed_events"], 1)
+
+    def test_preack_open_then_ack_then_closed(self):
+        self.assertEqual(self.call([frame(False), ACK, frame()])["confirmed_closed_events"], 1)
+
+    def test_preack_rejected_ack_cannot_promote(self):
+        bad = dict(ACK, success=False)
+        x = self.call([frame(), bad])
+        self.assertEqual(x["confirmed_closed_events"], 0)
+        self.assertEqual(x["status"], "ws_subscription_explicitly_rejected")
+
+    def test_preack_bad_frame_fails_closed(self):
+        bad = frame()
+        bad["topic"] = "kline.60.WRONGUSDT"
+        self.assertEqual(self.call([bad])["status"], "ws_failed_closed")
+
+    def test_preack_budget(self):
+        self.assertEqual(self.call([frame()] * 9, max_frames=10)["status"], "ws_preack_frame_limit")
 
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
