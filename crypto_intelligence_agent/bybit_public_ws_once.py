@@ -110,6 +110,21 @@ def _public_pong(payload: dict) -> bool:
     return True
 
 
+def _public_pong_v2(payload: dict) -> bool:
+    """Bybit V5 alternative public pong; reject all undocumented fields."""
+    if (type(payload) is not dict or set(payload) != {"op", "args"}
+            or payload.get("op") != "pong"):
+        return False
+    args = payload.get("args")
+    return (type(args) is list and len(args) == 1
+            and type(args[0]) is str and 1 <= len(args[0]) <= 16
+            and args[0].isascii() and args[0].isdecimal())
+
+
+def _is_public_pong(payload: dict) -> bool:
+    return _public_pong(payload) or _public_pong_v2(payload)
+
+
 def seconds_to_closed_hour_probe(now_ms: int) -> int:
     """UTC scheduling: connect at most 20s before a boundary, at most once."""
     if type(now_ms) is not int or now_ms <= 0:
@@ -129,8 +144,16 @@ def _safe_failure_category(error: Exception, stage: str) -> str:
         return "processing"
     # The error text is inspected locally, never emitted or logged.
     reason = str(error)
-    if reason.startswith("ws_topic_or_envelope") or reason.startswith("ws_kline_fields") or reason.startswith("ws_kline_shape"):
-        return "kline_envelope"
+    mapping = {
+        "ws_kline_root_keys_invalid": "kline_root_keys",
+        "ws_kline_topic_invalid": "kline_topic",
+        "ws_kline_type_invalid": "kline_type",
+        "ws_kline_shape_invalid": "kline_rows",
+        "ws_kline_fields_invalid": "kline_fields",
+    }
+    for prefix, category in mapping.items():
+        if reason.startswith(prefix):
+            return category
     if reason.startswith("ws_clock") or reason.startswith("ws_time") or reason.startswith("ws_close_clock"):
         return "kline_clock"
     if reason.startswith("ws_confirm"):
@@ -143,8 +166,12 @@ def _safe_failure_category(error: Exception, stage: str) -> str:
 
 
 def _check_closed(frame: dict, *, received_ms: int) -> bool:
-    if set(frame) != {"topic", "type", "ts", "data"} or frame.get("topic") != TOPIC or frame.get("type") != "snapshot":
-        raise DataValidationError("ws_topic_or_envelope_invalid")
+    if set(frame) != {"topic", "type", "ts", "data"}:
+        raise DataValidationError("ws_kline_root_keys_invalid")
+    if frame.get("topic") != TOPIC:
+        raise DataValidationError("ws_kline_topic_invalid")
+    if frame.get("type") != "snapshot":
+        raise DataValidationError("ws_kline_type_invalid")
     rows = frame.get("data")
     if type(rows) is not list or len(rows) != 1 or type(rows[0]) is not dict:
         raise DataValidationError("ws_kline_shape_invalid")
@@ -222,8 +249,10 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                     if preack_closed:
                         return WSOnceResult("ws_one_closed_hour_observed_only", frames, 1, True)
                     continue
-                if _public_pong(payload):
+                if _is_public_pong(payload):
                     continue
+                if "op" in payload and "topic" not in payload and "data" not in payload:
+                    return WSOnceResult("ws_failed_closed", frames, 0, acknowledged, "unexpected_control")
                 stage = "kline"
                 if _check_closed(payload, received_ms=wall_ms()):
                     return WSOnceResult("ws_one_closed_hour_observed_only", frames, 1, True)
