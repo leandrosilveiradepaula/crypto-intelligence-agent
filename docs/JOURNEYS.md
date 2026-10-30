@@ -234,3 +234,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## J3/PRE17 #369 — pesquisa de risco por snapshots PIT
 
 Work unit J3 de replay sintético: faixas de maintenance e deduções contínuas por nocional de mark; snapshots versionados conhecidos causalmente; comportamento legado intacto e teste adversarial de gaps/funding. Referência `docs/J3_PRE17_PIT_RISK_TIERS.md`. Requer CI e merge antes de registrar integração. Não substitui dependências J1/J2, não aprova fórmula da exchange ou ordens reais.
+
+
+## J3/PRE18 #371 — calendário de funding com cobertura obrigatória opt-in
+
+Validador offline de timestamps hipotéticos de funding; cada horário exige evento com taxa/notional declarado e não aceita tick simultâneo. Acopla-se opcionalmente ao replay de mark/trade sem alterar caminhos legados. Regressões e docs em `docs/J3_PRE18_FUNDING_CALENDAR.md`. Gate CI/merge pendente; não homologa eventos do provedor, ordens ou lucro.

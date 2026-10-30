@@ -321,3 +321,8 @@ Novo adaptador puro `vision_risk_sensitivity.py` consome a pesquisa mensal `visi
 ## J3/PRE17 — contrato isolado de faixas PIT para manutenção
 
 O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e snapshot, validações de continuidade e cálculo de manutenção por nocional mark. `synthetic_mark_replay.py` aceita snapshots opcionais e limite explícito de intervalo entre ticks, sem I/O e sem feed do provedor. Eventos de funding e ordem de gatilhos permanecem no replay atual. Não há alteração no ledger ou execução de ordens; ver `docs/J3_PRE17_PIT_RISK_TIERS.md`.
+
+
+## J3/PRE18 — calendário sintético separado da aritmética de funding
+
+`synthetic_funding_calendar.py` contém somente grade temporal tipada e checagem de cobertura; não calcula taxas, não obtém calendário da exchange nem persiste. `synthetic_mark_replay.py` exige a grade apenas quando `funding_calendar` é informado. Dedução e sinais LONG/SHORT permanecem na calculadora `synthetic_cost_scenarios.py`, sem duplicação de motor ou acoplamento à J1. Contrato completo em `docs/J3_PRE18_FUNDING_CALENDAR.md`.

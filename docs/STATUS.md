@@ -822,3 +822,8 @@ Após #363/PRs #364–#366 integradas, a nova issue #367 implementa comparação
 ## 30/10/2026 — J3/PRE17 #369 em implementação
 
 Após #367/#368 integradas, pesquisa sintética continua sem dados reais de mark/funding. Issue #369 e branch `work/j3-pre17-risk-snapshot-pit` adicionam risco por tiers e snapshots PIT opcionais no replay mark/trade, com regras de dedução contínua, controle de staleness e intervalo de ticks. Regressões offline e documentação junto ao código. **Não afirmar merge, CI ou homologação da #369 até evidência real**. J1 #2/#217/#319, J2 #3 e J3 #4 abertas; orçamento R$0 e ordens live desabilitadas.
+
+
+## 30/10/2026 — J3/PRE18 #371 em desenvolvimento
+
+Após PR #370/issue #369 integradas em `cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0`, a issue #371 acrescenta cobertura completa de horários de funding fictício no replay mark/trade. Arquivos `synthetic_funding_calendar.py`, extensão opt-in de `synthetic_mark_replay.py`, testes e `docs/J3_PRE18_FUNDING_CALENDAR.md`; nada habilita conta, Bybit real, ordens ou release. CI/merge desta issue dependem de resultados e SHA próprio, sem antecipar sucesso. J1 #2/#217/#319, J2 #3 e J3 #4 abertas.

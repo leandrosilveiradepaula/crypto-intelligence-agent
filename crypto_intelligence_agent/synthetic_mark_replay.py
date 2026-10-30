@@ -16,6 +16,9 @@ from .synthetic_intrabar_barriers import ResearchDirection
 from .synthetic_margin_envelope import SyntheticMarginBasis
 from .synthetic_feature_engine import validate_synthetic_research_price
 from .synthetic_manual_exit_replay import _utc_ms
+from .synthetic_funding_calendar import (
+    SyntheticFundingCalendar, validate_synthetic_funding_coverage,
+)
 from .synthetic_risk_tiers import (
     SyntheticRiskSnapshot, validate_synthetic_risk_snapshots, maintenance_for_mark,
 )
@@ -150,6 +153,7 @@ def replay_synthetic_mark_path(
     risk_snapshots: tuple[SyntheticRiskSnapshot, ...] | None = None,
     max_tick_gap_ms: int | None = None,
     max_risk_snapshot_age_ms: int | None = None,
+    funding_calendar: SyntheticFundingCalendar | None = None,
 ) -> SyntheticMarkReplayResult:
     """Evaluate each supplied timestamp exactly once, liquidation before exits.
 
@@ -177,6 +181,12 @@ def replay_synthetic_mark_path(
         raise DataValidationError("funding events must be unique ordered and between ticks")
     if len({f.event_id for f in funding_events}) != len(funding_events):
         raise DataValidationError("funding identifiers must be unique")
+    if funding_calendar is not None:
+        validate_synthetic_funding_coverage(
+            funding_calendar, instrument_id=plan.instrument_id,
+            entry_at_ms=plan.entry_at_ms, last_tick_at_ms=times[-1],
+            tick_times=tuple(times), funding_events=funding_events)
+
     if max_tick_gap_ms is not None:
         if (type(max_tick_gap_ms) is not int or not 1 <= max_tick_gap_ms <= 86_400_000
                 or any(right-left > max_tick_gap_ms
