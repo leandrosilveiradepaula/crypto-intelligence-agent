@@ -244,3 +244,8 @@ Validador offline de timestamps hipotéticos de funding; cada horário exige eve
 ## J3/PRE19 #373 — replay de carteira sintética
 
 Agregação multi-leg com relógio UTC comum, margem isolada, exposure gross/signed por mark, funding via módulos existentes, stop/target condicionais sem duplicação e PnL desconhecido após liquidação sem fill. Drawdown de prefixo e correlação descritiva, não previsão ou carteira com risco financeiro homologado. Contrato `docs/J3_PRE19_PORTFOLIO_REPLAY.md`. Gate CI/merge obrigatório antes de conclusão da work unit.
+
+
+## J3/PRE20 #375 — limites globais de risco para carteira sintética
+
+Reutilização do replay de carteira PRE19 para avaliar margem total/por leg, exposição gross/abs net por marcação, maior instrumento, concentração e drawdown causal, com bloqueio fail-closed quando PnL de liquidação é desconhecido. Exige testes, CI e merge sem produção; ver `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md`. Não equivale a risco homologado da corretora nem autoriza ordens.

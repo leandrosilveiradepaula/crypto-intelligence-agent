@@ -1059,3 +1059,8 @@ O motor de replay mark/trade pode exigir um `SyntheticFundingCalendar` opt-in qu
 ## D181 — J3/PRE19: carteira sintética sem PnL fictício após liquidação (30/10/2026)
 
 O agregador `synthetic_portfolio_replay.py` usa somente resultados do replay mark/trade existente, exige calendário UTC comum, moeda sintética igual, identidade de posição única e margem isolada por leg. Stop/target fecham apenas condicionalmente, sem preenchimento certificado; liquidação sem PnL verificado deixa equity, PnL e exposição **indefinidos** a partir do evento, não presume limite de perda nem liberação de capital. Drawdown cobre apenas prefixo com equity conhecida. Correlação de mark é descritiva após observação e nunca indicador causal de sinal. Issue #373 e contrato `docs/J3_PRE19_PORTFOLIO_REPLAY.md`. Não autoriza ordens reais.
+
+
+## D182 — J3/PRE20: limites globais de risco sintético fail-closed (30/10/2026)
+
+A auditoria offline da carteira multi-posição aplica caps configuráveis de margem inicial total e por posição, nocional bruto de entrada/aberto, nocional líquido absoluto aberto, maior instrumento, concentração, drawdown causal do prefixo conhecido e alavancagem registrada na abertura. Violação de risco não vira operação corretiva automática; histórico de violação permanece conservador. Após qualquer condição de liquidação sem fill, o estado global fica desconhecido e não pode autorizar nem novas hipóteses de entrada. Um `new_position_research_allowed=true` só significa aptidão abstrata para pesquisa offline, nunca ordem. Reutiliza motor PRE19 e fonte de verdade `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md`; mantém D77, D179, D180 e gates de produção.

@@ -702,3 +702,8 @@ Executar `tests/test_synthetic_funding_calendar.py` junto de `test_synthetic_mar
 ## J3/PRE19 #373 — replay multi-leg com estado desconhecido
 
 Executar `tests/test_synthetic_portfolio_replay.py` juntamente com `test_synthetic_mark_replay.py`, `test_synthetic_risk_tiers.py` e `test_synthetic_funding_calendar.py`. Validar relógio UTC comum, moeda, IDs/instrumentos únicos, múltiplas posições LONG/SHORT, no-double-count de saídas condicionais, precedência de liquidação, equity e PnL nulos após liquidação, prefix drawdown, gross/signed mark exposure, concentração, funding com calendário, tiers PIT, correlação degenerada, determinismo sob permutação e precisão Decimal. Sem rede, conta ou ordens. Exigir CI Linux/docs, Windows/offline, Chrome/PAPER no HEAD final; o gate não significa backtest financeiro aprovado.
+
+
+## J3/PRE20 #375 — auditoria de limites globais offline
+
+Executar `test_synthetic_portfolio_risk_limits.py` e `test_synthetic_portfolio_replay.py` com regressões PRE17/PRE18. Casos: net zero versus bruto alto LONG/SHORT, limite de margem agregada/por leg e cap de leverage de abertura, exposição por marcação, concentração e maior instrumento sem arredondamento indireto, saída condicional sem dupla contagem, drawdown causal por checkpoint e estado posterior de violação, liquidação simultânea e impossibilidade de conhecer PnL/exposição, Decimal inválido e contexto independente, ordem das legs determinística, ausência de rede/ordens. CI docs/Linux, Windows/offline e Chrome/PAPER no HEAD final, review e SHA antes do merge. Sem dados live ou aceitação financeira.
