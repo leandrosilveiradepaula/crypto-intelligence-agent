@@ -229,3 +229,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## J3/STRESS1 #359 — limites intrabar OHLC condicionais (30/10/2026)
 
 `vision_intrabar_stress.py` introduz estresse matemático estritamente offline para uma barra Vision, com margem sintética, alavancagem fixa por avaliação, stop, target, limiar de liquidação proxy por equity e manutenção hipotética, funding assinado e custos Decimal por lado. Como OHLC não informa a ordem dos eventos, retorna **dois limites condicionais**: downside (liquidação/stop antes de target) e upside (target antes de stop), marcando ambiguidade e toques simultâneos. A marcação e a fórmula de liquidação reais da corretora NÃO são inferidas. Não há integração com execução nem estimativa de perda garantida. `financial_backtest_approved=false`, nenhuma ordem, rede, licença, dado canônico ou homologação Top50. Testes de 50x/1x, long/short, ambiguidade, taxa, funding e corrupção. A integração com seleção OOS mensal e CLI é **pendência da issue #359**, não alegar entrega completa.
+
+
+## J3/PRE17 #369 — pesquisa de risco por snapshots PIT
+
+Work unit J3 de replay sintético: faixas de maintenance e deduções contínuas por nocional de mark; snapshots versionados conhecidos causalmente; comportamento legado intacto e teste adversarial de gaps/funding. Referência `docs/J3_PRE17_PIT_RISK_TIERS.md`. Requer CI e merge antes de registrar integração. Não substitui dependências J1/J2, não aprova fórmula da exchange ou ordens reais.
