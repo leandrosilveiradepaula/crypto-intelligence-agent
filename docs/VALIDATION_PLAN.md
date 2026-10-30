@@ -732,3 +732,8 @@ Executar `tests/test_paper_runner_trailing.py` com fixtures realmente armazenada
 ## J5/PRE14 #385 — runner no mobile sem proteção fictícia
 
 Regressões `test_paper_runner_mobile.py` + `test_paper_margin_mobile.py` + QA Chrome/PAPER: posição PAPER 100 inicial sem fills (aguardando), OPEN com EXIT pending/UNKNOWN (reconciliar), preenchimentos 50/30/14 para saldo 6 (runner confirmado, NÃO protegido), plano sem runner, CSP/escaping, teclado/tablet, no-network, journal imutável. Inspecionar em `PaperPositionInspection` com leitura RO, nunca abrir transação de escrita, somar exposições cross-instrument ou alegar stop nativo. CI Linux/docs, Windows offline e Chrome/PAPER no HEAD final antes do merge.
+
+
+## J4/RUNNER2 #387 — sobrevivência a restart e falhas de journal
+
+Em `tests/test_paper_runner_journal.py`, criar posição PAPER com fills 50/30/14 e runner 6, iniciar journal separado, adicionar marks 100→102→103→102, reabrir em outra conexão, conferir stop hipotético monotônico e `TRIGGERED_HYPOTHETICAL_ONLY` terminal sem ordens. Exercitar replay de último tick exato, conflito de preço com mesmo timestamp, gap/staleness, identidade ou política divergentes, arquivo ausente, hash adulterado, tabela estrangeira, posição ainda com parciais não confirmadas e conservação do banco AUTO4. Rede desabilitada, nenhuma integração Binance/Bybit. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final, revisão e merge seguro sem produção.
