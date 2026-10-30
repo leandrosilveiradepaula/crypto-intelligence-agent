@@ -37,6 +37,10 @@ _RUNNER_LABELS = {
     "PENDING_EXIT_RECONCILIATION": "Saída pendente ou incerta — reconciliar",
     "WAITING_FOR_PARTIAL_FILLS": "Aguardando preenchimento das parciais",
     "RUNNER_CONFIRMED_NOT_PROTECTED": "Runner confirmado — stop não instalado",
+    "RUNNER_EXIT_PENDING_RECONCILIATION": "Saída final do runner pendente ou incerta — reconciliar",
+    "RUNNER_EXIT_PARTIALLY_FILLED": "Saída final do runner parcialmente preenchida (PAPER)",
+    "RUNNER_CLOSED_PAPER_ONLY": "Runner encerrado no diário PAPER — sem prova de corretora",
+    "RUNNER_EXIT_CANCELLED_REMAINDER": "Saída final cancelada/recusada — saldo residual liberado",
 }
 
 
@@ -50,6 +54,19 @@ def _paper_runner_readiness(item: PaperPositionInspection) -> str:
             type(item.balance) is not PaperPositionBalance):
         raise DataValidationError("validated PAPER position required for runner status")
     b = item.balance
+    runner_orders = tuple(o for o in b.exit_orders if o.tranche_step == 0)
+    if runner_orders:
+        if (b.runner_reserved_unfilled_units > 0 or
+                any(o.snapshot.requires_reconciliation for o in runner_orders)):
+            return "RUNNER_EXIT_PENDING_RECONCILIATION"
+        if (b.runner_filled_units == b.runner_floor_units and
+                b.confirmed_remaining_units == 0):
+            return "RUNNER_CLOSED_PAPER_ONLY"
+        if b.runner_filled_units > 0:
+            return "RUNNER_EXIT_PARTIALLY_FILLED"
+        if b.runner_unallocated_units > 0:
+            return "RUNNER_EXIT_CANCELLED_REMAINDER"
+        raise DataValidationError("runner exit state inconsistent")
     if (b.reserved_unfilled_units > 0 or
             any(o.snapshot.requires_reconciliation for o in b.exit_orders)):
         return "PENDING_EXIT_RECONCILIATION"
@@ -107,6 +124,9 @@ def multi_paper_snapshot(
             "confirmed_remaining_units": p["confirmed_remaining_units"],
             "unreserved_units": p["unreserved_units"],
             "runner_floor_units": p["runner_floor_units"],
+            "runner_filled_units": str(item.balance.runner_filled_units),
+            "runner_reserved_unfilled_units": str(item.balance.runner_reserved_unfilled_units),
+            "runner_unallocated_units": str(item.balance.runner_unallocated_units),
             "runner_readiness": _paper_runner_readiness(item),
             "trailing_stop_active": False,
             "native_stop_verified": False,
@@ -215,6 +235,11 @@ def render_position_card_markup(p: dict[str, object]) -> str:
         + '<p class="details" data-field="runner-readiness" data-runner-state="'
         + _cell(runner_code) + '">' + _cell(_RUNNER_LABELS[runner_code])
         + ' · Somente PAPER; trailing não ativo e stop nativo não verificado.</p>'
+        + '<p class="details" data-field="runner-exit-quantities">'
+        + 'Runner PAPER — preenchido: ' + _cell(p["runner_filled_units"])
+        + ' · reservado: ' + _cell(p["runner_reserved_unfilled_units"])
+        + ' · disponível: ' + _cell(p["runner_unallocated_units"])
+        + ' (unidades do próprio instrumento, sem valor monetário).</p>'
         + '<p class="details">Saldo confirmado: ' + _cell(p["confirmed_remaining_units"])
         + ' · piso residual: ' + _cell(p["runner_floor_units"])
         + ' · pendentes: ' + _cell(pending)
@@ -249,7 +274,10 @@ def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
             p["position_id"], p["venue_candidate"] + " · " + p["symbol_fixture"]
             + " · " + p["side"], p["initial_confirmed_units"],
             p["filled_exit_units"], p["reserved_unfilled_units"],
-            p["unreserved_units"], unknown, _RUNNER_LABELS[p["runner_readiness"]] + (
+            p["unreserved_units"], unknown, _RUNNER_LABELS[p["runner_readiness"]] +
+            " · runner preenchido " + p["runner_filled_units"] +
+            " / reservado " + p["runner_reserved_unfilled_units"] +
+            " / disponível " + p["runner_unallocated_units"] + (
                 " · " + p["recovered_runner"]["state"] + " (somente hipotético)"
                 if p["recovered_runner"] is not None else ""),
         )
