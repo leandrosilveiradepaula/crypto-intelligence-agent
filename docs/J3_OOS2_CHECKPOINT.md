@@ -7,3 +7,9 @@ Sem a flag, o comportamento legado permanece inalterado. O custo explícito não
 A issue #363 permanece aberta para os próximos blocos: fold por período com benchmark LONG sob as mesmas barras, downside/upside e drawdown proxy para cada ramo, testes de monotonicidade e privacidade. Esta PR não os declara entregues.
 
 **Gates:** `financial_backtest_approved=false`; `marketwide_top50_verified=false`; `live_trading_authorized=false`; `orders_sent=false`. J1 #2/#217/#319, J2 #3 e J3 #4 abertas. Pesquisa pessoal histórica não produtiva; sem downloads, ordens, releases, migrations, segredos ou gastos adicionais. Testes de regressão em `tests/test_replay_private_vision_dynamic.py`; exigir CI Linux/Windows/Chrome no SHA final antes do merge.
+
+## Segunda entrega #363 — auditoria de benchmark e drawdown condicional
+
+A avaliação mensal `vision_stress_oos` registra, sem abrir posição, as barras pontuadas e as exposições/ambiguidades por fold OOS. O benchmark LONG é avaliado no mesmo ativo selecionado causalmente a cada barra do teste inclusive quando a estratégia abstém; resultados downside/upside são calculados sob condições intrabar mutuamente exclusivas. Drawdown é somente proxy de soma de resultados hipotéticos quote em cada ramo, sem capital, cronologia intrabar comprovada, preço mark, fórmula de liquidação real ou gestão de risco da corretora. O resultado de benchmark não é retorno financeiro observado. A diferença de exposição entre benchmark e estratégia impede comparação econômica direta sem normalização posterior.
+
+Gates de #2/#217/#319/#3/#4 e toda proibição de ordens ou release continuam inalterados. Após CI e merge seguro, manter #363 aberta até aferir riscos e limitações em testes adversariais adicionais; não declarar validação financeira real.
