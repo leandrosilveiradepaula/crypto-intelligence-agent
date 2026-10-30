@@ -346,3 +346,8 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J1/EXIT4 — membros dinâmicos sem rebaixar 720h
 
 `_append_dynamic_research_hour` mantém cursores de fechamento por símbolo durante um único owner-run de 3 PIT; `cursors.get(symbol,start)` distingue entrantes inéditos, retornantes e ativos contínuos. Cada par de páginas V5 tem metadados próprios, janela exata UTC e preflight de schema. `SQLiteBybitResearchStore.commit_raw_pair` continua idempotente e exige continuidade contígua; o PIT só é gravado após garantir todos os históricos ativos. Ex-membros permanecem no SQLite. O auditor `audit_private_bybit_j1_progress` verifica até 52 símbolos armazenados para SHA do registro expandido, união dos membros PIT igual aos persistidos, 720h de base e cobertura até a decisão em cada PIT. Não transforma este ledger privado no motor de ordens nem altera schema.
+
+
+## J4/RUNNER1 — observação conservadora do runner PAPER
+
+`paper_runner_trailing.py` depende de `PaperPositionBalance` de AUTO4 e eventos de preços mark tipados, sem acoplamento a REST/WS, banco de mercado J1 ou adaptadores de ordens. O monitor é funcional, limita 256 ticks por janela, valida cronologia/staleness e emite estado/digest sanitizado. Nenhuma transação, endpoint, persistência do stop ou ordens. Não confundir gatilho do replay com instalação de stop nativo. Issue #383, docs/J4_RUNNER1_PAPER_TRAILING.md.
