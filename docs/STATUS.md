@@ -837,3 +837,8 @@ Após PRs #370/#372 integradas em `cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0` e `
 ## 30/10/2026 — J3/PRE20 #375 (não homologada)
 
 Depois da PR #374/issue #373 integrada em `19d74c71a04d1bbef7015024bd0861ab9a34ec87`, iniciou-se work unit #375 na branch `work/j3-pre20-portfolio-risk-limits`. O bloco incorpora auditoria de risco global por margem, gross/net exposure, concentração, nocional individual por mark, drawdown causal e alavancagem por posição, com trava de incerteza pós-liquidação. Arquivos `synthetic_portfolio_risk_limits.py`, `test_synthetic_portfolio_risk_limits.py`, `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md` e D182. Não afirmar CI/merge desta work unit antes de verificá-los. J1 #2/#217/#319, J2 #3, J3 #4 abertas; execução real desabilitada.
+
+
+## J1/EXIT2 #377 — corrigindo o gargalo efetivo de 50 ativos (30/10/2026)
+
+A captura anterior não conectava `expanded-52` ao validador de manifesto, e usava seleção PIT com orçamento de 120s, insuficiente a 52 consultas 24h sob intervalo de 2s por GET. A issue #377 cria helper compartilhado de ranking fechado com orçamento 6min e seleção tipada para 50, libera manifesto expandido com validação estrita e adiciona teste ponta a ponta de 36.000 velas com armazenamento 0600. Por exigência de uso pessoal, não apresentar direito de redistribuição comercial como bloqueio técnico do cache privado. Até CI/merge, a implementação está na branch `work/j1-exit2-top50-private-capture`, **não** declarada pronta. Banco de 2 ativos e PIT originais permanecem intocados; #2/#319 ainda exigem observação real owner-only para aceite de mercado.
