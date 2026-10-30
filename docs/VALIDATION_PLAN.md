@@ -727,3 +727,8 @@ Além da fixture estável de 52→50→36.100 velas/3 PIT, variar classificaçã
 ## J4/RUNNER1 #383 — trailing sem envio
 
 Executar `tests/test_paper_runner_trailing.py` com fixtures realmente armazenadas no `SQLitePaperPositionJournal`, preenchimentos 50/30/14 até runner de 6, LONG/SHORT, ratchet e gatilho no tick seguinte, preenchimento parcial/UNKNOWN que bloqueia monitor, preços/timestamps inválidos, parâmetros bps/staleness, contexto Decimal, rede desativada e banco invariável. CI docs/Linux, Windows/offline, Chrome/PAPER no SHA final, revisão e merge sem produção. A regressão comprova cálculo de limiar, não gatilho intrabar, fill, stop nativo ou sucesso financeiro.
+
+
+## J5/PRE14 #385 — runner no mobile sem proteção fictícia
+
+Regressões `test_paper_runner_mobile.py` + `test_paper_margin_mobile.py` + QA Chrome/PAPER: posição PAPER 100 inicial sem fills (aguardando), OPEN com EXIT pending/UNKNOWN (reconciliar), preenchimentos 50/30/14 para saldo 6 (runner confirmado, NÃO protegido), plano sem runner, CSP/escaping, teclado/tablet, no-network, journal imutável. Inspecionar em `PaperPositionInspection` com leitura RO, nunca abrir transação de escrita, somar exposições cross-instrument ou alegar stop nativo. CI Linux/docs, Windows offline e Chrome/PAPER no HEAD final antes do merge.
