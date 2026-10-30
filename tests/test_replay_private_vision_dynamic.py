@@ -70,6 +70,23 @@ class VisionReplayCLI(unittest.TestCase):
             self.assertFalse(extra["orders_sent"])
             self.assertNotIn("BTCUSDT",str(stressed))
 
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                baseline=private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    costed_oos_bps=Decimal("5"))
+            self.assertEqual(baseline["hypothetical_costed_oos"]["fold_count"],1)
+            self.assertFalse(baseline["hypothetical_costed_oos"]["financial_backtest_approved"])
+            self.assertNotIn("BTCUSDT",json.dumps(baseline))
+            with redirect_stdout(StringIO()) as out:
+                rc=main(["--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--costed-oos","--oos-cost-bps","5"])
+            self.assertEqual(rc,0)
+            self.assertIn("hypothetical_costed_oos",out.getvalue())
             self.assertEqual(result["data_stored"],False)
             self.assertNotIn("BTCUSDT",json.dumps(result))
             with redirect_stdout(StringIO()) as output:
