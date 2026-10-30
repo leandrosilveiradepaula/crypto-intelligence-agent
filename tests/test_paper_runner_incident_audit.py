@@ -14,6 +14,7 @@ from crypto_intelligence_agent.paper_runner_journal import start_paper_runner_jo
 from crypto_intelligence_agent.paper_runner_trailing import PaperRunnerTrailPolicy
 from crypto_intelligence_agent.synthetic_order_lifecycle import PaperOrderEventKind
 from scripts.audit_paper_runner_incident import main
+from scripts.inspect_paper_positions import TEMPLATE, render_incident_card_markup, render_paper_positions
 from test_paper_position_reservations import e, exit_order, T
 from test_paper_runner_journal import DurablePaperRunnerTests, policy, tick
 
@@ -88,6 +89,19 @@ class PaperRunnerIncidentAuditTests(unittest.TestCase):
             payload = json.loads(out.getvalue())
         self.assertFalse(payload["live_trading_authorized"])
         self.assertNotIn(str(Path(self.path.parent)), out.getvalue())
+
+    def test_existing_mobile_view_renders_incident_without_trading_controls(self):
+        report = self.audit()
+        markup = render_incident_card_markup(report)
+        self.assertIn('data-incident-code="RUNNER_UNPROTECTED"', markup)
+        self.assertIn("stop nativo não verificado", markup)
+        self.assertNotIn("<script", markup.lower())
+        from crypto_intelligence_agent.paper_position_inspection import inspect_paper_position
+        html = render_paper_positions(
+            (inspect_paper_position(self.path, self.position_id),),
+            TEMPLATE.read_text(encoding="utf-8"), incident_report=report)
+        self.assertIn('data-incident-code="RUNNER_UNPROTECTED"', html)
+        self.assertIn("default-src 'none'", html)
 
 
 if __name__ == "__main__":
