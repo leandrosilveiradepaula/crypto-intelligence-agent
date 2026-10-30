@@ -932,3 +932,8 @@ A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-s
 ## Checkpoint J3/PRE17 #369 — 30/10/2026
 
 `main` confirmada em `556a2759efbcb4ed42b0e7dfd82673b254bd8c19`, PRs abertas = 0 no início da work unit. Issue #367 fechada com PR #368 integrada; consulta GitHub não retornou workflow pós-merge (wrapper filtra PR). Issue #369 aberta, branch `work/j3-pre17-risk-snapshot-pit`. Código sob revisão: `synthetic_risk_tiers.py`, extensão opcional em `synthetic_mark_replay.py`, testes `test_synthetic_risk_tiers.py` e docs/J3_PRE17_PIT_RISK_TIERS.md. Próxima ação autorizada: abrir PR, inspecionar CI Linux/docs/Windows/Chrome, corrigir falhas, revisar SHA final e fazer merge seguro sem produção. Nenhuma VPS, dados reais, ordens, licença nova, gasto, testnet nem deploy; J1 #2/#217/#319, J2 #3 e J3 #4 continuam sem aceite.
+
+
+## Checkpoint J3/PRE18 #371 — 30/10/2026
+
+`main=cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0` confirmado após PR #370 integrada; issue #369 fechada com comentários e evidências de CI pré-merge. Nova issue #371, branch `work/j3-pre18-funding-calendar`. Trabalho em andamento: contrato de grade temporal para `SyntheticFundingEvent` no replay, sem omissão silenciosa e sem default 8h, tests `test_synthetic_funding_calendar.py`, decisão D180, docs. **Próxima ação**: abrir PR, validar CI Linux/docs/Windows/Chrome e corrigir antes de merge; registrar SHA real após confirmação. Sem CLI nova, sem dados privados, rede de exchange, VPS, contas, ordens ou gasto. J1 #2/#217/#319, J2 #3 e J3 #4 pendentes.
