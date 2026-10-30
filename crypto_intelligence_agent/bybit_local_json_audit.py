@@ -48,7 +48,7 @@ class LocalBybitCaptureManifest:
             raise DataValidationError("local Bybit manifest requires exact linear symbol")
         if self.interval != "1h":
             raise DataValidationError("local Bybit audit supports closed 1h klines only")
-        if self.registry_variant not in ("btc-eth", "expanded-10", "expanded-13"):
+        if self.registry_variant not in ("btc-eth", "expanded-10", "expanded-13", "expanded-52"):
             raise DataValidationError("unsupported positive local registry revision")
         for key in (
             "start_open_ms", "end_open_ms", "capture_started_ms",
