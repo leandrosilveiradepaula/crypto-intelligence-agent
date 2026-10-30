@@ -132,7 +132,7 @@ def audit_paper_runner_incident(
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
                            reconcile=True, available=base + ("runner_exit_partial_fill_fixture", "runner_exit_cancel"), missing=("terminal_reconciliation",),
                            reason="Saída residual parcialmente preenchida e cancelada; não há reenvio automático.")
-        if latest.snapshot.status is PaperOrderStatus.CANCELLED:
+        if latest.snapshot.status in (PaperOrderStatus.CANCELLED, PaperOrderStatus.REJECTED):
             return _report(PaperIncidentCode.RUNNER_EXIT_CANCELLED_REVIEW, PaperIncidentSeverity.REVIEW,
                            as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
@@ -144,6 +144,15 @@ def audit_paper_runner_incident(
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
                            reconcile=True, available=base + ("runner_exit_unknown",), missing=("reconciliation",),
                            reason="Estado UNKNOWN não prova rejeição nem preenchimento.")
+        if (balance.runner_reserved_unfilled_units > 0
+                and latest.snapshot.filled_total_units == 0
+                and balance.runner_filled_units > 0):
+            return _report(PaperIncidentCode.RUNNER_EXIT_PENDING_RECONCILIATION, PaperIncidentSeverity.REVIEW,
+                           as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
+                           reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
+                           reconcile=True, available=base + ("auto4_runner_replacement_pending",),
+                           missing=("reconciliation",),
+                           reason="Saldo runner parcialmente preenchido tem nova reserva pendente; nao reenviar.")
         if balance.runner_filled_units > 0:
             return _report(PaperIncidentCode.RUNNER_EXIT_PARTIALLY_FILLED, PaperIncidentSeverity.REVIEW,
                            as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
