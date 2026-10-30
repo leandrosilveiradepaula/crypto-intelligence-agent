@@ -15,6 +15,7 @@ from .market_data import DataValidationError
 from .paper_position_inspection import inspect_paper_position
 from .paper_runner_journal import load_paper_runner_journal
 from .paper_runner_trailing import PaperRunnerTrailPolicy, PaperRunnerTrailState
+from .synthetic_manual_exit_replay import _utc_ms
 from .synthetic_order_lifecycle import PaperOrderStatus
 
 
@@ -98,6 +99,10 @@ def audit_paper_runner_incident(
     if ((runner_journal_path is None) != (policy is None)
             or (runner_journal_path is None) != (as_of_ms is None)):
         raise DataValidationError("RUNNER2 audit requires journal, policy and explicit cutoff together")
+    if runner_journal_path is not None:
+        if type(policy) is not PaperRunnerTrailPolicy:
+            raise DataValidationError("typed RUNNER2 policy required")
+        _utc_ms(as_of_ms, "RUNNER2 audit cutoff")
     try:
         inspection = inspect_paper_position(position_journal_path, position_id)
     except DataValidationError:
