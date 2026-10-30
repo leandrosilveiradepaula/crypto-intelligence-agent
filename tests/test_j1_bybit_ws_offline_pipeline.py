@@ -57,6 +57,50 @@ class PipelineTests(unittest.TestCase):
         result=self.run_batch([(json.dumps(ACK),t),(json.dumps(message('BTCUSDT',t,confirmed=False)),t+HOUR_MS+2000)])
         self.assertEqual(result.open_updates,1)
         self.assertEqual(result.appended,0)
+    def test_real_multirow_shape_closed_and_open_in_one_frame(self):
+        t=self.first
+        closed=message("BTCUSDT",t,confirmed=True)
+        update=message("BTCUSDT",t+HOUR_MS,confirmed=False)
+        frame=dict(closed,data=[closed["data"][0],update["data"][0]])
+        report=self.run_batch([(json.dumps(ACK),t),(json.dumps(frame),t+HOUR_MS+2000)])
+        self.assertEqual(report.appended,1)
+        self.assertEqual(report.open_updates,1)
+        self.assertEqual(self.j.audit(scope=self.scope,decision_at_ms=DECISION,
+                                     as_of_ms=DECISION+4000).persisted_rows,1)
+
+    def test_multirow_invalid_second_never_partially_commits(self):
+        t=self.first
+        valid=message("BTCUSDT",t,confirmed=True)
+        update=message("BTCUSDT",t+HOUR_MS,confirmed=False)
+        update["data"][0]["volume"]="NaN"
+        batch=dict(valid,data=[valid["data"][0],update["data"][0]])
+        with self.assertRaises(DataValidationError):
+            self.run_batch([(json.dumps(ACK),t),(json.dumps(batch),t+HOUR_MS+2000)])
+        audit=self.j.audit(scope=self.scope,decision_at_ms=DECISION,as_of_ms=DECISION+4000)
+        self.assertEqual(audit.persisted_rows,0)
+
+    def test_multiple_closed_and_bad_types_fail_without_partial_writes(self):
+        t=self.first
+        first=message("BTCUSDT",t,confirmed=True)
+        later=message("BTCUSDT",t+HOUR_MS,confirmed=True)
+        for data in ([first["data"][0],later["data"][0]],
+                     [first["data"][0],None], "not-array",
+                     [first["data"][0]]*9):
+            with self.subTest(data_type=type(data).__name__,length=len(data)):
+                bad=dict(first,data=data)
+                with self.assertRaises(DataValidationError):
+                    self.run_batch([(json.dumps(ACK),t),(json.dumps(bad),t+2*HOUR_MS+2000)])
+        audit=self.j.audit(scope=self.scope,decision_at_ms=DECISION,as_of_ms=DECISION+4000)
+        self.assertEqual(audit.persisted_rows,0)
+
+    def test_empty_array_not_candle(self):
+        t=self.first
+        empty=dict(message("BTCUSDT",t),data=[])
+        report=self.run_batch([(json.dumps(ACK),t),(json.dumps(empty),t+HOUR_MS+2000)])
+        self.assertEqual((report.open_updates,report.appended),(0,0))
+        self.assertEqual(self.j.audit(scope=self.scope,decision_at_ms=DECISION,
+                                     as_of_ms=DECISION+4000).persisted_rows,0)
+
     def test_unreviewed_symbol_rejected(self):
         t=self.first
         with self.assertRaises(DataValidationError): self.run_batch([(json.dumps(ACK),t),(json.dumps(message('DOGEUSDT',t)),t+HOUR_MS+2000)])
