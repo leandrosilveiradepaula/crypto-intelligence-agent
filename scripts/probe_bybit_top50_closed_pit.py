@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 from typing import Callable
 
 from crypto_intelligence_agent.bybit_paginated_universe_research import (
@@ -34,7 +35,6 @@ from crypto_intelligence_agent.market_data import (
 from crypto_intelligence_agent.research_registry_catalog import (
     load_reviewed_registry,
 )
-from scripts.capture_private_bybit_j1 import _clock
 from scripts.probe_bybit_top50_gap import (
     _capture_complete_instrument_catalog,
 )
@@ -43,26 +43,12 @@ REGISTRY = "expanded-52"
 CLOSE_SAFETY_MS = 2000
 
 
-def owner_rank_bybit_reviewed_closed_24h(
-    *, allow_public_network: bool = False,
-    confirm_region_and_personal_research: bool = False,
-    emit_public_ranked_symbols: bool = False,
-    client: BoundedBybitPublicClient | None = None,
-    clock_ms: Callable[[], int] | None = None,
+def observe_reviewed_closed_24h_rank(
+    *, fetch: BoundedBybitPublicClient,
+    clock: Callable[[], int],
     progress: Callable[[dict], None] | None = None,
-) -> dict:
-    """One audited closed-hour research observation of the 52-base registry.
-
-    No writes to local DB, filesystem, account or GitHub. The public-symbol
-    option is solely for audit; prices, turnover and OHLC never leave RAM.
-    """
-    if (allow_public_network is not True
-            or confirm_region_and_personal_research is not True
-            or type(emit_public_ranked_symbols) is not bool
-            or os.name != "posix"):
-        raise J1BybitCaptureError("closed24h_owner_opt_in_or_posix_required")
-    fetch = client if client is not None else BoundedBybitPublicClient()
-    clock = clock_ms or _clock
+):
+    """Trusted internal data structure for an owner-gated caller, never output."""
     start = clock()
     cutoff = start // HOUR_MS * HOUR_MS
     # Fail BEFORE first GET if the current hour cannot fit a conservatively
@@ -150,6 +136,30 @@ def owner_rank_bybit_reviewed_closed_24h(
         raise J1BybitCaptureError(
             "closed24h_catalog_or_kline_coverage_validation_rejected"
         ) from None
+    return ranked
+
+def owner_rank_bybit_reviewed_closed_24h(
+    *, allow_public_network: bool = False,
+    confirm_region_and_personal_research: bool = False,
+    emit_public_ranked_symbols: bool = False,
+    client: BoundedBybitPublicClient | None = None,
+    clock_ms: Callable[[], int] | None = None,
+    progress: Callable[[dict], None] | None = None,
+) -> dict:
+    """One audited closed-hour research observation of the 52-base registry.
+
+    No writes to local DB, filesystem, account or GitHub. The public-symbol
+    option is solely for audit; prices, turnover and OHLC never leave RAM.
+    """
+    if (allow_public_network is not True
+            or confirm_region_and_personal_research is not True
+            or type(emit_public_ranked_symbols) is not bool
+            or os.name != "posix"):
+        raise J1BybitCaptureError("closed24h_owner_opt_in_or_posix_required")
+    fetch = client if client is not None else BoundedBybitPublicClient()
+    clock = clock_ms or (lambda: time.time_ns() // 1_000_000)
+    ranked = observe_reviewed_closed_24h_rank(
+        fetch=fetch, clock=clock, progress=progress)
     result = ranked.sanitized_report(
         include_public_symbols=emit_public_ranked_symbols
     )
