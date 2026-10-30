@@ -172,3 +172,8 @@ Manutenção pode ser testada por faixas de nocional de marcação, taxa e dedu�
 ## J3/PRE18 — ausência de settlement não implica financiamento zero
 
 No replay causal, a grade de eventos de funding é fixture explícita e opt-in. Sem evento para um horário da grade, recusar a simulação em vez de assumir custo zero. Eventos com horário igual a marcação de tick não possuem ordem verificável; recusar. Rate, nocional, preço de mark, manutenção, fees e slippage reais continuam independentes da grade, sem inferência de PnL ou ganho. Issue #371.
+
+
+## J3/PRE19 — visão de carteira com perdas desconhecidas
+
+A soma de posições fictícias só é coerente com um relógio e uma moeda sintética em comum. Equity por mark e valores condicionais após stop/target não constituem PnL de fills. Se uma posição é liquidada no modelo sem preço de saída certificado, a carteira perde estado financeiro completo: não substituir por zero, margem perdida ou ganho presumido. Drawdown é apenas de prefixo verificável, e correlação pós-amostra entre séries de mark é descritiva, não decisão de entrada. Não pressupor diversificação garantida, 50x viável ou execução real. Issue #373.
