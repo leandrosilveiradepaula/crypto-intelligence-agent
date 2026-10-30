@@ -10,6 +10,7 @@ external JSON, market feed, money, positions from real accounts, or order API.
 from __future__ import annotations
 
 import argparse
+from decimal import Decimal
 from html import escape
 import json
 from pathlib import Path
@@ -17,6 +18,9 @@ import re
 import sys
 
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.paper_runner_journal import load_paper_runner_journal
+from crypto_intelligence_agent.paper_runner_trailing import PaperRunnerTrailPolicy, PaperRunnerTrailReport
+from crypto_intelligence_agent.paper_position_inspection import inspect_paper_position
 from crypto_intelligence_agent.paper_position_inspection import (
     PaperPositionInspection, inspect_paper_positions,
 )
@@ -65,9 +69,23 @@ def _paper_runner_readiness(item: PaperPositionInspection) -> str:
 
 def multi_paper_snapshot(
     selected: tuple[PaperPositionInspection, ...],
+    *, runner_observation: tuple[str, PaperRunnerTrailReport] | None = None,
 ) -> dict[str, object]:
     if type(selected) is not tuple or not 1 <= len(selected) <= 128:
         raise DataValidationError("1-128 explicitly inspected PAPER positions required")
+    if runner_observation is not None:
+        if (type(runner_observation) is not tuple or len(runner_observation) != 2
+                or type(runner_observation[0]) is not str
+                or type(runner_observation[1]) is not PaperRunnerTrailReport):
+            raise DataValidationError("invalid recovered PAPER runner")
+        runner_id, runner_report = runner_observation
+        selected_runner = [item for item in selected if item.balance.position_id == runner_id]
+        if (len(selected_runner) != 1 or
+                _paper_runner_readiness(selected_runner[0]) != "RUNNER_CONFIRMED_NOT_PROTECTED" or
+                runner_report.runner_units != selected_runner[0].balance.runner_floor_units or
+                runner_report.state.value not in (
+                    "NOT_ACTIVATED", "TRACKING", "TRIGGERED_HYPOTHETICAL_ONLY")):
+            raise DataValidationError("recovered runner does not match selected PAPER position")
     positions = []
     seen = set()
     for item in selected:
@@ -92,6 +110,16 @@ def multi_paper_snapshot(
             "runner_readiness": _paper_runner_readiness(item),
             "trailing_stop_active": False,
             "native_stop_verified": False,
+            "recovered_runner": (
+                {"state": runner_report.state.value,
+                 "observed_tick_count": runner_report.observed_tick_count,
+                 "digest_sha256": runner_report.digest_sha256,
+                 "hypothetical_only": True,
+                 "native_stop_verified": False,
+                 "trailing_stop_active": False}
+                if runner_observation is not None and p["position_id"] == runner_id
+                else None
+            ),
             "margin_intent_requested": p["margin_intent_requested"],
             "opening_order_cross_checked": single["opening_order_cross_checked"],
             "pending_or_unknown_orders": sum(
@@ -155,6 +183,23 @@ def render_position_card_markup(p: dict[str, object]) -> str:
             + _cell(margin["quote_currency"])
             + ' · Apenas intenção simulada, sem comprovar saldo ou margem da corretora.</p>'
         )
+    recovered = p.get("recovered_runner")
+    recovered_html = ""
+    if recovered is not None:
+        labels = {
+            "NOT_ACTIVATED": "Monitor PAPER recuperado, ainda não ativado",
+            "TRACKING": "Monitor PAPER recuperado, trailing hipotético em acompanhamento",
+            "TRIGGERED_HYPOTHETICAL_ONLY": "Monitor PAPER recuperado, gatilho apenas hipotético",
+        }
+        code = recovered["state"]
+        if code not in labels or recovered["native_stop_verified"] is not False:
+            raise DataValidationError("unsafe recovered runner state")
+        recovered_html = (
+            '<p class="details" data-field="runner-recovery" data-runner-observation="'
+            + _cell(code) + '">' + _cell(labels[code]) + ' · '
+            + _cell(recovered["observed_tick_count"])
+            + ' marcas fictícias; nenhum stop nativo ou fill.</p>'
+        )
     return (
         '<article class="position-card" data-position="' + _cell(p["position_id"]) + '">'
         + '<h3>' + _cell(p["position_id"]) + '</h3>'
@@ -166,7 +211,7 @@ def render_position_card_markup(p: dict[str, object]) -> str:
         + '<div><dt>Reservado/pedidos incertos</dt><dd>' + _cell(p["reserved_unfilled_units"]) + '</dd></div>'
         + '<div><dt>Disponível não reservado</dt><dd class="accent">' + _cell(p["unreserved_units"]) + '</dd></div>'
         + '</dl>'
-        + margin_html + crosscheck_html
+        + margin_html + crosscheck_html + recovered_html
         + '<p class="details" data-field="runner-readiness" data-runner-state="'
         + _cell(runner_code) + '">' + _cell(_RUNNER_LABELS[runner_code])
         + ' · Somente PAPER; trailing não ativo e stop nativo não verificado.</p>'
@@ -181,8 +226,9 @@ def render_position_card_markup(p: dict[str, object]) -> str:
 
 
 def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
-                           template: str) -> str:
-    snap = multi_paper_snapshot(selected)
+                           template: str, *,
+                           runner_observation: tuple[str, PaperRunnerTrailReport] | None = None) -> str:
+    snap = multi_paper_snapshot(selected, runner_observation=runner_observation)
     if (type(template) is not str
             or not template.lstrip().lower().startswith("<!doctype html>")
             or "default-src 'none'" not in template
@@ -203,7 +249,9 @@ def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
             p["position_id"], p["venue_candidate"] + " · " + p["symbol_fixture"]
             + " · " + p["side"], p["initial_confirmed_units"],
             p["filled_exit_units"], p["reserved_unfilled_units"],
-            p["unreserved_units"], unknown, _RUNNER_LABELS[p["runner_readiness"]],
+            p["unreserved_units"], unknown, _RUNNER_LABELS[p["runner_readiness"]] + (
+                " · " + p["recovered_runner"]["state"] + " (somente hipotético)"
+                if p["recovered_runner"] is not None else ""),
         )
         rows.append("<tr>" + "".join("<td>" + _cell(x) + "</td>" for x in fields)
                     + "</tr>")
@@ -240,15 +288,54 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--format", choices=("html", "json"), default="html")
     parser.add_argument("--output", type=Path,
                         help="Arquivo NOVO; nunca substituir resultado ou diário existente.")
+    parser.add_argument("--runner-journal", type=Path)
+    parser.add_argument("--runner-position-id")
+    parser.add_argument("--runner-activation-bps")
+    parser.add_argument("--runner-trail-distance-bps")
+    parser.add_argument("--runner-max-tick-gap-ms", type=int)
+    parser.add_argument("--runner-max-last-tick-age-ms", type=int)
+    parser.add_argument("--runner-as-of-ms", type=int)
     args = parser.parse_args(argv)
+    runner_options = (args.runner_journal, args.runner_position_id,
+                      args.runner_activation_bps, args.runner_trail_distance_bps,
+                      args.runner_max_tick_gap_ms, args.runner_max_last_tick_age_ms,
+                      args.runner_as_of_ms)
+    if any(v is not None for v in runner_options) and not all(v is not None for v in runner_options):
+        parser.error("RUNNER2 exige journal, ID, política e cutoff completos")
+    if args.runner_position_id is not None and args.runner_position_id not in args.position_id:
+        parser.error("RUNNER2 exige posição explicitamente selecionada")
     selected = inspect_paper_positions(
         args.journal, tuple(args.position_id),
         opening_order_path=args.opening_order_journal,
     )
+    runner_observation = None
+    if args.runner_journal is not None:
+        try:
+            policy = PaperRunnerTrailPolicy(
+                Decimal(args.runner_activation_bps), Decimal(args.runner_trail_distance_bps),
+                args.runner_max_tick_gap_ms, args.runner_max_last_tick_age_ms,
+            )
+        except (ValueError, ArithmeticError) as exc:
+            raise DataValidationError("invalid RUNNER2 policy") from exc
+        report = load_paper_runner_journal(
+            args.runner_journal, args.journal, args.runner_position_id,
+            policy=policy, as_of_ms=args.runner_as_of_ms,
+        )
+        refreshed = inspect_paper_position(
+            args.journal, args.runner_position_id,
+            opening_order_path=args.opening_order_journal,
+        )
+        previous = next(x for x in selected if x.balance.position_id == args.runner_position_id)
+        if refreshed != previous:
+            raise DataValidationError("PAPER position changed during RUNNER2 read")
+        runner_observation = (args.runner_position_id, report)
     payload = (
-        render_paper_positions(selected, TEMPLATE.read_text(encoding="utf-8"))
+        render_paper_positions(
+            selected, TEMPLATE.read_text(encoding="utf-8"),
+            runner_observation=runner_observation,
+        )
         if args.format == "html" else
-        json.dumps(multi_paper_snapshot(selected), sort_keys=True,
+        json.dumps(multi_paper_snapshot(selected, runner_observation=runner_observation), sort_keys=True,
                    ensure_ascii=False, indent=2) + "\n"
     )
     if args.output is None:
