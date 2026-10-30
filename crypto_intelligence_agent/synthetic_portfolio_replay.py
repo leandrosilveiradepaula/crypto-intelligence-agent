@@ -61,6 +61,7 @@ class SyntheticPortfolioCheckpoint:
     gross_open_notional_quote: Decimal | None
     signed_open_notional_quote: Decimal | None
     max_open_concentration: Decimal | None
+    max_open_notional_quote: Decimal | None
     signed_funding_paid_quote: Decimal
     open_count: int
     closed_conditional_count: int
@@ -203,10 +204,11 @@ def replay_synthetic_portfolio(
                 concentration = (max(open_sizes)/gross if gross > 0 else None)
                 row = SyntheticPortfolioCheckpoint(
                     k+1, equity, equity-initial_margin, gross, signed,
-                    concentration, funding, open_n, closed_n, liquidated_n)
+                    concentration, max(open_sizes) if open_sizes else _ZERO,
+                    funding, open_n, closed_n, liquidated_n)
             else:
                 row = SyntheticPortfolioCheckpoint(
-                    k+1, None, None, None, None, None,
+                    k+1, None, None, None, None, None, None,
                     funding, open_n, closed_n, liquidated_n)
             rows.append(row)
         # Correlations are descriptive, on overlapping OPEN prefixes only.
