@@ -707,3 +707,8 @@ Executar `tests/test_synthetic_portfolio_replay.py` juntamente com `test_synthet
 ## J3/PRE20 #375 — auditoria de limites globais offline
 
 Executar `test_synthetic_portfolio_risk_limits.py` e `test_synthetic_portfolio_replay.py` com regressões PRE17/PRE18. Casos: net zero versus bruto alto LONG/SHORT, limite de margem agregada/por leg e cap de leverage de abertura, exposição por marcação, concentração e maior instrumento sem arredondamento indireto, saída condicional sem dupla contagem, drawdown causal por checkpoint e estado posterior de violação, liquidação simultânea e impossibilidade de conhecer PnL/exposição, Decimal inválido e contexto independente, ordem das legs determinística, ausência de rede/ordens. CI docs/Linux, Windows/offline e Chrome/PAPER no HEAD final, review e SHA antes do merge. Sem dados live ou aceitação financeira.
+
+
+## J1/EXIT2 #377 — prova offline 52→50→36000
+
+Executar `tests/test_j1_private_bybit_capture.py` e `tests/test_j1_bybit_top50_closed_hour_rank.py` no SHA da PR. Cenário de 52 bases elegíveis, ranking com 24 velas 1h fechadas por ativo e dupla varredura de instrumentos, seleção das 50 maiores, uma página 720h por ativo, 36.000 candles em SQLite privado, replay PIT e 0600, 154 GETs injetados, nenhum socket ou ordem. Cenário com 49 candidatas diante de `max_assets=50` aborta antes da criação de DB. Preservar regressões legado `expanded-13`, conferir validações de clocks e falhas 10006. CI docs/Linux, Windows/offline, Chrome/PAPER e revisão no SHA exato antes de merge; não alegar que fixtures validam universo Top50 de mercado.
