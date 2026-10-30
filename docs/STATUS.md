@@ -832,3 +832,8 @@ Após PR #370/issue #369 integradas em `cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0
 ## 30/10/2026 — J3/PRE19 #373 em implementação
 
 Após PRs #370/#372 integradas em `cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0` e `a69be5202ff2afe5f16202d4e2767e57458ec30a`, issue #373 e branch `work/j3-pre19-portfolio-replay` implementam agregador puro de carteira de pesquisa multi-posição, no mesmo UTC e quote `SYNTHETIC_USDT`, reusando marcação/custo/funding. Reporta exposição e drawdown prefixo e deixa PnL desconhecido após liquidação. Arquivos e critérios em `docs/J3_PRE19_PORTFOLIO_REPLAY.md`. **Integração depende de CI e merge ainda não alegados**. J1 #2/#217/#319, J2 #3 e J3 #4 permanecem abertas; R$0 adicional, sem ordens nem deploy.
+
+
+## 30/10/2026 — J3/PRE20 #375 (não homologada)
+
+Depois da PR #374/issue #373 integrada em `19d74c71a04d1bbef7015024bd0861ab9a34ec87`, iniciou-se work unit #375 na branch `work/j3-pre20-portfolio-risk-limits`. O bloco incorpora auditoria de risco global por margem, gross/net exposure, concentração, nocional individual por mark, drawdown causal e alavancagem por posição, com trava de incerteza pós-liquidação. Arquivos `synthetic_portfolio_risk_limits.py`, `test_synthetic_portfolio_risk_limits.py`, `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md` e D182. Não afirmar CI/merge desta work unit antes de verificá-los. J1 #2/#217/#319, J2 #3, J3 #4 abertas; execução real desabilitada.
