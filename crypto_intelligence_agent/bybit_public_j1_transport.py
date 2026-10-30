@@ -165,7 +165,7 @@ def instruments_url(*, cursor: str | None = None, symbol: str | None = None) -> 
             raise J1BybitCaptureError("invalid_instrument_symbol")
         parameters.extend((("symbol", symbol), ("limit", "1")))
     else:
-        parameters.append(("limit", "200"))
+        parameters.append(("limit", "1000"))
         if cursor:
             if (type(cursor) is not str or len(cursor) > 300
                     or any(ord(c) < 33 or ord(c) > 126 for c in cursor)):
@@ -228,7 +228,7 @@ class BoundedBybitPublicClient:
             elif (set(queries) in (
                     {"category", "limit"},
                     {"category", "limit", "cursor"},
-                ) and queries.get("limit") == ["200"]):
+                ) and queries.get("limit") == ["1000"]):
                 cursor = queries.get("cursor", [None])[0]
                 allowed = (
                     (cursor is None or (len(cursor) > 0 and len(cursor) <= 300))
