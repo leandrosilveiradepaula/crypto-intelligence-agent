@@ -871,3 +871,7 @@ Base confirmada `main=1f15409e09c9f3072cf4c526dd57edf90b085e80`, PRs abertas zer
 
 ## J5/PRE15 #389 — recuperação de trailing PAPER no painel (30/10/2026)
 Base confirmada: J4/RUNNER2 #387/PR #388 integrada em main SHA `125c5c8a30d20f6f3c479ca64bea654bd48a4051`, J5/PRE14 #385/PR #386 já integrada. Branch `work/j5-pre15-durable-runner-mobile` implementa visualização local RO opt-in dos estados hipotéticos recuperados RUNNER2, com policy completa, posição explicitamente selecionada, teste de drift e JSON/HTML aditivos. Nova issue #389, testes `test_paper_runner_recovery_mobile.py`. PR, CI e merge desta unidade exigem confirmação independente; nenhuma VPS, dados novos J1, stop nativo, ordem, lucro ou deploy. J1 #2/#319 permanecem pendentes de owner-run adiado por decisão do PO.
+
+
+## J4/RUNNER3 #391 — fechamento da alocação runner PAPER, 30/10/2026
+Base auditada: `main=2ec2025b2a2f0673024ee79ea0c0fec1b2048ad7`, PR #390 integrada e #389 fechada; nenhuma PR aberta ao iniciar. Issue #391, branch `work/j4-runner3-residual-paper-reduce-only`. Implementado saldo residual como passo zero de EXIT REDUCE_ONLY somente PAPER em AUTO4 com conservação e rollback, e preview puro após gatilho RUNNER2. `tests/test_paper_runner_close.py` inclui LONG/SHORT, parcial/UNKNOWN/cancel/overfill, restart e no-network. O código ainda exige PR, revisão e CI SHA final; não presumir merge ou homologação. J1 #2/#319 continua pendente do owner-run VPS adiado. Sem stop nativo, ordens, deploy, nova despesa ou promessa de lucro.
