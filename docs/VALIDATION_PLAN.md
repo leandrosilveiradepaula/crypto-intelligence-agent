@@ -722,3 +722,8 @@ Com transporte inteiramente injetado, executar 52 identidades revisadas com 50 s
 ## J1/EXIT4 #381 — teste adversarial de churn
 
 Além da fixture estável de 52→50→36.100 velas/3 PIT, variar classificação das 24h fechadas: T0 exclui um candidato; T1 esse candidato sobe, desloca o membro número 50 e é backfilled 720+1 horas; T2 membro removido retorna, preenchendo só lacuna de 2h (nunca 720h novamente). Auditor deve encontrar 51 membros historicamente armazenados, 50 ativos em cada PIT, replay íntegro, total condicional 36.821 velas, 464 GETs injetados (<500) e zero sockets. Testar falha de GET/10006 ou página contaminada antes do PIT, sem limpar DB. Manter regressões antigas de 13 e de 50 estáveis; aceitar apenas com CI docs/Linux, Windows e Chrome no SHA final, revisão e merge sem produção.
+
+
+## J4/RUNNER1 #383 — trailing sem envio
+
+Executar `tests/test_paper_runner_trailing.py` com fixtures realmente armazenadas no `SQLitePaperPositionJournal`, preenchimentos 50/30/14 até runner de 6, LONG/SHORT, ratchet e gatilho no tick seguinte, preenchimento parcial/UNKNOWN que bloqueia monitor, preços/timestamps inválidos, parâmetros bps/staleness, contexto Decimal, rede desativada e banco invariável. CI docs/Linux, Windows/offline, Chrome/PAPER no SHA final, revisão e merge sem produção. A regressão comprova cálculo de limiar, não gatilho intrabar, fill, stop nativo ou sucesso financeiro.
