@@ -145,6 +145,13 @@ def _safe_failure_category(error: Exception, stage: str) -> str:
     # The error text is inspected locally, never emitted or logged.
     reason = str(error)
     mapping = {
+        "ws_clock_grid_invalid": "clock_grid",
+        "ws_clock_trade_stamp_invalid": "clock_trade_stamp",
+        "ws_clock_server_ahead_invalid": "clock_server_ahead",
+        "ws_clock_server_stale_invalid": "clock_server_stale",
+        "ws_clock_closed_before_server_end": "clock_closed_before_server_end",
+        "ws_clock_closed_before_local_end": "clock_closed_before_local_end",
+        "ws_clock_closed_too_old": "clock_closed_too_old",
         "ws_kline_root_keys_invalid": "kline_root_keys",
         "ws_kline_topic_invalid": "kline_topic",
         "ws_kline_type_invalid": "kline_type",
@@ -201,9 +208,14 @@ def _validate_one_kline_row(row: dict, server: int, received_ms: int) -> bool:
     start, end, stamp = row["start"], row["end"], row["timestamp"]
     if any(type(v) is not int for v in (start, end, stamp, server, received_ms)):
         raise DataValidationError("ws_time_type_invalid")
-    if (row["interval"] != "60" or start <= 0 or start % HOUR_MS or end != start + HOUR_MS - 1
-            or not start <= stamp <= end or server > received_ms + 5000 or received_ms - server > 30000):
-        raise DataValidationError("ws_clock_invalid")
+    if row["interval"] != "60" or start <= 0 or start % HOUR_MS or end != start + HOUR_MS - 1:
+        raise DataValidationError("ws_clock_grid_invalid")
+    if not start <= stamp <= end:
+        raise DataValidationError("ws_clock_trade_stamp_invalid")
+    if server > received_ms + 5000:
+        raise DataValidationError("ws_clock_server_ahead_invalid")
+    if received_ms - server > 30000:
+        raise DataValidationError("ws_clock_server_stale_invalid")
     from .bybit_linear_candle_research import _strict_decimal
     prices = {k: _strict_decimal(row[k], label=k, may_be_zero=False) for k in ("open", "high", "low", "close")}
     _strict_decimal(row["volume"], label="volume", may_be_zero=True)
@@ -214,8 +226,12 @@ def _validate_one_kline_row(row: dict, server: int, received_ms: int) -> bool:
         raise DataValidationError("ws_confirm_type_invalid")
     if not row["confirm"]:
         return False
-    if server < end + 1 or received_ms + 5000 < end + 1 or received_ms - (end + 1) > 120000:
-        raise DataValidationError("ws_close_clock_invalid")
+    if server < end + 1:
+        raise DataValidationError("ws_clock_closed_before_server_end")
+    if received_ms + 5000 < end + 1:
+        raise DataValidationError("ws_clock_closed_before_local_end")
+    if received_ms - (end + 1) > 120000:
+        raise DataValidationError("ws_clock_closed_too_old")
     return True
 
 
@@ -293,6 +309,10 @@ _SHAPE_COUNT_KEYS = (
     "confirmed_invalid_rows", "strict_valid_open_frames",
     "strict_valid_closed_candidates", "strict_rejected_frames",
     "before_utc_boundary_frames", "after_utc_boundary_frames", "other_time_frames",
+    "reject_clock_grid", "reject_clock_trade_stamp", "reject_clock_server_ahead",
+    "reject_clock_server_stale", "reject_clock_closed_before_server_end",
+    "reject_clock_closed_before_local_end", "reject_clock_closed_too_old",
+    "reject_other",
 )
 
 
@@ -441,8 +461,11 @@ def diagnose_shape_once(*, session_factory: Callable[[], StreamSession],
                     valid_close = _check_closed(payload, received_ms=received_ms)
                 except (ValueError, TypeError, RuntimeError, DataValidationError) as error:
                     counts["strict_rejected_frames"] += 1
+                    category = _safe_failure_category(error, "kline")
+                    bucket = "reject_" + category
+                    counts[bucket if bucket in counts else "reject_other"] += 1
                     if first_validation_failure == "none":
-                        first_validation_failure = _safe_failure_category(error, "kline")
+                        first_validation_failure = category
                     continue
                 # Even valid close candidates are NOT accepted as candles here.
                 if acknowledged:
