@@ -1,0 +1,11 @@
+# J3/PRE18 #371 — cobertura temporal de funding por calendário sintético
+
+O replay mark/trade já aceitava `SyntheticFundingEvent` explicitamente declarado. Com `funding_calendar=SyntheticFundingCalendar(...)`, exige cobertura exata dos horários de liquidação que seriam esperados durante **a janela de pesquisa fornecida**, sem inferir valores ou tratar eventos omitidos como taxa zero.
+
+O calendário tem `instrument_id` e `calendar_version` restritos a `fixture_...`, âncora UTC-ms exata e intervalo em minutos (1 minuto até 24 horas). É uma grade **hipotética**; não é o calendário publicado da Bybit, Binance ou qualquer exchange. Para o contrato opcional, a grade começa no primeiro timestamp estritamente posterior à abertura e se estende até imediatamente antes do último tick. Todos os horários dessa grade precisam possuir exatamente um `SyntheticFundingEvent` correspondente com nocional e taxa declarados, respeitando o teto de 64 eventos. Evento no mesmo instante de um tick (inclusive o último) é ambíguo e rejeitado. A grade não gera eventos nem presume fixação de funding a 8 horas.
+
+`replay_synthetic_mark_path` delega a aritmética de funding para `evaluate_synthetic_costs` existente, respeita preço de marcação para condição de risco e trade para gatilhos, e não concede preenchimento real. Nenhum evento pode aparecer depois do disparo de um cenário terminal. O modo legado sem `funding_calendar` permanece inalterado.
+
+**Limite importante:** exigir uma grade preenchida não autentica taxas/notionals, timestamps reais, posições, manutenção, mark, latência nem intervalo de settlement. Um calendário incompatível com o instrumento ou com informações point-in-time da corretora real não será utilizável sem nova homologação; a grade aqui é fixture pura. Não usar amostras reais privadas nem executar ordens.
+
+Validação: `tests/test_synthetic_funding_calendar.py` cobre LONG/SHORT, custo pago/recebido, eventos faltantes, extras, duplicados e simultâneos, janela sem settlements, contrato inválido, orçamento de eventos, invariância de precisão, ausência de rede e comportamento legado. Exigir CI Linux/docs, Windows/offline, Chrome/PAPER e SHA exato antes de merge seguro sem deploy. J1 #2/#217/#319, J2 #3 e J3 #4 continuam abertas. Nenhuma liberação de live/50x ou lucro validado.
