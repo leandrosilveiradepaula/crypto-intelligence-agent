@@ -78,9 +78,12 @@ def stress_vision_candle(candle: OfflineVisionCandle, *,
         liq=e+sign*(reserve+entry_cost+funding-m.requested_margin_quote)/q
         touched_stop=(candle.low<=stop if long else candle.high>=stop)
         touched_target=(candle.high>=target if long else candle.low<=target)
-        touched_liq=(candle.low<=liq if long else candle.high>=liq)
-        if not 0<liq or (long and liq>=e) or (not long and liq<=e):
-            raise DataValidationError("immediate or nonpositive liquidation proxy")
+        # An isolated 1x LONG can have a zero/negative algebraic threshold:
+        # there is then no positive price at which to assume liquidation.
+        if (long and liq>=e) or (not long and liq<=e):
+            raise DataValidationError("immediate liquidation proxy")
+        touched_liq=(candle.low<=liq if long and liq>0 else
+                     candle.high>=liq if not long else False)
         def net(exit_price):
             exit_n=q*exit_price
             costs=entry_cost+exit_n*(assumptions.exit_fee_bps+
