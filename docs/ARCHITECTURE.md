@@ -341,3 +341,8 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J1/EXIT2 — seleção compartilhada 52→50 e histórico 720h em DB novo privado
 
 `observe_reviewed_closed_24h_rank` é helper interno extraído do owner probe: pré e pós censo V5 íntegros, 24 velas fechadas por elegível revisado, orçamento de 6 minutos e seleção causal. `capture_private_bybit_j1._observe_large` reaproveita o objeto tipado `BybitReviewedClosedRanking` para construir `BybitPITResearchSelection` (até 50) sem ticker rolling, evitando a antiga janela impossível de 120s para 52 ativos. O restante do capturador reutiliza `LocalBybitCaptureManifest`, o parser de kline 720h e `SQLiteBybitResearchStore` com replay e controle 0600, sem segundo storage. A coleta do modo 52 só aceita uma página exata de 720h por ativo e um **novo** banco, preservando integralmente a base privada antiga com 2 símbolos. Sem migração/deploy. Issue #377.
+
+
+## J1/EXIT4 — membros dinâmicos sem rebaixar 720h
+
+`_append_dynamic_research_hour` mantém cursores de fechamento por símbolo durante um único owner-run de 3 PIT; `cursors.get(symbol,start)` distingue entrantes inéditos, retornantes e ativos contínuos. Cada par de páginas V5 tem metadados próprios, janela exata UTC e preflight de schema. `SQLiteBybitResearchStore.commit_raw_pair` continua idempotente e exige continuidade contígua; o PIT só é gravado após garantir todos os históricos ativos. Ex-membros permanecem no SQLite. O auditor `audit_private_bybit_j1_progress` verifica até 52 símbolos armazenados para SHA do registro expandido, união dos membros PIT igual aos persistidos, 720h de base e cobertura até a decisão em cada PIT. Não transforma este ledger privado no motor de ordens nem altera schema.
