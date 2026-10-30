@@ -12,6 +12,7 @@ import json
 
 from .market_data import DataValidationError
 from .synthetic_cost_scenarios import _amount
+from .synthetic_intrabar_barriers import ResearchDirection
 from .synthetic_portfolio_replay import (
     SyntheticPortfolioLeg, SyntheticPortfolioReplay, replay_synthetic_portfolio,
 )
@@ -116,7 +117,7 @@ def audit_synthetic_portfolio_risk(
         entry_gross = sum((leg.plan.margin.entry_notional_quote for leg in legs), _ZERO)
         entry_signed = sum((
             leg.plan.margin.entry_notional_quote
-            if leg.plan.direction.value == "long"
+            if leg.plan.direction is ResearchDirection.LONG
             else -leg.plan.margin.entry_notional_quote for leg in legs), _ZERO)
         entry_largest = max(leg.plan.margin.entry_notional_quote for leg in legs)
         initial = set()
