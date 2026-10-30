@@ -1,15 +1,48 @@
-"""J3 OOS stress audit: frozen monthly rule, conditional OHLC branches only."""
+"""J3 OOS conditional stress audit on historical research data, NEVER real fills."""
 from __future__ import annotations
+
 from dataclasses import dataclass
-from decimal import Decimal, localcontext, Context
+from decimal import Context, Decimal, localcontext
 from hashlib import sha256
 import json
+
 from .market_data import DataValidationError
 from .offline_vision_series import assemble_offline_vision_months
 from .vision_costed_oos import costed_vision_monthly_oos
 from .vision_intrabar_stress import VisionStressAssumptions, stress_vision_candle
 
-_CTX=Context(prec=512)
+_CTX = Context(prec=512)
+_ZERO = Decimal(0)
+
+
+@dataclass(frozen=True)
+class VisionStressFoldAudit:
+    """Monthly OOS observations. Neither branch is an executable fill path."""
+    test_month_number: int
+    bars_scored: int
+    strategy_exposures: int
+    benchmark_exposures: int
+    strategy_ambiguous_count: int
+    benchmark_ambiguous_count: int
+    strategy_liquidation_possible_count: int
+    benchmark_liquidation_possible_count: int
+    strategy_worst_net_quote: Decimal
+    strategy_best_net_quote: Decimal
+    benchmark_worst_net_quote: Decimal
+    benchmark_best_net_quote: Decimal
+    strategy_worst_drawdown_proxy_quote: Decimal
+    strategy_best_drawdown_proxy_quote: Decimal
+    benchmark_worst_drawdown_proxy_quote: Decimal
+    benchmark_best_drawdown_proxy_quote: Decimal
+    strategy_max_single_bar_loss_over_margin: Decimal
+    benchmark_max_single_bar_loss_over_margin: Decimal
+
+    def sanitized_report(self) -> dict:
+        return {
+            key: str(value) if type(value) is Decimal else value
+            for key, value in vars(self).items()
+        }
+
 
 @dataclass(frozen=True)
 class VisionStressOOS:
@@ -19,105 +52,164 @@ class VisionStressOOS:
     worst_net_quote: Decimal
     best_net_quote: Decimal
     digest_sha256: str
-    benchmark_worst_net_quote: Decimal = Decimal(0)
-    benchmark_best_net_quote: Decimal = Decimal(0)
-    worst_drawdown_proxy_quote: Decimal = Decimal(0)
-    best_drawdown_proxy_quote: Decimal = Decimal(0)
-    benchmark_worst_drawdown_proxy_quote: Decimal = Decimal(0)
-    benchmark_best_drawdown_proxy_quote: Decimal = Decimal(0)
-    fold_reports: tuple[tuple[int,int,int,int], ...] = ()
+    benchmark_worst_net_quote: Decimal = _ZERO
+    benchmark_best_net_quote: Decimal = _ZERO
+    worst_drawdown_proxy_quote: Decimal = _ZERO
+    best_drawdown_proxy_quote: Decimal = _ZERO
+    benchmark_worst_drawdown_proxy_quote: Decimal = _ZERO
+    benchmark_best_drawdown_proxy_quote: Decimal = _ZERO
+    fold_reports: tuple[VisionStressFoldAudit, ...] = ()
+    benchmark_ambiguous_count: int = 0
+    benchmark_liquidation_possible_count: int = 0
+    strategy_max_single_bar_loss_over_margin: Decimal = _ZERO
+    benchmark_max_single_bar_loss_over_margin: Decimal = _ZERO
 
-    def sanitized_report(self)->dict:
+    def sanitized_report(self) -> dict:
         return {
-            "status":"offline_oos_conditional_intrabar_stress_only",
-            "stressed_count":self.stressed_count,
-            "ambiguous_count":self.ambiguous_count,
-            "liquidation_possible_count":self.liquidation_possible_count,
-            "worst_net_quote":str(self.worst_net_quote),
-            "best_net_quote":str(self.best_net_quote),
-            "digest_sha256":self.digest_sha256,
-            "benchmark_worst_net_quote":str(self.benchmark_worst_net_quote),
-            "benchmark_best_net_quote":str(self.benchmark_best_net_quote),
-            "worst_drawdown_proxy_quote":str(self.worst_drawdown_proxy_quote),
-            "best_drawdown_proxy_quote":str(self.best_drawdown_proxy_quote),
-            "benchmark_worst_drawdown_proxy_quote":str(self.benchmark_worst_drawdown_proxy_quote),
-            "benchmark_best_drawdown_proxy_quote":str(self.benchmark_best_drawdown_proxy_quote),
-            "fold_coverage":[{"test_month_number":k,"bars_scored":bars,
-                "strategy_exposures":exposures,"ambiguous_exposures":amb}
-                for k,bars,exposures,amb in self.fold_reports],
-            "financial_backtest_approved":False,
-            "marketwide_top50_verified":False,
-            "source_authenticated":False,
-            "live_trading_authorized":False,
-            "orders_sent":False,"network_requests":0,"data_stored":False,
+            "status": "offline_oos_conditional_intrabar_stress_only",
+            "stressed_count": self.stressed_count,
+            "ambiguous_count": self.ambiguous_count,
+            "liquidation_possible_count": self.liquidation_possible_count,
+            "worst_net_quote": str(self.worst_net_quote),
+            "best_net_quote": str(self.best_net_quote),
+            "benchmark_worst_net_quote": str(self.benchmark_worst_net_quote),
+            "benchmark_best_net_quote": str(self.benchmark_best_net_quote),
+            "worst_drawdown_proxy_quote": str(self.worst_drawdown_proxy_quote),
+            "best_drawdown_proxy_quote": str(self.best_drawdown_proxy_quote),
+            "benchmark_worst_drawdown_proxy_quote": str(self.benchmark_worst_drawdown_proxy_quote),
+            "benchmark_best_drawdown_proxy_quote": str(self.benchmark_best_drawdown_proxy_quote),
+            "strategy_max_single_bar_loss_over_margin": str(self.strategy_max_single_bar_loss_over_margin),
+            "benchmark_max_single_bar_loss_over_margin": str(self.benchmark_max_single_bar_loss_over_margin),
+            "benchmark_ambiguous_count": self.benchmark_ambiguous_count,
+            "benchmark_liquidation_possible_count": self.benchmark_liquidation_possible_count,
+            "fold_coverage": [fold.sanitized_report() for fold in self.fold_reports],
+            "digest_sha256": self.digest_sha256,
+            "financial_backtest_approved": False,
+            "marketwide_top50_verified": False,
+            "source_authenticated": False,
+            "live_trading_authorized": False,
+            "orders_sent": False,
+            "network_requests": 0,
+            "data_stored": False,
         }
 
 
-def audit_costed_vision_intrabar_oos(month_groups:tuple[tuple,...],*,as_of_ms:int,
-    cost_bps_per_side:Decimal, assumptions:VisionStressAssumptions)->VisionStressOOS:
+def audit_costed_vision_intrabar_oos(
+    month_groups: tuple[tuple, ...], *, as_of_ms: int,
+    cost_bps_per_side: Decimal, assumptions: VisionStressAssumptions,
+) -> VisionStressOOS:
     if type(assumptions) is not VisionStressAssumptions:
         raise DataValidationError("explicit synthetic stress assumptions required")
-    baseline=costed_vision_monthly_oos(
-        month_groups,as_of_ms=as_of_ms,cost_bps_per_side=cost_bps_per_side)
-    series=tuple(assemble_offline_vision_months(g,as_of_ms=as_of_ms)
-                 for g in month_groups)
-    bounds=[0]
+    baseline = costed_vision_monthly_oos(
+        month_groups, as_of_ms=as_of_ms, cost_bps_per_side=cost_bps_per_side)
+    series = tuple(
+        assemble_offline_vision_months(group, as_of_ms=as_of_ms)
+        for group in month_groups
+    )
+    bounds = [0]
     for month in month_groups[0]:
-        bounds.append(bounds[-1]+len(month.candles))
-    # Honor each fold's rule selected from PRIOR months. No refitting or
-    # artificial extraction of winners from the test period.
+        bounds.append(bounds[-1] + len(month.candles))
     with localcontext(_CTX):
-        worst=best=Decimal(0)
-        n=ambiguous=liquidations=0
-        bench_worst=bench_best=Decimal(0)
-        eq=[Decimal(0) for _ in range(4)]
-        peak=[Decimal(0) for _ in range(4)]
-        dd=[Decimal(0) for _ in range(4)]
-        fold_reports=[]
-        digest=sha256()
-        def track(j,change):
-            eq[j]+=change
-            peak[j]=max(peak[j],eq[j])
-            dd[j]=min(dd[j],eq[j]-peak[j])
-        for k,fold in enumerate(baseline.folds,1):
-            exposure_before=n
-            ambiguous_before=ambiguous
-            bars=0
-            for i in range(bounds[k],bounds[k+1]):
-                ranked=sorted(
-                    ((s.symbol,sum((c.documented_quote_volume
-                                    for c in s.candles[i-24:i]),Decimal(0)),j)
-                     for j,s in enumerate(series)),
-                    key=lambda row:(-row[1],row[0]))
-                j=ranked[0][2]
-                prices=series[j].candles
-                bars+=1
-                # Same ranked candle and synthetic terms for the fixed LONG
-                # benchmark, including when the selected rule abstains.
-                reference=stress_vision_candle(prices[i],long=True,assumptions=assumptions)
-                bench_worst+=reference.worst_net_quote
-                bench_best+=reference.best_net_quote
-                track(2,reference.worst_net_quote)
-                track(3,reference.best_net_quote)
-                movement=prices[i-1].close-prices[i-2].close
-                if movement==0 or fold.selected_rule=="abstain":
+        totals = [_ZERO for _ in range(4)]
+        equities = [_ZERO for _ in range(4)]
+        peaks = [_ZERO for _ in range(4)]
+        drawdowns = [_ZERO for _ in range(4)]
+        n = ambiguous = liquidations = benchmark_ambiguous = benchmark_liquidations = 0
+        strategy_max_loss = benchmark_max_loss = _ZERO
+        folds = []
+        digest = sha256()
+        digest.update(json.dumps([
+            "vision-stress-oos-v2", baseline.digest_sha256,
+            sorted(s.series_manifest_sha256 for s in series),
+            as_of_ms, str(cost_bps_per_side),
+            str(assumptions.margin.requested_margin_quote),
+            assumptions.margin.leverage_at_intent,
+            str(assumptions.margin.entry_notional_quote),
+            assumptions.margin.quote_currency,
+            *[str(getattr(assumptions, attr)) for attr in (
+                "stop_fraction", "target_fraction", "maintenance_bps",
+                "entry_fee_bps", "exit_fee_bps", "entry_slippage_bps",
+                "exit_slippage_bps", "signed_funding_bps")],
+        ], separators=(",", ":")).encode("ascii"))
+
+        def track(index: int, change: Decimal, monthly_eq: list,
+                  monthly_peak: list, monthly_dd: list) -> None:
+            totals[index] += change
+            equities[index] += change
+            peaks[index] = max(peaks[index], equities[index])
+            drawdowns[index] = min(drawdowns[index], equities[index] - peaks[index])
+            monthly_eq[index] += change
+            monthly_peak[index] = max(monthly_peak[index], monthly_eq[index])
+            monthly_dd[index] = min(monthly_dd[index], monthly_eq[index] - monthly_peak[index])
+
+        for k, fold in enumerate(baseline.folds, 1):
+            month_totals_start = totals.copy()
+            monthly_eq = [_ZERO for _ in range(4)]
+            monthly_peak = [_ZERO for _ in range(4)]
+            monthly_dd = [_ZERO for _ in range(4)]
+            bars = exposures = amb = liq = b_amb = b_liq = 0
+            fold_strategy_max_loss = fold_benchmark_max_loss = _ZERO
+            for i in range(bounds[k], bounds[k + 1]):
+                # Prior 24 CLOSED hourly bars only, never the target bar.
+                ranked = sorted((
+                    (s.symbol, sum(
+                        (c.documented_quote_volume for c in s.candles[i - 24:i]),
+                        _ZERO), j)
+                    for j, s in enumerate(series)
+                ), key=lambda item: (-item[1], item[0]))
+                selected = series[ranked[0][2]].candles
+                bars += 1
+                # Fixed LONG benchmark observes every OOS bar, even while the
+                # trained strategy abstains. Exposure counts disclose asymmetry.
+                benchmark = stress_vision_candle(
+                    selected[i], long=True, assumptions=assumptions)
+                track(2, benchmark.worst_net_quote, monthly_eq, monthly_peak, monthly_dd)
+                track(3, benchmark.best_net_quote, monthly_eq, monthly_peak, monthly_dd)
+                b_amb += int(benchmark.intrabar_ambiguous)
+                b_liq += int(benchmark.touched_liquidation_proxy)
+                fold_benchmark_max_loss = max(
+                    fold_benchmark_max_loss,
+                    -benchmark.worst_net_quote / assumptions.margin.requested_margin_quote,
+                    _ZERO)
+                movement = selected[i - 1].close - selected[i - 2].close
+                if movement == 0 or fold.selected_rule == "abstain":
                     continue
-                trend=movement>0
-                long=trend if fold.selected_rule=="continuation" else not trend
-                row=stress_vision_candle(prices[i],long=long,assumptions=assumptions)
-                n+=1
-                ambiguous+=int(row.intrabar_ambiguous)
-                liquidations+=int(row.touched_liquidation_proxy)
-                worst+=row.worst_net_quote
-                best+=row.best_net_quote
-                track(0,row.worst_net_quote)
-                track(1,row.best_net_quote)
+                long = (movement > 0) == (fold.selected_rule == "continuation")
+                outcome = stress_vision_candle(selected[i], long=long,
+                                               assumptions=assumptions)
+                exposures += 1
+                amb += int(outcome.intrabar_ambiguous)
+                liq += int(outcome.touched_liquidation_proxy)
+                track(0, outcome.worst_net_quote, monthly_eq, monthly_peak, monthly_dd)
+                track(1, outcome.best_net_quote, monthly_eq, monthly_peak, monthly_dd)
+                fold_strategy_max_loss = max(
+                    fold_strategy_max_loss,
+                    -outcome.worst_net_quote / assumptions.margin.requested_margin_quote,
+                    _ZERO)
                 digest.update(json.dumps([
-                    k,i,int(long),str(row.worst_net_quote),str(row.best_net_quote),
-                    int(row.intrabar_ambiguous),int(row.touched_liquidation_proxy)],
-                    separators=(",",":")).encode("ascii")+b"\\n")
-            fold_reports.append((k,bars,n-exposure_before,ambiguous-ambiguous_before))
-        digest.update(json.dumps([str(bench_worst),str(bench_best),
-            [str(x) for x in dd],fold_reports],separators=(",",":")).encode("ascii"))
-        return VisionStressOOS(n,ambiguous,liquidations,worst,best,digest.hexdigest(),
-            bench_worst,bench_best,dd[0],dd[1],dd[2],dd[3],tuple(fold_reports))
+                    k, i, int(long),
+                    str(outcome.worst_net_quote), str(outcome.best_net_quote),
+                    int(outcome.intrabar_ambiguous),
+                    int(outcome.touched_liquidation_proxy),
+                ], separators=(",", ":")).encode("ascii") + b"\n")
+            n += exposures
+            ambiguous += amb
+            liquidations += liq
+            benchmark_ambiguous += b_amb
+            benchmark_liquidations += b_liq
+            strategy_max_loss = max(strategy_max_loss, fold_strategy_max_loss)
+            benchmark_max_loss = max(benchmark_max_loss, fold_benchmark_max_loss)
+            fold_audit = VisionStressFoldAudit(
+                k, bars, exposures, bars, amb, b_amb, liq, b_liq,
+                *(totals[j] - month_totals_start[j] for j in range(4)),
+                *monthly_dd, fold_strategy_max_loss, fold_benchmark_max_loss)
+            folds.append(fold_audit)
+            digest.update(json.dumps(
+                fold_audit.sanitized_report(), sort_keys=True,
+                separators=(",", ":")).encode("ascii"))
+        return VisionStressOOS(
+            n, ambiguous, liquidations, totals[0], totals[1], digest.hexdigest(),
+            totals[2], totals[3], drawdowns[0], drawdowns[1],
+            drawdowns[2], drawdowns[3], tuple(folds),
+            benchmark_ambiguous, benchmark_liquidations,
+            strategy_max_loss, benchmark_max_loss)
