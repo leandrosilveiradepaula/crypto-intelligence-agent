@@ -135,3 +135,10 @@ Em duas posições fictícias de 200 unidades quote, uma LONG e outra SHORT no m
 ## J1/PIT1 #306 — proxy de volume quote não é estratégia vencedora
 
 Para pesquisa multiativo, a ordenação local de 24 candles de 1h anteriores à decisão, em quote USDT sem conversão cambial, é apenas **estatística descritiva da amostra retida**. Não usar candle que abre na hora da decisão, não classificar dados faltantes como zero, não preservar universo retroativamente a partir da lista disponível hoje e não supor que uma posição alta em volume gera compra, retorno positivo ou liquidez executável. `historical_top50_verified` e `financial_backtest_approved` continuam FALSE. Dataset Vision nunca alimenta ordens live.
+
+
+## D177 — desbloqueio de pesquisa independente do gate de trading real (30/10/2026)
+
+**Decisão fechada:** Bybit continua candidata preferencial para feed prospectivo, usando WS/REST/cache local, sem considerar `10006` resolvido. Binance Vision previamente retido pelo titular fica restrito à pesquisa pessoal offline não produtiva, sem alimentação de sinais/live. J1 #319/#217 permanecem gates operacionais de dados/identidade/direitos. A execução automática permanece objetivo final (D77), mas nenhuma ordem live, testnet, deploy ou credencial foi ativada. J2/J3 podem pesquisar offline sem esperar homologação integral do Top50 de produção. Não exigir novo `prossiga` para tarefas seguras em sessão.
+
+A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `offline_vision_month` e `offline_vision_series`, e gera replay determinístico de decisões com volume de cotação USDT em 24h FECHADAS para uma amostra de até 50 contratos, por prefixos, em até 720 decisões. Flags de Top50 de mercado, origem autenticada, direitos live, backtest financeiro aprovado e ordens continuam negativas. Testes de alinhamento, relógio, duplicata, determinismo, não-lookahead e recursos. **Não é autenticação de fonte ou universo histórico global.**
