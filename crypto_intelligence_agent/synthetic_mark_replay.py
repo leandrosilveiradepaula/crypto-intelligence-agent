@@ -16,6 +16,9 @@ from .synthetic_intrabar_barriers import ResearchDirection
 from .synthetic_margin_envelope import SyntheticMarginBasis
 from .synthetic_feature_engine import validate_synthetic_research_price
 from .synthetic_manual_exit_replay import _utc_ms
+from .synthetic_risk_tiers import (
+    SyntheticRiskSnapshot, validate_synthetic_risk_snapshots, maintenance_for_mark,
+)
 
 _CTX = Context(prec=512, rounding=ROUND_HALF_EVEN)
 MAX_TICKS = 2048
@@ -48,9 +51,16 @@ class SyntheticMarkReplayPlan:
     exit_fee_bps: Decimal
     entry_slippage_bps: Decimal
     exit_slippage_bps: Decimal
+    instrument_id: str = "fixture_synthetic_usdt"
 
     def __post_init__(self) -> None:
         from .synthetic_cost_scenarios import _amount, _rate
+        if (type(self.instrument_id) is not str
+                or not self.instrument_id.startswith("fixture_")
+                or len(self.instrument_id) > 56
+                or not self.instrument_id[8:].replace("_","").replace("-","").isalnum()
+                or not self.instrument_id.isascii()):
+            raise DataValidationError("synthetic fixture instrument identity required")
         if type(self.direction) is not ResearchDirection:
             raise DataValidationError("explicit position direction required")
         _utc_ms(self.entry_at_ms, "entry")
@@ -137,6 +147,9 @@ def replay_synthetic_mark_path(
     ticks: tuple[SyntheticMarkTick, ...],
     funding_events: tuple[SyntheticFundingEvent, ...] = (),
     *, as_of_ms: int,
+    risk_snapshots: tuple[SyntheticRiskSnapshot, ...] | None = None,
+    max_tick_gap_ms: int | None = None,
+    max_risk_snapshot_age_ms: int | None = None,
 ) -> SyntheticMarkReplayResult:
     """Evaluate each supplied timestamp exactly once, liquidation before exits.
 
@@ -164,6 +177,26 @@ def replay_synthetic_mark_path(
         raise DataValidationError("funding events must be unique ordered and between ticks")
     if len({f.event_id for f in funding_events}) != len(funding_events):
         raise DataValidationError("funding identifiers must be unique")
+    if max_tick_gap_ms is not None:
+        if (type(max_tick_gap_ms) is not int or not 1 <= max_tick_gap_ms <= 86_400_000
+                or any(right-left > max_tick_gap_ms
+                       for left,right in zip((plan.entry_at_ms,*times[:-1]), times))):
+            raise DataValidationError("tick observation gap exceeds explicit bound")
+    if risk_snapshots is None:
+        if max_risk_snapshot_age_ms is not None:
+            raise DataValidationError("staleness bound without PIT snapshots")
+    else:
+        if (type(max_risk_snapshot_age_ms) is not int or
+                not 0 <= max_risk_snapshot_age_ms <= 86_400_000 * 31):
+            raise DataValidationError("explicit bounded PIT snapshot age required")
+        validate_synthetic_risk_snapshots(
+            risk_snapshots, instrument_id=plan.instrument_id,
+            entry_at_ms=plan.entry_at_ms, as_of_ms=as_of_ms)
+        if any(t.at_ms - next(s.effective_at_ms for s in reversed(risk_snapshots)
+                             if s.effective_at_ms <= t.at_ms)
+               > max_risk_snapshot_age_ms for t in ticks):
+            raise DataValidationError("stale PIT risk snapshot")
+
 
     observations = []
     total_entry_cost = None
@@ -187,8 +220,15 @@ def replay_synthetic_mark_path(
             gross_mark = sign * (tick.mark_price - plan.entry_price) * plan.quantity_base
             equity = (plan.margin.requested_margin_quote + gross_mark
                       - entry_cost - accrued.signed_funding_cost_units)
-            maintenance = (mark_notion * plan.maintenance_rate_bps
-                           / Decimal(10000) + plan.reserve_for_close_quote)
+            if risk_snapshots is None:
+                maintenance = (mark_notion * plan.maintenance_rate_bps
+                               / Decimal(10000) + plan.reserve_for_close_quote)
+            else:
+                active_snapshot = next(s for s in reversed(risk_snapshots)
+                                       if s.effective_at_ms <= tick.at_ms)
+                maintenance = maintenance_for_mark(
+                    active_snapshot, mark_notional_quote=mark_notion,
+                    close_reserve_quote=plan.reserve_for_close_quote)
             liquidation = equity <= maintenance
             if liquidation:
                 state = SyntheticReplayState.LIQUIDATION_CONDITION

@@ -817,3 +817,8 @@ A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-s
 ## J3/ROBUST1 #367 — pacote de robustez proposto (30/10/2026)
 
 Após #363/PRs #364–#366 integradas, a nova issue #367 implementa comparação de quatro cenários condicionais em dados históricos Vision já privados, com choques explícitos de taxa, slippage, manutenção e funding, sem alteração do calendário OOS ou suposta liquidação real. Arquivos `crypto_intelligence_agent/vision_risk_sensitivity.py`, `tests/test_vision_risk_sensitivity.py`, CLI e docs/J3_ROBUST1.md em branch de revisão `work/j3-robust1-sensitivity`; **não afirmar aceite até teste/CI e merge**. Nenhuma conta, API, ordem, VPS, credencial, deploy ou gasto. J1 #2/#217/#319 e J3 #4 abertas.
+
+
+## 30/10/2026 — J3/PRE17 #369 em implementação
+
+Após #367/#368 integradas, pesquisa sintética continua sem dados reais de mark/funding. Issue #369 e branch `work/j3-pre17-risk-snapshot-pit` adicionam risco por tiers e snapshots PIT opcionais no replay mark/trade, com regras de dedução contínua, controle de staleness e intervalo de ticks. Regressões offline e documentação junto ao código. **Não afirmar merge, CI ou homologação da #369 até evidência real**. J1 #2/#217/#319, J2 #3 e J3 #4 abertas; orçamento R$0 e ordens live desabilitadas.

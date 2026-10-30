@@ -162,3 +162,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## J3/ROBUST1 #367 — sensibilidade de risco OOS em cenários privados
 
 A auditoria `vision_risk_sensitivity.py` reutiliza a mesma seleção mensal OOS causal e compara base, custos/manutenção adversos e duas hipóteses de funding assinado. As quatro saídas são ramos de **simulação**, não quatro operações ou previsões. Uma alta de taxas não deve melhorar o envelope sob funding constante; funding com sinais opostos pode favorecer LONG e SHORT de modo diferente, logo não se conclui monotonicidade universal. Sem mark, ordem intrabar, preço executável, financiamento liquidado ou tier real de margem, não promover resultado a PnL, retorno esperado ou sinal live. Contrato e CLI opt-in em `docs/J3_ROBUST1.md`.
+
+
+## J3/PRE17 — margem de manutenção sintética por nocional e ponto no tempo
+
+Manutenção pode ser testada por faixas de nocional de marcação, taxa e dedução contínua conhecidas no instante do tick, sob snapshots `fixture_...` versionados. Trade aciona apenas stop/target; mark calcula equity e condição de liquidação hipotética, sem preço de fill, trajetória intrabar ou fórmula da corretora. Dados desconhecidos/futuros e períodos sem ticks suficientes falham quando configurados os gates; nunca inferir funcionamento real de margem cross ou alavancagem 50x. Issue #369.

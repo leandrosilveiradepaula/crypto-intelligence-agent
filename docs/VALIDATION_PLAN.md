@@ -687,3 +687,8 @@ A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-s
 ## J3/ROBUST1 #367 — regressões de sensibilidade e integridade temporal
 
 Executar `tests/test_vision_risk_sensitivity.py` e a suíte POSIX privada `test_replay_private_vision_dynamic.py` no mesmo SHA: custo/manutenção adversos não melhoram resultados condicionais sob funding constante, seleção OOS congelada, funding +/- mantidos como alternativas não monotônicas, digest dependente dos parâmetros, 50x vs 1x, perturbação da ordem da amostra, contexto Decimal, inputs inválidos, opt-in completo, nenhum símbolo/ZIP/caminho privado em report, rede e ordens zeradas. Exigir CI Linux/docs, Windows/offline e Chrome/PAPER; nenhum teste local deve ser alegado se não executado. J1/J3 financeiros não homologados.
+
+
+## J3/PRE17 #369 — tiers PIT e replay de mark/trade
+
+Testar `test_synthetic_risk_tiers.py` e `test_synthetic_mark_replay.py`: faixas contíguas e deduções contínuas, fontes/versionamento `fixture_...`, horários de observação/validade, mudanças somente futuras, marcação usada para risco, preços de trade para stop/alvo, funding cronológico, LONG/SHORT, gap entre ticks, staleness e comportamento legado imutável. CI Linux/docs, Windows offline e Chrome/PAPER no head da PR, comparar SHA e impedir merge vermelho. Resultado não autoriza liquidacão real, aplicação de calendário de funding da venue, ordens ou PnL.

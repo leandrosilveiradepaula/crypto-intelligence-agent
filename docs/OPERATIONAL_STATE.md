@@ -927,3 +927,8 @@ A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-s
 ## Checkpoint ativo 30/10/2026 — J3/ROBUST1 #367
 
 `main` inspecionada em `3efccdd275dd838673b64984a271612ed379021c` (PR #366), sem PRs abertas naquele instante. CI pós-merge não obtida via consulta; CI pré-merge do head da #366 SUCCESS em docs/Linux, Windows/offline e Chrome/PAPER. Issue #363 fechada após PRs #364–#366; J3 #4 permanece aberta. **Jornada ativa atual**: #367, branch `work/j3-robust1-sensitivity`, pesquisa adversa offline OOS com custo, slippage, manutenção e funding hipotético. Sem PR ou CI da #367 confirmada neste checkpoint; próximo passo é testar, revisar, corrigir CI e integrar somente com head SHA exato verificado. Sem rede a exchanges, credenciais, VPS, ordens/testnet/live, deploy ou gasto. J1 #2/#217/#319 e D177 mantidas. `docs/J3_ROBUST1.md` contém escopo, critérios e gates.
+
+
+## Checkpoint J3/PRE17 #369 — 30/10/2026
+
+`main` confirmada em `556a2759efbcb4ed42b0e7dfd82673b254bd8c19`, PRs abertas = 0 no início da work unit. Issue #367 fechada com PR #368 integrada; consulta GitHub não retornou workflow pós-merge (wrapper filtra PR). Issue #369 aberta, branch `work/j3-pre17-risk-snapshot-pit`. Código sob revisão: `synthetic_risk_tiers.py`, extensão opcional em `synthetic_mark_replay.py`, testes `test_synthetic_risk_tiers.py` e docs/J3_PRE17_PIT_RISK_TIERS.md. Próxima ação autorizada: abrir PR, inspecionar CI Linux/docs/Windows/Chrome, corrigir falhas, revisar SHA final e fazer merge seguro sem produção. Nenhuma VPS, dados reais, ordens, licença nova, gasto, testnet nem deploy; J1 #2/#217/#319, J2 #3 e J3 #4 continuam sem aceite.

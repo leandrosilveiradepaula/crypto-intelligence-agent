@@ -1044,3 +1044,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## D178 — J3/ROBUST1: testar sensibilidade de cenários sem homologar financiamento ou liquidação (30/10/2026)
 
 Para #367, variações não negativas de fee, slippage e manutenção são hipóteses adversas reprodutíveis em pesquisa Vision offline, nunca parâmetros inferidos da Bybit. Sem alterar o custo de seleção do treino, comparar com a mesma seleção mensal OOS. Funding +/- em bps não é settlement real e não deve ser imposto como monotônico para posições LONG e SHORT mistas. Ausência de mark real, contrato/tier, liquidez e ordens mantém aprovação financeira e live falsas. Código e evidência na issue #367 e docs/J3_ROBUST1.md; não mudar D177 nem D77.
+
+
+## D179 — J3/PRE17: snapshots sintéticos de margem point-in-time (30/10/2026)
+
+No replay mark/trade (issue #369), níveis de manutenção passam a poder variar por faixa de nocional marcado e versão de snapshot, somente sob `risk_snapshots` explícitos. Deduções por faixa precisam preservar continuidade; referências de risco só valem a partir de sua data efetiva, depois de conhecidas; rejeitar dados futuros, gaps e staleness. O modo legado é preservado. Sem cálculo da exchange, dados reais, acesso a ordens ou homologação de 50x. Ver `docs/J3_PRE17_PIT_RISK_TIERS.md`.

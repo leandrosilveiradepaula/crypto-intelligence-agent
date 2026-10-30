@@ -316,3 +316,8 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 ## Pesquisa J3/ROBUST1 — isolamento dos cenários adversos
 
 Novo adaptador puro `vision_risk_sensitivity.py` consome a pesquisa mensal `vision_stress_oos` e `VisionStressAssumptions` existentes. Não cria downloader, banco de dados, motor de ordens, provider real de mark/funding ou outra seleção. Reutiliza o mesmo histórico privativo auditado e os mesmos folds por mês; emite agregados e SHA, fail-closed se um cenário de custos melhora o envelope ou muda as exposições. A CLI só acessa o modo com opt-in explícito. Conservar `source_authenticated=false` e `financial_backtest_approved=false` invariantes. Detalhes em `docs/J3_ROBUST1.md`.
+
+
+## J3/PRE17 — contrato isolado de faixas PIT para manutenção
+
+O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e snapshot, validações de continuidade e cálculo de manutenção por nocional mark. `synthetic_mark_replay.py` aceita snapshots opcionais e limite explícito de intervalo entre ticks, sem I/O e sem feed do provedor. Eventos de funding e ordem de gatilhos permanecem no replay atual. Não há alteração no ledger ou execução de ordens; ver `docs/J3_PRE17_PIT_RISK_TIERS.md`.
