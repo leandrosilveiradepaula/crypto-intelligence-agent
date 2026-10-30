@@ -46,7 +46,7 @@ class Tests(unittest.TestCase):
         mutations=[lambda f:f.update(topic="kline.5.BTCUSDT"), lambda f:f["data"][0].update(turnover="NaN"),
                    lambda f:f["data"][0].update(open=10.1), lambda f:f["data"][0].update(high="8"),
                    lambda f:f["data"][0].update(confirm=1), lambda f:f["data"][0].update(start=FIRST+1),
-                   lambda f:f.update(ts=FIRST+HOUR_MS+3000), lambda f:f.update(type="delta")]
+                   lambda f:f.update(ts=FIRST+HOUR_MS+9000), lambda f:f.update(type="delta")]
         for mutate in mutations:
             with self.subTest(mutate=mutate):
                 f=frame();mutate(f)
@@ -103,6 +103,38 @@ class Tests(unittest.TestCase):
 
     def test_preack_budget(self):
         self.assertEqual(self.call([frame()] * 9, max_frames=10)["status"], "ws_preack_frame_limit")
+
+    def test_subsecond_confirmed_close_and_small_clock_skew(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import _check_closed
+        f=frame()
+        f["ts"]=FIRST+HOUR_MS+100
+        self.assertTrue(_check_closed(f,received_ms=FIRST+HOUR_MS+100))
+        self.assertTrue(_check_closed(f,received_ms=FIRST+HOUR_MS-800))
+
+    def test_excessive_clock_skew_fails_safely(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import _check_closed
+        from crypto_intelligence_agent.market_data import DataValidationError
+        with self.assertRaises(DataValidationError):
+            _check_closed(frame(),received_ms=FIRST+HOUR_MS-9000)
+        sock=Socket([ACK,frame()])
+        report=observe_once(session_factory=lambda:sock,wall_ms=lambda:FIRST+HOUR_MS-9000,
+                            clock=lambda:0,max_frames=3,max_seconds=3).sanitized_report()
+        self.assertEqual(report["status"],"ws_failed_closed")
+        self.assertEqual(report["failure_category"],"kline_clock")
+        self.assertNotIn("BTCUSDT",str(report))
+
+    def test_post_ack_error_categories_are_sanitized(self):
+        cases=[(dict(frame(),type="delta"),"kline_envelope"),
+               (dict(frame(),ts=FIRST+HOUR_MS+9000),"kline_clock"),
+               (dict(frame(),data=[dict(frame()["data"][0],turnover="NaN")]),"kline_decimal")]
+        for bad,expected in cases:
+            with self.subTest(category=expected):
+                sock=Socket([ACK,bad])
+                report=observe_once(session_factory=lambda:sock,wall_ms=lambda:FIRST+HOUR_MS+2000,
+                                    clock=lambda:0,max_seconds=3).sanitized_report()
+                self.assertEqual(report["status"],"ws_failed_closed")
+                self.assertEqual(report["failure_category"],expected)
+                self.assertTrue(sock.closed)
 
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
