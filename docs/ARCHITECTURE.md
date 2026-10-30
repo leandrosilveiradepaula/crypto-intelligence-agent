@@ -380,3 +380,6 @@ O CLI `scripts.demo_paper_runner_close_flow` usa os módulos de produção já a
 
 ### J6/PRE6 — observador de incidentes PAPER
 `paper_runner_incident_audit.py` compõe apenas inspeção AUTO4 e, por opt-in completo, replay RUNNER2 para uma posição escolhida. Ele devolve um DTO JSON sanitizado e determinístico; não abre writer, não cria banco, não agrega posições nem faz acesso externo. Após qualquer reserva RUNNER3, a fonte para pendência é AUTO4 e o fingerprint RUNNER2 anterior é tratado como checkpoint superado, nunca rearmado. Os SQLite independentes permanecem sem atomicidade distribuída; falha de leitura, schema, hash ou evidência bloqueia o relatório operacional.
+
+### J6/PRE7 — laboratório de evidência finita
+`paper_incident_matrix.py` orquestra fixtures descartáveis pelas APIs AUTO4/RUNNER2/PRE4 e obtém a classificação pelo PRE6. O DTO da matriz não contém identificadores do journal e distingue `PASS`, `BLOCKED_EXPECTED` e `FAIL`; a concorrência trata preview stale como perdedor seguro, exigindo uma reserva única no agregado AUTO4. É prova de contrato local, não monitor contínuo ou reconciliador distribuído.
