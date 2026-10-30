@@ -879,3 +879,7 @@ Base auditada: `main=2ec2025b2a2f0673024ee79ea0c0fec1b2048ad7`, PR #390 integrad
 
 ## J5/PRE16 #393 — visualização do fechamento runner PAPER, 30/10/2026
 Confirmado `main=60f9ec4aaf41a05495b25c56085f6ac1d096054c` após squash merge de J4 RUNNER3 #391/PR #392, issue #391 encerrada com CI 41137713503 Linux/Windows e 41137713508 Chrome/PAPER SUCCESS, review #5719329610. Issue #393 e branch `work/j5-pre16-runner-exit-mobile-status` distinguem runner PAPER pendente, parcial, cancelado e encerrado na UI, mantendo status e flag de stop real falsos. Testes SQLite e docs D191 adicionados; PR/CI/merge desta etapa ainda precisam ser verificados. J1/Top50 VPS owner-run continua adiado pelo PO, sem credenciais, trades ou deploy.
+
+
+## J6/PRE4 #395 — gatilho runner para reserva PAPER, 30/10/2026
+Base verificada `main=cb10525a0c32a0fd89ee9b49153814ac4a8db514` após PR #394 integrada, CI 41138259201 Linux/docs/Windows e 41138259179 Chrome/PAPER SUCCESS, revisão #5719361203; issue #393 encerrada. J6 PRE4 issue #395 e branch `work/j6-pre4-durable-paper-runner-close` introduzem função explícita `step_durable_paper_runner_close` para reservar a saída residual PAPER após gatilho RUNNER2, sem FILL presumido e com recuperação via ledger AUTO4. Testes de restart/UNKNOWN/cancel/partial/corrupção/concorrência e D192; CI/PR/merge da nova unidade ainda não afirmados. J1 #2/#319 aguarda owner-run privado na VPS adiado pelo PO, sem trading real ou gasto.
