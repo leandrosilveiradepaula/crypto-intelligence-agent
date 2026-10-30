@@ -100,18 +100,21 @@ def audit_paper_runner_incident(
         raise DataValidationError("RUNNER2 audit requires journal, policy and explicit cutoff together")
     try:
         inspection = inspect_paper_position(position_journal_path, position_id)
-    except DataValidationError as exc:
+    except DataValidationError:
         return _report(PaperIncidentCode.JOURNAL_INVALID_OR_MISSING, PaperIncidentSeverity.BLOCKED,
                        as_of_ms=None, residual=None, reserved=None, filled=None, reconcile=True,
                        available=(), missing=("valid_auto4_position_journal",),
-                       reason="AUTO4 local journal unavailable or invalid: " + str(exc))
+                       reason="AUTO4 local indisponível, ausente ou inválido; nenhum estado confiável pode ser inferido.")
 
     balance = inspection.balance
     base = ("auto4_position_replay", "synthetic_fixture_only")
     runner_orders = tuple(order for order in balance.exit_orders if order.tranche_step == 0)
     if runner_orders:
         latest = runner_orders[-1]
-        if latest.snapshot.status is PaperOrderStatus.FILLED:
+        if (balance.confirmed_remaining_units == 0
+                and balance.runner_filled_units == balance.runner_floor_units
+                and balance.runner_reserved_unfilled_units == 0
+                and not any(o.snapshot.requires_reconciliation for o in runner_orders)):
             return _report(PaperIncidentCode.RUNNER_CLOSED_PAPER_ONLY, PaperIncidentSeverity.INFO,
                            as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
@@ -136,18 +139,31 @@ def audit_paper_runner_incident(
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
                            reconcile=True, available=base + ("runner_exit_unknown",), missing=("reconciliation",),
                            reason="Estado UNKNOWN não prova rejeição nem preenchimento.")
-        if latest.snapshot.filled_total_units > 0:
+        if balance.runner_filled_units > 0:
             return _report(PaperIncidentCode.RUNNER_EXIT_PARTIALLY_FILLED, PaperIncidentSeverity.REVIEW,
                            as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
                            reconcile=True, available=base + ("runner_exit_partial_fill_fixture",), missing=("terminal_reconciliation",),
                            reason="Saída residual parcialmente preenchida apenas na simulação.")
-        return _report(PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED, PaperIncidentSeverity.REVIEW,
+        if runner_journal_path is not None:
+            return _report(PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED, PaperIncidentSeverity.REVIEW,
+                           as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
+                           reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
+                           reconcile=True, available=base + ("auto4_runner_reservation",),
+                           missing=("reconciliation",),
+                           reason="Reserva AUTO4 superou o checkpoint RUNNER2; não rearmar nem reenviar.")
+        return _report(PaperIncidentCode.RUNNER_EXIT_PENDING_RECONCILIATION, PaperIncidentSeverity.REVIEW,
                        as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
                        reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
                        reconcile=True, available=base + ("auto4_runner_reservation",), missing=("reconciliation",),
-                       reason="Reserva AUTO4 alterou o checkpoint; RUNNER2 anterior não deve ser rearmado.")
+                       reason="Saída runner PENDING/ACKNOWLEDGED no diário PAPER; requer reconciliação.")
 
+    if any(order.snapshot.requires_reconciliation for order in balance.exit_orders):
+        return _report(PaperIncidentCode.PARTIALS_INCOMPLETE, PaperIncidentSeverity.BLOCKED,
+                       as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
+                       reserved=balance.reserved_unfilled_units, filled=balance.filled_exit_units,
+                       reconcile=True, available=base + ("pending_partial_exit",), missing=("reconciled_partial_exit",),
+                       reason="Saída parcial PAPER pendente, incerta ou não reconciliada.")
     if balance.confirmed_remaining_units == 0:
         return _report(PaperIncidentCode.RUNNER_CLOSED_PAPER_ONLY, PaperIncidentSeverity.INFO,
                        as_of_ms=balance.as_of_ms, residual=Decimal(0), reserved=Decimal(0), filled=balance.runner_filled_units,
@@ -174,12 +190,24 @@ def audit_paper_runner_incident(
     try:
         trail = load_paper_runner_journal(runner_journal_path, position_journal_path, position_id,
                                           policy=policy, as_of_ms=as_of_ms)
-    except DataValidationError as exc:
+    except DataValidationError:
         return _report(PaperIncidentCode.INSUFFICIENT_EVIDENCE, PaperIncidentSeverity.BLOCKED,
                        as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
                        reserved=Decimal(0), filled=balance.runner_filled_units, reconcile=True,
                        available=base + ("confirmed_runner",), missing=("valid_runner2_journal",),
-                       reason="RUNNER2 indisponível ou incompatível: " + str(exc))
+                       reason="RUNNER2 local indisponível, corrompido, stale ou incompatível; verificação bloqueada.")
+    try:
+        refreshed = inspect_paper_position(position_journal_path, position_id)
+    except DataValidationError:
+        return _report(PaperIncidentCode.JOURNAL_INVALID_OR_MISSING, PaperIncidentSeverity.BLOCKED,
+                       as_of_ms=None, residual=None, reserved=None, filled=None,
+                       reconcile=True, available=(), missing=("stable_auto4_position_journal",),
+                       reason="AUTO4 local inválido durante a segunda leitura da auditoria.")
+    if refreshed != inspection:
+        return _report(PaperIncidentCode.INSUFFICIENT_EVIDENCE, PaperIncidentSeverity.BLOCKED,
+                       as_of_ms=None, residual=None, reserved=None, filled=None,
+                       reconcile=True, available=base, missing=("stable_auto4_checkpoint",),
+                       reason="Posição PAPER mudou durante a leitura dos journals; tentar nova auditoria.")
     mapping = {
         PaperRunnerTrailState.NOT_ACTIVATED: (PaperIncidentCode.TRAILING_NOT_ACTIVATED, PaperIncidentSeverity.INFO, "Trailing fictício ainda não ativado."),
         PaperRunnerTrailState.TRACKING: (PaperIncidentCode.TRAILING_TRACKING_HYPOTHETICAL, PaperIncidentSeverity.INFO, "Trailing fictício em acompanhamento; não é stop nativo."),
