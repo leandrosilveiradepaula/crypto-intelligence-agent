@@ -87,6 +87,16 @@ class SyntheticPortfolioRiskTests(unittest.TestCase):
                 self.assertFalse(result.new_position_research_allowed)
         self.assertEqual(a.plan.margin.leverage_at_intent,50)
 
+    def test_opening_net_and_concentration_are_checked_before_first_tick(self):
+        a=leg("alpha")
+        b=leg("beta",ResearchDirection.LONG)
+        r=audit(a,b,rules=limits(max_abs_open_net_notional_quote=D("399")))
+        self.assertIn("entry_abs_net_notional_exceeded",r.initial_violation_codes)
+        self.assertFalse(r.new_position_research_allowed)
+        single=audit(a,rules=limits(max_open_concentration_fraction=D("0.9")))
+        self.assertIn("entry_concentration_exceeded",single.initial_violation_codes)
+        self.assertFalse(single.new_position_research_allowed)
+
     def test_mark_growth_and_concentration_breach_without_double_counting_closed(self):
         a=leg("alpha",marks=("100","101","110","110"),
               trades=("100","100","100","100"))
