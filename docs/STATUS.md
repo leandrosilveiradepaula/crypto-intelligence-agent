@@ -731,3 +731,8 @@ A VPS executou com código `15187f34c66ab72a4b088e221ae9bc3dfc3dd910`, `websocke
 ## J1 WS5 #336 — dado antecipado e ACK tardia (29/10/2026)
 
 Última sonda owner-only na VPS sob SHA `4a6a28d5b6d528a437e6d6e9bb3239d9faa914fd`: 11/11 e 7/7 testes PASS, `frames_seen=1`, `status=ws_market_data_before_ack`, zero candles aprovados/ordens, dados locais preservados. Correção: kline pré-ACK estrita é apenas pendente e não dá sucesso até ACK válida; sem confirmação permanece recusada. #2/#319 seguem abertos.
+
+
+## J1 WS6 #338 (30/10/2026 UTC)
+
+Terceiro teste real na VPS: 16/16 + 7/7 testes offline PASS; ACK reconhecido, 19 frames, `ws_failed_closed`, 0 candles, 0 ordens/storage. Causa pendente; alteração offline elimina espera extra de 1000ms e reporta categoria de falha pós-ACK sem conteúdo do frame. J1 #2/#319 ainda ABERTAS por Top50 marketwide, 30d e direitos live.

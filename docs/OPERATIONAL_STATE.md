@@ -841,3 +841,8 @@ O titular atualizou a VPS de `a323b857` a `15187f34c66ab72a4b088e221ae9bc3dfc3dd
 ## 29/10/2026 J1 WS5 #336
 
 Ponto de partida GitHub `main=4a6a28d5b6d528a437e6d6e9bb3239d9faa914fd` sem PRs abertas; owner confirmou VPS atualizada, testes 11/11 e 7/7 PASS e primeiro frame WS de tópico/dados pré-ACK classificado, sem candle aprovado. Issue #336 branch `work/issue-336-j1-ws5-preack` implementa no observador buffering lógico limitado a 8 sem bytes e confirmação posterior estrita, testes e D171. Não conecta rede nesta unidade. Validar CI Linux/docs/Windows/Chrome no HEAD e pós-merge, sem deploy, ordens ou gasto; só depois executar uma sessão real opt-in. Histórico owner 1446 candles/2 ativos/3 PIT preservado; J1 #2/#319 e direitos live ainda bloqueados.
+
+
+## 30/10/2026 — J1 WS6 #338
+
+Owner executou `main=738b54eb44aaea20036bafb2dc742f67abc675e9` com venv `websockets==15.0.1`; testes 16/16 + 7/7 PASS; sessão WS real única retornou `subscription_acknowledged=true`, `frames_seen=19`, `ws_failed_closed`, nenhum candle aprovado ou ordem. Não atribuir causa sem nova categoria. Issue #338, branch `work/issue-338-j1-ws6-clock-close-diagnostics`, parser com fechamento subsegundo e relatório categórico, sem banco privado/network em CI. Gates: CI Linux/docs/Windows/Chrome no head exato e pós-merge, squash não produtivo; uma sessão owner-only opt-in posterior com SHA fixo. J1 #2/#319/#217 abertas, 1446 candles privados/2 ativos/3 PIT preservados.

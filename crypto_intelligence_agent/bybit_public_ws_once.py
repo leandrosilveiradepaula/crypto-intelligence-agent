@@ -36,6 +36,7 @@ class WSOnceResult:
     frames_seen: int
     confirmed_closed_events: int
     acknowledged: bool
+    failure_category: str | None = None
 
     def sanitized_report(self) -> dict:
         return {"status": self.status, "frames_seen": self.frames_seen,
@@ -44,7 +45,8 @@ class WSOnceResult:
                 "network_source_authenticated": False,
                 "marketwide_top50_verified": False,
                 "data_stored": False, "orders_sent": False,
-                "live_trading_authorized": False}
+                "live_trading_authorized": False,
+                "failure_category": self.failure_category}
 
 
 def _bounded_json(frame: str | bytes) -> dict:
@@ -116,6 +118,30 @@ def seconds_to_closed_hour_probe(now_ms: int) -> int:
     return max(0, (until_boundary_ms - 20_000 + 999) // 1000)
 
 
+
+def _safe_failure_category(error: Exception, stage: str) -> str:
+    """Only fixed categories; never serialize exception text or provider bytes."""
+    if stage == "transport":
+        return "transport"
+    if stage == "json":
+        return "json"
+    if not isinstance(error, DataValidationError):
+        return "processing"
+    # The error text is inspected locally, never emitted or logged.
+    reason = str(error)
+    if reason.startswith("ws_topic_or_envelope") or reason.startswith("ws_kline_fields") or reason.startswith("ws_kline_shape"):
+        return "kline_envelope"
+    if reason.startswith("ws_clock") or reason.startswith("ws_time") or reason.startswith("ws_close_clock"):
+        return "kline_clock"
+    if reason.startswith("ws_confirm"):
+        return "kline_confirmation"
+    if reason.startswith("ws_ohlc"):
+        return "kline_ohlc"
+    if reason.startswith("Bybit "):
+        return "kline_decimal"
+    return "kline_invalid"
+
+
 def _check_closed(frame: dict, *, received_ms: int) -> bool:
     if set(frame) != {"topic", "type", "ts", "data"} or frame.get("topic") != TOPIC or frame.get("type") != "snapshot":
         raise DataValidationError("ws_topic_or_envelope_invalid")
@@ -130,7 +156,7 @@ def _check_closed(frame: dict, *, received_ms: int) -> bool:
     if any(type(v) is not int for v in (start, end, stamp, server, received_ms)):
         raise DataValidationError("ws_time_type_invalid")
     if (row["interval"] != "60" or start <= 0 or start % HOUR_MS or end != start + HOUR_MS - 1
-            or not start <= stamp <= end or server > received_ms or received_ms - server > 30000):
+            or not start <= stamp <= end or server > received_ms + 5000 or received_ms - server > 30000):
         raise DataValidationError("ws_clock_invalid")
     from .bybit_linear_candle_research import _strict_decimal
     prices = {k: _strict_decimal(row[k], label=k, may_be_zero=False) for k in ("open", "high", "low", "close")}
@@ -142,7 +168,7 @@ def _check_closed(frame: dict, *, received_ms: int) -> bool:
         raise DataValidationError("ws_confirm_type_invalid")
     if not row["confirm"]:
         return False
-    if server < end + 1 or received_ms < end + 1000 or received_ms - (end + 1) > 120000:
+    if server < end + 1 or received_ms + 5000 < end + 1 or received_ms - (end + 1) > 120000:
         raise DataValidationError("ws_close_clock_invalid")
     return True
 
@@ -159,6 +185,7 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
     last_ping = started
     preack_frames = 0
     preack_closed = False
+    stage = "transport"
     try:
         with closing(session_factory()) as session:
             session.send(json.dumps({"op": "subscribe", "args": [TOPIC]}, separators=(",", ":")))
@@ -175,11 +202,14 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                 except TimeoutError:
                     continue
                 frames += 1
+                stage = "json"
                 payload = _bounded_json(raw)
+                stage = "envelope"
                 if not acknowledged:
                     if payload.get("topic") is not None or "data" in payload:
                         # A pre-ACK frame is never accepted without a later valid ACK.
                         # Do not retain the payload or any market value.
+                        stage = "kline"
                         closed = _check_closed(payload, received_ms=wall_ms())
                         preack_frames += 1
                         if preack_frames > 8:
@@ -194,10 +224,12 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
                     continue
                 if _public_pong(payload):
                     continue
+                stage = "kline"
                 if _check_closed(payload, received_ms=wall_ms()):
                     return WSOnceResult("ws_one_closed_hour_observed_only", frames, 1, True)
-    except (OSError, ValueError, TypeError, RuntimeError, DataValidationError, ImportError):
-        return WSOnceResult("ws_failed_closed", frames, 0, acknowledged)
+    except (OSError, ValueError, TypeError, RuntimeError, DataValidationError, ImportError) as error:
+        category = _safe_failure_category(error, stage)
+        return WSOnceResult("ws_failed_closed", frames, 0, acknowledged, category)
     return WSOnceResult("ws_unacknowledged_market_data" if preack_frames and not acknowledged else "ws_frame_budget_exhausted", frames, 0, acknowledged)
 
 
