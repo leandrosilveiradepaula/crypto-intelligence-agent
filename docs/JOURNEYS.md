@@ -239,3 +239,8 @@ Work unit J3 de replay sintético: faixas de maintenance e deduções contínuas
 ## J3/PRE18 #371 — calendário de funding com cobertura obrigatória opt-in
 
 Validador offline de timestamps hipotéticos de funding; cada horário exige evento com taxa/notional declarado e não aceita tick simultâneo. Acopla-se opcionalmente ao replay de mark/trade sem alterar caminhos legados. Regressões e docs em `docs/J3_PRE18_FUNDING_CALENDAR.md`. Gate CI/merge pendente; não homologa eventos do provedor, ordens ou lucro.
+
+
+## J3/PRE19 #373 — replay de carteira sintética
+
+Agregação multi-leg com relógio UTC comum, margem isolada, exposure gross/signed por mark, funding via módulos existentes, stop/target condicionais sem duplicação e PnL desconhecido após liquidação sem fill. Drawdown de prefixo e correlação descritiva, não previsão ou carteira com risco financeiro homologado. Contrato `docs/J3_PRE19_PORTFOLIO_REPLAY.md`. Gate CI/merge obrigatório antes de conclusão da work unit.

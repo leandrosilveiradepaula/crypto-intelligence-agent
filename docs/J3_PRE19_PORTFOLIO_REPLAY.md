@@ -1,0 +1,17 @@
+# J3/PRE19 #373 — replay de carteira sintética sem inventar PnL
+
+Pesquisa financeira determinística **offline**, sem conta, rede, execução, contratos homologados ou dados de produção. Não estima lucro ou capacidade de usar 50x na exchange.
+
+## Contratos e escolhas
+- `SyntheticPortfolioLeg` agrupa um plano `SyntheticMarkReplayPlan`, ticks pareados `mark/trade` e opcionalmente `SyntheticFundingEvent`, calendário explícito `SyntheticFundingCalendar` e snapshots `SyntheticRiskSnapshot`. Todo cálculo da posição é delegado ao módulo existente `replay_synthetic_mark_path`; nenhuma reimplementação de mark-equity, funding, stop, alvo ou manutenção.
+- Conjunto de 1 a 16 legs em fixture (limite defensivo de teste, não meta nem número fixo de operações). IDs e instrumentos `fixture_...` únicos, quote `SYNTHETIC_USDT`, mesmo instante de entrada, ticks com calendário UTC idêntico. Modo isolado, **sem cross-margin**, compensação automática, hedge/netting, capital reutilizado, rate real ou lotes executáveis.
+- Por tick: `hypothetical_equity_quote` = soma de equity sintética das legs abertas + margem e `conditional_net_quote` das legs que tocaram stop/target. Após um terminal condicional, valor é carregado, **não somado novamente**. `conditional_net_from_entry_quote` subtrai a margem alocada inicialmente, não é lucro realizado. Funding é acumulado na trajetória do evento até o último tick por posição (não duplicado entre checkpoints).
+- Exposição `gross_open_notional_quote` usa `mark_price * quantity_base` das legs ainda abertas; exposição `signed_open_notional_quote` LONG positiva/SHORT negativa. Concentração maior fração do nocional aberto. Margens e valores de diferentes instrumentos só se somam porque a moeda de fixture é a mesma.
+- Se qualquer leg atingir `LIQUIDATION_CONDITION` sem preço de saída verificado, **toda a carteira passa a ter equity, PnL e exposição desconhecidos** para aquele e os ticks seguintes. Não inventar perda limitada à margem, preenchimento ou liberação de capital. Drawdown declarado é apenas o do prefixo conhecido; `complete_equity_path=false` impede tratá-lo como máximo da carteira completa.
+- Correlação de retornos simples do preço de **mark**, somente descritiva da amostra sintética, pares com no mínimo duas mudanças, variância positiva e prefixo anterior ao encerramento. Nunca prever diversificação, nem combinar dados de volta no sinal de entrada. Pares sem variância ficam sem estatística.
+- Saída `sanitized_report` publica agregados e hash determinístico, sem timestamps internos, preços, símbolos, IDs ou caminhos. Hash pode incorporar identidade fictícia mas não publica texto sensível.
+
+## Validação
+`tests/test_synthetic_portfolio_replay.py`: posições LONG/SHORT múltiplas, igual grade, exposição bruta/líquida, concentração, stop e alvo condicionais sem duplicação, mark-liquidação antes de target sem PnL fictício, funding e tiers PIT opcionais, ordem de legs irrelevante, correlação degenerada, Decimal, falhas de input e bloqueio de rede. CI Linux/docs, Windows/offline e Chrome/PAPER no HEAD exato; merge seguro sem deploy após revisão.
+
+**Gates invariantes:** `financial_backtest_approved=false`, `net_pnl_verified=false`, `liquidation_formula_verified=false`, `orders_sent=false`, `live_trading_authorized=false`. J1 #2/#217/#319, J2 #3, J3 #4 continuam pendentes. Sem dados de conta, ordens, VPS, credenciais, compra, download, mudança de banco ou deploy. Valores por margem, correlações e equity são **apenas hipóteses numéricas**.

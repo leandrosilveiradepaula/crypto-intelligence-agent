@@ -827,3 +827,8 @@ Após #367/#368 integradas, pesquisa sintética continua sem dados reais de mark
 ## 30/10/2026 — J3/PRE18 #371 em desenvolvimento
 
 Após PR #370/issue #369 integradas em `cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0`, a issue #371 acrescenta cobertura completa de horários de funding fictício no replay mark/trade. Arquivos `synthetic_funding_calendar.py`, extensão opt-in de `synthetic_mark_replay.py`, testes e `docs/J3_PRE18_FUNDING_CALENDAR.md`; nada habilita conta, Bybit real, ordens ou release. CI/merge desta issue dependem de resultados e SHA próprio, sem antecipar sucesso. J1 #2/#217/#319, J2 #3 e J3 #4 abertas.
+
+
+## 30/10/2026 — J3/PRE19 #373 em implementação
+
+Após PRs #370/#372 integradas em `cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0` e `a69be5202ff2afe5f16202d4e2767e57458ec30a`, issue #373 e branch `work/j3-pre19-portfolio-replay` implementam agregador puro de carteira de pesquisa multi-posição, no mesmo UTC e quote `SYNTHETIC_USDT`, reusando marcação/custo/funding. Reporta exposição e drawdown prefixo e deixa PnL desconhecido após liquidação. Arquivos e critérios em `docs/J3_PRE19_PORTFOLIO_REPLAY.md`. **Integração depende de CI e merge ainda não alegados**. J1 #2/#217/#319, J2 #3 e J3 #4 permanecem abertas; R$0 adicional, sem ordens nem deploy.
