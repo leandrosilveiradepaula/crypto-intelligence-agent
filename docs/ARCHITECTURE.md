@@ -365,3 +365,7 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 
 ### RUNNER3 — encerramento de posição residual exclusivamente sintética
 AUTO4 preserva o ledger existente e usa `tranche_step=0` para a parcela residual de um plano completamente reconciliado, com `runner_filled_units`, `runner_reserved_unfilled_units` e `runner_unallocated_units` distintos das tranches de 1..n. `paper_runner_close_preview` é um componente funcional que consulta RUNNER2 e AUTO4 em leitura RO, exigindo gatilho hipotético e checkpoint estável, sem inserir reservas. Uma reserva posterior é explicitamente PAPER e verificada sob lock do AUTO4. A vinculação de journals distintos não fornece atomicidade cruzada. Sem stop exchange, executor live ou migração; ver `docs/J4_RUNNER3_RESIDUAL_PAPER_CLOSE.md`.
+
+
+### J5/PRE16 — leitura de status do residual de posições PAPER
+A interface `scripts.inspect_paper_positions` consome somente `PaperPositionBalance` já validado por SQLite AUTO4 RO. O novo passo zero do runner define estados PENDING/UNKNOWN, cancelado, parcialmente preenchido e encerrado a partir do ledger; nunca tenta deduzir stop nativo ou proteção financeira por flags do RUNNER2. Campos aditivos em `paper_positions_snapshot_v1` são quantidades por instrumento, sem consolidação/FX. Ver `docs/J5_PRE16_RUNNER_EXIT_MOBILE.md`.
