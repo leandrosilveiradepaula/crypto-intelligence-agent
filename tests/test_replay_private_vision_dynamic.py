@@ -40,6 +40,11 @@ class VisionReplayCLI(unittest.TestCase):
                 if first is None:
                     from datetime import datetime,timezone
                     first=int(datetime(2026,8,2,tzinfo=timezone.utc).timestamp()*1000)
+            # Isolate independently audited manifest failures from replay logic.
+            from scripts.audit_private_vision_multiasset import audit_private_vision_multiasset_coverage
+            audit_private_vision_multiasset_coverage(
+                manifest_paths=tuple(manifests),
+                allow_personal_nonproduction_research=True)
             with patch("socket.create_connection",side_effect=AssertionError("network")):
                 result=private_vision_dynamic_replay(
                     manifest_paths=tuple(manifests),
