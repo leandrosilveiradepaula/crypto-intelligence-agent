@@ -37,6 +37,21 @@ class J1BybitTransportTests(unittest.TestCase):
         self.assertEqual(
             parse_qs(urlsplit(urls[1]).query)["cursor"], ["abc/+=="])
 
+
+    def test_catalog_1000_limit_preserves_query_guards(self):
+        from crypto_intelligence_agent.bybit_public_j1_transport import instruments_url
+        one = instruments_url()
+        self.assertEqual(parse_qs(urlsplit(one).query)["limit"], ["1000"])
+        self.assertEqual(parse_qs(urlsplit(instruments_url(cursor="safe")).query)["limit"], ["1000"])
+        self.assertEqual(parse_qs(urlsplit(instruments_url(symbol="BTCUSDT")).query)["limit"], ["1"])
+        c = BoundedBybitPublicClient(transport=lambda url, limit: b'{"retCode":0}')
+        for bad in (one.replace("limit=1000", "limit=200"),
+                    one.replace("limit=1000", "limit=1001"),
+                    instruments_url(cursor="safe").replace("limit=1000", "limit=200")):
+            with self.subTest(bad=bad), self.assertRaises(J1BybitCaptureError):
+                c.get(bad)
+        self.assertEqual(c.requests_attempted, 0)
+
     def test_malformed_origin_or_extra_arguments_rejected_without_io(self):
         client = BoundedBybitPublicClient(
             transport=lambda url, limit: self.fail("transport must not run"))
