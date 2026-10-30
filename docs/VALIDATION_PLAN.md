@@ -625,3 +625,8 @@ A PR #343 incorpora uma sonda `--diagnostic-only` separada do observador fail-cl
 ## J1 WS9 #344 — lote multirregistro de verdade, relógio categórico
 
 Com dados da sonda real apenas agregados (1 lote 2..8 após UTC), injetar frames simulados com último fechado e próximo aberto, duplicata, 2 fechados, aberto inválido depois do fechado, array vazio, array >8, item não-dict, `confirm` inválido e replay. Provar que o journal isolado não recebe commit se qualquer linha falhar; regras de integridade, lacuna, idempotência e as suites WS2/WS3/WS8 devem continuar passando. Testar clock `timestamp` fora do candle, fechamento servidor antes de end, lag e divergência de relógio com categorias estáticas. CI docs/Windows/Chrome no SHA exato pré/pós merge. Sem rede em CI, credenciais, ordens, acesso ao SQLite owner, release nem gasto.
+
+
+## J1/WS10 #346 — replay de controle e PIT histórico ainda pendente (30/10/2026)
+
+Replay offline ignora somente pong Bybit já reconhecido no observador após ACK válido; pong não altera candle, DB ou ranking. Pong malformado, controle desconhecido ou pré-ACK aborta. Testes cobrem replay idempotente e fail-closed. **Não concluído:** auditoria 720h com múltiplos escopos point-in-time validados. O contrato atual usa um snapshot e limite de sete dias: nenhum sucesso de 30d, 50 ativos de mercado, licença de dados ou live pode ser afirmado nesta entrega. Sem rede, alteração de schema, ordens ou dados privados da VPS.

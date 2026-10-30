@@ -93,6 +93,33 @@ class PipelineTests(unittest.TestCase):
         audit=self.j.audit(scope=self.scope,decision_at_ms=DECISION,as_of_ms=DECISION+4000)
         self.assertEqual(audit.persisted_rows,0)
 
+    def test_heartbeat_after_ack_preserves_candle_replay(self):
+        t=self.first
+        frames=[(json.dumps(ACK),t),
+                (json.dumps({"op":"ping","ret_msg":"pong"}),t+500),
+                (json.dumps({"op":"pong","args":["1793280000000"]}),t+900),
+                (json.dumps(message("BTCUSDT",t)),t+HOUR_MS+2000)]
+        report=self.run_batch(frames)
+        self.assertEqual((report.frames,report.open_updates,report.appended),(4,0,1))
+        self.assertEqual(self.run_batch(frames).identical_replays,1)
+        self.assertEqual(self.j.audit(scope=self.scope,decision_at_ms=DECISION,
+                                     as_of_ms=DECISION+4000).persisted_rows,1)
+
+    def test_heartbeat_before_ack_or_malformed_is_rejected(self):
+        t=self.first
+        for invalid in ({"op":"ping","ret_msg":"pong","unexpected":"x"},
+                        {"op":"pong","args":[True]},
+                        {"op":"subscribe","success":True,"ret_msg":"subscribe",
+                         "conn_id":"fake"}):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(DataValidationError):
+                    self.run_batch([(json.dumps(ACK),t),(json.dumps(invalid),t+1000)])
+        with self.assertRaises(DataValidationError):
+            self.run_batch([(json.dumps({"op":"ping","ret_msg":"pong"}),t),
+                            (json.dumps(ACK),t+1000)])
+        self.assertEqual(self.j.audit(scope=self.scope,decision_at_ms=DECISION,
+                                     as_of_ms=DECISION+4000).persisted_rows,0)
+
     def test_empty_array_not_candle(self):
         t=self.first
         empty=dict(message("BTCUSDT",t),data=[])
