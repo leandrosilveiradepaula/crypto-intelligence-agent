@@ -356,3 +356,8 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J5/PRE14 — status do runner na leitura RO mobile
 
 `scripts.inspect_paper_positions.multi_paper_snapshot` acrescenta status por posição usando o `PaperPositionBalance` já lido via `mode=ro` e replay validado, sem novos acessos ao SQLite. O renderizador HTML compartilha o cartão com a tela de recuperação e fornece label controlada em PT-BR e coluna na tabela; não injeta marcação/fills/stop. O esquema JSON v1 recebe campos aditivos sem mudar contratos anteriores e mantém flags live falsas. `tests/test_paper_runner_mobile.py` e Chrome/PAPER testam resultado sem rede.
+
+
+## J4/RUNNER2 — persistência isolada do replay de trailing PAPER
+
+`crypto_intelligence_agent/paper_runner_journal.py` adiciona somente arquivo SQLite de pesquisa novo e separado. `start_paper_runner_journal` fixa fingerprint do saldo, evento/versão e política de `PaperPositionBalance` lida RO e grava o primeiro mark. `append_paper_runner_mark` faz transação de um agregado, replay completo antes de persistir, trata duplicação exata e recusa status hipotético já disparado. `load_paper_runner_journal` usa URI mode=ro e `query_only`, confere schema/metadados/hash, reabre posição RO e executa RUNNER1. Não depende de envio nem reconciliação exchange; cruzamento entre arquivos é observacional, não atômico.
