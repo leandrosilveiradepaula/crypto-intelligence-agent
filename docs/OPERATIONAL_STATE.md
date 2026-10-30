@@ -937,3 +937,8 @@ A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-s
 ## Checkpoint J3/PRE18 #371 — 30/10/2026
 
 `main=cccca495b823c9fa4f7f465ca4ae5eb68e7c59d0` confirmado após PR #370 integrada; issue #369 fechada com comentários e evidências de CI pré-merge. Nova issue #371, branch `work/j3-pre18-funding-calendar`. Trabalho em andamento: contrato de grade temporal para `SyntheticFundingEvent` no replay, sem omissão silenciosa e sem default 8h, tests `test_synthetic_funding_calendar.py`, decisão D180, docs. **Próxima ação**: abrir PR, validar CI Linux/docs/Windows/Chrome e corrigir antes de merge; registrar SHA real após confirmação. Sem CLI nova, sem dados privados, rede de exchange, VPS, contas, ordens ou gasto. J1 #2/#217/#319, J2 #3 e J3 #4 pendentes.
+
+
+## Checkpoint J3/PRE19 #373 — 30/10/2026
+
+`main` confirmada em `a69be5202ff2afe5f16202d4e2767e57458ec30a`, sem PRs abertas no início da work unit; #371/#372 concluídas na integração anterior. Issue #373 aberta, branch `work/j3-pre19-portfolio-replay`; arquivos `synthetic_portfolio_replay.py`, `test_synthetic_portfolio_replay.py`, `docs/J3_PRE19_PORTFOLIO_REPLAY.md` e atualizações D181/arquitetura/validação/jornadas. A agregação exige identidade/relógio, evita double-count e anula valores financeiros a partir de liquidação proxy sem PnL definido. Próxima ação autorizada: abrir PR, observar e corrigir CI, revisar SHA exato, fazer merge sem deploy se verde e fechar #373 com evidências. Limites: VPS, credenciais, conta real, novos dados, ordens, testnet, migration e custo adicional não utilizados. J1 #2/#217/#319, J2 #3, J3 #4 ainda abertas.
