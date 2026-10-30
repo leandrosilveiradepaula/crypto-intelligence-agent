@@ -53,6 +53,18 @@ class J1BybitTransportTests(unittest.TestCase):
                 c.get(bad)
         self.assertEqual(c.requests_attempted, 0)
 
+    def test_catalog_1000_uses_bounded_large_response_budget(self):
+        budgets=[]
+        def fake(url,limit):
+            budgets.append(limit)
+            return b'{"retCode":0,"result":{},"time":1793000000000}'
+        c=BoundedBybitPublicClient(transport=fake)
+        c.get(instruments_url())
+        c.get(instruments_url(symbol="BTCUSDT"))
+        c.get(kline_url("BTCUSDT",T-H,T))
+        self.assertEqual(budgets,[1_500_000,131_072,131_072])
+        self.assertEqual(c.requests_attempted,3)
+
     def test_malformed_origin_or_extra_arguments_rejected_without_io(self):
         client = BoundedBybitPublicClient(
             transport=lambda url, limit: self.fail("transport must not run"))
