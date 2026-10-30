@@ -99,8 +99,8 @@ class RunnerMobileExitTests(unittest.TestCase):
         self.fixture.append("103", 2)
         report = self.fixture.append("102", 3)
         current = self.store.load(self.id)
-        intent = exit_order("runner_mobile_observe", "6", current.as_of_ms-T, cap="6")
-        self.store.reserve_exit(self.id, 0, intent, as_of_ms=current.as_of_ms)
+        intent = exit_order("runner_mobile_observe", "6", 3100, cap="6")
+        self.store.reserve_exit(self.id, 0, intent, as_of_ms=T+3100)
         selected = (inspect_paper_position(self.fixture.position_path, self.id),)
         with self.assertRaises(DataValidationError):
             multi_paper_snapshot(selected, runner_observation=(self.id, report))
