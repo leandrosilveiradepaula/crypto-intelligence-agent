@@ -1,4 +1,5 @@
 """J4 #391: runner residual is now a bounded PAPER-only tranche zero."""
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from decimal import Decimal as D
 import sqlite3
@@ -79,6 +80,25 @@ class RunnerClosePaperTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             self.preview()
         self.assertEqual(store.load(self.fixture.id), current)
+
+    def test_concurrent_runner_reservations_have_single_winner(self):
+        self.trigger()
+        seed = self.preview().intent
+        def attempt(n):
+            intent = replace(seed, intent_id=f"fixture_runner_competitor_{n}")
+            try:
+                SQLitePaperPositionJournal(self.fixture.position_path).reserve_exit(
+                    self.fixture.id, 0, intent, as_of_ms=T+3100)
+                return True
+            except DataValidationError:
+                return False
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(attempt, (1, 2)))
+        self.assertEqual(sorted(outcomes), [False, True])
+        after = SQLitePaperPositionJournal(self.fixture.position_path).load(self.fixture.id)
+        self.assertEqual(after.runner_reserved_unfilled_units, D(6))
+        self.assertEqual(after.runner_unallocated_units, D(0))
+        self.assertEqual(len(after.exit_orders), 4)
 
     def test_unknown_cancel_and_replacement_then_fill(self):
         self.trigger()
