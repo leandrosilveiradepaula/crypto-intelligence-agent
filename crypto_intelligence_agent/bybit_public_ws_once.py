@@ -181,6 +181,8 @@ def _check_closed(frame: dict, *, received_ms: int) -> bool:
         raise DataValidationError("ws_kline_rows_overflow_invalid")
     if any(type(row) is not dict for row in rows):
         raise DataValidationError("ws_kline_rows_nonobject_invalid")
+    if type(frame["ts"]) is not int or frame["ts"] > received_ms + 5000 or received_ms - frame["ts"] > 30000:
+        raise DataValidationError("ws_clock_invalid")
     # Validate every row before approving any closed candle.
     return any_closed_after_full_validation(rows, frame["ts"], received_ms)
 
