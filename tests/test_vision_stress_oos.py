@@ -22,6 +22,17 @@ class VisionStressOOSTests(unittest.TestCase):
         self.assertGreaterEqual(first.best_net_quote,first.worst_net_quote)
         self.assertLessEqual(first.liquidation_possible_count,first.stressed_count)
         self.assertLessEqual(first.ambiguous_count,first.stressed_count)
+        self.assertEqual(len(first.fold_reports),1)
+        self.assertGreater(first.fold_reports[0][1],0)
+        self.assertEqual(first.fold_reports[0][2],first.stressed_count)
+        self.assertLessEqual(first.worst_drawdown_proxy_quote,D("0"))
+        self.assertLessEqual(first.best_drawdown_proxy_quote,D("0"))
+        self.assertLessEqual(first.benchmark_worst_drawdown_proxy_quote,D("0"))
+        self.assertGreaterEqual(first.benchmark_best_net_quote,
+                                first.benchmark_worst_net_quote)
+        self.assertIn("benchmark_worst_net_quote",result)
+        self.assertNotIn("ETHUSDT",str(result))
+
 
     def test_requires_explicit_and_valid_stress_terms(self):
         a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
