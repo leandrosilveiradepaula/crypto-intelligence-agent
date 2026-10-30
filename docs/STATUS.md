@@ -883,3 +883,7 @@ Confirmado `main=60f9ec4aaf41a05495b25c56085f6ac1d096054c` após squash merge de
 
 ## J6/PRE4 #395 — gatilho runner para reserva PAPER, 30/10/2026
 Base verificada `main=cb10525a0c32a0fd89ee9b49153814ac4a8db514` após PR #394 integrada, CI 41138259201 Linux/docs/Windows e 41138259179 Chrome/PAPER SUCCESS, revisão #5719361203; issue #393 encerrada. J6 PRE4 issue #395 e branch `work/j6-pre4-durable-paper-runner-close` introduzem função explícita `step_durable_paper_runner_close` para reservar a saída residual PAPER após gatilho RUNNER2, sem FILL presumido e com recuperação via ledger AUTO4. Testes de restart/UNKNOWN/cancel/partial/corrupção/concorrência e D192; CI/PR/merge da nova unidade ainda não afirmados. J1 #2/#319 aguarda owner-run privado na VPS adiado pelo PO, sem trading real ou gasto.
+
+
+## J6/PRE5 #397 — ciclo completo demonstrável sem rede, 30/10/2026
+Confirmado J6/PRE4 #395/PR #396 integrada em `main=870bdfc2969af6a2c6fb87e91e4bb23f3a87e6ec`, CI 41138778211 Linux/docs/Windows e 41138778276 Chrome/PAPER SUCCESS, revisão #5719397733; #395 encerrada. Issue #397 e branch `work/j6-pre5-runner-e2e-demo` acrescentam `scripts.demo_paper_runner_close_flow`: 100→50→20→6, trailing fictício, reserva REDUCE_ONLY sem FILL, restart e preenchimento explicitamente sintético final. Teste de determinismo, no-network e limpeza temporária; D193 e documentação. PR/CI/merge desta etapa ainda não verificados. J1/VPS owner-run adiado, nenhum trade, stop nativo ou gasto.
