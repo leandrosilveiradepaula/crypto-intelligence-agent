@@ -177,3 +177,8 @@ No replay causal, a grade de eventos de funding é fixture explícita e opt-in. 
 ## J3/PRE19 — visão de carteira com perdas desconhecidas
 
 A soma de posições fictícias só é coerente com um relógio e uma moeda sintética em comum. Equity por mark e valores condicionais após stop/target não constituem PnL de fills. Se uma posição é liquidada no modelo sem preço de saída certificado, a carteira perde estado financeiro completo: não substituir por zero, margem perdida ou ganho presumido. Drawdown é apenas de prefixo verificável, e correlação pós-amostra entre séries de mark é descritiva, não decisão de entrada. Não pressupor diversificação garantida, 50x viável ou execução real. Issue #373.
+
+
+## J3/PRE20 — risco de carteira não deve ser ocultado por hedge
+
+Para long e short simultâneos, exposição bruta por marcação permanece alta mesmo quando líquido assinado é zero; dois limites são avaliados independentemente. Margem e alavancagem são fixadas para cada posição na abertura; saídas condicionais não geram automática liberação de margem ou trading. Breach de concentração, nocional por ativo e drawdown do prefixo bloqueiam nova pesquisa de entrada. Uma liquidação hipotética sem preço de fill torna desconhecido o PnL/equity de carteira, e nenhuma decisão de entrada recebe autorização. Isto é gate para pesquisa, não execução nem homologação J3. Issue #375.
