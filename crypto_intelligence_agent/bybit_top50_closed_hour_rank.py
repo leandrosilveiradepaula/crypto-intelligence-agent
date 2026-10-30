@@ -54,6 +54,7 @@ class BybitReviewedClosedRanking:
     complete_catalog_instrument_rows: int
     unreviewed_plausible_contracts: int
     ranked: tuple[ReviewedClosedMember, ...]
+    instrument_pages_scanned: int = 1
 
     def sanitized_report(self, *, include_public_symbols: bool = False) -> dict:
         canonical = json.dumps(
@@ -246,4 +247,5 @@ def rank_bybit_reviewed_closed_24h_pit(
         complete_catalog_instrument_rows=pre_census.scanned_rows,
         unreviewed_plausible_contracts=pre_census.plausible_unreviewed_usdt_perpetuals,
         ranked=ranked,
+        instrument_pages_scanned=len(before_instrument_pages),
     )
