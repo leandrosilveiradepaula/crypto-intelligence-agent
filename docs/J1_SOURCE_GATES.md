@@ -299,3 +299,8 @@ A observacao WS de um topico `kline.60` sera diagnosticamente util apenas se a A
 ## WS6 #338 — confirmação temporal não autentica a fonte (30/10/2026)
 
 `confirm=true` recebido após o fim da hora pelo relógio do provedor permite análise de fechamento com tolerância limitada ao desvio do relógio do host. Não equivale a assinatura criptográfica do feed, direitos de uso para live, ranking global Top50, histórico 30d ou operação financeira. Nova categoria de falha não registra mensagens brutas, timestamps, OHLCV ou IDs; acesso real continua owner-only e opt-in, sem contorno de bloqueios.
+
+
+## J1 WS7 #340 — um heartbeat válido não prova cobertura Kline
+
+Resposta de controle sem dados (`pong`) não equivale a candle, autorização de assinatura ou prova de qualidade. Somente ACK válida e Kline com schema/tempo/confirm estritos permitem `ws_one_closed_hour_observed_only`, ainda sem persistência ou mercado Top50 global. Diagnósticos sanitizados nunca incluem `ret_msg`, símbolos, IDs, timestamps ou OHLCV reais; condições de #2/#319/#217 e limite REST `10006` permanecem independentes.
