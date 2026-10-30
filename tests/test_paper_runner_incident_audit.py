@@ -95,6 +95,37 @@ class PaperRunnerIncidentAuditTests(unittest.TestCase):
         self.assertFalse(payload["live_trading_authorized"])
         self.assertNotIn(str(Path(self.path.parent)), out.getvalue())
 
+    def test_replacement_pending_after_partial_is_not_treated_as_terminal(self):
+        current = self.store.load(self.position_id)
+        first = exit_order("pre6_first", "6", current.as_of_ms - T, cap="6")
+        self.store.reserve_exit(self.position_id, 0, first, as_of_ms=current.as_of_ms)
+        self.store.append_exit_events(
+            self.position_id, first.intent_id,
+            (e("pre6_partial_two", PaperOrderEventKind.FILL, 5, "2"),), as_of_ms=T+5)
+        self.store.append_exit_events(
+            self.position_id, first.intent_id,
+            (e("pre6_partial_cancel", PaperOrderEventKind.CANCELLED, 6),), as_of_ms=T+6)
+        second = exit_order("pre6_replacement", "4", 6, cap="4")
+        self.store.reserve_exit(self.position_id, 0, second, as_of_ms=T+6)
+        pending = self.audit()
+        self.assertEqual(pending.code, PaperIncidentCode.RUNNER_EXIT_PENDING_RECONCILIATION)
+        self.assertEqual(pending.reserved_units, D(4))
+        self.assertEqual(pending.filled_units, D(2))
+        self.assertTrue(pending.reconciliation_required)
+
+    def test_rejected_runner_exit_requires_review(self):
+        current = self.store.load(self.position_id)
+        order = exit_order("pre6_rejected", "6", current.as_of_ms-T, cap="6")
+        self.store.reserve_exit(self.position_id, 0, order, as_of_ms=current.as_of_ms)
+        self.store.append_exit_events(
+            self.position_id, order.intent_id,
+            (e("pre6_runner_rejected", PaperOrderEventKind.REJECTED, 5),),
+            as_of_ms=T+5)
+        report = self.audit()
+        self.assertEqual(report.code, PaperIncidentCode.RUNNER_EXIT_CANCELLED_REVIEW)
+        self.assertEqual(report.severity, PaperIncidentSeverity.REVIEW)
+        self.assertTrue(report.reconciliation_required)
+
     def test_filled_short_runner_order_cannot_mean_whole_position_closed(self):
         current = self.store.load(self.position_id)
         # A legal REDUCE_ONLY runner order may cover only a subset of the floor.
