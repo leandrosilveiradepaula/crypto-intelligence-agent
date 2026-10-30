@@ -15,7 +15,7 @@ from crypto_intelligence_agent.vision_dynamic_replay import replay_offline_visio
 from scripts.audit_private_vision_multiasset import audit_private_vision_multiasset_coverage
 from scripts.audit_private_bybit_json import _read_private_file
 
-NAME=re.compile(r"[A-Z0-9]{2,20}USDT-1h-20[0-9]{2}-(0[1-9]|1[0-2])\\.zip\\Z")
+NAME=re.compile(r"[A-Z0-9]{2,20}USDT-1h-20[0-9]{2}-(0[1-9]|1[0-2])\.zip\Z")
 MAX_INPUT_BYTES=192_000_000
 
 
