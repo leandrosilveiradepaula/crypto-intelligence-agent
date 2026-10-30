@@ -125,6 +125,15 @@ class PaperRunnerIncidentAuditTests(unittest.TestCase):
             runner_journal_path=self.runner, policy=policy(), as_of_ms=T+1100)
         self.assertEqual(explicit_old_trailing.code, PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED)
 
+    def test_invalid_cutoff_or_policy_is_rejected_even_after_runner_reservation(self):
+        current = self.store.load(self.position_id)
+        intent = exit_order("audit_cutoff_runner", "6", current.as_of_ms - T, cap="6")
+        self.store.reserve_exit(self.position_id, 0, intent, as_of_ms=current.as_of_ms)
+        with self.assertRaises(DataValidationError):
+            self.audit(runner_journal_path=self.runner, policy=policy(), as_of_ms=-1)
+        with self.assertRaises(DataValidationError):
+            self.audit(runner_journal_path=self.runner, policy=object(), as_of_ms=T+1100)
+
     def test_runner2_cross_database_drift_blocks_stale_report(self):
         self.fixture.start()
         selected = inspect_paper_position(self.path, self.position_id)
