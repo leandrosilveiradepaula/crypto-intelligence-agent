@@ -185,12 +185,14 @@ class OwnerJ1CaptureTests(unittest.TestCase):
                 symbol=symbols[-1],interval="1h",
                 start_open_ms=DECISION-720*H,
                 end_open_ms=DECISION).complete_for_offline_staging_only)
-            self.assertFalse(store.replay_pit_research_snapshot(
-                result["last_pit_sha256"] if False else next(
-                    row[0] for row in __import__("sqlite3").connect(db).execute(
-                        "SELECT observed_at_ms FROM bybit_research_pit_snapshots LIMIT 1"
-                    ))
-            ).verified_market_top50)
+            import sqlite3
+            with closing(sqlite3.connect(db)) as connection:
+                observed_ms=connection.execute(
+                    "SELECT observed_at_ms FROM bybit_research_pit_snapshots"
+                ).fetchone()[0]
+            self.assertFalse(
+                store.replay_pit_research_snapshot(observed_ms).verified_market_top50)
+
 
     def test_expanded_52_below_requested_count_aborts_before_storage(self):
         from test_j1_bybit_top50_closed_hour_rank import NOW
