@@ -69,6 +69,7 @@
     </aside>
     <section aria-labelledby="cartoes-title">
       <h2 id="cartoes-title">Posições PAPER selecionadas</h2>
+      <p class="note">O status do runner usa apenas fills e reservas PAPER confirmados; não conhece preço mark atual, trailing ativado ou stop nativo instalado.</p>
       <p class="note">Não existe total consolidado: cada posição tem instrumento, lado, reservas, piso residual e configuração solicitada próprios. As margens PAPER não são somadas nem convertidas entre moedas. Pedidos incertos não são preenchimentos.</p>
       <div class="positions" data-selected-positions="{{count}}">
         {{position_cards}}
@@ -80,7 +81,7 @@
       <div class="table-wrap" role="region" tabindex="0" aria-label="Posições PAPER independentes, quantidades preenchidas e pendentes" aria-describedby="table-scroll-instructions">
         <table>
           <caption>Quantidades apenas de cada posição. Não combinar unidades entre instrumentos.</caption>
-          <thead><tr><th scope="col">Posição</th><th scope="col">Contrato fictício</th><th scope="col">Inicial</th><th scope="col">Preenchido</th><th scope="col">Reservado</th><th scope="col">Disponível</th><th scope="col">UNKNOWN</th></tr></thead>
+          <thead><tr><th scope="col">Posição</th><th scope="col">Contrato fictício</th><th scope="col">Inicial</th><th scope="col">Preenchido</th><th scope="col">Reservado</th><th scope="col">Disponível</th><th scope="col">UNKNOWN</th><th scope="col">Runner PAPER</th></tr></thead>
           <tbody>
             {{position_rows}}
           </tbody>
