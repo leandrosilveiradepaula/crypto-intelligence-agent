@@ -249,3 +249,8 @@ Agregação multi-leg com relógio UTC comum, margem isolada, exposure gross/sig
 ## J3/PRE20 #375 — limites globais de risco para carteira sintética
 
 Reutilização do replay de carteira PRE19 para avaliar margem total/por leg, exposição gross/abs net por marcação, maior instrumento, concentração e drawdown causal, com bloqueio fail-closed quando PnL de liquidação é desconhecido. Exige testes, CI e merge sem produção; ver `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md`. Não equivale a risco homologado da corretora nem autoriza ordens.
+
+
+## J1/EXIT2 #377 — fechar bloqueios de captura privada dos 50 candidatos
+
+Comportamento alvo: 52 identidades crypto-base revisadas disponíveis no registro → censo pre/post completo → 24 velas fechadas por elegível → 50 maiores do conjunto revisado → 720 candles por ativo em banco SQLite **novo** sem sobrescrever histórico anterior. Guardas de 6min, manifesto 52, falha antes de criar DB se faltar cobertura, CI e replay garantem preparo técnico. O proprietário executará pesquisa pessoal na VPS somente após CI/merge, preservando direitos e limitações de dados live. A J1 épica #2 e o censo de todos contratos #319 exigem aceitação real posterior, sem inventar ranking marketwide.

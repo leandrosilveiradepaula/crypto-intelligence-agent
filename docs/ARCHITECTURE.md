@@ -336,3 +336,8 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J3/PRE20 — guardrail de risco global, somente avaliação offline
 
 `synthetic_portfolio_risk_limits.py` é avaliador read-only sobre `synthetic_portfolio_replay.py`, sem duplicar custos, marcação, funding ou execução. `SyntheticPortfolioRiskLimits` recebe parâmetros tipados exact-Decimal; `SyntheticPortfolioCheckpoint.max_open_notional_quote` usa o maior nocional mark das legs abertas (nulo após liquidação proxy sem fill). A auditoria aplica limites de margem de entrada, bruto/net de exposição, concentração e drawdown causal com trava após incerteza. Não modifica ledger, posição, ordem, dados ou deploy. Contrato `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md`.
+
+
+## J1/EXIT2 — seleção compartilhada 52→50 e histórico 720h em DB novo privado
+
+`observe_reviewed_closed_24h_rank` é helper interno extraído do owner probe: pré e pós censo V5 íntegros, 24 velas fechadas por elegível revisado, orçamento de 6 minutos e seleção causal. `capture_private_bybit_j1._observe_large` reaproveita o objeto tipado `BybitReviewedClosedRanking` para construir `BybitPITResearchSelection` (até 50) sem ticker rolling, evitando a antiga janela impossível de 120s para 52 ativos. O restante do capturador reutiliza `LocalBybitCaptureManifest`, o parser de kline 720h e `SQLiteBybitResearchStore` com replay e controle 0600, sem segundo storage. A coleta do modo 52 só aceita uma página exata de 720h por ativo e um **novo** banco, preservando integralmente a base privada antiga com 2 símbolos. Sem migração/deploy. Issue #377.
