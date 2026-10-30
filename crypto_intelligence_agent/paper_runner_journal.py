@@ -6,7 +6,7 @@ the original pure RUNNER1 result; local SHA is not broker authentication.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from contextlib import closing
 from decimal import Decimal
 from hashlib import sha256
 import json
@@ -166,7 +166,7 @@ def start_paper_runner_journal(
     fd = os.open(str(checked), os.O_CREAT | os.O_EXCL | os.O_RDWR, 0o600)
     os.close(fd)
     try:
-        with sqlite3.connect(checked) as conn:
+        with closing(sqlite3.connect(checked)) as conn, conn:
             conn.execute("BEGIN IMMEDIATE")
             conn.execute("CREATE TABLE paper_runner_meta (k TEXT PRIMARY KEY,v TEXT NOT NULL)")
             conn.execute("CREATE TABLE paper_runner_state (id INTEGER PRIMARY KEY,"
@@ -187,7 +187,7 @@ def load_paper_runner_journal(
     """Read-only recovery; stale or conflicting position/policy fails closed."""
     checked = _checked_path(path, existing=True)
     try:
-        with sqlite3.connect(checked.as_uri() + "?mode=ro", uri=True) as conn:
+        with closing(sqlite3.connect(checked.as_uri() + "?mode=ro", uri=True)) as conn:
             conn.execute("PRAGMA query_only=ON")
             conn.execute("BEGIN")
             data = _decode(conn)
@@ -209,7 +209,7 @@ def append_paper_runner_mark(
         raise DataValidationError("typed PAPER runner mark required")
     checked = _checked_path(path, existing=True)
     try:
-        with sqlite3.connect(checked.as_uri() + "?mode=rw", uri=True) as conn:
+        with closing(sqlite3.connect(checked.as_uri() + "?mode=rw", uri=True)) as conn, conn:
             conn.execute("BEGIN IMMEDIATE")
             data = _decode(conn)
             current_marks = _marks(data)
