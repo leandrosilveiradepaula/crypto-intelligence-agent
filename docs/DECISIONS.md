@@ -973,3 +973,8 @@ A primeira sonda real Bybit V5, após 17 testes offline na VPS, retornou `frames
 ## D171 — J1 WS5: kline antes de ACK continua sem autoridade (29/10/2026 UTC)
 
 Duas sondagens reais de um tópico Bybit, sem dados armazenados, retornaram primeiro frame sem ACK; a última classificou `ws_market_data_before_ack`. O programa agora valida estritamente frames de kline antecipados, mantém somente estado booleano efêmero/contagem até limite de 8 e aguarda na mesma conexão ACK positiva antes de promover um candle confirmado; ACK negativa ou inexistente falha fechado. Não reter preços/payload. Isto não demonstra origem, Top50, qualidade ou direitos live. Sem retry/REST/ordem/deploy.
+
+
+## D172 — J1 WS6: fechamento subsegundo e diagnóstico pós-ACK (30/10/2026 UTC)
+
+A sessão pública owner-only sob `main=738b54eb44aaea20036bafb2dc742f67abc675e9` confirmou a assinatura (`subscription_acknowledged=true`) mas terminou `ws_failed_closed`, 19 frames e zero candles aprovados. A causa da exceção não foi exposta. O parser antigo exigia 1s após o fechamento apesar de `confirm=true`; a nova validação aceita confirmação no próprio fechamento pela hora do servidor, com tolerância explícita de até 5s de desvio local, sem promover vela aberta, timestamp anterior ao fechamento ou dados atrasados. O relatório adiciona `failure_category` estritamente categórico, não publica a exceção, valores ou payload e conserva `ws_failed_closed`. Uma observação futura ainda não autentica source/Top50/licenças. Sem rede no CI, orders ou deploy.
