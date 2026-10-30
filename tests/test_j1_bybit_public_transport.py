@@ -291,7 +291,7 @@ class J1BybitTransportTests(unittest.TestCase):
         with self.assertRaises(J1BybitCaptureError):
             bad.get(instruments_url())
         with self.assertRaises(J1BybitCaptureError):
-            kline_url("BTCUSDT", T, T + 2*H)
+            kline_url("BTCUSDT", T, T + 3*H)
 
 
 if __name__ == "__main__":
