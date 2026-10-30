@@ -2,6 +2,7 @@
 from decimal import Decimal as D
 from pathlib import Path
 import json
+import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -121,6 +122,13 @@ class RunnerMobileExitTests(unittest.TestCase):
             p = snap["positions"][0]
             self.assertEqual(p["runner_readiness"], "NO_RESIDUAL_RUNNER_CONFIGURED")
             self.assertEqual(p["runner_unallocated_units"], "0")
+
+    def test_corrupted_runner_position_does_not_render_misleading_state(self):
+        with sqlite3.connect(self.fixture.position_path) as conn:
+            conn.execute("UPDATE paper_positions SET digest='bad' WHERE position_id=?",
+                         (self.id,))
+        with self.assertRaises(DataValidationError):
+            self.view()
 
     def test_snapshot_read_only_no_network_or_mutation(self):
         current = self.store.load(self.id)
