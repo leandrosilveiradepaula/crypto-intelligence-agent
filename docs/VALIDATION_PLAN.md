@@ -745,3 +745,7 @@ Exigir regressões offline do runner residual: proibição antes de preencher pa
 
 ### J5/PRE16 #393 — regressões de estados pós-RUNNER3
 Reproduzir em SQLite real de fixture: runner 6 unidades após saídas 50/30/14, reserva RUNNER3, UNKNOWN, CANCEL, parcial 2, cancelamento residual, FILL4 e fechamento. Validar prioridade da reconciliação, quantidades Decimal e sinais de stop/ordem sempre false, ausência de consolidação ou rede, semantic HTML/CSP PT-BR e preservação do caminho legado sem runner. Testar long/short e recusar evidência RUNNER2 de checkpoint anterior. Gates: CI docs/Linux, Windows/offline, Chrome/PAPER no head SHA, revisão e merge não produtivo; sem J1/live.
+
+
+### J6/PRE4 #395 — recuperação causal PAPER após gatilho fictício
+Cenários com SQLite de fixture e sem chamada de corretora: gatilho ausente bloqueia criação, gatilho comprovado reserva `tranche_step=0` uma vez, crash/restart conserva apenas PENDING e ID, UNKNOWN/partial/cancelled nunca retentam, fechamento após FILL PAPER explícito, ambos lados LONG/SHORT, concorrência com uma reserva, corrupção/stale antes da escrita, no-network e ausência de atualizações em RUNNER2. Todos os resultados `orders_sent=false`, `native_stop_verified=false`. CI docs/Linux/Windows/Chrome, revisão SHA final e squash sem produção; não autorizar J6 de mercado real.
