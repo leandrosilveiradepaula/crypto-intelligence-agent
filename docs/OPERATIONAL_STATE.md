@@ -957,3 +957,8 @@ Repositório `leandrosilveiradepaula/crypto-intelligence-agent`, início `main=1
 ## Checkpoint J1/EXIT3 #379 — 30/10/2026
 
 `main` pós #378 confirmada em `67d69f6f7ed451e8a4f0cf66d563ed49f354ad48`, issue #377 fechada após CI Linux/docs (1.618 testes PASS), Windows offline e Chrome/PAPER verdes. Issue #379, branch `work/j1-exit3-top50-contiguous-pit`, libera duas observações PIT extras no mesmo owner-run 50×720; teste com 462 GETs injetados e auditor independente de 3 PIT/36.100 candles. Próxima ação autorizada: CI/PR/revisão/merge e depois execução na VPS em novo DB 0700/0600 pelo proprietário; este chat não tem SSH e não realizou coleta. Se 10006 ou troca de 50 símbolos abortar, preservar dados e analisar diagnostico sanitizado, sem retentar automaticamente. J1 #2/#319 seguem abertas até evidência real de Top50 e ciclo 30d. Nenhuma ordem, release, migração, VPS ou gasto adicional aqui.
+
+
+## J1/EXIT3 #379 — regressão encontrada na CI e corrigida
+
+A primeira CI do head `ac47356023dc5530b1746d39eadd7ecbfd6209a2` identificou `private_research_registry_or_scope_mixed` **após** o teste concluir a captura simulada 50×722: o auditor read-only ainda restringia `len(windows)<=13`. A correção específica em `scripts/audit_private_bybit_j1_progress.py` amplia até 50, exige registry SHA do manifesto versionado `expanded-52` para escopo >13, mantém verificação SQLite/page/PIT e exige conjunto de membros estável entre três observações; não reescreve SQLite. Nova CI no SHA atualizado deve ser verificada antes de merge. Esta evidência é de fixture POSIX, não da VPS real.
