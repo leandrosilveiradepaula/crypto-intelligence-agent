@@ -611,3 +611,8 @@ Executar testes `test_j1_bybit_public_ws_once.py` e regressões `test_j1_bybit_w
 ## J1 WS7 #340 — teste de protocolo público e envelopes separados
 
 Rodar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q` e regressões #332/#330/#326. Confirmar pong `op=ping,ret_msg=pong` (linear/inverse) e `op=pong,args=[decimal timestamp]` (outros canais públicos), negar campos extras, e distinguir `kline_root_keys`, `kline_topic`, `kline_type`, `kline_rows`, `kline_fields` sem valores do provedor. Preservar recusas de malformed, pré-ACK, Decimal, relógio e falso confirm. CI GitHub docs/Windows/Chrome pré e pós-merge, sem conexão real nos testes. Não promover Top50/live.
+
+
+## J1 WS8 #342 — array Kline e atomicidade de validação
+
+Testes `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q` e regressões WS #326/#328/#330/#332. Cobrir `data=[]` (sem candle), multiobjeto aberto+confirmado válido, segundo objeto malicioso após confirmado (nunca sucesso parcial), item não-dict, array 9+, não-lista, relógio inválido até no array vazio, contrato Decimal/OHLC e fechamento UTC. CI Linux/docs/Windows/Chrome no head final e após merge. Zero rede, credenciais, ordens ou escrita owner.
