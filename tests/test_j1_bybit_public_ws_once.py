@@ -182,6 +182,37 @@ class Tests(unittest.TestCase):
         bad_clock=frame();bad_clock["data"]=[];bad_clock["ts"]=FIRST+HOUR_MS+9000
         self.assertEqual(self.call([ACK,bad_clock],max_frames=2)["failure_category"],"kline_clock")
 
+    def test_diagnostic_only_aggregates_without_approving(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        a=frame();a["data"]=[]
+        b=frame();b["data"]=[dict(frame(False)["data"][0]),dict(frame()["data"][0])]
+        c=frame();c["data"]={"secret_price": "999"}
+        sock=Socket([ACK,a,b,c])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=4,max_seconds=3)
+        self.assertEqual(report["shape_counts"]["data_array_0"],1)
+        self.assertEqual(report["shape_counts"]["data_array_2_to_8"],1)
+        self.assertEqual(report["shape_counts"]["data_object"],1)
+        self.assertEqual(report["confirmed_closed_events"],0)
+        self.assertEqual(report["shape_counts"]["strict_valid_closed_candidates"],1)
+        self.assertEqual(report["shape_counts"]["strict_rejected_frames"],1)
+        self.assertTrue(sock.closed)
+        self.assertNotIn("999",str(report))
+        self.assertNotIn("BTCUSDT",str(report))
+        self.assertFalse(report["data_stored"])
+        self.assertFalse(report["orders_sent"])
+
+    def test_diagnostic_rejection_does_not_end_session(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        bad=frame();bad["data"]="not-list"
+        sock=Socket([ACK,bad,frame()])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=3,max_seconds=2)
+        self.assertEqual(report["shape_counts"]["data_other"],1)
+        self.assertEqual(report["shape_counts"]["strict_rejected_frames"],1)
+        self.assertEqual(report["shape_counts"]["strict_valid_closed_candidates"],1)
+        self.assertEqual(report["confirmed_closed_events"],0)
+
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
 
