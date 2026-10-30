@@ -38,7 +38,7 @@ class VisionIntrabarStressTests(unittest.TestCase):
     def test_fee_and_funding_signs(self):
         z=stress_vision_candle(bar(),long=True,assumptions=terms())
         f=stress_vision_candle(bar(),long=True,assumptions=terms(fee="10"))
-        self.assertLess(f.worst_net_quote,z.worst_net_quote)
+        self.assertLess(f.best_net_quote,z.best_net_quote)
         paid=stress_vision_candle(bar(),long=True,assumptions=terms(funding="5"))
         recv=stress_vision_candle(bar(),long=True,assumptions=terms(funding="-5"))
         self.assertLess(paid.best_net_quote,recv.best_net_quote)
