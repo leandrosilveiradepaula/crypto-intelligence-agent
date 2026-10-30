@@ -194,6 +194,70 @@ class OwnerJ1CaptureTests(unittest.TestCase):
                 store.replay_pit_research_snapshot(observed_ms).verified_market_top50)
 
 
+    def test_expanded_52_full_50_three_pit_snapshots_in_one_run(self):
+        """A single safe owner run can obtain two genuine consecutive PIT hours."""
+        from test_j1_bybit_top50_closed_hour_rank import NOW
+        from test_j1_bybit_exit_vertical import kline
+        from crypto_intelligence_agent.research_registry_catalog import load_reviewed_registry
+        from scripts.audit_private_bybit_j1_progress import audit_private_bybit_j1_progress
+
+        registry=load_reviewed_registry("expanded-52",as_of_ms=NOW)
+        symbols=tuple(asset.base+"USDT" for asset in registry.assets)
+        clock_now=[NOW]
+        calls=[]
+        def clock():
+            clock_now[0]+=80
+            return clock_now[0]
+        def sleep(seconds):
+            clock_now[0]+=int(seconds*1000)+100
+        def transport(url,limit):
+            calls.append(url)
+            params=parse_qs(urlsplit(url).query)
+            received=clock_now[0]-30
+            if "/instruments-info" in url:
+                which=(params["symbol"][0],) if "symbol" in params else symbols
+                page=instrument_page([instrument_row(sym) for sym in which],
+                                     ms=received,cursor="")
+                for row in page["result"]["list"]:
+                    row.pop("marketRegion",None)
+                    row.pop("underlyingTicker",None)
+                return json.dumps(page).encode("ascii")
+            symbol=params["symbol"][0]
+            first=int(params["start"][0])
+            count=(int(params["end"][0])+1-first)//H
+            self.assertIn(count,(1,24,720))
+            page=kline(symbol,first,count,str(symbols.index(symbol)+1))
+            page["time"]=received
+            return json.dumps(page).encode("ascii")
+
+        with TemporaryDirectory() as tmp:
+            private=Path(tmp)/"private"
+            private.mkdir(mode=0o700)
+            dest=private/"50-researched.sqlite"
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                report=owner_private_j1_capture(
+                    database=dest,max_assets=50,history_page_hours=720,
+                    registry_variant="expanded-52",two_hourly_updates=True,
+                    allow_public_network=True,allow_private_storage=True,
+                    confirm_region_and_personal_research=True,
+                    client=BoundedBybitPublicClient(transport=transport),
+                    clock_ms=clock,sleep=sleep)
+            self.assertEqual(report["selected_assets"],50)
+            self.assertEqual(report["closed_candles"],36100)
+            self.assertEqual(report["consecutive_hourly_updates"],2)
+            self.assertEqual(report["pit_snapshot_count"],3)
+            self.assertEqual(report["requests_attempted"],462)
+            self.assertEqual(len(calls),462)
+            self.assertFalse(report["marketwide_top50_verified"])
+            self.assertFalse(report["orders_sent"])
+            self.assertEqual(dest.stat().st_mode&0o777,0o600)
+            checked=audit_private_bybit_j1_progress(
+                database=dest,allow_private_readonly_audit=True)
+            self.assertEqual(checked["immutable_pit_snapshots"],3)
+            self.assertEqual(checked["stored_closed_candle_rows"],36100)
+            self.assertTrue(checked["sqlite_integrity_passed"])
+            self.assertTrue(checked["private_page_replay_passed"])
+
     def test_expanded_52_below_requested_count_aborts_before_storage(self):
         from test_j1_bybit_top50_closed_hour_rank import NOW
         from crypto_intelligence_agent.research_registry_catalog import load_reviewed_registry

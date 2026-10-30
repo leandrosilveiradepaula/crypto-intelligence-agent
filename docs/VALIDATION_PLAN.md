@@ -712,3 +712,8 @@ Executar `test_synthetic_portfolio_risk_limits.py` e `test_synthetic_portfolio_r
 ## J1/EXIT2 #377 — prova offline 52→50→36000
 
 Executar `tests/test_j1_private_bybit_capture.py` e `tests/test_j1_bybit_top50_closed_hour_rank.py` no SHA da PR. Cenário de 52 bases elegíveis, ranking com 24 velas 1h fechadas por ativo e dupla varredura de instrumentos, seleção das 50 maiores, uma página 720h por ativo, 36.000 candles em SQLite privado, replay PIT e 0600, 154 GETs injetados, nenhum socket ou ordem. Cenário com 49 candidatas diante de `max_assets=50` aborta antes da criação de DB. Preservar regressões legado `expanded-13`, conferir validações de clocks e falhas 10006. CI docs/Linux, Windows/offline, Chrome/PAPER e revisão no SHA exato antes de merge; não alegar que fixtures validam universo Top50 de mercado.
+
+
+## J1/EXIT3 #379 — teste único de continuidade PIT em 50 ativos
+
+Com transporte inteiramente injetado, executar 52 identidades revisadas com 50 selecionadas; 50×720 velas fechadas iniciais, mais 2×50 velas futuras em duas janelas UTC consecutivas. Verificar 3 PIT com horários observados distintos, 36.100 candles, auditor independente `audit_private_bybit_j1_progress`, integridade SQLite, replay dos pages, modo 0600 e 462 GETs sem rede. 462 fica abaixo do cap estrito 500 do transport, não é estimativa de consumo garantido no mercado. Testar risco de mudança de ranking (falha antes de append inválido), opt-in, restrições de tempo, 10006, legado. CI Linux/docs, Windows/offline e Chrome/PAPER SHA final, revisão e merge sem produção.
