@@ -851,3 +851,8 @@ Owner executou `main=738b54eb44aaea20036bafb2dc742f67abc675e9` com venv `websock
 ## 30/10/2026 — J1 #340 WS7 correção do observador pós-ACK
 
 Ponto verificado: `main=5f3cacf7bf2e234f354f0188b9ecb08bd46eaa12`, 0 PRs abertas; relatório VPS `subscription_acknowledged=true`, `frames_seen=21`, `failure_category=kline_envelope`, 0 candles/ordens/armazenamento e testes 19/19+7/7 PASS. Issue #340 branch `work/issue-340-j1-ws7-pong-envelope` e PR correspondente, parser offline com categoria allowlisted desagregada de chaves/tópico/tipo/lista/campos e controle pong. CI Windows/docs/Chrome no SHA exato antes/depois de merge obrigatória, sem VPS/WS live ou modificação do SQLite proprietário (1446 candles/2 ativos/3 PIT). O próximo owner-run único, condicionado ao gate de pesquisa/território, deve preservar a flag `failure_category`, sem revelar payload bruto. J1 #2/#319/#217 abertas.
+
+
+## 30/10/2026 — J1 WS8 #342
+
+Owner rodou na VPS checkout `d84f8c194ae37825e5b1152d2e6e9dac5372c3b9`, suíte WS 22/22 e 7/7 PASS, 1 conexão pública com `subscription_acknowledged=true`, `frames_seen=19`, `status=ws_failed_closed`, `failure_category=kline_rows`, `confirmed_closed_events=0`, ordens e storage false. Branch `work/issue-342-j1-ws8-kline-array` implementa validação de listas vazias ou até 8 objetos, sem promoção parcial em lote inválido; testes específicos e documentação D174. CI GitHub docs/Windows/Chrome pré e pós merge no SHA exato obrigatória, nenhum acesso Bybit real nesta unidade, SQLite privado (1446 candles/2 ativos/3 PIT) intacto. Gate externo posterior: sessão owner-only opt-in após integração; não capturar dados brutos. J1 #2/#319 não homologadas.
