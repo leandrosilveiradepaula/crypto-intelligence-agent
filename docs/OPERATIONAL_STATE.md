@@ -836,3 +836,8 @@ Ponto de partida confirmado `main=b2b6822b84453ff8707e7ab7f4cf7e6cfea5e16e`, nen
 ## 29/10/2026 — J1 WS4 #334: evidência real e próximo diagnóstico seguro
 
 O titular atualizou a VPS de `a323b857` a `15187f34c66ab72a4b088e221ae9bc3dfc3dd910`, instalou `websockets==15.0.1` em venv isolada; suites WS #328 10/10 e #332 7/7 PASS. Uma conexão Bybit real, única, retornou `frames_seen=1`, `ws_subscription_not_acknowledged`, `confirmed_closed_events=0`, `data_stored=false`, `orders_sent=false`. Não inferir bloqueio regional, causa de rate-limit ou aceitação. Issue #334 / branch `work/issue-334-j1-ws4-first-frame-diagnostics`: emitir apenas motivo categórico do primeiro frame; testes de regressão e CI real pré/pós merge exigidos. Uma nova conexão owner-only requer opt-in, SHA verificado e janela UTC; sem mudança nos 1446 candles/2 ativos/3 PIT privados.
+
+
+## 29/10/2026 J1 WS5 #336
+
+Ponto de partida GitHub `main=4a6a28d5b6d528a437e6d6e9bb3239d9faa914fd` sem PRs abertas; owner confirmou VPS atualizada, testes 11/11 e 7/7 PASS e primeiro frame WS de tópico/dados pré-ACK classificado, sem candle aprovado. Issue #336 branch `work/issue-336-j1-ws5-preack` implementa no observador buffering lógico limitado a 8 sem bytes e confirmação posterior estrita, testes e D171. Não conecta rede nesta unidade. Validar CI Linux/docs/Windows/Chrome no HEAD e pós-merge, sem deploy, ordens ou gasto; só depois executar uma sessão real opt-in. Histórico owner 1446 candles/2 ativos/3 PIT preservado; J1 #2/#319 e direitos live ainda bloqueados.
