@@ -157,7 +157,7 @@ class Tests(unittest.TestCase):
         cases=[(dict(frame(),surprise="private"),"kline_root_keys"),
                (dict(frame(),topic="kline.60.OTHERUSDT"),"kline_topic"),
                (dict(frame(),type="delta"),"kline_type"),
-               (dict(frame(),data=[]),"kline_rows"),
+               (dict(frame(),data="invalid"),"kline_rows_type"),
                (dict(frame(),data=[dict(frame()["data"][0],surprise="private")]),"kline_fields")]
         for bad,expected in cases:
             with self.subTest(expected=expected):
@@ -166,6 +166,21 @@ class Tests(unittest.TestCase):
                 self.assertEqual(x["failure_category"],expected)
                 self.assertEqual(x["confirmed_closed_events"],0)
                 self.assertNotIn("private",str(x))
+
+    def test_empty_and_multiple_rows_without_partial_approval(self):
+        empty=frame();empty["data"]=[]
+        self.assertEqual(self.call([ACK,empty,frame()],max_frames=3)["confirmed_closed_events"],1)
+        self.assertEqual(self.call([ACK,empty],max_frames=2)["confirmed_closed_events"],0)
+        multiple=frame();multiple["data"]=[dict(frame(False)["data"][0]), dict(frame()["data"][0])]
+        self.assertEqual(self.call([ACK,multiple],max_frames=2)["confirmed_closed_events"],1)
+        invalid=frame();invalid["data"]=[dict(frame()["data"][0]),dict(frame()["data"][0],turnover="NaN")]
+        self.assertEqual(self.call([ACK,invalid],max_frames=2)["confirmed_closed_events"],0)
+        bad_type=frame();bad_type["data"]=[None]
+        self.assertEqual(self.call([ACK,bad_type],max_frames=2)["failure_category"],"kline_rows_nonobject")
+        overflow=frame();overflow["data"]=[dict(frame()["data"][0]) for _ in range(9)]
+        self.assertEqual(self.call([ACK,overflow],max_frames=2)["failure_category"],"kline_rows_overflow")
+        bad_clock=frame();bad_clock["data"]=[];bad_clock["ts"]=FIRST+HOUR_MS+9000
+        self.assertEqual(self.call([ACK,bad_clock],max_frames=2)["failure_category"],"kline_clock")
 
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
