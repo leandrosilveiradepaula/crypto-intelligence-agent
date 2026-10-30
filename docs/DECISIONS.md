@@ -1049,3 +1049,8 @@ Para #367, variações não negativas de fee, slippage e manutenção são hipó
 ## D179 — J3/PRE17: snapshots sintéticos de margem point-in-time (30/10/2026)
 
 No replay mark/trade (issue #369), níveis de manutenção passam a poder variar por faixa de nocional marcado e versão de snapshot, somente sob `risk_snapshots` explícitos. Deduções por faixa precisam preservar continuidade; referências de risco só valem a partir de sua data efetiva, depois de conhecidas; rejeitar dados futuros, gaps e staleness. O modo legado é preservado. Sem cálculo da exchange, dados reais, acesso a ordens ou homologação de 50x. Ver `docs/J3_PRE17_PIT_RISK_TIERS.md`.
+
+
+## D180 — J3/PRE18: cobertura explícita de funding sintético (30/10/2026)
+
+O motor de replay mark/trade pode exigir um `SyntheticFundingCalendar` opt-in que determina somente horários fictícios; cada vencimento na janela exige evento `SyntheticFundingEvent` com taxa/nocional explícitos, sem preenchimento zero quando ausente. Instantes de funding coincidentes com ticks são ambíguos e falham. Nenhum calendário real da exchange pode ser inferido por default, e nenhuma taxa é gerada automaticamente. O caminho legado permanece intacto. Ver issue #371 e `docs/J3_PRE18_FUNDING_CALENDAR.md`; a decisão D77 de produto final automático não autoriza ordens.
