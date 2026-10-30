@@ -23,14 +23,26 @@ class VisionStressOOSTests(unittest.TestCase):
         self.assertLessEqual(first.liquidation_possible_count,first.stressed_count)
         self.assertLessEqual(first.ambiguous_count,first.stressed_count)
         self.assertEqual(len(first.fold_reports),1)
-        self.assertGreater(first.fold_reports[0][1],0)
-        self.assertEqual(first.fold_reports[0][2],first.stressed_count)
+        self.assertGreater(first.fold_reports[0].bars_scored,0)
+        self.assertEqual(first.fold_reports[0].strategy_exposures,first.stressed_count)
         self.assertLessEqual(first.worst_drawdown_proxy_quote,D("0"))
         self.assertLessEqual(first.best_drawdown_proxy_quote,D("0"))
         self.assertLessEqual(first.benchmark_worst_drawdown_proxy_quote,D("0"))
         self.assertGreaterEqual(first.benchmark_best_net_quote,
                                 first.benchmark_worst_net_quote)
         self.assertIn("benchmark_worst_net_quote",result)
+        self.assertEqual(first.fold_reports[0].benchmark_exposures,
+                         first.fold_reports[0].bars_scored)
+        self.assertEqual(first.fold_reports[0].strategy_ambiguous_count,
+                         first.ambiguous_count)
+        self.assertGreaterEqual(first.strategy_max_single_bar_loss_over_margin,D("0"))
+        self.assertGreaterEqual(first.benchmark_max_single_bar_loss_over_margin,D("0"))
+        self.assertEqual(first.fold_reports[0].strategy_worst_net_quote,
+                         first.worst_net_quote)
+        self.assertEqual(first.fold_reports[0].benchmark_worst_net_quote,
+                         first.benchmark_worst_net_quote)
+        self.assertFalse(result["live_trading_authorized"])
+        self.assertEqual(result["network_requests"],0)
         self.assertNotIn("ETHUSDT",str(result))
 
 
