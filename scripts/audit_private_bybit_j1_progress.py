@@ -140,7 +140,7 @@ def audit_private_bybit_j1_progress(
             registry.add(reviewed.registry_sha256)
             volumes[symbol] += len(reviewed.candles)
             closed_candle_rows += len(reviewed.candles)
-        if len(registry) > 1 or len(windows) > 13:
+        if len(registry) != 1 or len(windows) > 50:
             raise BybitProgressAuditError("private_research_registry_or_scope_mixed")
         pit_rows = db.execute(
             "SELECT observed_at_ms,decision_at_ms,content_json,content_sha256 "
@@ -190,6 +190,25 @@ def audit_private_bybit_j1_progress(
             prior_observed, prior_decision = pit["observed_at_ms"], pit["decision_at_ms"]
             decisions.append(pit["decision_at_ms"])
             pit_digests.append(digest)
+        if len(windows) > 13:
+            # Only the checked-in independently reviewed expanded-52
+            # identity registry may authorize this larger research scope.
+            # Compare hashes without applying a CURRENT registry age gate
+            # to old immutable point-in-time observations.
+            from crypto_intelligence_agent.crypto_asset_registry import load_registry_json
+            from crypto_intelligence_agent.research_registry_catalog import _FILES
+            verified_registry = load_registry_json(
+                _FILES["expanded-52"].read_bytes()).sha256_digest
+            if (registry != {verified_registry}
+                    or not first_pit_members
+                    or first_pit_members != set(windows)):
+                raise BybitProgressAuditError("private_research_registry_or_scope_mixed")
+        if any(
+            set(item["symbol"] for item in json.loads(pit["content_json"])["ranked"])
+                != first_pit_members
+            for pit in pit_rows[1:]
+        ):
+            raise BybitProgressAuditError("private_research_pit_membership_changed")
         extensions = 0
         for current, earlier in zip(reversed(decisions[1:]), reversed(decisions[:-1])):
             if current - earlier != HOUR_MS:
