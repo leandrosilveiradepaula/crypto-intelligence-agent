@@ -870,3 +870,8 @@ Conferido no terminal do proprietário: `main=0b1deda4482bd356721f5b51e596391336
 ## J1/WS10 #346 — replay de controle e PIT histórico ainda pendente (30/10/2026)
 
 Replay offline ignora somente pong Bybit já reconhecido no observador após ACK válido; pong não altera candle, DB ou ranking. Pong malformado, controle desconhecido ou pré-ACK aborta. Testes cobrem replay idempotente e fail-closed. **Não concluído:** auditoria 720h com múltiplos escopos point-in-time validados. O contrato atual usa um snapshot e limite de sete dias: nenhum sucesso de 30d, 50 ativos de mercado, licença de dados ou live pode ser afirmado nesta entrega. Sem rede, alteração de schema, ordens ou dados privados da VPS.
+
+
+## J1 #346 — auditoria histórica PIT de 720h sintéticas (30/10/2026)
+
+A API opcional `SQLiteOfflineClosedStreamJournal.audit(..., historical_scopes=(...))` preserva a auditoria legada de 24h. Exige no máximo 64 épocas ordenadas, com mesma identidade dos contratos, registro SHA e limites de relógio, associando cada evento à época mais recente conhecida no fechamento; rejeita retrodatação, deriva, escopo omitido, corrupção e gaps. Calcula cobertura 720h (720 velas fechadas por símbolo), slots ausentes, épocas e digest somente para janela integral de todos os símbolos. Mesmo em fixtures completas, `marketwide_top50_verified=false`, direitos e autenticidade false; sem rede, dados da VPS, migração ou ordens. Testes adversariais sintéticos novos em `tests/test_j1_bybit_ws_pit720.py`. Esta implementação não comprova que o mesmo registro de identidade permanece legalmente/temporalmente válido por 30 dias, nem reconstrói os 50 ativos reais; J1 #2/#319/#217 continuam abertas. Aceite somente com CI GitHub no SHA final e merge seguro.
