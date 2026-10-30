@@ -606,3 +606,8 @@ Executar suíte `test_j1_bybit_public_ws_once.py` e regressões `test_j1_bybit_w
 ## J1 WS6 #338 — clock e categorias de falha pós-ACK
 
 Executar testes `test_j1_bybit_public_ws_once.py` e regressões `test_j1_bybit_ws_ack_heartbeat_schedule.py`, `test_j1_bybit_ws_offline_pipeline.py`, `test_j1_bybit_closed_stream_cache.py`; validar `confirm=true` +100ms após fim da hora, skew local dentro de 5s, rejeição de skew >5s, candle falso, OHLC/decimal, schema e category allowlist sem dados. CI Linux/docs/Windows/Chrome pré/pós-merge. Sem WS real nos testes, ordens, migração ou alterações ao SQLite owner.
+
+
+## J1 WS7 #340 — teste de protocolo público e envelopes separados
+
+Rodar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q` e regressões #332/#330/#326. Confirmar pong `op=ping,ret_msg=pong` (linear/inverse) e `op=pong,args=[decimal timestamp]` (outros canais públicos), negar campos extras, e distinguir `kline_root_keys`, `kline_topic`, `kline_type`, `kline_rows`, `kline_fields` sem valores do provedor. Preservar recusas de malformed, pré-ACK, Decimal, relógio e falso confirm. CI GitHub docs/Windows/Chrome pré e pós-merge, sem conexão real nos testes. Não promover Top50/live.

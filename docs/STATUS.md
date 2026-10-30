@@ -736,3 +736,8 @@ A VPS executou com código `15187f34c66ab72a4b088e221ae9bc3dfc3dd910`, `websocke
 ## J1 WS6 #338 (30/10/2026 UTC)
 
 Terceiro teste real na VPS: 16/16 + 7/7 testes offline PASS; ACK reconhecido, 19 frames, `ws_failed_closed`, 0 candles, 0 ordens/storage. Causa pendente; alteração offline elimina espera extra de 1000ms e reporta categoria de falha pós-ACK sem conteúdo do frame. J1 #2/#319 ainda ABERTAS por Top50 marketwide, 30d e direitos live.
+
+
+## J1 WS7 #340 — envelope real ainda não validado (30/10/2026)
+
+Owner executou um WS público real após 19+7 testes PASS, recebeu 21 frames com ACK positiva, mas `failure_category=kline_envelope`; nenhum candle validado. Implementação offline diferencia chaves raiz, tópico, tipo, rows e campos, reconhece variantes de controle público documentadas sem credenciais; nenhuma nova sonda real nesta entrega. J1 #319/#2 e direitos live permanecem abertos; não afirmar Top50 marketwide.

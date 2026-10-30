@@ -846,3 +846,8 @@ Ponto de partida GitHub `main=4a6a28d5b6d528a437e6d6e9bb3239d9faa914fd` sem PRs 
 ## 30/10/2026 — J1 WS6 #338
 
 Owner executou `main=738b54eb44aaea20036bafb2dc742f67abc675e9` com venv `websockets==15.0.1`; testes 16/16 + 7/7 PASS; sessão WS real única retornou `subscription_acknowledged=true`, `frames_seen=19`, `ws_failed_closed`, nenhum candle aprovado ou ordem. Não atribuir causa sem nova categoria. Issue #338, branch `work/issue-338-j1-ws6-clock-close-diagnostics`, parser com fechamento subsegundo e relatório categórico, sem banco privado/network em CI. Gates: CI Linux/docs/Windows/Chrome no head exato e pós-merge, squash não produtivo; uma sessão owner-only opt-in posterior com SHA fixo. J1 #2/#319/#217 abertas, 1446 candles privados/2 ativos/3 PIT preservados.
+
+
+## 30/10/2026 — J1 #340 WS7 correção do observador pós-ACK
+
+Ponto verificado: `main=5f3cacf7bf2e234f354f0188b9ecb08bd46eaa12`, 0 PRs abertas; relatório VPS `subscription_acknowledged=true`, `frames_seen=21`, `failure_category=kline_envelope`, 0 candles/ordens/armazenamento e testes 19/19+7/7 PASS. Issue #340 branch `work/issue-340-j1-ws7-pong-envelope` e PR correspondente, parser offline com categoria allowlisted desagregada de chaves/tópico/tipo/lista/campos e controle pong. CI Windows/docs/Chrome no SHA exato antes/depois de merge obrigatória, sem VPS/WS live ou modificação do SQLite proprietário (1446 candles/2 ativos/3 PIT). O próximo owner-run único, condicionado ao gate de pesquisa/território, deve preservar a flag `failure_category`, sem revelar payload bruto. J1 #2/#319/#217 abertas.
