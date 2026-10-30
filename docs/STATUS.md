@@ -842,3 +842,8 @@ Depois da PR #374/issue #373 integrada em `19d74c71a04d1bbef7015024bd0861ab9a34e
 ## J1/EXIT2 #377 — corrigindo o gargalo efetivo de 50 ativos (30/10/2026)
 
 A captura anterior não conectava `expanded-52` ao validador de manifesto, e usava seleção PIT com orçamento de 120s, insuficiente a 52 consultas 24h sob intervalo de 2s por GET. A issue #377 cria helper compartilhado de ranking fechado com orçamento 6min e seleção tipada para 50, libera manifesto expandido com validação estrita e adiciona teste ponta a ponta de 36.000 velas com armazenamento 0600. Por exigência de uso pessoal, não apresentar direito de redistribuição comercial como bloqueio técnico do cache privado. Até CI/merge, a implementação está na branch `work/j1-exit2-top50-private-capture`, **não** declarada pronta. Banco de 2 ativos e PIT originais permanecem intocados; #2/#319 ainda exigem observação real owner-only para aceite de mercado.
+
+
+## J1/EXIT3 #379 — conclusão de ciclo único 50×722, ainda requer owner-run
+
+A PR #378 integrada corrigiu time budget de 6min e manifesto `expanded-52`, com 1.618 testes Linux PASS. O novo bloco #379 habilita `--two-hourly-updates` no modo 50×720h, mantendo cliente com cap 500 GET e falhas seguras; teste completo fake calcula 36.100 velas em novo SQLite privado e 3 PIT consecutivos. Não transformar o resultado fake em prova de Top50 real. O único owner-run na VPS deve ser realizado após CI/merge, em DB novo sob diretório 0700, sem tocar banco existente de 2 ativos ou habilitar ordens.
