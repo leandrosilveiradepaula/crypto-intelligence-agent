@@ -19,6 +19,13 @@ class VisionStressOOS:
     worst_net_quote: Decimal
     best_net_quote: Decimal
     digest_sha256: str
+    benchmark_worst_net_quote: Decimal = Decimal(0)
+    benchmark_best_net_quote: Decimal = Decimal(0)
+    worst_drawdown_proxy_quote: Decimal = Decimal(0)
+    best_drawdown_proxy_quote: Decimal = Decimal(0)
+    benchmark_worst_drawdown_proxy_quote: Decimal = Decimal(0)
+    benchmark_best_drawdown_proxy_quote: Decimal = Decimal(0)
+    fold_reports: tuple[tuple[int,int,int,int], ...] = ()
 
     def sanitized_report(self)->dict:
         return {
@@ -29,6 +36,15 @@ class VisionStressOOS:
             "worst_net_quote":str(self.worst_net_quote),
             "best_net_quote":str(self.best_net_quote),
             "digest_sha256":self.digest_sha256,
+            "benchmark_worst_net_quote":str(self.benchmark_worst_net_quote),
+            "benchmark_best_net_quote":str(self.benchmark_best_net_quote),
+            "worst_drawdown_proxy_quote":str(self.worst_drawdown_proxy_quote),
+            "best_drawdown_proxy_quote":str(self.best_drawdown_proxy_quote),
+            "benchmark_worst_drawdown_proxy_quote":str(self.benchmark_worst_drawdown_proxy_quote),
+            "benchmark_best_drawdown_proxy_quote":str(self.benchmark_best_drawdown_proxy_quote),
+            "fold_coverage":[{"test_month_number":k,"bars_scored":bars,
+                "strategy_exposures":exposures,"ambiguous_exposures":amb}
+                for k,bars,exposures,amb in self.fold_reports],
             "financial_backtest_approved":False,
             "marketwide_top50_verified":False,
             "source_authenticated":False,
@@ -53,10 +69,20 @@ def audit_costed_vision_intrabar_oos(month_groups:tuple[tuple,...],*,as_of_ms:in
     with localcontext(_CTX):
         worst=best=Decimal(0)
         n=ambiguous=liquidations=0
+        bench_worst=bench_best=Decimal(0)
+        eq=[Decimal(0) for _ in range(4)]
+        peak=[Decimal(0) for _ in range(4)]
+        dd=[Decimal(0) for _ in range(4)]
+        fold_reports=[]
         digest=sha256()
+        def track(j,change):
+            eq[j]+=change
+            peak[j]=max(peak[j],eq[j])
+            dd[j]=min(dd[j],eq[j]-peak[j])
         for k,fold in enumerate(baseline.folds,1):
-            if fold.selected_rule=="abstain":
-                continue
+            exposure_before=n
+            ambiguous_before=ambiguous
+            bars=0
             for i in range(bounds[k],bounds[k+1]):
                 ranked=sorted(
                     ((s.symbol,sum((c.documented_quote_volume
@@ -65,8 +91,16 @@ def audit_costed_vision_intrabar_oos(month_groups:tuple[tuple,...],*,as_of_ms:in
                     key=lambda row:(-row[1],row[0]))
                 j=ranked[0][2]
                 prices=series[j].candles
+                bars+=1
+                # Same ranked candle and synthetic terms for the fixed LONG
+                # benchmark, including when the selected rule abstains.
+                reference=stress_vision_candle(prices[i],long=True,assumptions=assumptions)
+                bench_worst+=reference.worst_net_quote
+                bench_best+=reference.best_net_quote
+                track(2,reference.worst_net_quote)
+                track(3,reference.best_net_quote)
                 movement=prices[i-1].close-prices[i-2].close
-                if movement==0:
+                if movement==0 or fold.selected_rule=="abstain":
                     continue
                 trend=movement>0
                 long=trend if fold.selected_rule=="continuation" else not trend
@@ -76,8 +110,14 @@ def audit_costed_vision_intrabar_oos(month_groups:tuple[tuple,...],*,as_of_ms:in
                 liquidations+=int(row.touched_liquidation_proxy)
                 worst+=row.worst_net_quote
                 best+=row.best_net_quote
+                track(0,row.worst_net_quote)
+                track(1,row.best_net_quote)
                 digest.update(json.dumps([
                     k,i,int(long),str(row.worst_net_quote),str(row.best_net_quote),
                     int(row.intrabar_ambiguous),int(row.touched_liquidation_proxy)],
-                    separators=(",",":")).encode("ascii")+b"\n")
-        return VisionStressOOS(n,ambiguous,liquidations,worst,best,digest.hexdigest())
+                    separators=(",",":")).encode("ascii")+b"\\n")
+            fold_reports.append((k,bars,n-exposure_before,ambiguous-ambiguous_before))
+        digest.update(json.dumps([str(bench_worst),str(bench_best),
+            [str(x) for x in dd],fold_reports],separators=(",",":")).encode("ascii"))
+        return VisionStressOOS(n,ambiguous,liquidations,worst,best,digest.hexdigest(),
+            bench_worst,bench_best,dd[0],dd[1],dd[2],dd[3],tuple(fold_reports))
