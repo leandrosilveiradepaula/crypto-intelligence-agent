@@ -89,10 +89,22 @@ def stress_vision_candle(candle: OfflineVisionCandle, *,
             costs=entry_cost+exit_n*(assumptions.exit_fee_bps+
                    assumptions.exit_slippage_bps)/_BPS+funding
             return sign*(exit_price-e)*q-costs
-        # Gap-through stop/liquidation is evaluated at worse opening when applicable.
-        downside = (liq if touched_liq else stop if touched_stop else candle.close)
+        # A liquidation PROXY is not an executable fill at liq. Previously
+        # net(liq) could falsely improve as exit fees increased: liq shifts
+        # toward entry, shrinking the price loss more than the added fee.
+        # For the liquidation branch, charge full hypothetical isolated
+        # margin PLUS the explicit adverse costs at ENTRY notional. Do not
+        # credit received funding against exhaustion of posted collateral.
+        # This is a conditional stress convention, not a venue liquidation
+        # formula or a guaranteed floor under gaps.
+        if touched_liq:
+            exit_cost_at_entry=n*(assumptions.exit_fee_bps+
+                                  assumptions.exit_slippage_bps)/_BPS
+            worst=(-m.requested_margin_quote-entry_cost-exit_cost_at_entry
+                   -max(funding,Decimal(0)))
+        else:
+            worst=net(stop if touched_stop else candle.close)
         upside = (target if touched_target else stop if touched_stop else candle.close)
-        worst=net(downside)
         best=net(upside)
         if best<worst: best=worst
         return VisionStressEnvelope(
