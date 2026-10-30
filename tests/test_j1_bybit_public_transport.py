@@ -61,7 +61,7 @@ class J1BybitTransportTests(unittest.TestCase):
             good.replace("api.bybit.com", "api.bybit.com.evil"),
             good + "&api_key=foo",
             good + "#fragment",
-            good.replace("limit=200", "limit=1000"),
+            good.replace("limit=1000", "limit=200"),
             instruments_url(symbol="BTCUSDT") + "&cursor=foo",
             kline_url("BTCUSDT", T-H, T).replace("interval=60", "interval=1"),
             kline_url("BTCUSDT", T-H, T).replace("limit=1", "limit=72"),
