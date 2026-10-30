@@ -755,3 +755,8 @@ A PR #343 incorpora uma sonda `--diagnostic-only` separada do observador fail-cl
 ## J1 WS9 #344 — prova real de array múltiplo e integração offline (30/10/2026)
 
 Owner VPS: 27/27 + 7/7 PASS, 64 frames, ACK=true, 61 eventos de mercado; `data_array_1=60`, `data_array_2_to_8=1`, um `confirm=true`, `first_validation_failure=kline_clock`, `strict_rejected_frames=1`, sem aprovar candles/ordens/storage. Corrigido ingresso do pipeline offline de array V5 e granularizadas causas de relógio no observador. Próxima evidência: CI e review no SHA da PR #344, sem sondagem repetitiva até necessário. J1 #319/#2 e direitos #217 abertas.
+
+
+## J1/WS10 #346 — replay de controle e PIT histórico ainda pendente (30/10/2026)
+
+Replay offline ignora somente pong Bybit já reconhecido no observador após ACK válido; pong não altera candle, DB ou ranking. Pong malformado, controle desconhecido ou pré-ACK aborta. Testes cobrem replay idempotente e fail-closed. **Não concluído:** auditoria 720h com múltiplos escopos point-in-time validados. O contrato atual usa um snapshot e limite de sete dias: nenhum sucesso de 30d, 50 ativos de mercado, licença de dados ou live pode ser afirmado nesta entrega. Sem rede, alteração de schema, ordens ou dados privados da VPS.

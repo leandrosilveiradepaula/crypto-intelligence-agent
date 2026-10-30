@@ -865,3 +865,8 @@ A PR #343 incorpora uma sonda `--diagnostic-only` separada do observador fail-cl
 ## 30/10/2026 — J1 WS9 #344, prova multirregistro owner-only
 
 Conferido no terminal do proprietário: `main=0b1deda4482bd356721f5b51e59639133694c9ec`, `websockets==15.0.1`, testes 27+7 PASS, uma sessão `--diagnostic-only` pública de 64 frames/90s com ACK=true, 61 frames target, 60 `data` de 1 objeto, 1 `data` de 2..8 após virada UTC, 61 linhas open, 1 closed, 1 erro de relógio, `confirmed_closed_events=0`, `orders_sent=false`, `data_stored=false`. Questão anterior de cardinalidade **resolvida por observação real**, detalhe do clock permanece pendente. Issue #344, branch `work/issue-344-j1-ws9-batch-clock`; código offline de ingressão multirow/validação integral e categoria temporal sem números sensíveis; testes adversariais. CI Linux/docs/Windows/Chrome pré e pós-merge exigida, merge SHA exato, sem prod. Arquivo privado owner 1446 candles/2 ativos/3 PIT intocado; #2/#319/#217 abertas. Nenhuma nova conexão de mercado nesta work unit.
+
+
+## J1/WS10 #346 — replay de controle e PIT histórico ainda pendente (30/10/2026)
+
+Replay offline ignora somente pong Bybit já reconhecido no observador após ACK válido; pong não altera candle, DB ou ranking. Pong malformado, controle desconhecido ou pré-ACK aborta. Testes cobrem replay idempotente e fail-closed. **Não concluído:** auditoria 720h com múltiplos escopos point-in-time validados. O contrato atual usa um snapshot e limite de sete dias: nenhum sucesso de 30d, 50 ativos de mercado, licença de dados ou live pode ser afirmado nesta entrega. Sem rede, alteração de schema, ordens ou dados privados da VPS.

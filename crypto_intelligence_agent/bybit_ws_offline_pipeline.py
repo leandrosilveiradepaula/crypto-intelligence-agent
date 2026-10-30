@@ -12,7 +12,7 @@ from .bybit_closed_stream_cache import (
     OfflineReviewedStreamScope, SQLiteOfflineClosedStreamJournal,
     parse_offline_confirmed_kline,
 )
-from .bybit_public_ws_once import _bounded_json, _subscription_ack
+from .bybit_public_ws_once import _bounded_json, _subscription_ack, _is_public_pong
 from .market_data import DataValidationError
 
 MAX_BATCH_FRAMES = 4096
@@ -69,6 +69,9 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
             if not _subscription_ack(payload):
                 raise DataValidationError("offline WS subscription not acknowledged")
             ack = True
+            continue
+        if _is_public_pong(payload):
+            # Heartbeats are neither market data nor additional ACKs.
             continue
         if (set(payload) != {"topic", "type", "ts", "data"}
                 or payload.get("topic") not in subscribed

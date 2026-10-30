@@ -314,3 +314,8 @@ Reconhecer `data` como array é compatibilidade de transporte, não evidência d
 ## J1 WS9 #344 — evidência de cardinalidade não implica validação temporal ou Top50
 
 Sessão owner-only pública comprovou um frame V5 com 2..8 registros na virada da hora, mas diagnóstico `kline_clock` não aponta qual subregra e não atesta candle fechado válido. Processar todos os registros antes de persistir um fechado, e recusar ambiguidades de vários fechados ou linhas não válidas; não reinterpretar timestamps nem afrouxar relógio sem evidência. Sem autorização live, negociação ou mudança no SQLite privado. J1 mercado Top50 permanece não verificada.
+
+
+## J1/WS10 #346 — replay de controle e PIT histórico ainda pendente (30/10/2026)
+
+Replay offline ignora somente pong Bybit já reconhecido no observador após ACK válido; pong não altera candle, DB ou ranking. Pong malformado, controle desconhecido ou pré-ACK aborta. Testes cobrem replay idempotente e fail-closed. **Não concluído:** auditoria 720h com múltiplos escopos point-in-time validados. O contrato atual usa um snapshot e limite de sete dias: nenhum sucesso de 30d, 50 ativos de mercado, licença de dados ou live pode ser afirmado nesta entrega. Sem rede, alteração de schema, ordens ou dados privados da VPS.
