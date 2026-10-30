@@ -611,3 +611,12 @@ Executar testes `test_j1_bybit_public_ws_once.py` e regressões `test_j1_bybit_w
 ## J1 WS7 #340 — teste de protocolo público e envelopes separados
 
 Rodar `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q` e regressões #332/#330/#326. Confirmar pong `op=ping,ret_msg=pong` (linear/inverse) e `op=pong,args=[decimal timestamp]` (outros canais públicos), negar campos extras, e distinguir `kline_root_keys`, `kline_topic`, `kline_type`, `kline_rows`, `kline_fields` sem valores do provedor. Preservar recusas de malformed, pré-ACK, Decimal, relógio e falso confirm. CI GitHub docs/Windows/Chrome pré e pós-merge, sem conexão real nos testes. Não promover Top50/live.
+
+
+## J1 WS8 #342 — array Kline e atomicidade de validação
+
+Testes `python3 -m unittest discover -s tests -p test_j1_bybit_public_ws_once.py -q` e regressões WS #326/#328/#330/#332. Cobrir `data=[]` (sem candle), multiobjeto aberto+confirmado válido, segundo objeto malicioso após confirmado (nunca sucesso parcial), item não-dict, array 9+, não-lista, relógio inválido até no array vazio, contrato Decimal/OHLC e fechamento UTC. CI Linux/docs/Windows/Chrome no head final e após merge. Zero rede, credenciais, ordens ou escrita owner.
+
+## J1 WS8 — auditoria estrutural sem candles aprovados (30/10/2026)
+
+A PR #343 incorpora uma sonda `--diagnostic-only` separada do observador fail-closed, sem persistência: em uma única conexão com orçamento máximo de 64 frames/90s mede somente histogramas de formato `data` (ausente, nulo, escalar, objeto, array 0/1/2..8/>8), itens objeto, `confirm` booleano, erros sanitizados e fase relativa à virada UTC. O modo diagnóstico não certifica nem armazena candles; continua após mensagem inválida apenas para investigar formas, mantendo ACK e o escopo do tópico, sem retransmissões ou novas conexões. O formato oficial V5 define `data` como array e o SDK pybit repassa Kline sem remodelar, porém NENHUMA ocorrência real de lote com 0 ou >1 linha foi ainda provada. Uma futura execução depende de CI/merge e opt-in e visa esclarecer o frame `kline_rows` de 19 mensagens. O pipeline offline e cache SQLite ainda exigem exatamente uma linha; não conectar o diagnóstico aos dois nem promover feed real antes de corrigir o contrato de ponta a ponta. J1 #2/#319 continuam abertas.

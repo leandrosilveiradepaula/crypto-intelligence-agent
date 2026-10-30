@@ -741,3 +741,12 @@ Terceiro teste real na VPS: 16/16 + 7/7 testes offline PASS; ACK reconhecido, 19
 ## J1 WS7 #340 — envelope real ainda não validado (30/10/2026)
 
 Owner executou um WS público real após 19+7 testes PASS, recebeu 21 frames com ACK positiva, mas `failure_category=kline_envelope`; nenhum candle validado. Implementação offline diferencia chaves raiz, tópico, tipo, rows e campos, reconhece variantes de controle público documentadas sem credenciais; nenhuma nova sonda real nesta entrega. J1 #319/#2 e direitos live permanecem abertos; não afirmar Top50 marketwide.
+
+
+## J1 WS8 #342 — cardinalidade de linhas Kline (30/10/2026 UTC)
+
+Sonda pública owner-only confirmou ACK e 19 frames, mas falhou `kline_rows` sem candle validado. A implementação offline deixa de exigir exatamente um registro em `data`, valida lotes limitados com rejeição total em caso de linha inválida e ignora lista vazia sem sucesso. A causa real ainda depende de uma única observação futura com SHA homologado. J1 #2/#319/#217 abertas.
+
+## J1 WS8 — auditoria estrutural sem candles aprovados (30/10/2026)
+
+A PR #343 incorpora uma sonda `--diagnostic-only` separada do observador fail-closed, sem persistência: em uma única conexão com orçamento máximo de 64 frames/90s mede somente histogramas de formato `data` (ausente, nulo, escalar, objeto, array 0/1/2..8/>8), itens objeto, `confirm` booleano, erros sanitizados e fase relativa à virada UTC. O modo diagnóstico não certifica nem armazena candles; continua após mensagem inválida apenas para investigar formas, mantendo ACK e o escopo do tópico, sem retransmissões ou novas conexões. O formato oficial V5 define `data` como array e o SDK pybit repassa Kline sem remodelar, porém NENHUMA ocorrência real de lote com 0 ou >1 linha foi ainda provada. Uma futura execução depende de CI/merge e opt-in e visa esclarecer o frame `kline_rows` de 19 mensagens. O pipeline offline e cache SQLite ainda exigem exatamente uma linha; não conectar o diagnóstico aos dois nem promover feed real antes de corrigir o contrato de ponta a ponta. J1 #2/#319 continuam abertas.

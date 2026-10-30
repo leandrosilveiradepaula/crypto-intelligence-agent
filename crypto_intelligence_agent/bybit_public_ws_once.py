@@ -148,7 +148,9 @@ def _safe_failure_category(error: Exception, stage: str) -> str:
         "ws_kline_root_keys_invalid": "kline_root_keys",
         "ws_kline_topic_invalid": "kline_topic",
         "ws_kline_type_invalid": "kline_type",
-        "ws_kline_shape_invalid": "kline_rows",
+        "ws_kline_rows_type_invalid": "kline_rows_type",
+        "ws_kline_rows_nonobject_invalid": "kline_rows_nonobject",
+        "ws_kline_rows_overflow_invalid": "kline_rows_overflow",
         "ws_kline_fields_invalid": "kline_fields",
     }
     for prefix, category in mapping.items():
@@ -173,13 +175,30 @@ def _check_closed(frame: dict, *, received_ms: int) -> bool:
     if frame.get("type") != "snapshot":
         raise DataValidationError("ws_kline_type_invalid")
     rows = frame.get("data")
-    if type(rows) is not list or len(rows) != 1 or type(rows[0]) is not dict:
-        raise DataValidationError("ws_kline_shape_invalid")
-    row = rows[0]
+    if type(rows) is not list:
+        raise DataValidationError("ws_kline_rows_type_invalid")
+    if len(rows) > 8:
+        raise DataValidationError("ws_kline_rows_overflow_invalid")
+    if any(type(row) is not dict for row in rows):
+        raise DataValidationError("ws_kline_rows_nonobject_invalid")
+    if type(frame["ts"]) is not int or frame["ts"] > received_ms + 5000 or received_ms - frame["ts"] > 30000:
+        raise DataValidationError("ws_clock_invalid")
+    # Validate every row before approving any closed candle.
+    return any_closed_after_full_validation(rows, frame["ts"], received_ms)
+
+
+def any_closed_after_full_validation(rows: list, server: int, received_ms: int) -> bool:
+    any_closed = False
+    for row in rows:
+        any_closed = _validate_one_kline_row(row, server, received_ms) or any_closed
+    return any_closed
+
+
+def _validate_one_kline_row(row: dict, server: int, received_ms: int) -> bool:
     expected = {"start", "end", "interval", "open", "high", "low", "close", "volume", "turnover", "confirm", "timestamp"}
     if set(row) != expected:
         raise DataValidationError("ws_kline_fields_invalid")
-    start, end, stamp, server = row["start"], row["end"], row["timestamp"], frame["ts"]
+    start, end, stamp = row["start"], row["end"], row["timestamp"]
     if any(type(v) is not int for v in (start, end, stamp, server, received_ms)):
         raise DataValidationError("ws_time_type_invalid")
     if (row["interval"] != "60" or start <= 0 or start % HOUR_MS or end != start + HOUR_MS - 1
@@ -262,6 +281,182 @@ def observe_once(*, session_factory: Callable[[], StreamSession], clock: Callabl
     return WSOnceResult("ws_unacknowledged_market_data" if preack_frames and not acknowledged else "ws_frame_budget_exhausted", frames, 0, acknowledged)
 
 
+
+# A diagnostic observer is intentionally separate from the strict candle gate.
+# It never emits, stores, hashes, or certifies any market payload.
+_SHAPE_COUNT_KEYS = (
+    "ack_frames", "pong_frames", "unknown_controls", "before_ack_market_frames",
+    "target_market_frames", "unexpected_topic_frames", "invalid_json_frames",
+    "data_missing", "data_array_0", "data_array_1", "data_array_2_to_8",
+    "data_array_over_8", "data_object", "data_null", "data_other",
+    "non_object_array_frames", "confirmed_true_rows", "confirmed_false_rows",
+    "confirmed_invalid_rows", "strict_valid_open_frames",
+    "strict_valid_closed_candidates", "strict_rejected_frames",
+    "before_utc_boundary_frames", "after_utc_boundary_frames", "other_time_frames",
+)
+
+
+def _shape_diagnostic_phase(received_ms: int) -> str:
+    """UTC relative bucket only: absolute timestamps never enter the report."""
+    phase = received_ms % HOUR_MS
+    if phase >= HOUR_MS - 20_000:
+        return "before_utc_boundary_frames"
+    if phase <= 20_000:
+        return "after_utc_boundary_frames"
+    return "other_time_frames"
+
+
+def _shape_diagnostic_data(payload: dict, counts: dict) -> str | None:
+    """Classify bounded structure only; caller discards source payload."""
+    if "data" not in payload:
+        counts["data_missing"] += 1
+        return "missing"
+    rows = payload["data"]
+    if type(rows) is not list:
+        if type(rows) is dict:
+            label = "object"
+            counts["data_object"] += 1
+        elif rows is None:
+            label = "null"
+            counts["data_null"] += 1
+        else:
+            label = "other"
+            counts["data_other"] += 1
+        return label
+    if not rows:
+        counts["data_array_0"] += 1
+        return "array_0"
+    if len(rows) == 1:
+        counts["data_array_1"] += 1
+        label = None
+    elif len(rows) <= 8:
+        counts["data_array_2_to_8"] += 1
+        label = "array_2_to_8"
+    else:
+        counts["data_array_over_8"] += 1
+        label = "array_over_8"
+    if any(type(row) is not dict for row in rows[:8]):
+        counts["non_object_array_frames"] += 1
+        label = "non_object_array"
+    for row in rows[:8]:
+        if type(row) is dict:
+            c = row.get("confirm")
+            if c is True:
+                counts["confirmed_true_rows"] += 1
+            elif c is False:
+                counts["confirmed_false_rows"] += 1
+            else:
+                counts["confirmed_invalid_rows"] += 1
+    return label
+
+
+def diagnose_shape_once(*, session_factory: Callable[[], StreamSession],
+                        clock: Callable[[], float] = time.monotonic,
+                        wall_ms: Callable[[], int] = lambda: int(time.time() * 1000),
+                        max_frames: int = MAX_FRAMES,
+                        max_seconds: int = MAX_SECONDS) -> dict:
+    """One bounded socket, anonymous structural histogram, never candle approval.
+
+    An invalid market frame does not end diagnostic collection, but the normal
+    observe_once() validator continues to fail closed on the same frame.
+    No source values, exact timestamps, hashes, strings, or payloads are retained.
+    """
+    if (type(max_frames) is not int or not 1 <= max_frames <= MAX_FRAMES
+            or type(max_seconds) is not int or not 1 <= max_seconds <= MAX_SECONDS):
+        raise DataValidationError("ws_diagnostic_budget_invalid")
+    counts = {key: 0 for key in _SHAPE_COUNT_KEYS}
+    frames = 0
+    acknowledged = False
+    anomaly = "none"
+    anomaly_phase = "none"
+    first_validation_failure = "none"
+    stopped = "ws_shape_diagnostic_complete"
+    started = clock()
+    last_ping = started
+
+    def report() -> dict:
+        return {
+            "status": stopped,
+            "frames_seen": frames,
+            "subscription_acknowledged": acknowledged,
+            "first_shape_anomaly": anomaly,
+            "first_shape_anomaly_phase": anomaly_phase,
+            "first_validation_failure": first_validation_failure,
+            "shape_counts": dict(counts),
+            "confirmed_closed_events": 0,
+            "data_stored": False,
+            "orders_sent": False,
+            "marketwide_top50_verified": False,
+            "network_source_authenticated": False,
+            "live_trading_authorized": False,
+        }
+
+    try:
+        with closing(session_factory()) as session:
+            session.send(json.dumps({"op": "subscribe", "args": [TOPIC]}, separators=(",", ":")))
+            while frames < max_frames:
+                if clock() - started >= max_seconds:
+                    break
+                now = clock()
+                if acknowledged and now - last_ping >= 20:
+                    session.send('{"op":"ping"}')
+                    last_ping = now
+                try:
+                    raw = session.recv(min(max_seconds - (clock() - started), 5.0))
+                except TimeoutError:
+                    continue
+                frames += 1
+                received_ms = wall_ms()
+                phase = _shape_diagnostic_phase(received_ms)
+                counts[phase] += 1
+                try:
+                    payload = _bounded_json(raw)
+                except (ValueError, TypeError, RuntimeError, DataValidationError):
+                    counts["invalid_json_frames"] += 1
+                    continue
+                if payload.get("op") == "subscribe" and not acknowledged:
+                    counts["ack_frames"] += 1
+                    if _subscription_ack(payload):
+                        acknowledged = True
+                        continue
+                    stopped = "ws_shape_diagnostic_ack_not_accepted"
+                    break
+                if _is_public_pong(payload):
+                    counts["pong_frames"] += 1
+                    continue
+                if "op" in payload and "topic" not in payload and "data" not in payload:
+                    counts["unknown_controls"] += 1
+                    continue
+                if payload.get("topic") != TOPIC:
+                    counts["unexpected_topic_frames"] += 1
+                    continue
+                if not acknowledged:
+                    counts["before_ack_market_frames"] += 1
+                counts["target_market_frames"] += 1
+                shape = _shape_diagnostic_data(payload, counts)
+                if shape is not None and anomaly == "none":
+                    anomaly = shape
+                    anomaly_phase = phase.replace("_frames", "")
+                try:
+                    valid_close = _check_closed(payload, received_ms=received_ms)
+                except (ValueError, TypeError, RuntimeError, DataValidationError) as error:
+                    counts["strict_rejected_frames"] += 1
+                    if first_validation_failure == "none":
+                        first_validation_failure = _safe_failure_category(error, "kline")
+                    continue
+                # Even valid close candidates are NOT accepted as candles here.
+                if acknowledged:
+                    counts["strict_valid_closed_candidates" if valid_close
+                           else "strict_valid_open_frames"] += 1
+    except (OSError, ValueError, TypeError, RuntimeError, ImportError):
+        stopped = "ws_shape_diagnostic_transport_stopped"
+    if stopped == "ws_shape_diagnostic_complete":
+        if not acknowledged:
+            stopped = "ws_shape_diagnostic_no_ack"
+        elif counts["target_market_frames"] == 0:
+            stopped = "ws_shape_diagnostic_no_market_frames"
+    return report()
+
 def _real_session_factory():
     from websockets.sync.client import connect
     from websockets.exceptions import ConnectionClosed
@@ -280,9 +475,10 @@ def _real_session_factory():
 def owner_probe(*, allow_public_websocket: bool, confirm_region_and_personal_research: bool,
                 schedule_closed_utc_hour: bool = False,
                 clock_ms: Callable[[], int] = lambda: int(time.time() * 1000),
-                sleeper: Callable[[float], None] = time.sleep) -> dict:
+                sleeper: Callable[[float], None] = time.sleep,
+                diagnostic_only: bool = False) -> dict:
     if (allow_public_websocket is not True or confirm_region_and_personal_research is not True
-            or os.name != "posix"):
+            or type(diagnostic_only) is not bool or os.name != "posix"):
         return WSOnceResult("ws_owner_opt_in_or_posix_required", 0, 0, False).sanitized_report()
     if schedule_closed_utc_hour is not True:
         return WSOnceResult("ws_closed_hour_schedule_required", 0, 0, False).sanitized_report()
@@ -294,4 +490,6 @@ def owner_probe(*, allow_public_websocket: bool, confirm_region_and_personal_res
             sleeper(seconds)
     except (OSError, ValueError, TypeError, RuntimeError):
         return WSOnceResult("ws_owner_clock_invalid", 0, 0, False).sanitized_report()
+    if diagnostic_only:
+        return diagnose_shape_once(session_factory=_real_session_factory)
     return observe_once(session_factory=_real_session_factory).sanitized_report()

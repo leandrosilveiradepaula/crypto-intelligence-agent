@@ -157,7 +157,7 @@ class Tests(unittest.TestCase):
         cases=[(dict(frame(),surprise="private"),"kline_root_keys"),
                (dict(frame(),topic="kline.60.OTHERUSDT"),"kline_topic"),
                (dict(frame(),type="delta"),"kline_type"),
-               (dict(frame(),data=[]),"kline_rows"),
+               (dict(frame(),data="invalid"),"kline_rows_type"),
                (dict(frame(),data=[dict(frame()["data"][0],surprise="private")]),"kline_fields")]
         for bad,expected in cases:
             with self.subTest(expected=expected):
@@ -166,6 +166,69 @@ class Tests(unittest.TestCase):
                 self.assertEqual(x["failure_category"],expected)
                 self.assertEqual(x["confirmed_closed_events"],0)
                 self.assertNotIn("private",str(x))
+
+    def test_empty_and_multiple_rows_without_partial_approval(self):
+        empty=frame();empty["data"]=[]
+        self.assertEqual(self.call([ACK,empty,frame()],max_frames=3)["confirmed_closed_events"],1)
+        self.assertEqual(self.call([ACK,empty],max_frames=2)["confirmed_closed_events"],0)
+        multiple=frame();multiple["data"]=[dict(frame(False)["data"][0]), dict(frame()["data"][0])]
+        self.assertEqual(self.call([ACK,multiple],max_frames=2)["confirmed_closed_events"],1)
+        invalid=frame();invalid["data"]=[dict(frame()["data"][0]),dict(frame()["data"][0],turnover="NaN")]
+        self.assertEqual(self.call([ACK,invalid],max_frames=2)["confirmed_closed_events"],0)
+        bad_type=frame();bad_type["data"]=[None]
+        self.assertEqual(self.call([ACK,bad_type],max_frames=2)["failure_category"],"kline_rows_nonobject")
+        overflow=frame();overflow["data"]=[dict(frame()["data"][0]) for _ in range(9)]
+        self.assertEqual(self.call([ACK,overflow],max_frames=2)["failure_category"],"kline_rows_overflow")
+        bad_clock=frame();bad_clock["data"]=[];bad_clock["ts"]=FIRST+HOUR_MS+9000
+        self.assertEqual(self.call([ACK,bad_clock],max_frames=2)["failure_category"],"kline_clock")
+
+    def test_diagnostic_only_aggregates_without_approving(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        a=frame();a["data"]=[]
+        b=frame();b["data"]=[dict(frame(False)["data"][0]),dict(frame()["data"][0])]
+        c=frame();c["data"]={"secret_price": "999"}
+        sock=Socket([ACK,a,b,c])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=4,max_seconds=3)
+        self.assertEqual(report["shape_counts"]["data_array_0"],1)
+        self.assertEqual(report["shape_counts"]["data_array_2_to_8"],1)
+        self.assertEqual(report["shape_counts"]["data_object"],1)
+        self.assertEqual(report["confirmed_closed_events"],0)
+        self.assertEqual(report["shape_counts"]["strict_valid_closed_candidates"],1)
+        self.assertEqual(report["shape_counts"]["strict_rejected_frames"],1)
+        self.assertTrue(sock.closed)
+        self.assertNotIn("999",str(report))
+        self.assertNotIn("BTCUSDT",str(report))
+        self.assertFalse(report["data_stored"])
+        self.assertFalse(report["orders_sent"])
+
+    def test_diagnostic_rejection_does_not_end_session(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        bad=frame();bad["data"]="not-list"
+        sock=Socket([ACK,bad,frame()])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=3,max_seconds=2)
+        self.assertEqual(report["shape_counts"]["data_other"],1)
+        self.assertEqual(report["shape_counts"]["strict_rejected_frames"],1)
+        self.assertEqual(report["shape_counts"]["strict_valid_closed_candidates"],1)
+        self.assertEqual(report["confirmed_closed_events"],0)
+
+    def test_diagnostic_no_ack_is_not_success(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        sock=Socket([frame()])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=1,max_seconds=3)
+        self.assertEqual(report["status"],"ws_shape_diagnostic_no_ack")
+        self.assertFalse(report["subscription_acknowledged"])
+        self.assertEqual(report["confirmed_closed_events"],0)
+
+    def test_diagnostic_ack_only_is_not_success(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        sock=Socket([ACK])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=1,max_seconds=3)
+        self.assertEqual(report["status"],"ws_shape_diagnostic_no_market_frames")
+        self.assertTrue(report["subscription_acknowledged"])
 
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
