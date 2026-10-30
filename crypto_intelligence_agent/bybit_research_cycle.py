@@ -69,7 +69,7 @@ def stage_offline_bybit_research_cycle(
 ) -> BybitResearchCycleResult:
     """Strict preflight of all raw pages before any SQLite write.
 
-    Each 1..72-bar page is separately verified by the existing WU39 research
+    Each 1..72-bar or exact 720-bar page is separately verified by the existing WU39 research
     parser and then revalidated by SQLiteBybitResearchStore.commit_raw_pair.
     Multi-symbol atomicity is NOT claimed. Failed/retried batches are fail-closed
     and the store's immutable page replay handles idempotent safe restarts.

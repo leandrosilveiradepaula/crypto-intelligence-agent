@@ -184,7 +184,7 @@ def kline_url(symbol: str, start: int, end: int) -> str:
     if (type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None
             or type(start) is not int or type(end) is not int
             or start <= 0 or start % HOUR_MS or end % HOUR_MS or remainder
-            or hours not in (1, 24, 72)):
+            or hours not in (1, 24, 72, 720)):
         raise J1BybitCaptureError("invalid_kline_window")
     parameters = (
         ("category", "linear"), ("symbol", symbol), ("interval", "60"),
@@ -243,7 +243,7 @@ class BoundedBybitPublicClient:
             allowed = (set(queries) == {
                 "category", "symbol", "interval", "start", "end", "limit"
             } and queries.get("interval") == ["60"]
-                and queries.get("limit") in (["1"], ["24"], ["72"])
+                and queries.get("limit") in (["1"], ["24"], ["72"], ["720"])
                 and _SYMBOL.fullmatch(queries.get("symbol", [""])[0]) is not None)
             if allowed:
                 try:
