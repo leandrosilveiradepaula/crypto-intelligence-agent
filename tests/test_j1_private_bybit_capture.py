@@ -123,6 +123,114 @@ class OwnerJ1CaptureTests(unittest.TestCase):
                         clock_ms=fake.now, **invalid)
             self.assertEqual(fake.call_count, 0)
 
+    def test_expanded_52_ranks_50_and_stages_full_private_720h(self):
+        """Single fake run: 52 eligible, 50 ranked, 36,000 closed bars, no HTTP."""
+        from test_j1_bybit_top50_closed_hour_rank import NOW, DECISION
+        from test_j1_bybit_exit_vertical import kline
+        from crypto_intelligence_agent.research_registry_catalog import load_reviewed_registry
+        from crypto_intelligence_agent.bybit_research_storage import SQLiteBybitResearchStore
+        from crypto_intelligence_agent.bybit_pit_research import BybitPITResearchSelection
+
+        reg = load_reviewed_registry("expanded-52", as_of_ms=NOW)
+        symbols = tuple(a.base + "USDT" for a in reg.assets)
+        self.assertEqual(len(symbols), 52)
+        now = [NOW]
+        calls = []
+        def clock():
+            now[0] += 90
+            return now[0]
+        def transport(url, limit):
+            calls.append(url)
+            q = parse_qs(urlsplit(url).query)
+            stamp = now[0] - 45
+            if "/instruments-info" in url:
+                syms = (q["symbol"][0],) if "symbol" in q else symbols
+                page = instrument_page(
+                    [instrument_row(sym) for sym in syms],
+                    ms=stamp, cursor="")
+                for row in page["result"]["list"]:
+                    row.pop("marketRegion", None)
+                    row.pop("underlyingTicker", None)
+                return json.dumps(page).encode("ascii")
+            sym = q["symbol"][0]
+            start, end = int(q["start"][0]), int(q["end"][0]) + 1
+            hours = (end - start) // H
+            self.assertIn(hours, (24, 720))
+            page = kline(sym, start, hours, str(symbols.index(sym) + 1))
+            page["time"] = stamp
+            return json.dumps(page).encode("ascii")
+
+        with TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "private"
+            folder.mkdir(mode=0o700)
+            db = folder / "bulk-50.sqlite"
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                result = owner_private_j1_capture(
+                    database=db, max_assets=50,
+                    history_page_hours=720, registry_variant="expanded-52",
+                    allow_public_network=True, allow_private_storage=True,
+                    confirm_region_and_personal_research=True,
+                    client=BoundedBybitPublicClient(transport=transport),
+                    clock_ms=clock,
+                )
+            self.assertEqual(result["selected_assets"],50)
+            self.assertEqual(result["closed_candles"],36000)
+            self.assertEqual(result["reviewed_eligible_ranked_count"],52)
+            self.assertEqual(result["requests_attempted"],154)
+            self.assertEqual(db.stat().st_mode & 0o777,0o600)
+            self.assertFalse(result["marketwide_top50_verified"])
+            self.assertFalse(result["orders_sent"])
+            store=SQLiteBybitResearchStore(db)
+            self.assertTrue(store.quality_report(
+                symbol=symbols[-1],interval="1h",
+                start_open_ms=DECISION-720*H,
+                end_open_ms=DECISION).complete_for_offline_staging_only)
+            self.assertFalse(store.replay_pit_research_snapshot(
+                result["last_pit_sha256"] if False else next(
+                    row[0] for row in __import__("sqlite3").connect(db).execute(
+                        "SELECT observed_at_ms FROM bybit_research_pit_snapshots LIMIT 1"
+                    ))
+            ).verified_market_top50)
+
+    def test_expanded_52_below_requested_count_aborts_before_storage(self):
+        from test_j1_bybit_top50_closed_hour_rank import NOW
+        from crypto_intelligence_agent.research_registry_catalog import load_reviewed_registry
+        reg=load_reviewed_registry("expanded-52",as_of_ms=NOW)
+        symbols=tuple(a.base+"USDT" for a in reg.assets[:49])
+        now=[NOW]
+        def clock():
+            now[0]+=100
+            return now[0]
+        def transport(url,limit):
+            q=parse_qs(urlsplit(url).query)
+            if "/instruments-info" in url:
+                page=instrument_page(
+                    [instrument_row(sym) for sym in symbols], ms=now[0]-40)
+                for row in page["result"]["list"]:
+                    row.pop("marketRegion",None)
+                    row.pop("underlyingTicker",None)
+                return json.dumps(page).encode("ascii")
+            from test_j1_bybit_exit_vertical import kline
+            sym=q["symbol"][0]
+            start=int(q["start"][0])
+            page=kline(sym,start,24,"1")
+            page["time"]=now[0]-40
+            return json.dumps(page).encode("ascii")
+        with TemporaryDirectory() as tmp:
+            folder=Path(tmp)/"private"
+            folder.mkdir(mode=0o700)
+            db=folder/"bulk-50.sqlite"
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                with self.assertRaisesRegex(J1BybitCaptureError,"below_requested_assets"):
+                    owner_private_j1_capture(
+                        database=db,max_assets=50,history_page_hours=720,
+                        registry_variant="expanded-52",
+                        allow_public_network=True,allow_private_storage=True,
+                        confirm_region_and_personal_research=True,
+                        client=BoundedBybitPublicClient(transport=transport),
+                        clock_ms=clock)
+            self.assertFalse(db.exists())
+
     def test_one_run_30d_and_two_distinct_hourly_updates(self):
         fake = FakeFeed()
         def advance(seconds):
