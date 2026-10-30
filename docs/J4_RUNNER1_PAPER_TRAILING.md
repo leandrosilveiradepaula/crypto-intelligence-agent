@@ -14,3 +14,8 @@ Após a execução **simulada** de parciais, o componente `paper_runner_trailing
 `tests/test_paper_runner_trailing.py` usa `SQLitePaperPositionJournal` real de fixture com fills, reservas, runner residual 6%, LONG/SHORT, ativações, gaps, escala Decimal, cronologia, identidade, invariância de replay, no-network e DB imutável. CI docs/Linux, Windows offline e Chrome/PAPER em SHA exato; revisão e merge sem deploy.
 
 `orders_sent=false`, `order_submission_enabled=false`, `native_stop_verified=false`, `approved_for_live_use=false`, `financial_pnl_available=false`, sem trades, conta, acesso VPS, chave ou gasto. J1 #2/#319 permanecem pendentes de owner-run, **adiado pelo proprietário**, sem interferir nesta jornada.
+
+
+## Extensão RUNNER2 — durabilidade apenas da pesquisa local PAPER
+
+O contrato da RUNNER1 continua funcional e read-only. RUNNER2 permite gravar sequência tipada de mark hipotético em um banco SQLite **novo** e separado, vinculada ao checkpoint exato de posição PAPER e à política explícita. Reiniciar e executar `load_paper_runner_journal` restaura histórico e stop hipotético anterior; reentrada de tick idêntico é idempotente, divergência falha. O gatilho terminal impede novas marcações sem declarar fill, ordem ou stop instalado. Bancos AUTO2/AUTO4/J1 não são modificados por este journal. O replay recusa períodos sem ticks ou cutoff muito distante; dados da corretora não são autenticados. Não há atomicidade de snapshots entre DB de posição e DB de trailing.
