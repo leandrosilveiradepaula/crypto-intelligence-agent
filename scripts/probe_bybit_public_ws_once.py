@@ -9,11 +9,13 @@ def main(argv=None) -> int:
     parser.add_argument("--allow-public-websocket", action="store_true")
     parser.add_argument("--confirm-region-and-personal-research", action="store_true")
     parser.add_argument("--schedule-closed-utc-hour", action="store_true")
+    parser.add_argument("--diagnostic-only", action="store_true", help="structural counters only; no candle approvals")
     args = parser.parse_args(argv)
     report = owner_probe(allow_public_websocket=args.allow_public_websocket,
                          confirm_region_and_personal_research=args.confirm_region_and_personal_research,
-                         schedule_closed_utc_hour=args.schedule_closed_utc_hour)
+                         schedule_closed_utc_hour=args.schedule_closed_utc_hour,
+                         diagnostic_only=args.diagnostic_only)
     print(json.dumps(report, sort_keys=True, separators=(",", ":")))
-    return 0 if report["status"] == "ws_one_closed_hour_observed_only" else 1
+    return 0 if report["status"] in ("ws_one_closed_hour_observed_only", "ws_shape_diagnostic_complete") else 1
 
 if __name__ == "__main__": raise SystemExit(main())
