@@ -331,3 +331,8 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J3/PRE19 — agregação isolada de carteira sintética
 
 `synthetic_portfolio_replay.py` recebe legs imutáveis com um relógio UTC comum e reutiliza `replay_synthetic_mark_path` (incluindo tiers PIT e calendário opcional de funding). Não duplica motor de custo ou execução. Expõe equity, drawdown prefixo, exposição assinada/bruta, concentração e correlação descritiva de retornos mark; global PnL fica nulo após qualquer liquidação proxy sem saída verificável. Sem armazenamento, troca de moeda, cross-margin ou dados live. Ver `docs/J3_PRE19_PORTFOLIO_REPLAY.md`.
+
+
+## J3/PRE20 — guardrail de risco global, somente avaliação offline
+
+`synthetic_portfolio_risk_limits.py` é avaliador read-only sobre `synthetic_portfolio_replay.py`, sem duplicar custos, marcação, funding ou execução. `SyntheticPortfolioRiskLimits` recebe parâmetros tipados exact-Decimal; `SyntheticPortfolioCheckpoint.max_open_notional_quote` usa o maior nocional mark das legs abertas (nulo após liquidação proxy sem fill). A auditoria aplica limites de margem de entrada, bruto/net de exposição, concentração e drawdown causal com trava após incerteza. Não modifica ledger, posição, ordem, dados ou deploy. Contrato `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md`.
