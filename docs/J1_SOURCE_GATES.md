@@ -309,3 +309,8 @@ Resposta de controle sem dados (`pong`) não equivale a candle, autorização de
 ## J1 WS8 #342 — cardinalidade array não é prova de qualidade
 
 Reconhecer `data` como array é compatibilidade de transporte, não evidência de autenticidade, completude de 24h, 30d de 50 integrantes ou autorização live. A promoção de candle exige ACK válido, tempo, OHLCV, `confirm=true` e todas as linhas de um frame válidas; `data=[]` ou entrada inválida nunca gera candle aprovado. J1 #2/#319/#217 seguem gates pendentes, sem contornar limites REST ou modificar dataset privado.
+
+
+## J1 WS9 #344 — evidência de cardinalidade não implica validação temporal ou Top50
+
+Sessão owner-only pública comprovou um frame V5 com 2..8 registros na virada da hora, mas diagnóstico `kline_clock` não aponta qual subregra e não atesta candle fechado válido. Processar todos os registros antes de persistir um fechado, e recusar ambiguidades de vários fechados ou linhas não válidas; não reinterpretar timestamps nem afrouxar relógio sem evidência. Sem autorização live, negociação ou mudança no SQLite privado. J1 mercado Top50 permanece não verificada.

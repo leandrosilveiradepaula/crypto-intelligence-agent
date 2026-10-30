@@ -70,44 +70,67 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                 raise DataValidationError("offline WS subscription not acknowledged")
             ack = True
             continue
-        if (payload.get("topic") not in subscribed or type(payload.get("data")) is not list
-                or len(payload["data"]) != 1 or type(payload["data"][0]) is not dict):
+        if (set(payload) != {"topic", "type", "ts", "data"}
+                or payload.get("topic") not in subscribed
+                or payload.get("type") != "snapshot"
+                or type(payload.get("ts")) is not int
+                or type(payload.get("data")) is not list):
             raise DataValidationError("offline WS unsubscribed or malformed topic")
-        row = payload["data"][0]
-        if row.get("confirm") is False:
-            # Open events are never persisted. Require the exact known shape
-            # and bounded numeric fields without pretending the candle closed.
+        rows = payload["data"]
+        if len(rows) > 8 or any(type(row) is not dict for row in rows):
+            raise DataValidationError("offline WS batch row count or type invalid")
+        if payload["ts"] > item[1] or item[1] - payload["ts"] > 30000:
+            raise DataValidationError("offline WS batch server clock invalid")
+        # Validate ALL rows before any SQLite write. A frame is indivisible.
+        # The established single-candle parser remains the source of truth.
+        pending_closed = []
+        pending_open = 0
+        seen_hours = set()
+        for row in rows:
             from .bybit_closed_stream_cache import _ROW_FIELDS, HOUR_MS
-            from .bybit_linear_candle_research import _strict_decimal
-            if (set(payload) != {"topic", "type", "ts", "data"}
-                    or payload["type"] != "snapshot"
-                    or set(row) != _ROW_FIELDS
-                    or row["interval"] != "60"
-                    or type(payload["ts"]) is not int
-                    or any(type(row[key]) is not int for key in ("start", "end", "timestamp"))
-                    or row["start"] <= 0 or row["start"] % HOUR_MS
-                    or row["end"] != row["start"] + HOUR_MS - 1
-                    or not row["start"] <= row["timestamp"] <= row["end"]
-                    or payload["ts"] > item[1] or item[1] - payload["ts"] > 30000):
-                raise DataValidationError("offline WS open candle envelope invalid")
-            values = {key: _strict_decimal(row[key], label=key, may_be_zero=False)
-                      for key in ("open", "high", "low", "close")}
-            for key in ("volume", "turnover"):
-                _strict_decimal(row[key], label=key, may_be_zero=True)
-            if (values["high"] < max(values.values())
-                    or values["low"] > min(values.values())):
-                raise DataValidationError("offline WS open candle OHLC invalid")
-            opened += 1
-            continue
-        event = parse_offline_confirmed_kline(payload, scope=scope,
-                                             received_at_ms=item[1])
-        outcome = journal.append(event)
-        if outcome == "appended":
-            appended += 1
-        elif outcome == "idempotent":
-            replayed += 1
-        else:
-            raise DataValidationError("offline WS journal outcome invalid")
+            if set(row) != _ROW_FIELDS:
+                raise DataValidationError("offline WS batch row fields invalid")
+            start_ms = row["start"]
+            if type(start_ms) is not int or start_ms in seen_hours:
+                raise DataValidationError("offline WS duplicate or malformed hour")
+            seen_hours.add(start_ms)
+            if row["confirm"] is True:
+                if pending_closed:
+                    # Multiple closed candles require atomic journal batch support.
+                    raise DataValidationError("offline WS multiple closed rows require atomic batch")
+                one = dict(payload, data=[row])
+                pending_closed.append(parse_offline_confirmed_kline(
+                    one, scope=scope, received_at_ms=item[1]))
+            elif row["confirm"] is False:
+                # An open update must be fully checked, but cannot be stored.
+                from .bybit_linear_candle_research import _strict_decimal
+                if (row["interval"] != "60"
+                        or any(type(row[key]) is not int
+                               for key in ("start", "end", "timestamp"))
+                        or row["start"] <= 0 or row["start"] % HOUR_MS
+                        or row["end"] != row["start"] + HOUR_MS - 1
+                        or not row["start"] <= row["timestamp"] <= row["end"]):
+                    raise DataValidationError("offline WS open candle clock invalid")
+                values = {key: _strict_decimal(row[key], label=key, may_be_zero=False)
+                          for key in ("open", "high", "low", "close")}
+                for key in ("volume", "turnover"):
+                    _strict_decimal(row[key], label=key, may_be_zero=True)
+                if (values["high"] < max(values.values())
+                        or values["low"] > min(values.values())):
+                    raise DataValidationError("offline WS open candle OHLC invalid")
+                pending_open += 1
+            else:
+                raise DataValidationError("offline WS confirm must be boolean")
+        # No partially validated frame reaches the journal.
+        if pending_closed:
+            outcome = journal.append(pending_closed[0])
+            if outcome == "appended":
+                appended += 1
+            elif outcome == "idempotent":
+                replayed += 1
+            else:
+                raise DataValidationError("offline WS journal outcome invalid")
+        opened += pending_open
     if not ack:
         raise DataValidationError("offline WS ACK missing")
     return OfflineWSBatch(count, opened, appended, replayed, ack)

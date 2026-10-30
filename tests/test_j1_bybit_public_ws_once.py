@@ -230,6 +230,29 @@ class Tests(unittest.TestCase):
         self.assertEqual(report["status"],"ws_shape_diagnostic_no_market_frames")
         self.assertTrue(report["subscription_acknowledged"])
 
+    def test_diagnostic_clock_categories_are_sanitized(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import diagnose_shape_once
+        bad=frame()
+        bad["data"][0]["timestamp"]=FIRST+HOUR_MS+1
+        sock=Socket([ACK,bad])
+        report=diagnose_shape_once(session_factory=lambda:sock,clock=lambda:0,
+                                   wall_ms=lambda:FIRST+HOUR_MS+2000,max_frames=2,max_seconds=2)
+        self.assertEqual(report["first_validation_failure"],"clock_trade_stamp")
+        self.assertEqual(report["shape_counts"]["reject_clock_trade_stamp"],1)
+        self.assertEqual(report["confirmed_closed_events"],0)
+        self.assertNotIn(str(FIRST),str(report))
+        self.assertNotIn("BTCUSDT",str(report))
+
+    def test_closed_server_before_end_has_precise_failure(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import _check_closed, _safe_failure_category
+        from crypto_intelligence_agent.market_data import DataValidationError
+        f=frame()
+        f["ts"]=FIRST+HOUR_MS-1
+        with self.assertRaises(DataValidationError) as ctx:
+            _check_closed(f,received_ms=FIRST+HOUR_MS+2000)
+        self.assertEqual(_safe_failure_category(ctx.exception,"kline"),
+                         "clock_closed_before_server_end")
+
     def test_budget_type(self):
         with self.assertRaises(Exception):observe_once(session_factory=lambda:Socket([]),max_frames=True)
 
