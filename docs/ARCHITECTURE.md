@@ -377,3 +377,6 @@ A interface `scripts.inspect_paper_positions` consome somente `PaperPositionBala
 
 ### J6/PRE5 — laboratório local executável do ciclo runner
 O CLI `scripts.demo_paper_runner_close_flow` usa os módulos de produção já auditados de AUTO4, RUNNER2, J6/PRE4 e leitura J5 dentro de um diretório temporário. O cenário injeta eventos FILL **somente de fixture**, demonstra restart e idempotência sem gateway externo, e remove arquivos após terminar. O JSON público tem apenas estágios e flags negativas para live/ordens. Contrato `docs/J6_PRE5_PAPER_RUNNER_E2E_DEMO.md`.
+
+### J6/PRE6 — observador de incidentes PAPER
+`paper_runner_incident_audit.py` compõe apenas inspeção AUTO4 e, por opt-in completo, replay RUNNER2 para uma posição escolhida. Ele devolve um DTO JSON sanitizado e determinístico; não abre writer, não cria banco, não agrega posições nem faz acesso externo. Após qualquer reserva RUNNER3, a fonte para pendência é AUTO4 e o fingerprint RUNNER2 anterior é tratado como checkpoint superado, nunca rearmado. Os SQLite independentes permanecem sem atomicidade distribuída; falha de leitura, schema, hash ou evidência bloqueia o relatório operacional.

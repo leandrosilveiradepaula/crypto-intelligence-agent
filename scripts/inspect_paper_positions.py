@@ -20,6 +20,9 @@ import sys
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_runner_journal import load_paper_runner_journal
 from crypto_intelligence_agent.paper_runner_trailing import PaperRunnerTrailPolicy, PaperRunnerTrailReport
+from crypto_intelligence_agent.paper_runner_incident_audit import (
+    PaperRunnerIncidentReport, audit_paper_runner_incident,
+)
 from crypto_intelligence_agent.paper_position_inspection import inspect_paper_position
 from crypto_intelligence_agent.paper_position_inspection import (
     PaperPositionInspection, inspect_paper_positions,
@@ -250,9 +253,38 @@ def render_position_card_markup(p: dict[str, object]) -> str:
     )
 
 
+def render_incident_card_markup(report: PaperRunnerIncidentReport) -> str:
+    """Mobile-safe, descriptive PRE6 card; it exposes no journal identity."""
+    if type(report) is not PaperRunnerIncidentReport:
+        raise DataValidationError("typed PAPER incident report required")
+    payload = report.sanitized_report()
+    if (payload["orders_sent"] or payload["native_stop_verified"]
+            or payload["live_trading_authorized"] or payload["approved_for_live_use"]):
+        raise DataValidationError("unsafe PAPER incident flags")
+    severity = payload["severity"]
+    if severity not in ("INFO", "REVIEW", "BLOCKED"):
+        raise DataValidationError("invalid PAPER incident severity")
+    quantities = (
+        "Saldo residual PAPER: " + _cell(payload["residual_paper_units"])
+        + " · reservado: " + _cell(payload["reserved_units"])
+        + " · preenchido: " + _cell(payload["filled_units"])
+    )
+    return (
+        '<article class="position-card" data-incident-code="' + _cell(payload["incident_code"]) + '">'
+        + '<h3>Auditoria operacional do runner</h3>'
+        + '<p class="meta">Severidade: <strong class="' + ('unknown' if severity != 'INFO' else 'accent') + '">'
+        + _cell(severity) + '</strong> · código: ' + _cell(payload["incident_code"]) + '</p>'
+        + '<p class="details" data-field="incident-reason">' + _cell(payload["reason"]) + '</p>'
+        + '<p class="details" data-field="incident-quantities">' + quantities + '</p>'
+        + '<p class="details">Reconciliação necessária: ' + _cell("sim" if payload["reconciliation_required"] else "não")
+        + ' · stop nativo não verificado · somente PAPER.</p></article>'
+    )
+
+
 def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
                            template: str, *,
-                           runner_observation: tuple[str, PaperRunnerTrailReport] | None = None) -> str:
+                           runner_observation: tuple[str, PaperRunnerTrailReport] | None = None,
+                           incident_report: PaperRunnerIncidentReport | None = None) -> str:
     snap = multi_paper_snapshot(selected, runner_observation=runner_observation)
     if (type(template) is not str
             or not template.lstrip().lower().startswith("<!doctype html>")
@@ -267,6 +299,8 @@ def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
         raise DataValidationError("unsafe PAPER portfolio template") from exc
 
     cards, rows = [], []
+    if incident_report is not None:
+        cards.append(render_incident_card_markup(incident_report))
     for p in snap["positions"]:
         cards.append(render_position_card_markup(p))
         unknown = p["unknown_order_count"]
@@ -323,6 +357,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--runner-max-tick-gap-ms", type=int)
     parser.add_argument("--runner-max-last-tick-age-ms", type=int)
     parser.add_argument("--runner-as-of-ms", type=int)
+    parser.add_argument("--incident-position-id",
+                        help="Mostra auditoria PRE6 da posição explicitamente selecionada.")
     args = parser.parse_args(argv)
     runner_options = (args.runner_journal, args.runner_position_id,
                       args.runner_activation_bps, args.runner_trail_distance_bps,
@@ -332,6 +368,9 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("RUNNER2 exige journal, ID, política e cutoff completos")
     if args.runner_position_id is not None and args.runner_position_id not in args.position_id:
         parser.error("RUNNER2 exige posição explicitamente selecionada")
+    if (args.incident_position_id is not None
+            and args.incident_position_id not in args.position_id):
+        parser.error("auditoria PRE6 exige posição explicitamente selecionada")
     selected = inspect_paper_positions(
         args.journal, tuple(args.position_id),
         opening_order_path=args.opening_order_journal,
@@ -357,10 +396,18 @@ def main(argv: list[str] | None = None) -> None:
         if refreshed != previous:
             raise DataValidationError("PAPER position changed during RUNNER2 read")
         runner_observation = (args.runner_position_id, report)
+    incident_report = None
+    if args.incident_position_id is not None:
+        incident_report = audit_paper_runner_incident(
+            args.journal, args.incident_position_id,
+            runner_journal_path=args.runner_journal,
+            policy=(policy if args.runner_journal is not None else None),
+            as_of_ms=(args.runner_as_of_ms if args.runner_journal is not None else None),
+        )
     payload = (
         render_paper_positions(
             selected, TEMPLATE.read_text(encoding="utf-8"),
-            runner_observation=runner_observation,
+            runner_observation=runner_observation, incident_report=incident_report,
         )
         if args.format == "html" else
         json.dumps(multi_paper_snapshot(selected, runner_observation=runner_observation), sort_keys=True,

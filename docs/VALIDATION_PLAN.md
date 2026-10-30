@@ -753,3 +753,6 @@ Cenários com SQLite de fixture e sem chamada de corretora: gatilho ausente bloq
 
 ### J6/PRE5 #397 — demonstração operacional isolada
 Executar `python -m scripts.demo_paper_runner_close_flow` somente com fixtures locais, verificar contabilidade 100=94+6, reserva PENDING 6 sem FILL, restart sem segundo ID, FILL explícito final 6, saldo 0 e UI J5 refletindo encerramento PAPER. Testes determinísticos em duas execuções, bloqueio de socket/urllib, limpeza TEMP, stdout sanitizado e rejeição de parâmetros de endpoint/credencial. CI docs/Linux, Windows/offline e Chrome/PAPER SHA exato mais revisão; nenhuma autenticação, dados de mercado, lucro ou ordem real decorrem da demonstração.
+
+### J6/PRE6 #399 — auditoria read-only de incidentes
+Executar `test_paper_runner_incident_audit.py` por discovery junto de regressões RUNNER2/RUNNER3. Cobrir runner sem proteção, NOT_ACTIVATED/TRACKING/TRIGGERED, PENDING/UNKNOWN, fill parcial e cancelamento, checkpoint superado pela reserva AUTO4, journal ausente/digest corrompido, JSON sem caminho/ID/preço e imutabilidade/no-network. Validar que relatório bloqueado não resulta em retry, ordem, stop ou confirmação financeira. CI Linux/docs, Windows/offline e Chrome/PAPER no SHA da PR continuam obrigatórios; não é homologação prospectiva ou financeira.
