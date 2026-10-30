@@ -47,7 +47,7 @@ def _clock() -> int:
     return time.time_ns() // 1_000_000
 
 
-def _observe(client, clock, max_assets):
+def _observe(client, clock, max_assets, registry_variant=REGISTRY):
     start = clock()
     decision = start // HOUR_MS * HOUR_MS
     if start - decision < CLOSE_SAFETY_MS:
@@ -77,7 +77,7 @@ def _observe(client, clock, max_assets):
     try:
         scan = scan_bybit_linear_instruments_offline(
             instrument_pages=tuple(pages), requested_cursors=tuple(cursors),
-            observed_at_ms=at_scan, registry_variant=REGISTRY,
+            observed_at_ms=at_scan, registry_variant=registry_variant,
             page_received_at_ms=tuple(received_at_ms),
         )
     except DataValidationError as exc:
@@ -106,7 +106,7 @@ def _observe(client, clock, max_assets):
         selection = select_bybit_reviewed_sample_pit(
             instrument_pages=tuple(pages), requested_cursors=tuple(cursors),
             kline_pages=klines, observed_at_ms=observed,
-            decision_at_ms=decision, registry_variant=REGISTRY,
+            decision_at_ms=decision, registry_variant=registry_variant,
             max_candidates=max_assets,
             instrument_page_received_at_ms=tuple(received_at_ms),
             max_contract_age_ms=MAX_PIT_BATCH_CONTRACT_AGE_MS,
@@ -119,7 +119,7 @@ def _observe(client, clock, max_assets):
     return selection, scan.instrument_row_count
 
 
-def _page(client, clock, symbol, first, hours):
+def _page(client, clock, symbol, first, hours, registry_variant=REGISTRY):
     started = clock()
     meta_raw, _ = client.get(instruments_url(symbol=symbol))
     meta_at = clock()
@@ -128,7 +128,7 @@ def _page(client, clock, symbol, first, hours):
     chart_at = clock()
     try:
         manifest = LocalBybitCaptureManifest(
-            symbol=symbol, interval="1h", registry_variant=REGISTRY,
+            symbol=symbol, interval="1h", registry_variant=registry_variant,
             start_open_ms=first, end_open_ms=first + hours * HOUR_MS,
             capture_started_ms=started, instrument_received_ms=meta_at,
             kline_received_ms=chart_at, capture_finished_ms=chart_at,
@@ -140,6 +140,8 @@ def _page(client, clock, symbol, first, hours):
 
 def owner_private_j1_capture(
     *, database: str | Path, max_assets: int = 2,
+    history_page_hours: int = PAGE_HOURS,
+    registry_variant: str = REGISTRY,
     two_hourly_updates: bool = False,
     allow_public_network: bool = False,
     allow_private_storage: bool = False,
@@ -150,7 +152,10 @@ def owner_private_j1_capture(
 ) -> dict:
     if (allow_public_network is not True or allow_private_storage is not True
             or confirm_region_and_personal_research is not True
-            or type(max_assets) is not int or not 1 <= max_assets <= 13
+            or type(max_assets) is not int or not 1 <= max_assets <= 50
+            or history_page_hours not in (72, 720)
+            or registry_variant not in ("expanded-13", "expanded-52")
+            or (registry_variant == "expanded-13" and max_assets > 13)
             or type(two_hourly_updates) is not bool or os.name != "posix"):
         raise J1BybitCaptureError("owner_opt_in_or_posix_requirement_failed")
     target = _private_db_path(database)
@@ -159,14 +164,15 @@ def owner_private_j1_capture(
     clock = clock_ms or _clock
     sleeper = sleep or time.sleep
     fetch = client or BoundedBybitPublicClient()
-    load_reviewed_registry(REGISTRY, as_of_ms=clock())
-    original, instrument_rows = _observe(fetch, clock, max_assets)
+    load_reviewed_registry(registry_variant, as_of_ms=clock())
+    original, instrument_rows = _observe(fetch, clock, max_assets, registry_variant)
     start = original.decision_at_ms - HISTORY_HOURS * HOUR_MS
     history = {
         member.symbol: tuple(
             _page(fetch, clock, member.symbol,
-                  start + i * PAGE_HOURS * HOUR_MS, PAGE_HOURS)
-            for i in range(HISTORY_HOURS // PAGE_HOURS)
+                  start + i * history_page_hours * HOUR_MS, history_page_hours,
+                  registry_variant)
+            for i in range(HISTORY_HOURS // history_page_hours)
         ) for member in original.ranked
     }
     # First ensure each required page passes the offline preflight; the
@@ -189,7 +195,7 @@ def owner_private_j1_capture(
                 sleeper(remaining_ms / 1000)
             if clock() // HOUR_MS * HOUR_MS != next_hour:
                 raise J1BybitCaptureError("hourly_update_window_missed")
-            updated, _ = _observe(fetch, clock, max_assets)
+            updated, _ = _observe(fetch, clock, max_assets, registry_variant)
             if updated.decision_at_ms != next_hour:
                 raise J1BybitCaptureError("nonconsecutive_hourly_snapshot")
             if {x.symbol for x in previous.ranked} != {
@@ -197,7 +203,7 @@ def owner_private_j1_capture(
                 raise J1BybitCaptureError("sample_changed_requires_new_backfill")
             hourly_pages = {
                 m.symbol: _page(fetch, clock, m.symbol,
-                                previous.decision_at_ms, 1)
+                                previous.decision_at_ms, 1, registry_variant)
                 for m in updated.ranked
             }
             append_offline_bybit_hourly_update(
@@ -246,6 +252,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database", required=True)
     parser.add_argument("--max-assets", type=int, default=2)
+    parser.add_argument("--history-page-hours", type=int, choices=(72, 720), default=72)
+    parser.add_argument("--registry-variant", choices=("expanded-13", "expanded-52"), default=REGISTRY)
     parser.add_argument("--two-hourly-updates", action="store_true")
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--allow-private-storage", action="store_true")
@@ -258,6 +266,8 @@ def main() -> int:
     try:
         report = owner_private_j1_capture(
             database=args.database, max_assets=args.max_assets,
+            history_page_hours=args.history_page_hours,
+            registry_variant=args.registry_variant,
             two_hourly_updates=args.two_hourly_updates,
             allow_public_network=args.allow_public_network,
             allow_private_storage=args.allow_private_storage,

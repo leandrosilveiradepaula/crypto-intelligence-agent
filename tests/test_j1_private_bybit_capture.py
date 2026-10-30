@@ -81,6 +81,48 @@ class OwnerJ1CaptureTests(unittest.TestCase):
             self.assertTrue(db.is_file())
             self.assertEqual(db.stat().st_mode & 0o777, 0o600)
 
+    def test_bulk_720h_exact_closed_history_has_seven_gets_and_replay(self):
+        fake = FakeFeed()
+        with TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "private"
+            folder.mkdir(mode=0o700)
+            db = folder / "bulk.sqlite"
+            with patch("socket.create_connection", side_effect=AssertionError("network")):
+                report = owner_private_j1_capture(
+                    database=db, max_assets=2, history_page_hours=720,
+                    registry_variant="expanded-13",
+                    allow_public_network=True, allow_private_storage=True,
+                    confirm_region_and_personal_research=True,
+                    client=BoundedBybitPublicClient(transport=fake.get),
+                    clock_ms=fake.now,
+                )
+            self.assertEqual(report["requests_attempted"], 7)
+            self.assertEqual(report["closed_candles"], 1440)
+            self.assertTrue(report["quality_and_readonly_replay"])
+            self.assertFalse(report["marketwide_top50_verified"])
+            self.assertEqual(db.stat().st_mode & 0o777, 0o600)
+
+    def test_bulk_invalid_modes_fail_before_network(self):
+        fake = FakeFeed()
+        with TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "private"
+            folder.mkdir(mode=0o700)
+            for invalid in (
+                {"history_page_hours": 719},
+                {"history_page_hours": 721},
+                {"registry_variant": "invalid"},
+                {"max_assets": 51},
+                {"max_assets": 14, "registry_variant": "expanded-13"},
+            ):
+                with self.subTest(invalid=invalid), self.assertRaises(J1BybitCaptureError):
+                    owner_private_j1_capture(
+                        database=folder / "bulk.sqlite",
+                        allow_public_network=True, allow_private_storage=True,
+                        confirm_region_and_personal_research=True,
+                        client=BoundedBybitPublicClient(transport=fake.get),
+                        clock_ms=fake.now, **invalid)
+            self.assertEqual(fake.call_count, 0)
+
     def test_one_run_30d_and_two_distinct_hourly_updates(self):
         fake = FakeFeed()
         def advance(seconds):

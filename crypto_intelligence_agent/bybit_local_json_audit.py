@@ -17,7 +17,7 @@ from .market_data import DataValidationError, interval_duration_ms
 
 MAX_LOCAL_BODY = 131_072
 MAX_CAPTURE_DURATION_MS = 30_000
-MAX_WINDOW_CANDLES = 72
+MAX_WINDOW_CANDLES = 720
 _MAX_TIMESTAMP = 253_402_300_799_999
 
 MANIFEST_FIELDS = frozenset({
@@ -61,11 +61,11 @@ class LocalBybitCaptureManifest:
         if (
             self.end_open_ms <= self.start_open_ms
             or (self.end_open_ms - self.start_open_ms) % period != 0
-            or not 1 <= (self.end_open_ms - self.start_open_ms) // period <= MAX_WINDOW_CANDLES
+            or (self.end_open_ms - self.start_open_ms) // period not in (*range(1, 73), 720)
             or (self.start_open_ms % period) != 0
             or (self.end_open_ms % period) != 0
         ):
-            raise DataValidationError("local Bybit window requires 1..72 contiguous UTC hours")
+            raise DataValidationError("local Bybit window requires 1..72 or exactly 720 contiguous UTC hours")
         if not (
             self.capture_started_ms <= self.instrument_received_ms
             <= self.kline_received_ms <= self.capture_finished_ms

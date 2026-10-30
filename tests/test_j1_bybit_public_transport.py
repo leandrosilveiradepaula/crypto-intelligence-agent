@@ -29,10 +29,11 @@ class J1BybitTransportTests(unittest.TestCase):
             instruments_url(symbol="BTCUSDT"),
             kline_url("BTCUSDT", T-24*H, T),
             kline_url("BTCUSDT", T-72*H, T),
+            kline_url("BTCUSDT", T-720*H, T),
         ):
             self.assertEqual(client.get(url)[1]["retCode"], 0)
-        self.assertEqual(client.requests_attempted, 5)
-        self.assertEqual(len(urls), 5)
+        self.assertEqual(client.requests_attempted, 6)
+        self.assertEqual(len(urls), 6)
         self.assertEqual(
             parse_qs(urlsplit(urls[1]).query)["cursor"], ["abc/+=="])
 
