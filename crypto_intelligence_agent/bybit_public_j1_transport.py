@@ -278,7 +278,8 @@ class BoundedBybitPublicClient:
             self._last_request = time.monotonic()
         limit = (
             MAX_RESPONSE_BYTES if (
-                queries.get("limit") == ["200"]
+                (parsed.path == "/v5/market/instruments-info"
+                 and queries.get("limit") == ["1000"])
                 or parsed.path == "/v5/market/tickers"
             ) else 131_072
         )
