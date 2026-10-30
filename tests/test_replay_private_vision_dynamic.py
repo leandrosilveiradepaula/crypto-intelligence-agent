@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 import json
+from decimal import Decimal
 import os
 import unittest
 
@@ -56,6 +57,19 @@ class VisionReplayCLI(unittest.TestCase):
             self.assertFalse(result["marketwide_top50_verified"])
             self.assertFalse(result["orders_sent"])
             self.assertEqual(result["network_requests"],0)
+            from test_vision_intrabar_stress import terms
+            stressed=private_vision_dynamic_replay(
+                manifest_paths=tuple(manifests),
+                allow_personal_nonproduction_research=True,
+                first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                stress_assumptions=terms(),
+                stress_selection_cost_bps=Decimal("0"))
+            self.assertIn("hypothetical_intrabar_oos",stressed)
+            extra=stressed["hypothetical_intrabar_oos"]
+            self.assertFalse(extra["financial_backtest_approved"])
+            self.assertFalse(extra["orders_sent"])
+            self.assertNotIn("BTCUSDT",str(stressed))
+
             self.assertEqual(result["data_stored"],False)
             self.assertNotIn("BTCUSDT",json.dumps(result))
             with redirect_stdout(StringIO()) as output:
@@ -63,6 +77,24 @@ class VisionReplayCLI(unittest.TestCase):
                     "--first-decision-ms",str(first),
                     "--last-decision-ms",str(first+24*HOUR_MS)])
             self.assertEqual(rc,1)
+            with redirect_stdout(StringIO()) as stress_output:
+                rc_stress=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-intrabar-stress",
+                    "--stress-margin-quote","2","--stress-leverage","50",
+                    "--stress-stop-fraction","0.01",
+                    "--stress-target-fraction","0.03",
+                    "--stress-maintenance-bps","0",
+                    "--stress-fee-bps","0",
+                    "--stress-slippage-bps","0",
+                    "--stress-funding-bps","0",
+                    "--stress-selection-cost-bps","0"])
+            self.assertEqual(rc_stress,0)
+            self.assertIn("hypothetical_intrabar_oos",stress_output.getvalue())
+            self.assertNotIn("BTCUSDT",stress_output.getvalue())
             self.assertNotIn(str(root),output.getvalue())
             self.assertEqual(json.loads(output.getvalue())["status"],
                              "private_vision_dynamic_replay_rejected")
