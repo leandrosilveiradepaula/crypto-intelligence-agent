@@ -28,6 +28,41 @@ TEMPLATE = Path(__file__).resolve().parent.parent / "web" / "paper-positions-tem
 _SCHEMA = "paper_positions_snapshot_v1"
 
 
+_RUNNER_LABELS = {
+    "NO_RESIDUAL_RUNNER_CONFIGURED": "Sem runner residual configurado",
+    "PENDING_EXIT_RECONCILIATION": "Saída pendente ou incerta — reconciliar",
+    "WAITING_FOR_PARTIAL_FILLS": "Aguardando preenchimento das parciais",
+    "RUNNER_CONFIRMED_NOT_PROTECTED": "Runner confirmado — stop não instalado",
+}
+
+
+def _paper_runner_readiness(item: PaperPositionInspection) -> str:
+    """Only the local PAPER fill ledger can confirm a residual balance.
+
+    No mark, stop placement, trailing activation or execution is inferred.
+    """
+    from crypto_intelligence_agent.paper_position_reservations import PaperPositionBalance
+    if (type(item) is not PaperPositionInspection or
+            type(item.balance) is not PaperPositionBalance):
+        raise DataValidationError("validated PAPER position required for runner status")
+    b = item.balance
+    if (b.reserved_unfilled_units > 0 or
+            any(o.snapshot.requires_reconciliation for o in b.exit_orders)):
+        return "PENDING_EXIT_RECONCILIATION"
+    if b.runner_floor_units == 0:
+        return "NO_RESIDUAL_RUNNER_CONFIGURED"
+    if (b.runner_floor_units > 0 and
+            b.confirmed_remaining_units == b.runner_floor_units and
+            b.unreserved_units == b.runner_floor_units and
+            b.tranches and all(
+                row.filled_units == row.target_units and
+                row.reserved_unfilled_units == 0 and
+                row.unallocated_units == 0 for row in b.tranches
+            )):
+        return "RUNNER_CONFIRMED_NOT_PROTECTED"
+    return "WAITING_FOR_PARTIAL_FILLS"
+
+
 def multi_paper_snapshot(
     selected: tuple[PaperPositionInspection, ...],
 ) -> dict[str, object]:
@@ -54,6 +89,9 @@ def multi_paper_snapshot(
             "confirmed_remaining_units": p["confirmed_remaining_units"],
             "unreserved_units": p["unreserved_units"],
             "runner_floor_units": p["runner_floor_units"],
+            "runner_readiness": _paper_runner_readiness(item),
+            "trailing_stop_active": False,
+            "native_stop_verified": False,
             "margin_intent_requested": p["margin_intent_requested"],
             "opening_order_cross_checked": single["opening_order_cross_checked"],
             "pending_or_unknown_orders": sum(
@@ -88,6 +126,9 @@ def render_position_card_markup(p: dict[str, object]) -> str:
     Shared by the existing multi-position HTML and the operator overview.
     The caller must first validate all selected positions.
     """
+    runner_code = p["runner_readiness"]
+    if runner_code not in _RUNNER_LABELS or p["trailing_stop_active"] is not False:
+        raise DataValidationError("invalid PAPER runner UI state")
     pending = p["pending_or_unknown_orders"]
     unknown = p["unknown_order_count"]
     margin = p["margin_intent_requested"]
@@ -126,6 +167,9 @@ def render_position_card_markup(p: dict[str, object]) -> str:
         + '<div><dt>Disponível não reservado</dt><dd class="accent">' + _cell(p["unreserved_units"]) + '</dd></div>'
         + '</dl>'
         + margin_html + crosscheck_html
+        + '<p class="details" data-field="runner-readiness" data-runner-state="'
+        + _cell(runner_code) + '">' + _cell(_RUNNER_LABELS[runner_code])
+        + ' · Somente PAPER; trailing não ativo e stop nativo não verificado.</p>'
         + '<p class="details">Saldo confirmado: ' + _cell(p["confirmed_remaining_units"])
         + ' · piso residual: ' + _cell(p["runner_floor_units"])
         + ' · pendentes: ' + _cell(pending)
@@ -159,7 +203,7 @@ def render_paper_positions(selected: tuple[PaperPositionInspection, ...],
             p["position_id"], p["venue_candidate"] + " · " + p["symbol_fixture"]
             + " · " + p["side"], p["initial_confirmed_units"],
             p["filled_exit_units"], p["reserved_unfilled_units"],
-            p["unreserved_units"], unknown,
+            p["unreserved_units"], unknown, _RUNNER_LABELS[p["runner_readiness"]],
         )
         rows.append("<tr>" + "".join("<td>" + _cell(x) + "</td>" for x in fields)
                     + "</tr>")
