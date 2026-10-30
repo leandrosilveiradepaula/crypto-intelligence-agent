@@ -942,3 +942,8 @@ A CLI `scripts.replay_private_vision_dynamic` recebeu opt-in `--audit-intrabar-s
 ## Checkpoint J3/PRE19 #373 — 30/10/2026
 
 `main` confirmada em `a69be5202ff2afe5f16202d4e2767e57458ec30a`, sem PRs abertas no início da work unit; #371/#372 concluídas na integração anterior. Issue #373 aberta, branch `work/j3-pre19-portfolio-replay`; arquivos `synthetic_portfolio_replay.py`, `test_synthetic_portfolio_replay.py`, `docs/J3_PRE19_PORTFOLIO_REPLAY.md` e atualizações D181/arquitetura/validação/jornadas. A agregação exige identidade/relógio, evita double-count e anula valores financeiros a partir de liquidação proxy sem PnL definido. Próxima ação autorizada: abrir PR, observar e corrigir CI, revisar SHA exato, fazer merge sem deploy se verde e fechar #373 com evidências. Limites: VPS, credenciais, conta real, novos dados, ordens, testnet, migration e custo adicional não utilizados. J1 #2/#217/#319, J2 #3, J3 #4 ainda abertas.
+
+
+## Checkpoint J3/PRE20 #375 — 30/10/2026
+
+`main=19d74c71a04d1bbef7015024bd0861ab9a34ec87` verificada e zero PRs abertas no início; #373 fechada com PR #374 integrada. Issue #375 aberta; branch `work/j3-pre20-portfolio-risk-limits`. Implementados guardrails retrospectivos com limites explícitos, métrica de maior nocional aberto e testes, documentação D182 e checklist `docs/J3_PRE20_PORTFOLIO_RISK_LIMITS.md`. Próxima ação: abrir PR, conferir CI Linux/docs, Windows/offline, Chrome/PAPER, corrigir regressões, verificar SHA exato e integrar somente sem produção. Bloqueios permanentes J1 #2/#217/#319 e J3 #4; dados de corretora, VPS, contas, credenciais, ordens reais, migrations e deploy não utilizados. R$0 de custo adicional.
