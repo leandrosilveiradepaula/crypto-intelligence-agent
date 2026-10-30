@@ -66,7 +66,7 @@ def _policy_values(policy: PaperRunnerTrailPolicy) -> list[object]:
 
 
 def _checked_path(path: str | Path, *, existing: bool) -> Path:
-    if type(path) not in (Path, str):
+    if not isinstance(path, (str, Path)):
         raise DataValidationError("local PAPER runner journal path required")
     source = Path(path)
     if (not str(path) or str(path).startswith("file:") or
