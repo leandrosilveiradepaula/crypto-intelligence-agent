@@ -264,3 +264,8 @@ O CLI owner-only permite operação autônoma de pesquisa privada por uma única
 ## J1/EXIT4 #381 — universo dinâmico sem perder histórico
 
 Requisito de J1: Top50 muda a cada hora de decisão conforme as 24h fechadas; alteração do conjunto não invalida dados já persistidos nem obriga recapturar 720h de membro retornante. Entrantes recebem backfill exato desde T0-720h, ex-membros permanecem cacheados e a auditoria lê cada snapshot imutável PIT no seu contexto. Pesquisa pessoal offline com um único owner-run, sem comportamento live. Aceite de engenharia depende de testes e CI; aceite de J1 mercado depende de coleta real e denominador completo.
+
+
+## J4/RUNNER1 #383 — monitoramento read-only de runner confirmado
+
+O módulo separado PAPER observa mark em série causal após todas as parciais do journal e emite estado de trailing LONG/SHORT, sem ordens, alteração de stop na venue ou PnL. O estado não é durável após restart: requisito futuro de J4/J6 continua pendente. Contrato `docs/J4_RUNNER1_PAPER_TRAILING.md` e testes no repositório. J1 owner-run na VPS ficou estacionado por solicitação do usuário; outras jornadas podem continuar sem ele.
