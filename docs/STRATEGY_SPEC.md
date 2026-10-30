@@ -182,3 +182,8 @@ A soma de posições fictícias só é coerente com um relógio e uma moeda sint
 ## J3/PRE20 — risco de carteira não deve ser ocultado por hedge
 
 Para long e short simultâneos, exposição bruta por marcação permanece alta mesmo quando líquido assinado é zero; dois limites são avaliados independentemente. Margem e alavancagem são fixadas para cada posição na abertura; saídas condicionais não geram automática liberação de margem ou trading. Breach de concentração, nocional por ativo e drawdown do prefixo bloqueiam nova pesquisa de entrada. Uma liquidação hipotética sem preço de fill torna desconhecido o PnL/equity de carteira, e nenhuma decisão de entrada recebe autorização. Isto é gate para pesquisa, não execução nem homologação J3. Issue #375.
+
+
+## J4/RUNNER1 — trailing do runner residual (somente PAPER)
+
+Depois de preenchimentos confirmados das tranches e sem reservas/UNKNOWN, a parcela residual configurada pode ser observada por trailing sobre mark sintético. LONG ratcheteia stop para cima com máximo favorável; SHORT para baixo com mínimo favorável. A ação resultante é sinal de pesquisa `TRIGGERED_HYPOTHETICAL_ONLY` e não ordem, fill, PnL ou stop garantido. Antes de confirmar runner, status `WAITING_FOR_CONFIRMED_RUNNER`. A política não altera posição, margem, alavancagem, ledger, nem autoriza capital real.
