@@ -1,4 +1,5 @@
 """J4 #387: durable PAPER runner recovery, no venue/exchange writes."""
+from contextlib import closing
 from decimal import Decimal as D
 from pathlib import Path
 import os
@@ -136,13 +137,13 @@ class DurablePaperRunnerTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             self.load(0)
         self.start()
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn, conn:
             conn.execute("UPDATE paper_runner_state SET digest='bad'")
         with self.assertRaises(DataValidationError):
             self.load(0)
         with self.assertRaises(DataValidationError):
             self.append("102",1)
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn, conn:
             conn.execute("CREATE TABLE foreign_table(x TEXT)")
         with self.assertRaises(DataValidationError):
             self.load(0)
