@@ -692,3 +692,8 @@ Executar `tests/test_vision_risk_sensitivity.py` e a suíte POSIX privada `test_
 ## J3/PRE17 #369 — tiers PIT e replay de mark/trade
 
 Testar `test_synthetic_risk_tiers.py` e `test_synthetic_mark_replay.py`: faixas contíguas e deduções contínuas, fontes/versionamento `fixture_...`, horários de observação/validade, mudanças somente futuras, marcação usada para risco, preços de trade para stop/alvo, funding cronológico, LONG/SHORT, gap entre ticks, staleness e comportamento legado imutável. CI Linux/docs, Windows offline e Chrome/PAPER no head da PR, comparar SHA e impedir merge vermelho. Resultado não autoriza liquidacão real, aplicação de calendário de funding da venue, ordens ou PnL.
+
+
+## J3/PRE18 #371 — cobertura temporal de funding
+
+Executar `tests/test_synthetic_funding_calendar.py` junto de `test_synthetic_mark_replay.py` e `test_synthetic_risk_tiers.py`; exigir teste de 0/1/N timestamps, evento perdido/extra/duplicado, igualdade de timestamps entre funding e tick, LONG/SHORT, janelas sem evento, limite de 64, ausência de rede, Decimal sob contexto baixo e caminho legado. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final; sem dados de conta, ordem ou validação de calendário real.
