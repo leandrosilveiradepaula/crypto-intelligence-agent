@@ -862,3 +862,8 @@ J1 EXIT4 (#381/PR #382) integrada em `main=c58c6845d5f1be97cf27ec1ffb50a54d4a970
 ## 30/10/2026 — J5/PRE14 #385, sem VPS
 
 J4/RUNNER1 #383/PR #384 integrada na `main` em `08cae66c40779562fa15a07e5be77fce157d5c51` após CI docs/Linux, Windows e Chrome/PAPER verdes. Na J5 #6, issue #385 e branch `work/j5-pre14-paper-runner-state-mobile` mostram no cartão mobile e tabela o estado do runner obtido somente do ledger PAPER: aguardando parcial, reconciliar ordem incerta, sem runner ou runner confirmado sem stop verificado. Sem consultar marcação do mercado nem presumir trailing ativo. CI e merge desta nova work unit ainda sujeitos a confirmação. J1 #2/#319 continuam com execução owner-run na VPS explicitamente adiada; nenhuma nova solicitação ao proprietário.
+
+
+## 30/10/2026 — J4/RUNNER2 #387, persistência offline sem VPS
+
+Base confirmada `main=1f15409e09c9f3072cf4c526dd57edf90b085e80`, PRs abertas zero no início. Issue #387 e branch `work/j4-runner2-durable-paper-trailing` introduzem SQLite separado de eventos mark sintéticos, leitura RO do diário de posições e replay monotônico via RUNNER1. Os cenários de recuperação, corrupção, idempotência e staleness foram codificados em testes; CI/merge devem ser verificados. A coleta J1 #2/#319 segue pendente de ação externa quando possível, sem solicitar VPS agora. Nenhuma API financeira, ordem, credencial ou custo.
