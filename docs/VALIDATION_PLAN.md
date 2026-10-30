@@ -697,3 +697,8 @@ Testar `test_synthetic_risk_tiers.py` e `test_synthetic_mark_replay.py`: faixas 
 ## J3/PRE18 #371 — cobertura temporal de funding
 
 Executar `tests/test_synthetic_funding_calendar.py` junto de `test_synthetic_mark_replay.py` e `test_synthetic_risk_tiers.py`; exigir teste de 0/1/N timestamps, evento perdido/extra/duplicado, igualdade de timestamps entre funding e tick, LONG/SHORT, janelas sem evento, limite de 64, ausência de rede, Decimal sob contexto baixo e caminho legado. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final; sem dados de conta, ordem ou validação de calendário real.
+
+
+## J3/PRE19 #373 — replay multi-leg com estado desconhecido
+
+Executar `tests/test_synthetic_portfolio_replay.py` juntamente com `test_synthetic_mark_replay.py`, `test_synthetic_risk_tiers.py` e `test_synthetic_funding_calendar.py`. Validar relógio UTC comum, moeda, IDs/instrumentos únicos, múltiplas posições LONG/SHORT, no-double-count de saídas condicionais, precedência de liquidação, equity e PnL nulos após liquidação, prefix drawdown, gross/signed mark exposure, concentração, funding com calendário, tiers PIT, correlação degenerada, determinismo sob permutação e precisão Decimal. Sem rede, conta ou ordens. Exigir CI Linux/docs, Windows/offline, Chrome/PAPER no HEAD final; o gate não significa backtest financeiro aprovado.
