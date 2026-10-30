@@ -167,3 +167,8 @@ A auditoria `vision_risk_sensitivity.py` reutiliza a mesma seleção mensal OOS 
 ## J3/PRE17 — margem de manutenção sintética por nocional e ponto no tempo
 
 Manutenção pode ser testada por faixas de nocional de marcação, taxa e dedução contínua conhecidas no instante do tick, sob snapshots `fixture_...` versionados. Trade aciona apenas stop/target; mark calcula equity e condição de liquidação hipotética, sem preço de fill, trajetória intrabar ou fórmula da corretora. Dados desconhecidos/futuros e períodos sem ticks suficientes falham quando configurados os gates; nunca inferir funcionamento real de margem cross ou alavancagem 50x. Issue #369.
+
+
+## J3/PRE18 — ausência de settlement não implica financiamento zero
+
+No replay causal, a grade de eventos de funding é fixture explícita e opt-in. Sem evento para um horário da grade, recusar a simulação em vez de assumir custo zero. Eventos com horário igual a marcação de tick não possuem ordem verificável; recusar. Rate, nocional, preço de mark, manutenção, fees e slippage reais continuam independentes da grade, sem inferência de PnL ou ganho. Issue #371.
