@@ -43,6 +43,18 @@ class VisionIntrabarStressTests(unittest.TestCase):
         recv=stress_vision_candle(bar(),long=True,assumptions=terms(funding="-5"))
         self.assertLess(paid.best_net_quote,recv.best_net_quote)
 
+    def test_liquidation_worst_branch_does_not_benefit_from_fees(self):
+        for long in (True,False):
+            with self.subTest(long=long):
+                old=stress_vision_candle(bar(),long=long,assumptions=terms(fee="0"))
+                new=stress_vision_candle(bar(),long=long,assumptions=terms(fee="10"))
+                self.assertTrue(old.touched_liquidation_proxy)
+                self.assertTrue(new.touched_liquidation_proxy)
+                self.assertLess(new.worst_net_quote,old.worst_net_quote)
+                self.assertLessEqual(new.best_net_quote,old.best_net_quote)
+                self.assertLessEqual(new.worst_net_quote,D("-2"))
+                self.assertFalse(new.liquidation_formula_verified)
+
     def test_bad_inputs_fail_closed(self):
         with self.assertRaises(DataValidationError):
             stress_vision_candle(bar(),long=1,assumptions=terms())
