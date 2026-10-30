@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from contextlib import closing
+from bisect import bisect_right
 from decimal import Context, Decimal, localcontext
 from hashlib import sha256
 import json
@@ -35,6 +36,8 @@ MAX_SCOPE_AGE_MS = 7 * 86_400_000
 MAX_FRAME_BYTES = 16_384
 MAX_JOURNAL_ROWS = 100_000
 MAX_SCOPE_CONTRACTS = 500
+MAX_PIT_SCOPES = 64
+HISTORICAL_HOURS = 720
 MAX_UTC_MS = 4_102_444_800_000  # Conservative year-2100 bound.
 _VERSION = "j1-bybit-ws-closed-fixture-v1"
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
@@ -247,6 +250,74 @@ def _validated_payload(raw: str, digest: str) -> dict:
     return value
 
 
+
+def _scope_contract_fingerprint(scope: OfflineReviewedStreamScope) -> tuple:
+    """Check bounded offline metadata shape; never authenticate an exchange."""
+    if (type(scope) is not OfflineReviewedStreamScope
+            or type(scope.observed_at_ms) is not int
+            or not 0 < scope.observed_at_ms < MAX_UTC_MS
+            or type(scope.registry_sha256) is not str
+            or _DIGEST.fullmatch(scope.registry_sha256) is None
+            or type(scope.contracts) is not tuple
+            or not 1 <= len(scope.contracts) <= MAX_SCOPE_CONTRACTS
+            or type(scope.asserted_full_catalog_rows) is not int
+            or scope.asserted_full_catalog_rows < len(scope.contracts)):
+        raise DataValidationError("offline PIT scope structure invalid")
+    checked = []
+    seen = set()
+    for member in scope.contracts:
+        if (type(member) is not BybitLinearInstrumentResearch
+                or type(member.symbol) is not str
+                or type(member.base_coin) is not str
+                or member.symbol != member.base_coin + "USDT"
+                or member.symbol in seen
+                or member.quote_coin != "USDT" or member.settle_coin != "USDT"
+                or member.registry_sha256 != scope.registry_sha256
+                or type(member.observed_at_ms) is not int
+                or not 0 < member.observed_at_ms <= scope.observed_at_ms
+                or scope.observed_at_ms - member.observed_at_ms > MAX_SCOPE_AGE_MS
+                or type(member.launch_time_ms) is not int
+                or not 0 < member.launch_time_ms <= scope.observed_at_ms
+                or type(member.source) is not str
+                or any(type(value) is not Decimal or not value.is_finite() or value <= 0
+                       for value in (member.max_leverage, member.tick_size,
+                                     member.quantity_step))):
+            raise DataValidationError("offline PIT member is malformed or stale")
+        seen.add(member.symbol)
+        # Only observation timestamps may vary across the epochs. A changed
+        # contract specification is NOT silently carried into the same rank.
+        checked.append((
+            member.symbol, member.base_coin, member.quote_coin, member.settle_coin,
+            member.launch_time_ms, member.max_leverage, member.tick_size,
+            member.quantity_step, member.registry_sha256, member.source,
+        ))
+    return tuple(sorted(checked, key=lambda entry: entry[0]))
+
+
+def _validate_pit_scopes(
+    scope: OfflineReviewedStreamScope,
+    historical_scopes: tuple[OfflineReviewedStreamScope, ...],
+    decision_at_ms: int,
+) -> tuple[int, ...]:
+    """Verify a strict, bounded PIT chain of the SAME offline reviewed universe."""
+    if (type(historical_scopes) is not tuple
+            or not 1 <= len(historical_scopes) <= MAX_PIT_SCOPES
+            or historical_scopes[-1] != scope):
+        raise DataValidationError("offline PIT epochs missing or latest scope mismatched")
+    identity = _scope_contract_fingerprint(scope)
+    previous_ms = 0
+    times = []
+    for epoch in historical_scopes:
+        if (epoch.registry_sha256 != scope.registry_sha256
+                or epoch.observed_at_ms <= previous_ms
+                or epoch.observed_at_ms > decision_at_ms
+                or _scope_contract_fingerprint(epoch) != identity):
+            raise DataValidationError("offline PIT epochs unordered or universe drifted")
+        times.append(epoch.observed_at_ms)
+        previous_ms = epoch.observed_at_ms
+    return tuple(times)
+
+
 @dataclass(frozen=True)
 class OfflineStreamAudit:
     status: str
@@ -256,9 +327,14 @@ class OfflineStreamAudit:
     missing_24h_symbols: int
     complete_24h_symbols: int
     rank_digest_sha256: str | None
+    complete_720h_symbols: int | None = None
+    missing_720h_symbols: int | None = None
+    missing_720h_hour_slots: int | None = None
+    history_720h_digest_sha256: str | None = None
+    pit_scope_count: int | None = None
 
     def sanitized_report(self) -> dict:
-        return {
+        result = {
             "status": self.status,
             "persisted_rows": self.persisted_rows,
             "observed_symbols": self.observed_symbols,
@@ -270,6 +346,19 @@ class OfflineStreamAudit:
             "canonical_ohlcv_approved": False, "rights_for_live_authorized": False,
             "network_requests": 0, "orders_sent": False,
         }
+        if self.pit_scope_count is not None:
+            result.update({
+                "historical_720h_status": (
+                    "offline_720h_complete_not_marketwide"
+                    if self.missing_720h_symbols == 0 and self.complete_720h_symbols
+                    else "offline_720h_incomplete_abstain"),
+                "complete_720h_symbols": self.complete_720h_symbols,
+                "missing_720h_symbols": self.missing_720h_symbols,
+                "missing_720h_hour_slots": self.missing_720h_hour_slots,
+                "history_720h_digest_sha256": self.history_720h_digest_sha256,
+                "pit_scope_count": self.pit_scope_count,
+            })
+        return result
 
 
 class SQLiteOfflineClosedStreamJournal:
@@ -381,13 +470,21 @@ class SQLiteOfflineClosedStreamJournal:
             raise DataGapError("offline journal write failed closed") from None
 
     def audit(self, *, scope: OfflineReviewedStreamScope,
-              decision_at_ms: int, as_of_ms: int) -> OfflineStreamAudit:
+              decision_at_ms: int, as_of_ms: int,
+              historical_scopes: tuple[OfflineReviewedStreamScope, ...] | None = None,
+              ) -> OfflineStreamAudit:
         if (type(scope) is not OfflineReviewedStreamScope
                 or type(decision_at_ms) is not int
                 or type(as_of_ms) is not int or decision_at_ms <= 0
                 or decision_at_ms % HOUR_MS
                 or not decision_at_ms + 1000 <= as_of_ms < decision_at_ms + HOUR_MS):
             raise DataValidationError("offline ranking requires closed UTC decision clock")
+        # Legacy 24h calls preserve the original one-scope contract. The 720h
+        # path explicitly opts into a bounded PIT series without altering DB.
+        epoch_times = (_validate_pit_scopes(scope, historical_scopes, decision_at_ms)
+                       if historical_scopes is not None else None)
+        if epoch_times is not None and decision_at_ms <= HISTORICAL_HOURS * HOUR_MS:
+            raise DataValidationError("offline 720h decision predates valid UTC history")
         # mode=ro and BEGIN ensure all checks observe exactly ONE SQLite snapshot.
         # SQLite returns a complete report or throws: no partial accepted rank.
         if self.path.is_symlink() or not self.path.is_file():
@@ -412,13 +509,21 @@ class SQLiteOfflineClosedStreamJournal:
                 for symbol, open_ms, received_ms, registry, raw, digest in rows:
                     data = _validated_payload(raw, digest)
                     member = allowed.get(symbol)
+                    expected_scope_ms = scope.observed_at_ms
+                    if epoch_times is not None:
+                        # At every server close, the most recent known snapshot
+                        # must be used; a later review cannot validate older data.
+                        epoch_index = bisect_right(epoch_times, data["server_ms"]) - 1
+                        if epoch_index < 0:
+                            raise DataGapError("offline PIT candle predates first scope")
+                        expected_scope_ms = epoch_times[epoch_index]
                     if (member is None or symbol != data["symbol"]
                             or open_ms != data["open_ms"]
                             or received_ms != data["received_ms"]
                             or registry != scope.registry_sha256
                             or registry != data["registry_sha256"]
                             or data["launch_ms"] != member.launch_time_ms
-                            or data["scope_observed_ms"] != scope.observed_at_ms):
+                            or data["scope_observed_ms"] != expected_scope_ms):
                         raise DataGapError("offline journal membership/identity changed")
                     earlier = last.get(symbol)
                     if earlier and (open_ms != earlier[0] + HOUR_MS
@@ -451,13 +556,44 @@ class SQLiteOfflineClosedStreamJournal:
                                                "registry": scope.registry_sha256,
                                                "ranked": [[s, format(v, "f")] for s, v in values]}))
                                    if values and not missing else None)
-                # If even one reviewed eligible contract misses 24 closed hours,
-                # there is no complete sample ranking. Never publish partial.
+                history_complete = history_missing = history_slots = None
+                history_digest = None
+                if epoch_times is not None:
+                    history_complete = history_missing = history_slots = 0
+                    start_720 = decision_at_ms - HISTORICAL_HOURS * HOUR_MS
+                    required_720 = range(start_720, decision_at_ms, HOUR_MS)
+                    for member in scope.contracts:
+                        bars = by_symbol.get(member.symbol, {})
+                        missing_slots = sum(
+                            member.launch_time_ms > t or t not in bars
+                            or bars[t]["received_ms"] > as_of_ms
+                            for t in required_720
+                        )
+                        history_slots += missing_slots
+                        if missing_slots:
+                            history_missing += 1
+                        else:
+                            history_complete += 1
+                    if history_complete and not history_missing:
+                        # Hash of a bounded closed window and PIT epochs, not a
+                        # signature, licensed data or a live venue attestation.
+                        history_digest = _sha(_json({
+                            "decision": decision_at_ms,
+                            "hours": HISTORICAL_HOURS,
+                            "registry": scope.registry_sha256,
+                            "epochs": list(epoch_times),
+                            "rows": [item for item in summary
+                                     if start_720 <= item[1] < decision_at_ms],
+                        }))
+                # 24h sample ranking is unchanged by an incomplete 720h window.
+                # Neither is an authenticated marketwide ranking.
                 return OfflineStreamAudit(
                     ("offline_reviewed_24h_complete_not_top50" if not missing and values
                      else "offline_closed_stream_incomplete_abstain"),
                     len(rows), len(by_symbol), journal_digest, missing,
                     len(values), rank_digest,
+                    history_complete, history_missing, history_slots,
+                    history_digest, len(epoch_times) if epoch_times is not None else None,
                 )
         except sqlite3.DatabaseError:
             raise DataGapError("offline journal read-only audit failed") from None
