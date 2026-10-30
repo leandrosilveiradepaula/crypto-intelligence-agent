@@ -361,3 +361,7 @@ O módulo puro `synthetic_risk_tiers.py` contém tipos imutáveis de faixa e sna
 ## J4/RUNNER2 — persistência isolada do replay de trailing PAPER
 
 `crypto_intelligence_agent/paper_runner_journal.py` adiciona somente arquivo SQLite de pesquisa novo e separado. `start_paper_runner_journal` fixa fingerprint do saldo, evento/versão e política de `PaperPositionBalance` lida RO e grava o primeiro mark. `append_paper_runner_mark` faz transação de um agregado, replay completo antes de persistir, trata duplicação exata e recusa status hipotético já disparado. `load_paper_runner_journal` usa URI mode=ro e `query_only`, confere schema/metadados/hash, reabre posição RO e executa RUNNER1. Não depende de envio nem reconciliação exchange; cruzamento entre arquivos é observacional, não atômico.
+
+
+### RUNNER3 — encerramento de posição residual exclusivamente sintética
+AUTO4 preserva o ledger existente e usa `tranche_step=0` para a parcela residual de um plano completamente reconciliado, com `runner_filled_units`, `runner_reserved_unfilled_units` e `runner_unallocated_units` distintos das tranches de 1..n. `paper_runner_close_preview` é um componente funcional que consulta RUNNER2 e AUTO4 em leitura RO, exigindo gatilho hipotético e checkpoint estável, sem inserir reservas. Uma reserva posterior é explicitamente PAPER e verificada sob lock do AUTO4. A vinculação de journals distintos não fornece atomicidade cruzada. Sem stop exchange, executor live ou migração; ver `docs/J4_RUNNER3_RESIDUAL_PAPER_CLOSE.md`.
