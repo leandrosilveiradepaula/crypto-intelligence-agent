@@ -35,6 +35,12 @@ class VisionStressFoldAudit:
     strategy_best_net_quote: Decimal
     benchmark_worst_net_quote: Decimal
     benchmark_best_net_quote: Decimal
+    # Sum of conditional net per hypothetical fixed margin for EACH exposure.
+    # NOT portfolio ROI, capital compounding or realized liquidation PnL.
+    strategy_worst_cumulative_net_over_margin: Decimal
+    strategy_best_cumulative_net_over_margin: Decimal
+    benchmark_worst_cumulative_net_over_margin: Decimal
+    benchmark_best_cumulative_net_over_margin: Decimal
     strategy_worst_drawdown_proxy_quote: Decimal
     strategy_best_drawdown_proxy_quote: Decimal
     benchmark_worst_drawdown_proxy_quote: Decimal
@@ -73,6 +79,10 @@ class VisionStressOOS:
     abstention_count: int = 0
     benchmark_stop_touched_count: int = 0
     benchmark_target_touched_count: int = 0
+    strategy_worst_cumulative_net_over_margin: Decimal = _ZERO
+    strategy_best_cumulative_net_over_margin: Decimal = _ZERO
+    benchmark_worst_cumulative_net_over_margin: Decimal = _ZERO
+    benchmark_best_cumulative_net_over_margin: Decimal = _ZERO
 
     def sanitized_report(self) -> dict:
         return {
@@ -97,6 +107,10 @@ class VisionStressOOS:
             "abstention_count": self.abstention_count,
             "benchmark_stop_touched_count": self.benchmark_stop_touched_count,
             "benchmark_target_touched_count": self.benchmark_target_touched_count,
+            "strategy_worst_cumulative_net_over_margin": str(self.strategy_worst_cumulative_net_over_margin),
+            "strategy_best_cumulative_net_over_margin": str(self.strategy_best_cumulative_net_over_margin),
+            "benchmark_worst_cumulative_net_over_margin": str(self.benchmark_worst_cumulative_net_over_margin),
+            "benchmark_best_cumulative_net_over_margin": str(self.benchmark_best_cumulative_net_over_margin),
             "fold_coverage": [fold.sanitized_report() for fold in self.fold_reports],
             "digest_sha256": self.digest_sha256,
             "financial_backtest_approved": False,
@@ -220,10 +234,13 @@ def audit_costed_vision_intrabar_oos(
             benchmark_targets += b_target
             strategy_max_loss = max(strategy_max_loss, fold_strategy_max_loss)
             benchmark_max_loss = max(benchmark_max_loss, fold_benchmark_max_loss)
+            month_nets = tuple(totals[j] - month_totals_start[j] for j in range(4))
+            margin_quote = assumptions.margin.requested_margin_quote
             fold_audit = VisionStressFoldAudit(
                 k, bars, exposures, bars, amb, b_amb, liq, b_liq,
                 stop, target, b_stop, b_target, abstain,
-                *(totals[j] - month_totals_start[j] for j in range(4)),
+                *month_nets,
+                *(net / margin_quote for net in month_nets),
                 *monthly_dd, fold_strategy_max_loss, fold_benchmark_max_loss)
             folds.append(fold_audit)
             digest.update(json.dumps(
@@ -235,4 +252,5 @@ def audit_costed_vision_intrabar_oos(
             drawdowns[2], drawdowns[3], tuple(folds),
             benchmark_ambiguous, benchmark_liquidations,
             strategy_max_loss, benchmark_max_loss,
-            stops, targets, abstentions, benchmark_stops, benchmark_targets)
+            stops, targets, abstentions, benchmark_stops, benchmark_targets,
+            *(net / assumptions.margin.requested_margin_quote for net in totals))
