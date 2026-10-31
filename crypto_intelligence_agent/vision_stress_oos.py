@@ -47,6 +47,7 @@ class VisionStressFoldAudit:
     benchmark_best_drawdown_proxy_quote: Decimal
     strategy_max_single_bar_loss_over_margin: Decimal
     benchmark_max_single_bar_loss_over_margin: Decimal
+    decision_fingerprint_sha256: str = ""
 
     def sanitized_report(self) -> dict:
         return {
@@ -83,6 +84,7 @@ class VisionStressOOS:
     strategy_best_cumulative_net_over_margin: Decimal = _ZERO
     benchmark_worst_cumulative_net_over_margin: Decimal = _ZERO
     benchmark_best_cumulative_net_over_margin: Decimal = _ZERO
+    decision_fingerprint_sha256: str = ""
 
     def sanitized_report(self) -> dict:
         return {
@@ -113,6 +115,7 @@ class VisionStressOOS:
             "benchmark_best_cumulative_net_over_margin": str(self.benchmark_best_cumulative_net_over_margin),
             "fold_coverage": [fold.sanitized_report() for fold in self.fold_reports],
             "digest_sha256": self.digest_sha256,
+            "decision_fingerprint_sha256": self.decision_fingerprint_sha256,
             "financial_backtest_approved": False,
             "marketwide_top50_verified": False,
             "source_authenticated": False,
@@ -147,6 +150,7 @@ def audit_costed_vision_intrabar_oos(
         stops = targets = abstentions = benchmark_stops = benchmark_targets = 0
         strategy_max_loss = benchmark_max_loss = _ZERO
         folds = []
+        decision_digest = sha256()
         digest = sha256()
         digest.update(json.dumps([
             "vision-stress-oos-v2", baseline.digest_sha256,
@@ -173,6 +177,7 @@ def audit_costed_vision_intrabar_oos(
             monthly_dd[index] = min(monthly_dd[index], monthly_eq[index] - monthly_peak[index])
 
         for k, fold in enumerate(baseline.folds, 1):
+            fold_decision_digest = sha256()
             month_totals_start = totals.copy()
             monthly_eq = [_ZERO for _ in range(4)]
             monthly_peak = [_ZERO for _ in range(4)]
@@ -184,6 +189,20 @@ def audit_costed_vision_intrabar_oos(
                 # Prior 24 CLOSED hourly bars only, never the target bar.
                 selected_index, direction = causal_oos_bar_choice(series, i)
                 selected = series[selected_index].candles
+                # This trail is independent of leverage/costs and covers
+                # abstentions too. An opaque per-series identity is sufficient
+                # for equality; no symbol/path/price is emitted.
+                action = ("abstain" if direction == 0 or
+                          fold.selected_rule == "abstain" else
+                          ("long" if (direction > 0) ==
+                           (fold.selected_rule == "continuation") else "short"))
+                event = json.dumps([
+                    "j3-pre24-decision-v1", k, i,
+                    series[selected_index].series_manifest_sha256,
+                    direction, fold.selected_rule, action,
+                ], separators=(",", ":")).encode("ascii") + b"\n"
+                fold_decision_digest.update(event)
+                decision_digest.update(event)
                 bars += 1
                 # Fixed LONG benchmark observes every OOS bar, even while the
                 # trained strategy abstains. Exposure counts disclose asymmetry.
@@ -241,10 +260,15 @@ def audit_costed_vision_intrabar_oos(
                 stop, target, b_stop, b_target, abstain,
                 *month_nets,
                 *(net / margin_quote for net in month_nets),
-                *monthly_dd, fold_strategy_max_loss, fold_benchmark_max_loss)
+                *monthly_dd, fold_strategy_max_loss, fold_benchmark_max_loss,
+                fold_decision_digest.hexdigest())
             folds.append(fold_audit)
+            # Keep the historical PRE21 financial digest byte-compatible:
+            # the new selection commitment has its OWN independent field.
+            legacy_fold = fold_audit.sanitized_report()
+            legacy_fold.pop("decision_fingerprint_sha256")
             digest.update(json.dumps(
-                fold_audit.sanitized_report(), sort_keys=True,
+                legacy_fold, sort_keys=True,
                 separators=(",", ":")).encode("ascii"))
         return VisionStressOOS(
             n, ambiguous, liquidations, totals[0], totals[1], digest.hexdigest(),
@@ -253,4 +277,5 @@ def audit_costed_vision_intrabar_oos(
             benchmark_ambiguous, benchmark_liquidations,
             strategy_max_loss, benchmark_max_loss,
             stops, targets, abstentions, benchmark_stops, benchmark_targets,
-            *(net / assumptions.margin.requested_margin_quote for net in totals))
+            *(net / assumptions.margin.requested_margin_quote for net in totals),
+            decision_fingerprint_sha256=decision_digest.hexdigest())

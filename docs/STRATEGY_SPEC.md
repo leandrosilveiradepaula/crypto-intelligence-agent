@@ -207,3 +207,8 @@ Para um conjunto OOS com decisão por 24h já fechadas, manter regra/ativo/dire�
 ### J3/PRE23 — comparar alavancagem sem escolher vencedora pós-amostra
 
 A CLI privada usa o histórico Vision já auditado e a mesma regra causal OOS treinada antes do mês de teste; varia somente o multiplicador 1x vs Nx sobre igual margem/termos, com nocional coerente em cada cenário. A diferença no resultado financeiro é hipotética e não implica segurança de 50x, retorno realizado ou melhor configuração. A escolha causal da entrada e a classificação de risco permanecem separadas de qualquer autorização real. PRE23 é opt-in exclusivo de pesquisa, contrato `docs/J3_PRE23_PRIVATE_OOS_LEVERAGE_CLI.md`.
+
+
+## J3/PRE24 #413 — integridade de decisões OOS, 31/10/2026
+
+Partindo de main 97a990c2f62fa6888e80c1c509df1ab453da7d8d (PRE23/PR #412 integrada, zero PRs abertas), PRE24 corrige a insuficiência de comparações por contagem: fingerprints de decisões OOS por fold e global permitem detectar seleção diferente com exposição igual; PRE22 falha fechado quando houver discrepância. Relatório aditivo inclui drawdown e perda máxima por margem, preservando digest financeiro PRE21. Branch work/j3-pre24-oos-decision-fingerprint-risk; issue #413. Testes/CI/revisão/merge dependem de evidência de execução, sem alegação antecipada. J1 #2/#319: worker agendado às 15:00:15 UTC, conclusão não verificável pelo GitHub, sem reiniciar. Sem dados reais, VPS, ordens, credenciais, deploy ou custo.

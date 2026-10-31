@@ -304,3 +304,8 @@ Um único histórico mensal e uma única regra OOS de seleção causal podem ser
 ## J3/PRE23 #411 — sensibilidade OOS acessível por CLI owner-only
 
 Sem abrir novas fontes, a CLI Vision de pesquisa pessoal poderá computar uma grade de dois cenários (1x e Nx, N 2–200) com a mesma margem e seleção causal OOS, a partir de manifests locais auditados. Exige opção positiva, preserva comportamento legado sem o opt-in e mantém todos os gates de live/ordens falsos. A J1 Top50/VPS não é utilizada nem resolvida. Aceite exige CI, regressões POSIX e revisão da PR; D200/PRE23.
+
+
+## J3/PRE24 #413 — integridade de decisões OOS, 31/10/2026
+
+Partindo de main 97a990c2f62fa6888e80c1c509df1ab453da7d8d (PRE23/PR #412 integrada, zero PRs abertas), PRE24 corrige a insuficiência de comparações por contagem: fingerprints de decisões OOS por fold e global permitem detectar seleção diferente com exposição igual; PRE22 falha fechado quando houver discrepância. Relatório aditivo inclui drawdown e perda máxima por margem, preservando digest financeiro PRE21. Branch work/j3-pre24-oos-decision-fingerprint-risk; issue #413. Testes/CI/revisão/merge dependem de evidência de execução, sem alegação antecipada. J1 #2/#319: worker agendado às 15:00:15 UTC, conclusão não verificável pelo GitHub, sem reiniciar. Sem dados reais, VPS, ordens, credenciais, deploy ou custo.

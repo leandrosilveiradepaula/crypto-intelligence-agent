@@ -789,3 +789,8 @@ Executar `tests/test_vision_stress_sensitivity.py` junto com PRE21 (`tests/test_
 ### J3/PRE23 #411 — opt-in da grade OOS 1x versus Nx em Vision privada
 
 Criar dois manifests ZIP/CHECKSUM de fixture em POSIX; executar `private_vision_dynamic_replay` e CLI com `--audit-oos-leverage-pair`, `--audit-intrabar-stress` e todos os termos. Checar que o JSON `hypothetical_oos_leverage_pair` casa com chamada direta PRE22 para `OfflineVisionMonth` já auditados, ordinais 1x/Nx, margens iguais, nocionais distintos, contagens congeladas por fold, nenhuma chave/símbolo/caminho no stdout, nenhuma rede/escrita. Rejeitar N=1, falta de flag stress, parâmetros incompletos e modo concorrente de shock; preservar resposta sem flag. Regressão PRE21/PRE22 e toda CI Linux/docs, Windows/offline (skips POSIX) e Chrome/PAPER no SHA final; só merger após revisão segura, sem VPS/deploy.
+
+
+## J3/PRE24 #413 — integridade de decisões OOS, 31/10/2026
+
+Partindo de main 97a990c2f62fa6888e80c1c509df1ab453da7d8d (PRE23/PR #412 integrada, zero PRs abertas), PRE24 corrige a insuficiência de comparações por contagem: fingerprints de decisões OOS por fold e global permitem detectar seleção diferente com exposição igual; PRE22 falha fechado quando houver discrepância. Relatório aditivo inclui drawdown e perda máxima por margem, preservando digest financeiro PRE21. Branch work/j3-pre24-oos-decision-fingerprint-risk; issue #413. Testes/CI/revisão/merge dependem de evidência de execução, sem alegação antecipada. J1 #2/#319: worker agendado às 15:00:15 UTC, conclusão não verificável pelo GitHub, sem reiniciar. Sem dados reais, VPS, ordens, credenciais, deploy ou custo.

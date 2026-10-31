@@ -38,6 +38,14 @@ class VisionStressSensitivityTests(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertEqual(len(a.scenarios), 2)
         self.assertEqual([x.ordinal for x in a.scenarios], [1, 2])
+        self.assertEqual(a.scenarios[0].audit.decision_fingerprint_sha256,
+                         a.scenarios[1].audit.decision_fingerprint_sha256)
+        for row in a.sanitized_report()["scenarios"]:
+            self.assertEqual(len(row["decision_fingerprint_sha256"]),64)
+            self.assertIn("strategy_worst_drawdown_proxy_quote",row)
+            self.assertIn("strategy_max_single_bar_loss_over_margin",row)
+            self.assertIn("benchmark_best_drawdown_proxy_quote",row["folds"][0])
+            self.assertIn("decision_fingerprint_sha256",row["folds"][0])
         self.assertEqual(
             [x.assumptions.margin.leverage_at_intent for x in a.scenarios],
             [1, 50],
@@ -144,6 +152,24 @@ class VisionStressSensitivityTests(unittest.TestCase):
                 (self.a, self.b), as_of_ms=self.cutoff,
                 cost_bps_per_side=0.0,
                 assumptions_grid=(terms(1), terms(50)))
+
+    def test_same_counts_but_different_decision_fingerprint_fails_closed(self):
+        from dataclasses import replace as clone
+        valid = self.run_grid().scenarios[0].audit
+        modified = clone(valid, decision_fingerprint_sha256="f" * 64)
+        with patch(
+            "crypto_intelligence_agent.vision_stress_sensitivity.audit_costed_vision_intrabar_oos",
+            side_effect=(valid, modified),
+        ), self.assertRaises(DataValidationError):
+            self.run_grid((terms(1), terms(50)))
+        modified_fold = clone(valid, fold_reports=tuple(
+            clone(f,decision_fingerprint_sha256="f" * 64)
+            for f in valid.fold_reports))
+        with patch(
+            "crypto_intelligence_agent.vision_stress_sensitivity.audit_costed_vision_intrabar_oos",
+            side_effect=(valid, modified_fold),
+        ), self.assertRaises(DataValidationError):
+            self.run_grid((terms(1), terms(50)))
 
     def test_divergent_oos_coverage_blocks_report_instead_of_ranking(self):
         from dataclasses import replace as clone
