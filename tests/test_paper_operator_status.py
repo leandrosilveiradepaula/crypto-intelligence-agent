@@ -144,6 +144,61 @@ class PaperOperatorReadOnlyDashboardTests(unittest.TestCase):
         self.assertFalse(updated.new_paper_open_paused)
         self.assertEqual(updated.pause_sequence, 2)
 
+    def test_future_open_fill_does_not_erase_past_pending_count(self):
+        self.batch(2)
+        before = self.snapshot()
+        self.assertEqual(before.pending_or_unresolved_open_count, 1)
+        with closing(sqlite3.connect(self.db)) as db:
+            intent_id = db.execute(
+                "SELECT intent_id FROM paper_order_intents WHERE effect='OPEN'"
+            ).fetchone()[0]
+        at = self.cs[5].close_time_ms + 1001
+        fill = PaperOrderEvent(
+            "fixture_pre12_future_fill", PaperOrderEventKind.FILL,
+            at + 1, D(2))
+        self.orders.append_events(intent_id, (fill,), as_of_ms=at+1)
+        frozen = self.db.read_bytes()
+        self.assertEqual(self.snapshot().pending_or_unresolved_open_count, 0)
+        with self.assertRaisesRegex(DataValidationError, "future PAPER intent or event"):
+            inspect_local_paper_operator_status(self.db, decision_at_ms=at)
+        self.assertEqual(
+            inspect_local_paper_operator_status(self.db, decision_at_ms=at+1),
+            self.snapshot())
+        self.assertEqual(self.db.read_bytes(), frozen)
+
+    def test_future_reduce_only_intent_and_fill_cannot_be_skipped(self):
+        from crypto_intelligence_agent.synthetic_order_lifecycle import (
+            PaperOrderIntent, PaperOrderEffect, PaperOrderSide,
+        )
+        from crypto_intelligence_agent.synthetic_position_state import SyntheticSide
+        self.batch(1)
+        at = self.cs[4].close_time_ms + 1001
+        exit_intent = PaperOrderIntent(
+            "fixture_pre12_exit", "fixture_pre12_exit_signal",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.SELL, PaperOrderEffect.REDUCE_ONLY,
+            D(1), at, D(1))
+        self.orders.reserve(exit_intent)
+        self.assertEqual(inspect_local_paper_operator_status(
+            self.db, decision_at_ms=at).pending_or_unresolved_open_count, 0)
+        fill = PaperOrderEvent(
+            "fixture_pre12_exit_future", PaperOrderEventKind.FILL, at+1, D(1))
+        self.orders.append_events(exit_intent.intent_id, (fill,), as_of_ms=at+1)
+        frozen = self.db.read_bytes()
+        with self.assertRaisesRegex(DataValidationError, "future PAPER intent or event"):
+            inspect_local_paper_operator_status(self.db, decision_at_ms=at)
+        self.assertEqual(inspect_local_paper_operator_status(
+            self.db, decision_at_ms=at+1).pending_or_unresolved_open_count, 0)
+        self.assertEqual(self.db.read_bytes(), frozen)
+        second = PaperOrderIntent(
+            "fixture_pre12_exit_next", "fixture_pre12_exit_signal_next",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.SELL, PaperOrderEffect.REDUCE_ONLY,
+            D(1), at+2, D(1))
+        self.orders.reserve(second)
+        with self.assertRaisesRegex(DataValidationError, "future PAPER intent or event"):
+            inspect_local_paper_operator_status(self.db, decision_at_ms=at+1)
+
     def test_unknown_open_is_flagged_not_mistaken_for_fill(self):
         self.batch(2)
         with closing(sqlite3.connect(self.db)) as conn:
