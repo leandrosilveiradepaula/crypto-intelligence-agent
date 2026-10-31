@@ -383,3 +383,8 @@ O CLI `scripts.demo_paper_runner_close_flow` usa os módulos de produção já a
 
 ### J6/PRE7 — laboratório de evidência finita
 `paper_incident_matrix.py` orquestra fixtures descartáveis pelas APIs AUTO4/RUNNER2/PRE4 e obtém a classificação pelo PRE6. O DTO da matriz não contém identificadores do journal e distingue `PASS`, `BLOCKED_EXPECTED` e `FAIL`; a concorrência trata preview stale como perdedor seguro, exigindo uma reserva única no agregado AUTO4. É prova de contrato local, não monitor contínuo ou reconciliador distribuído.
+
+
+### J6/PRE8 — auditoria de incidentes em lote com um snapshot AUTO4
+
+`paper_portfolio_incident_audit` reutiliza `inspect_paper_positions` para ler 1–128 posições especificadas em uma única transação read-only. `classify_inspected_paper_runner_incident` isola a classificação pura de PRE6, mantendo o trajeto RUNNER2 opt-in exclusivo da API individual. O estado global é INFO/REVIEW/BLOCKED por precedência; erro do lote impede publicação de slots parciais. CLI JSON não expõe IDs/símbolos/paths e não soma unidades financeiras; idade máxima causa bloqueio individual sem executar ações. Contrato `docs/J6_PRE8_PAPER_PORTFOLIO_INCIDENTS.md`.
