@@ -773,3 +773,8 @@ Usar SQLite real com duas posições no mesmo AUTO4, símbolos diferentes e chec
 ### J6/PRE9 #405 — pipeline causal completo com somente FILL de fixture
 
 Executar `python -m scripts.demo_full_offline_paper_lifecycle` duas vezes e comparar relatórios. Conferir mesma intenção OPEN gerada por J2/RiskGate e reconhecida em AUTO2/AUTO4, zero posição antes de evento FILL, abertura 2 unidades explícita, parciais 1+0,60+0,28, runner 0,12 REDUCE_ONLY PENDING sem FILL, replay/restart sem duplicação e fechamento somente após FILL sintético final com cross-check AUTO2 e PRE8. Testes de no-network, saneamento stdout, rejeição de flags de trading, recursos TEMP removidos e regressões PRE4-PRE8. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final; revisão de segurança/merge sem deploy. Não confirma J1, segurança de 50x ou J6 prospectiva.
+
+
+#### Revisão PRE21 — causalidade explícita e métricas por margem
+
+A regressão adicional compara a primitiva `causal_oos_bar_choice` a uma seleção manual por volume das 24 barras anteriores e à direção dos dois closes anteriores; alterar volume/close na barra escolhida ou em barras futuras não altera o resultado da decisão. O relatório de stress deve incluir, por fold e no agregado, as somas líquidas condicionais normalizadas pela margem fixa hipotética por exposição, calculadas em contexto Decimal de alta precisão. Nenhuma métrica representa retorno composto ou exposição real da carteira.
