@@ -89,7 +89,8 @@ def inspect_local_paper_operator_status(
                 "PAPER operator cursor or pause is newer than decision cutoff"
             )
         pending, unresolved_unknown = (
-            SQLitePaperOrderJournal._pending_open_from_connection(connection)
+            SQLitePaperOrderJournal._pending_open_from_connection(
+                connection, decision_at_ms=decision_at_ms)
         )
         return PaperOperatorStatus(
             new_paper_open_paused=pause.active,
