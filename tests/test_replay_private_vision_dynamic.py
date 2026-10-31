@@ -101,7 +101,8 @@ class VisionReplayCLI(unittest.TestCase):
                     stress_assumptions=high,stress_selection_cost_bps=Decimal("0"),
                     audit_oos_leverage_pair=True)
             expected=compare_costed_vision_oos_stress_scenarios(
-                tuple(checked_groups),as_of_ms=cutoff+HOUR_MS,
+                tuple(checked_groups),
+                as_of_ms=checked_groups[0][-1].end_open_exclusive_ms+HOUR_MS,
                 cost_bps_per_side=Decimal("0"),assumptions_grid=(low,high))
             self.assertEqual(pair["hypothetical_oos_leverage_pair"],
                              expected.sanitized_report())
