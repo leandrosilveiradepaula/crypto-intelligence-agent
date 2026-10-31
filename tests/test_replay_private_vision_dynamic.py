@@ -113,6 +113,33 @@ class VisionReplayCLI(unittest.TestCase):
                 pair["hypothetical_oos_leverage_pair"]["scenarios"][0]["hypothetical_margin_quote"],
                 pair["hypothetical_oos_leverage_pair"]["scenarios"][1]["hypothetical_margin_quote"])
             self.assertFalse(pair["hypothetical_oos_leverage_pair"]["live_trading_authorized"])
+            from crypto_intelligence_agent.vision_oos_robustness import (
+                OOSRobustnessPolicy, audit_oos_robustness,
+            )
+            review_policy = OOSRobustnessPolicy(
+                1, 1, Decimal("0"), Decimal("0"), Decimal("0.2"),
+                Decimal("1"), True)
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                screened = private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    stress_assumptions=high,stress_selection_cost_bps=Decimal("0"),
+                    audit_oos_leverage_pair=True,
+                    oos_robustness_policy=review_policy)
+            self.assertEqual(
+                screened["hypothetical_oos_robustness"],
+                audit_oos_robustness(expected,policy=review_policy).sanitized_report())
+            self.assertFalse(screened["hypothetical_oos_robustness"]["financial_backtest_approved"])
+            self.assertFalse(screened["hypothetical_oos_robustness"]["all_synthetic_conditions_met"])
+            self.assertNotIn("BTCUSDT",json.dumps(screened))
+            self.assertNotIn(str(root),json.dumps(screened))
+            with self.assertRaises(VisionReplayPrivateError):
+                private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    oos_robustness_policy=review_policy)
             self.assertNotIn("hypothetical_oos_leverage_pair",stressed)
             self.assertNotIn("BTCUSDT",json.dumps(pair))
             self.assertNotIn(str(root),json.dumps(pair))
@@ -135,6 +162,44 @@ class VisionReplayCLI(unittest.TestCase):
             self.assertEqual(rc_pair,0)
             cli_pair=json.loads(leverage_output.getvalue())
             self.assertEqual(cli_pair["hypothetical_oos_leverage_pair"]["scenario_count"],2)
+            with redirect_stdout(StringIO()) as robust_output:
+                rc_robust=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-intrabar-stress",
+                    "--stress-margin-quote","2","--stress-leverage","50",
+                    "--stress-stop-fraction","0.01",
+                    "--stress-target-fraction","0.03",
+                    "--stress-maintenance-bps","0",
+                    "--stress-fee-bps","0",
+                    "--stress-slippage-bps","0",
+                    "--stress-funding-bps","0",
+                    "--stress-selection-cost-bps","0",
+                    "--audit-oos-leverage-pair",
+                    "--audit-oos-robustness",
+                    "--robust-min-folds","1",
+                    "--robust-min-exposures-per-fold","1",
+                    "--robust-max-liquidation-fraction","0",
+                    "--robust-max-ambiguity-fraction","0",
+                    "--robust-max-single-loss-over-margin","0.2",
+                    "--robust-max-drawdown-quote","1",
+                    "--robust-require-nonnegative-adverse"])
+            self.assertEqual(rc_robust,0)
+            self.assertIn("hypothetical_oos_robustness",robust_output.getvalue())
+            self.assertNotIn("BTCUSDT",robust_output.getvalue())
+            self.assertNotIn(str(root),robust_output.getvalue())
+            with redirect_stdout(StringIO()) as invalid_robust:
+                bad_robust=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-oos-robustness", "--robust-min-folds","1"])
+            self.assertEqual(bad_robust,1)
+            self.assertEqual(json.loads(invalid_robust.getvalue())["status"],
+                             "private_vision_dynamic_replay_rejected")
             self.assertNotIn("BTCUSDT",leverage_output.getvalue())
             self.assertNotIn(str(root),leverage_output.getvalue())
             with redirect_stdout(StringIO()) as rejected_pair:
