@@ -116,6 +116,40 @@ class VisionStressOOSTests(unittest.TestCase):
                          later.fold_reports[0].bars_scored)
         self.assertEqual(baseline.stressed_count,later.stressed_count)
 
+    def test_shared_choice_uses_only_24_closed_bars_and_past_direction(self):
+        from dataclasses import replace
+        from crypto_intelligence_agent.offline_vision_series import assemble_offline_vision_months
+        from crypto_intelligence_agent.vision_costed_oos import causal_oos_bar_choice
+        a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
+        end=a[-1].end_open_exclusive_ms+3600000
+        series=tuple(assemble_offline_vision_months(x,as_of_ms=end) for x in (a,b))
+        index=len(a[0].candles)+50
+        expected=causal_oos_bar_choice(series,index)
+        manual=sorted((
+            (sum((c.documented_quote_volume for c in asset.candles[index-24:index]),D(0)),
+             asset.symbol,asset_index)
+            for asset_index,asset in enumerate(series)
+        ),key=lambda row:(-row[0],row[1]))[0][2]
+        self.assertEqual(expected[0],manual)
+        chosen=series[manual].candles
+        self.assertEqual(expected[1],
+                         (1 if chosen[index-1].close>chosen[index-2].close else
+                          -1 if chosen[index-1].close<chosen[index-2].close else 0))
+        mutated=[]
+        for asset in series:
+            candles=list(asset.candles)
+            candles[index]=replace(candles[index],
+                                   documented_quote_volume=D("999999999999"),
+                                   close=candles[index].close+D("0.001"))
+            candles[index+1]=replace(candles[index+1],
+                                     documented_quote_volume=D("999999999999"))
+            mutated.append(replace(asset,candles=tuple(candles)))
+        self.assertEqual(causal_oos_bar_choice(tuple(mutated),index),expected)
+        with self.assertRaises(DataValidationError):
+            causal_oos_bar_choice(series,23)
+        with self.assertRaises(DataValidationError):
+            causal_oos_bar_choice(series,len(series[0].candles))
+
     def test_requires_explicit_and_valid_stress_terms(self):
         a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
         end=a[-1].end_open_exclusive_ms+3600000
