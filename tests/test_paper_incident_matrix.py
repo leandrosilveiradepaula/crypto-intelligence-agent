@@ -52,6 +52,22 @@ class PaperIncidentMatrixTests(unittest.TestCase):
                                  replace(valid, reconciliation_required=False)
                                  ).validation_status, "FAIL")
 
+    def test_nonblocked_scenario_requires_exact_severity_and_reconciliation(self):
+        report = PaperRunnerIncidentReport(
+            PaperIncidentCode.RUNNER_EXIT_PARTIALLY_FILLED,
+            PaperIncidentSeverity.REVIEW, 1793100000100, D("4"), D("0"), D("2"),
+            True, ("auto4_position_replay",), ("terminal_reconciliation",),
+            "Preenchimento parcial de fixture",
+        )
+        expected = PaperIncidentCode.RUNNER_EXIT_PARTIALLY_FILLED.value
+        self.assertEqual(_report("partial_cancel_requires_review", expected, report).validation_status, "PASS")
+        self.assertEqual(_report("partial_cancel_requires_review", expected,
+                                  replace(report, severity=PaperIncidentSeverity.INFO)
+                                  ).validation_status, "FAIL")
+        self.assertEqual(_report("partial_cancel_requires_review", expected,
+                                  replace(report, reconciliation_required=False)
+                                  ).validation_status, "FAIL")
+
     def test_readiness_is_not_proven_when_scenario_fails(self):
         original = run_paper_incident_matrix()
         broken = tuple(replace(x, validation_status="FAIL")
