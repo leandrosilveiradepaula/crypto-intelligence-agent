@@ -284,3 +284,8 @@ O estado de trailing pode ser reconstruído após reinício por marks sintético
 ## J6/PRE8 #403 — auditoria simultânea de posições PAPER selecionadas (31/10/2026)
 
 A triagem PRE6 por uma posição não fornece fotografia simultânea de várias posições. PRE8 reutiliza o leitor `inspect_paper_positions` para um snapshot AUTO4 único de até 128 posições explicitamente escolhidas, classificando o incidente PRE6 por item, cutoff UTC e staleness, com bloqueio do lote inteiro se qualquer diário for inválido. Não agrega posições em carteira financeira ou conta de exchange, não ativa ordens, stop, feed real ou live. Gates e documentação em `docs/J6_PRE8_PAPER_PORTFOLIO_INCIDENTS.md`.
+
+
+## J6/PRE9 #405 — identidade causal da entrada em fluxo PAPER completo
+
+Uma intenção OPEN gerada pelo motor quantitativo J2/RiskGate deve permanecer a mesma ao ser confirmada por FILL de fixture em AUTO2 e registrada em AUTO4; somente depois as parciais, trailing e runner podem afetar saldo sintético. PRE9 integra os componentes existentes em uma demo finita com checkpoints/read-only PRE8, sem implicar execução, stop nativo ou homologação de dados/conta. Ver `docs/J6_PRE9_FULL_OFFLINE_LIFECYCLE.md`.

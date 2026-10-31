@@ -899,3 +899,8 @@ Branch `codex/issue-401-j6-pre7-paper-readiness-matrix` parte de `main=0959c86fc
 ## J6/PRE8 #403 — auditoria de uma carteira PAPER selecionada, 31/10/2026
 
 Base verificada `main=6ab7b3558b44bf03bc6fbede62f6060f76d1a250`, PRs abertas=0 no início. PRE7 #401/PR #402 integrada com 11 cenários, SHA revisado `d400cb752cff605f5c71123c25241648b95298e9`, CI Linux/docs+Windows `41173066212` e Chrome/PAPER `41173066163` SUCCESS. Issue #403 e branch `work/j6-pre8-batched-paper-incident-readonly` implementam classificador puro PRE6 compartilhado e auditor de 1–128 posições PAPER no mesmo snapshot AUTO4, cutoff/idade, blocos de integridade sem publicação parcial e JSON/CLI sanitizados. Testes e decisão D196; PR/CI/merge dessa etapa permanecem pendentes até validação do SHA. J1 owner-run VPS adiado; sem exchange, ordens, deploy, migrations ou gasto.
+
+
+## J6/PRE9 #405 — mesma intenção J2/RiskGate no ledger AUTO4, 31/10/2026
+
+Base verificada `main=46975938ec727489647edcc8173bf98f2e7657a8`, após PR #404/J6 PRE8 integrada com CI 41174110832 Linux/docs+Windows e 41174110831 Chrome/PAPER SUCCESS, review 5721532250. Issue #405 e branch `work/j6-pre9-causal-open-to-runner-paper` implementam demonstração de cadeia J2→AUTO2→AUTO4→RUNNER2→PRE4→PRE8 com intenção OPEN recuperada do cursor real e FILL de fixture isolado, parciais/trailing/runner e relatório sanitizado. Testes e D197 adicionados; PR/CI/merge ainda não presumidos. J1 VPS owner-run adiado, nenhuma ordem/endpoint/gasto.
