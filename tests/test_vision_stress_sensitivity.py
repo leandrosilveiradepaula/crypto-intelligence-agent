@@ -1,6 +1,6 @@
 """J3/PRE22: independent bounded OOS sensitivity and safety regressions."""
 from dataclasses import replace
-from decimal import Decimal as D
+from decimal import Decimal as D, Context, localcontext
 from unittest.mock import patch
 import json
 import unittest
@@ -50,13 +50,14 @@ class VisionStressSensitivityTests(unittest.TestCase):
             self.assertEqual(result, expected)
             self.assertEqual(case.sanitized_report()["strategy_exposures"],
                              result.stressed_count)
-            self.assertEqual(
-                result.strategy_worst_cumulative_net_over_margin,
-                result.worst_net_quote / case.assumptions.margin.requested_margin_quote)
-            for fold in result.fold_reports:
+            with localcontext(Context(prec=512)):
                 self.assertEqual(
-                    fold.strategy_worst_cumulative_net_over_margin,
-                    fold.strategy_worst_net_quote / case.assumptions.margin.requested_margin_quote)
+                    result.strategy_worst_cumulative_net_over_margin,
+                    result.worst_net_quote / case.assumptions.margin.requested_margin_quote)
+                for fold in result.fold_reports:
+                    self.assertEqual(
+                        fold.strategy_worst_cumulative_net_over_margin,
+                        fold.strategy_worst_net_quote / case.assumptions.margin.requested_margin_quote)
         x, y = a.scenarios
         self.assertEqual(
             [(f.test_month_number, f.bars_scored, f.strategy_exposures,
