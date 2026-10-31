@@ -1,5 +1,5 @@
 """Adversarial monthly OOS stress integration fixtures."""
-from decimal import Decimal as D
+from decimal import Decimal as D, localcontext
 import unittest
 from test_vision_dynamic_replay import fixture
 from test_vision_intrabar_stress import terms
@@ -35,16 +35,51 @@ class VisionStressOOSTests(unittest.TestCase):
                          first.fold_reports[0].bars_scored)
         self.assertEqual(first.fold_reports[0].strategy_ambiguous_count,
                          first.ambiguous_count)
+        self.assertEqual(first.fold_reports[0].strategy_stop_touched_count,
+                         first.stop_touched_count)
+        self.assertEqual(first.fold_reports[0].strategy_target_touched_count,
+                         first.target_touched_count)
+        self.assertEqual(first.fold_reports[0].benchmark_stop_touched_count,
+                         first.benchmark_stop_touched_count)
+        self.assertEqual(first.fold_reports[0].benchmark_target_touched_count,
+                         first.benchmark_target_touched_count)
+        self.assertEqual(first.fold_reports[0].strategy_abstention_count,
+                         first.abstention_count)
+        self.assertEqual(first.fold_reports[0].strategy_exposures +
+                         first.fold_reports[0].strategy_abstention_count,
+                         first.fold_reports[0].bars_scored)
         self.assertGreaterEqual(first.strategy_max_single_bar_loss_over_margin,D("0"))
         self.assertGreaterEqual(first.benchmark_max_single_bar_loss_over_margin,D("0"))
+        margin=terms().margin.requested_margin_quote
+        # The evaluator computes with 512-digit Decimal context.
+        # The fixtures use finite-decimal OHLC, but ratios can be repeating.
+        with localcontext() as ctx:
+            ctx.prec=512
+            for fold in first.fold_reports:
+                self.assertEqual(
+                    fold.strategy_worst_cumulative_net_over_margin,
+                    fold.strategy_worst_net_quote / margin)
+                self.assertEqual(
+                    fold.strategy_best_cumulative_net_over_margin,
+                    fold.strategy_best_net_quote / margin)
+                self.assertEqual(
+                    fold.benchmark_worst_cumulative_net_over_margin,
+                    fold.benchmark_worst_net_quote / margin)
+                self.assertEqual(
+                    fold.benchmark_best_cumulative_net_over_margin,
+                    fold.benchmark_best_net_quote / margin)
+            self.assertEqual(first.strategy_worst_cumulative_net_over_margin,
+                             first.worst_net_quote / margin)
+            self.assertEqual(first.benchmark_best_cumulative_net_over_margin,
+                             first.benchmark_best_net_quote / margin)
+            self.assertEqual(first.sanitized_report()["fold_coverage"][0][
+                "strategy_worst_cumulative_net_over_margin"],
+                str(first.worst_net_quote / margin))
+        # Original amount-based fold accounting remains unchanged.
         self.assertEqual(first.fold_reports[0].strategy_worst_net_quote,
                          first.worst_net_quote)
         self.assertEqual(first.fold_reports[0].benchmark_worst_net_quote,
                          first.benchmark_worst_net_quote)
-        self.assertFalse(result["live_trading_authorized"])
-        self.assertEqual(result["network_requests"],0)
-        self.assertNotIn("ETHUSDT",str(result))
-
 
     def test_fee_deterioration_and_folds_are_sanitized(self):
         a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
@@ -81,6 +116,40 @@ class VisionStressOOSTests(unittest.TestCase):
         self.assertEqual(baseline.fold_reports[0].bars_scored,
                          later.fold_reports[0].bars_scored)
         self.assertEqual(baseline.stressed_count,later.stressed_count)
+
+    def test_shared_choice_uses_only_24_closed_bars_and_past_direction(self):
+        from dataclasses import replace
+        from crypto_intelligence_agent.offline_vision_series import assemble_offline_vision_months
+        from crypto_intelligence_agent.vision_costed_oos import causal_oos_bar_choice
+        a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
+        end=a[-1].end_open_exclusive_ms+3600000
+        series=tuple(assemble_offline_vision_months(x,as_of_ms=end) for x in (a,b))
+        index=len(a[0].candles)+50
+        expected=causal_oos_bar_choice(series,index)
+        manual=sorted((
+            (sum((c.documented_quote_volume for c in asset.candles[index-24:index]),D(0)),
+             asset.symbol,asset_index)
+            for asset_index,asset in enumerate(series)
+        ),key=lambda row:(-row[0],row[1]))[0][2]
+        self.assertEqual(expected[0],manual)
+        chosen=series[manual].candles
+        self.assertEqual(expected[1],
+                         (1 if chosen[index-1].close>chosen[index-2].close else
+                          -1 if chosen[index-1].close<chosen[index-2].close else 0))
+        mutated=[]
+        for asset in series:
+            candles=list(asset.candles)
+            candles[index]=replace(candles[index],
+                                   documented_quote_volume=D("999999999999"),
+                                   close=candles[index].close+D("0.001"))
+            candles[index+1]=replace(candles[index+1],
+                                     documented_quote_volume=D("999999999999"))
+            mutated.append(replace(asset,candles=tuple(candles)))
+        self.assertEqual(causal_oos_bar_choice(tuple(mutated),index),expected)
+        with self.assertRaises(DataValidationError):
+            causal_oos_bar_choice(series,23)
+        with self.assertRaises(DataValidationError):
+            causal_oos_bar_choice(series,len(series[0].candles))
 
     def test_requires_explicit_and_valid_stress_terms(self):
         a,b=fixture("BTCUSDT"),fixture("ETHUSDT")

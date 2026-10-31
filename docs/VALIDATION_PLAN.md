@@ -673,6 +673,10 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 
 `vision_intrabar_stress.py` introduz estresse matemático estritamente offline para uma barra Vision, com margem sintética, alavancagem fixa por avaliação, stop, target, limiar de liquidação proxy por equity e manutenção hipotética, funding assinado e custos Decimal por lado. Como OHLC não informa a ordem dos eventos, retorna **dois limites condicionais**: downside (liquidação/stop antes de target) e upside (target antes de stop), marcando ambiguidade e toques simultâneos. A marcação e a fórmula de liquidação reais da corretora NÃO são inferidas. Não há integração com execução nem estimativa de perda garantida. `financial_backtest_approved=false`, nenhuma ordem, rede, licença, dado canônico ou homologação Top50. Testes de 50x/1x, long/short, ambiguidade, taxa, funding e corrupção. A integração com seleção OOS mensal e CLI é **pendência da issue #359**, não alegar entrega completa.
 
+## J3/PRE21 #407 — regressões do envelope mensal integrado
+
+Exigir: equivalência do caminho legado; ranking de 24h fechado e regra congelada apesar de mutação futura; LONG/SHORT 1x/50x; stop+alvo+liquidação simultâneos; fee/slippage/funding positivos e negativos; monotonicidade de custos com funding constante; contagens de exposição/abstenção/toques; Decimal/contexto, corrupção, determinismo e zero rede. O relatório não pode expor OHLC, símbolos ou paths e preserva todos os gates negativos. CI Linux/docs, Windows/offline e Chrome/PAPER devem validar o SHA final.
+
 
 ## #359 — ligação de stress à seleção mensal OOS sem refitting (30/10/2026)
 
@@ -769,3 +773,8 @@ Usar SQLite real com duas posições no mesmo AUTO4, símbolos diferentes e chec
 ### J6/PRE9 #405 — pipeline causal completo com somente FILL de fixture
 
 Executar `python -m scripts.demo_full_offline_paper_lifecycle` duas vezes e comparar relatórios. Conferir mesma intenção OPEN gerada por J2/RiskGate e reconhecida em AUTO2/AUTO4, zero posição antes de evento FILL, abertura 2 unidades explícita, parciais 1+0,60+0,28, runner 0,12 REDUCE_ONLY PENDING sem FILL, replay/restart sem duplicação e fechamento somente após FILL sintético final com cross-check AUTO2 e PRE8. Testes de no-network, saneamento stdout, rejeição de flags de trading, recursos TEMP removidos e regressões PRE4-PRE8. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final; revisão de segurança/merge sem deploy. Não confirma J1, segurança de 50x ou J6 prospectiva.
+
+
+#### Revisão PRE21 — causalidade explícita e métricas por margem
+
+A regressão adicional compara a primitiva `causal_oos_bar_choice` a uma seleção manual por volume das 24 barras anteriores e à direção dos dois closes anteriores; alterar volume/close na barra escolhida ou em barras futuras não altera o resultado da decisão. O relatório de stress deve incluir, por fold e no agregado, as somas líquidas condicionais normalizadas pela margem fixa hipotética por exposição, calculadas em contexto Decimal de alta precisão. Nenhuma métrica representa retorno composto ou exposição real da carteira.

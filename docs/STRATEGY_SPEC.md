@@ -153,6 +153,10 @@ A biblioteca `vision_dynamic_replay.py` reutiliza candles já auditados por `off
 
 `vision_intrabar_stress.py` introduz estresse matemático estritamente offline para uma barra Vision, com margem sintética, alavancagem fixa por avaliação, stop, target, limiar de liquidação proxy por equity e manutenção hipotética, funding assinado e custos Decimal por lado. Como OHLC não informa a ordem dos eventos, retorna **dois limites condicionais**: downside (liquidação/stop antes de target) e upside (target antes de stop), marcando ambiguidade e toques simultâneos. A marcação e a fórmula de liquidação reais da corretora NÃO são inferidas. Não há integração com execução nem estimativa de perda garantida. `financial_backtest_approved=false`, nenhuma ordem, rede, licença, dado canônico ou homologação Top50. Testes de 50x/1x, long/short, ambiguidade, taxa, funding e corrupção. A integração com seleção OOS mensal e CLI é **pendência da issue #359**, não alegar entrega completa.
 
+## J3/PRE21 #407 — OOS mensal condicionado por OHLC
+
+O avaliador OOS mensal usa escolha causal compartilhada, mantendo o proxy open→close legado e adicionando apenas a visão opt-in de estresse. Cada barra exposta preserva ambos os ramos OHLC adverso/favorável; abstenção não ganha PnL. Toques simultâneos de stop, alvo e liquidação proxy são ambíguos, não vitórias. Ver `docs/J3_PRE21_MONTHLY_INTRABAR_OOS.md`.
+
 
 ## #359 — ligação de stress à seleção mensal OOS sem refitting (30/10/2026)
 

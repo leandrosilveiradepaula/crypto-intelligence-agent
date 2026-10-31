@@ -895,6 +895,10 @@ Branch `codex/issue-399-j6-pre6-paper-incident-audit` parte de `main=7819e05c8d1
 
 Branch `codex/issue-401-j6-pre7-paper-readiness-matrix` parte de `main=0959c86fc611a1a313514fde1ab728925ac333ea`. Acrescenta laboratório temporário com 11 cenários após revisão de integração e relatório `paper_incident_matrix_v1`, incluindo saúde/restart, UNKNOWN, parcial/cancelamento, concorrência, incompatibilidade e corrupção. D195 e contrato PRE7 registram que os resultados são evidência offline, não homologação financeira. PR/CI ainda pendentes.
 
+## J3/PRE21 #407 — OOS mensal com estresse intrabar condicionado
+
+A branch `codex/issue-407-j3-pre21-monthly-intrabar-oos` parte de `main=51df143e0a689b59f7874132d1fe1a328e787465`. Ela centraliza seleção/direção causal por barra em `causal_oos_bar_choice` para que o proxy legado e o auditor intrabar usem a mesma janela de 24h fechadas, e amplia os agregados do fold com abstenções e toques stop/alvo. `docs/J3_PRE21_MONTHLY_INTRABAR_OOS.md` e D198 delimitam os envelopes hipotéticos. A PR #408 teve o primeiro SHA `bb40654b71ba98231b9c47ff56d54422a7317263` aprovado em docs/Linux+Windows `41204360350` e Chrome/PAPER `41204360372`; o SHA documental posterior requer a mesma validação antes de revisão. Nenhum dado externo, VPS, credencial, ordem, testnet/live, deploy ou gasto foi usado.
+
 
 ## J6/PRE8 #403 — auditoria de uma carteira PAPER selecionada, 31/10/2026
 

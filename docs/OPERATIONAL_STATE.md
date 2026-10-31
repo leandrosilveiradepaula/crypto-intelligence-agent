@@ -1024,3 +1024,12 @@ Base `main=0959c86fc611a1a313514fde1ab728925ac333ea`, issue #401 aberta e zero P
 ## Checkpoint 31/10/2026 — J6/PRE9 #405 em validação
 
 `main=46975938ec727489647edcc8173bf98f2e7657a8` após PR #404 integrada, issue #403 encerrada, review 5721532250, CI 41174110832 Linux/docs/Windows e 41174110831 Chrome/PAPER SUCCESS. Nova issue #405 e branch `work/j6-pre9-causal-open-to-runner-paper`: laboratório `scripts.demo_full_offline_paper_lifecycle` para ligar sinal J2/RiskGate e intenção persistida AUTO2 à mesma OPEN em AUTO4 somente após FILL de fixture explícito, demonstrando saídas 50/60/70, RUNNER2, reserva PRE4, restart e auditor PRE8. `tests/test_full_offline_paper_lifecycle.py`, D197 e documentação PRE9. Próxima ação: PR/CI SHA final, correção de falhas, revisão e merge não produtivo se aprovado. J1 #2/#319 VPS adiada pelo PO; sem rede real, credenciais, ordens, migrations, deploy ou gasto.
+
+## Checkpoint 31/10/2026 — J3/PRE21 #407 em validação
+
+`main=51df143e0a689b59f7874132d1fe1a328e787465` e zero PRs abertas foram verificados antes da branch `codex/issue-407-j3-pre21-monthly-intrabar-oos`. A entrega extrai `causal_oos_bar_choice` para reutilização obrigatória do ranking de volume 24h fechado/direção passada pelo proxy OOS e auditor intrabar; adiciona abstenções e toques de stop/alvo aos agregados mensais condicionais. D198 e `docs/J3_PRE21_MONTHLY_INTRABAR_OOS.md` registram que custos/funding/margem/1x-50x são hipóteses e que liquidação proxy, gaps e ordem OHLC continuam desconhecidos. A PR #408 abriu em `bb40654b71ba98231b9c47ff56d54422a7317263`, validado em docs/Linux+Windows `41204360350` e Chrome/PAPER `41204360372` SUCCESS; o commit documental seguinte deve obter CI no próprio SHA antes da revisão. Sem VPS, rede de mercado, credencial, ordem, testnet/live, migration, deploy ou gasto.
+
+
+#### Revisão de integração J3/PRE21 #407/PR #408, 31/10/2026
+
+Codex entregou a PR #408 inicialmente no head `d69db31dffc1e5684e35ab07eebc59cb35cef497`, com CI Linux/docs+Windows/offline `41204614829` e Chrome/PAPER `41204614787` SUCCESS, 1734 testes locais e 101 skips relatados. Revisão independente acrescentou campos por margem condicional em cada fold/agregado e testes causais de ranking 24h fechado/direção passada; verificação da nova CI no HEAD atualizado é obrigatória **antes de qualquer merge**. Não houve migração, operação financeira, VPS, credenciais, deploy nem orçamento adicional.
