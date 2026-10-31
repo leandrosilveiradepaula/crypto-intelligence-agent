@@ -934,3 +934,8 @@ Base `main=fea791dfd6dfb565a5254e4bb6dbb137cc2762ca` com PRE24 #413/PR #414 inte
 ## J6/PRE10 #417 — matriz integrada de interrupção causal PAPER (31/10/2026)
 
 Base confirmada `main=87f6221c82c4f38a6307a2daaf023ed26aeb21e8`, zero PRs abertas antes da tarefa. A demo existente `scripts.demo_full_offline_paper_lifecycle` agora usa auditoria AUTO8 e PRE8, operador AUTO6 e ramo AUTO4 descartável com FILL divergente para afirmar bloqueio nas fronteiras J2/AUTO2/AUTO4/REDUCE_ONLY/runner sem alterar caminho de sucesso. Sete checkpoints sanitizados `interruption_checks`; testes de determinismo, contadores, travas de native stop/live e auditor adulterado. Issue #417; branch `work/j6-pre10-causal-interruption-matrix`. CI, PR, revisão e merge somente após evidências no SHA exato, sem promessas antecipadas. J1 #319: worker VPS agendado no último registro mas sem resultado privado verificado, não reiniciar/coletar. Sem conta, rede, ordens, deploy ou gastos.
+
+
+## J6/PRE11 #419 — cutoff causal e recuperação em PAPER, 31/10/2026
+
+Base verificada `main=97840c8f4245ed7692b372d06ed68b611c50cbab` (J6 PRE10/PR #418 integrada, CI pós-merge verde, zero PRs abertas). PRE11 implementa fail-closed em snapshot futuro AUTO2 cursor/pause no status de operador e recuperação; runner-close PENDING/FILLED com cutoff antigo; classificação de incidente RUNNER2 com AUTO4 posterior ao cutoff. Testes adversariais de instante anterior/igual, recusa de leitura retrocausal e imutabilidade do diário. Issue #419 branch `work/j6-pre11-causal-recovery-cutoff`. CI, revisão e merge dependem de evidência verificável. J1 #319 permanece sem resultado auditado da tentativa VPS; sem novo GET, restart, trade, credenciais, release, deploy ou gasto.

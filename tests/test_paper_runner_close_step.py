@@ -72,6 +72,37 @@ class DurablePaperRunnerCloseStepTests(unittest.TestCase):
         self.assertEqual(self.fixture.position_path.read_bytes(), content_before_restart)
         self.assertFalse(restarted.sanitized_report()["orders_sent"])
 
+    def test_runner_existing_pending_and_filled_cannot_be_read_before_checkpoint(self):
+        from crypto_intelligence_agent.synthetic_order_lifecycle import PaperOrderEvent
+        self.trigger()
+        initial = self.step()
+        self.assertEqual(initial.state, PaperRunnerCloseStepState.RESERVED_PAPER_ONLY)
+        saved = self.store.load(self.fixture.id)
+        before = self.fixture.position_path.read_bytes()
+        with self.assertRaisesRegex(DataValidationError, "future PAPER runner position"):
+            self.step(saved.as_of_ms-1)
+        self.assertEqual(self.fixture.position_path.read_bytes(), before)
+        self.assertEqual(self.step(saved.as_of_ms).state,
+                         PaperRunnerCloseStepState.PENDING_RECONCILIATION_PAPER_ONLY)
+        with self.assertRaises(DataValidationError):
+            step_durable_paper_runner_close(
+                self.fixture.path, self.fixture.position_path, self.fixture.id,
+                policy=None, as_of_ms=saved.as_of_ms)
+        self.assertEqual(self.fixture.position_path.read_bytes(), before)
+        fill = PaperOrderEvent(
+            "fixture_pre11_runner_explicit_fill", PaperOrderEventKind.FILL,
+            saved.as_of_ms+1, saved.runner_reserved_unfilled_units)
+        self.store.append_exit_events(
+            self.fixture.id, initial.created_intent_id,
+            (fill,), as_of_ms=fill.event_at_ms)
+        final = self.store.load(self.fixture.id)
+        before = self.fixture.position_path.read_bytes()
+        with self.assertRaisesRegex(DataValidationError, "future PAPER runner position"):
+            self.step(final.as_of_ms-1)
+        self.assertEqual(self.step(final.as_of_ms).state,
+                         PaperRunnerCloseStepState.CLOSED_PAPER_ONLY)
+        self.assertEqual(self.fixture.position_path.read_bytes(), before)
+
     def test_missing_or_nontriggering_runner_fails_without_new_writer(self):
         original = self.fixture.position_path.read_bytes()
         with self.assertRaises(DataValidationError):

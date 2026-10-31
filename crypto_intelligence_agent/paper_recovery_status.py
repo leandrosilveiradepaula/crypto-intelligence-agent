@@ -49,14 +49,16 @@ def inspect_local_paper_recovery_status(
         positions = _checked_path(position_journal_path)
         if orders == positions:
             raise DataValidationError("independent PAPER journals required")
-        operator = inspect_local_paper_operator_status(orders)
+        operator = inspect_local_paper_operator_status(
+            orders, decision_at_ms=decision_at_ms)
         health = audit_paper_open_health(
             orders, positions, decision_at_ms=decision_at_ms,
         )
         # Each reader has its own SQLite snapshot. Repeat both inspections
         # and reject any observed drift; this still is NOT an atomic
         # cross-journal snapshot and must NEVER be an OPEN authorization.
-        operator_after = inspect_local_paper_operator_status(orders)
+        operator_after = inspect_local_paper_operator_status(
+            orders, decision_at_ms=decision_at_ms)
         health_after = audit_paper_open_health(
             orders, positions, decision_at_ms=decision_at_ms,
         )

@@ -97,6 +97,29 @@ class PaperOperatorReadOnlyDashboardTests(unittest.TestCase):
         self.assertFalse(report.unknown_open_requires_reconciliation)
         self.assertFalse(report.provider_market_data_authenticated)
 
+    def test_operator_cutoff_rejects_future_cursor_and_pause_without_writes(self):
+        self.batch(1)
+        initial = self.snapshot()
+        assert initial.durable_cursor_present
+        cursor_cutoff = self.cs[4].close_time_ms + 1000
+        before = self.db.read_bytes()
+        with self.assertRaisesRegex(DataValidationError, "newer than decision cutoff"):
+            inspect_local_paper_operator_status(self.db, decision_at_ms=cursor_cutoff-1)
+        self.assertEqual(
+            inspect_local_paper_operator_status(self.db, decision_at_ms=cursor_cutoff),
+            initial)
+        self.assertEqual(self.db.read_bytes(), before)
+        pause_at = cursor_cutoff + 1
+        self.orders.set_local_kill_switch(
+            pause=True, expected_sequence=0, changed_at_ms=pause_at,
+        )
+        before = self.db.read_bytes()
+        with self.assertRaisesRegex(DataValidationError, "newer than decision cutoff"):
+            inspect_local_paper_operator_status(self.db, decision_at_ms=cursor_cutoff)
+        self.assertTrue(inspect_local_paper_operator_status(
+            self.db, decision_at_ms=pause_at).new_paper_open_paused)
+        self.assertEqual(self.db.read_bytes(), before)
+
     def test_persisted_pause_reflected_across_reopen_and_resume(self):
         self.batch(1)
         self.orders.set_local_kill_switch(

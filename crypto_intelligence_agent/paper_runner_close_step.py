@@ -118,7 +118,12 @@ def step_durable_paper_runner_close(
     partial fills require reconciliation/manual review; no automatic retry.
     """
     cutoff = _utc_ms(as_of_ms, "PAPER runner-close step cutoff")
+    if type(policy) is not PaperRunnerTrailPolicy:
+        raise DataValidationError("typed PAPER runner policy required")
     before = inspect_paper_position(position_path, position_id)
+    if before.balance.as_of_ms > cutoff:
+        raise DataValidationError(
+            "future PAPER runner position checkpoint at requested cutoff")
     existing = _existing_runner_state(before.balance)
     if existing is not None:
         return existing
