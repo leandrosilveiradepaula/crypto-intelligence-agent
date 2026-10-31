@@ -1,0 +1,12 @@
+# J3/PRE25 — benchmark LONG pareado à exposição OOS
+
+## Por que existe
+O benchmark histórico `benchmark_*` do PRE21 executa um LONG *hipotético* por barra OOS, inclusive quando a regra causal selecionou abstenção. O novo `matched_long` acompanha LONG **somente quando a estratégia efetivamente escolheria expor**, no mesmo ativo e barra temporal, com termos idênticos de financiamento, alavancagem, taxas, margem, slippage, stop e alvo. O motor usa o envelope LONG já calculado para o comparador integral, sem chamada de preço extra. O benchmark original é preservado como referência all-bars, não como exposição pareada.
+
+## Contrato aditivo
+`matched_long` é agregado e por fold em `VisionStressOOS` e `VisionStressFoldAudit` e aparece em `VisionStressSensitivity` / CLI PRE23: `exposures`, `ambiguous_count`, `liquidation_possible_count`, `stop_touched_count`, `target_touched_count`, `worst_net_quote`, `best_net_quote`, `worst_cumulative_net_over_margin`, `best_cumulative_net_over_margin`, `worst_drawdown_proxy_quote`, `best_drawdown_proxy_quote`, `max_single_bar_loss_over_margin`, `strategy_worst_minus_matched_best_quote` e `strategy_best_minus_matched_worst_quote`. Deltas cruzam hipóteses condicionais, **não** medem alpha, edge estatística, ganho garantido ou retorno líquido de carteira. Se a estratégia abstém em todo fold, `matched_long.exposures=0` e suas grandezas financeiras são zero; a referência all-bars permanece.
+
+O digest PRE21 original exclui explicitamente os campos aditivos `decision_fingerprint_sha256` (D201) e `matched_long` da serialização do fold, preservando comparabilidade byte-a-byte; o fingerprint PRE24 continua incluindo todas as barras OOS e é independente de custos/alavancagem. Sem novo parser, I/O, feed, chamada de mercado, código de ordens ou outro ledger.
+
+## Aceite
+Testes de tendência sintética dentro de OHLC válido (força treino de continuação e exposições LONG), reversão SHORT em mock *apenas para teste*, abstenção 100%, reconciliação exata dos sinais e riscos, 1x/50x, permutação de ativos, elevação de custos, PR/CI Linux, Windows/offline e Chrome/PAPER verdes no SHA final. Regressões PRE21-PRE24 e CLI PRE23. Sem inferência sobre rentabilidade, funding/mark/liq reais, intrabar conhecido, Top50 de mercado, execução live/testnet ou capital protegido. J1 #319 segue externa, sem nova coleta. R$0 adicional.

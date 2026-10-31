@@ -193,6 +193,78 @@ class VisionStressOOSTests(unittest.TestCase):
         self.assertNotEqual(low.decision_fingerprint_sha256,
                             modified.decision_fingerprint_sha256)
 
+    def test_exposure_matched_long_and_short_abstain_on_synthetic_month(self):
+        from dataclasses import replace
+        from unittest.mock import patch
+        from crypto_intelligence_agent.vision_costed_oos import costed_vision_monthly_oos
+        a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
+        # The original fixture has flat closes. Build a directional OOS
+        # sequence with valid prices bounded by the existing OHLC range.
+        def trending(group):
+            n=0
+            months=[]
+            for month in group:
+                candles=[]
+                for candle in month.candles:
+                    candles.append(replace(candle,close=D("101")+D(n)/D("1000"),
+                                           high=D("104"),low=D("99")))
+                    n+=1
+                months.append(replace(month,candles=tuple(candles)))
+            return tuple(months)
+        a,b=trending(a),trending(b)
+        end=a[-1].end_open_exclusive_ms+3600000
+        def audit(groups=(a,b),lev=1,fee="0"):
+            return audit_costed_vision_intrabar_oos(
+                groups,as_of_ms=end,cost_bps_per_side=D("0"),
+                assumptions=terms(lev,fee=fee))
+        one=audit()
+        fifty=audit((b,a),50)
+        self.assertGreater(one.stressed_count,0)
+        self.assertEqual(one.decision_fingerprint_sha256,
+                         fifty.decision_fingerprint_sha256)
+        self.assertEqual(one.matched_long.exposures,one.stressed_count)
+        self.assertEqual(one.matched_long.exposures,
+                         one.fold_reports[0].matched_long.exposures)
+        self.assertLessEqual(one.matched_long.exposures,
+                             one.fold_reports[0].benchmark_exposures)
+        # Every OOS direction in this fixture is LONG; the matched LONG
+        # and strategy must reconcile on the same exact exposure indices.
+        self.assertEqual(one.matched_long.worst_net_quote,one.worst_net_quote)
+        self.assertEqual(one.matched_long.best_net_quote,one.best_net_quote)
+        self.assertEqual(one.matched_long.strategy_worst_minus_matched_best_quote,
+                         one.worst_net_quote-one.best_net_quote)
+        self.assertEqual(one.matched_long.strategy_best_minus_matched_worst_quote,
+                         one.best_net_quote-one.worst_net_quote)
+        self.assertEqual(one.matched_long.exposures,fifty.matched_long.exposures)
+        with_fee=audit(fee="10")
+        self.assertEqual(one.matched_long.exposures,with_fee.matched_long.exposures)
+        self.assertLessEqual(with_fee.matched_long.best_net_quote,
+                             one.matched_long.best_net_quote)
+        self.assertLessEqual(with_fee.matched_long.worst_net_quote,
+                             one.matched_long.worst_net_quote)
+        trained=costed_vision_monthly_oos(
+            (a,b),as_of_ms=end,cost_bps_per_side=D("0"))
+        reversed_fold=replace(trained,folds=tuple(
+            replace(f,selected_rule="reversal") for f in trained.folds))
+        with patch("crypto_intelligence_agent.vision_stress_oos.costed_vision_monthly_oos",
+                   return_value=reversed_fold):
+            short=audit()
+        self.assertEqual(short.stressed_count,short.matched_long.exposures)
+        self.assertGreater(short.stressed_count,0)
+        self.assertNotEqual(short.best_net_quote,short.matched_long.best_net_quote)
+        self.assertEqual(short.matched_long.worst_net_quote,
+                         one.matched_long.worst_net_quote)
+        abstained=replace(trained,folds=tuple(
+            replace(f,selected_rule="abstain") for f in trained.folds))
+        with patch("crypto_intelligence_agent.vision_stress_oos.costed_vision_monthly_oos",
+                   return_value=abstained):
+            zero=audit()
+        self.assertEqual(zero.matched_long.exposures,0)
+        self.assertEqual(zero.matched_long.worst_net_quote,D(0))
+        self.assertEqual(zero.matched_long.best_drawdown_proxy_quote,D(0))
+        self.assertGreater(zero.fold_reports[0].benchmark_exposures,0)
+        self.assertNotIn("BTCUSDT",str(one.sanitized_report()))
+
     def test_requires_explicit_and_valid_stress_terms(self):
         a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
         end=a[-1].end_open_exclusive_ms+3600000

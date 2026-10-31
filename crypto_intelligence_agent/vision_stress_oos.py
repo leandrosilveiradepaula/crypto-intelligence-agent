@@ -16,6 +16,28 @@ _ZERO = Decimal(0)
 
 
 @dataclass(frozen=True)
+class MatchedLongBenchmark:
+    """LONG on precisely the selected OOS strategy exposure bars."""
+    exposures: int
+    ambiguous_count: int
+    liquidation_possible_count: int
+    stop_touched_count: int
+    target_touched_count: int
+    worst_net_quote: Decimal
+    best_net_quote: Decimal
+    worst_cumulative_net_over_margin: Decimal
+    best_cumulative_net_over_margin: Decimal
+    worst_drawdown_proxy_quote: Decimal
+    best_drawdown_proxy_quote: Decimal
+    max_single_bar_loss_over_margin: Decimal
+    strategy_worst_minus_matched_best_quote: Decimal
+    strategy_best_minus_matched_worst_quote: Decimal
+
+    def sanitized_report(self) -> dict:
+        return {k: str(v) if type(v) is Decimal else v for k,v in vars(self).items()}
+
+
+@dataclass(frozen=True)
 class VisionStressFoldAudit:
     """Monthly OOS observations. Neither branch is an executable fill path."""
     test_month_number: int
@@ -48,10 +70,12 @@ class VisionStressFoldAudit:
     strategy_max_single_bar_loss_over_margin: Decimal
     benchmark_max_single_bar_loss_over_margin: Decimal
     decision_fingerprint_sha256: str = ""
+    matched_long: MatchedLongBenchmark | None = None
 
     def sanitized_report(self) -> dict:
         return {
-            key: str(value) if type(value) is Decimal else value
+            key: (value.sanitized_report() if type(value) is MatchedLongBenchmark
+                  else str(value) if type(value) is Decimal else value)
             for key, value in vars(self).items()
         }
 
@@ -85,6 +109,7 @@ class VisionStressOOS:
     benchmark_worst_cumulative_net_over_margin: Decimal = _ZERO
     benchmark_best_cumulative_net_over_margin: Decimal = _ZERO
     decision_fingerprint_sha256: str = ""
+    matched_long: MatchedLongBenchmark | None = None
 
     def sanitized_report(self) -> dict:
         return {
@@ -116,6 +141,8 @@ class VisionStressOOS:
             "fold_coverage": [fold.sanitized_report() for fold in self.fold_reports],
             "digest_sha256": self.digest_sha256,
             "decision_fingerprint_sha256": self.decision_fingerprint_sha256,
+            "matched_long": (self.matched_long.sanitized_report()
+                             if self.matched_long is not None else None),
             "financial_backtest_approved": False,
             "marketwide_top50_verified": False,
             "source_authenticated": False,
@@ -146,9 +173,14 @@ def audit_costed_vision_intrabar_oos(
         equities = [_ZERO for _ in range(4)]
         peaks = [_ZERO for _ in range(4)]
         drawdowns = [_ZERO for _ in range(4)]
+        matched_totals = [_ZERO, _ZERO]
+        matched_equities = [_ZERO, _ZERO]
+        matched_peaks = [_ZERO, _ZERO]
+        matched_drawdowns = [_ZERO, _ZERO]
         n = ambiguous = liquidations = benchmark_ambiguous = benchmark_liquidations = 0
         stops = targets = abstentions = benchmark_stops = benchmark_targets = 0
-        strategy_max_loss = benchmark_max_loss = _ZERO
+        strategy_max_loss = benchmark_max_loss = matched_max_loss = _ZERO
+        matched_amb = matched_liq = matched_stops = matched_targets = 0
         folds = []
         decision_digest = sha256()
         digest = sha256()
@@ -176,12 +208,29 @@ def audit_costed_vision_intrabar_oos(
             monthly_peak[index] = max(monthly_peak[index], monthly_eq[index])
             monthly_dd[index] = min(monthly_dd[index], monthly_eq[index] - monthly_peak[index])
 
+        def matched_track(index: int, change: Decimal, eq: list,
+                          peak: list, dd: list) -> None:
+            matched_totals[index] += change
+            matched_equities[index] += change
+            matched_peaks[index] = max(matched_peaks[index], matched_equities[index])
+            matched_drawdowns[index] = min(
+                matched_drawdowns[index], matched_equities[index] - matched_peaks[index])
+            eq[index] += change
+            peak[index] = max(peak[index], eq[index])
+            dd[index] = min(dd[index], eq[index] - peak[index])
+
         for k, fold in enumerate(baseline.folds, 1):
             fold_decision_digest = sha256()
             month_totals_start = totals.copy()
             monthly_eq = [_ZERO for _ in range(4)]
             monthly_peak = [_ZERO for _ in range(4)]
             monthly_dd = [_ZERO for _ in range(4)]
+            matched_start = matched_totals.copy()
+            matched_eq = [_ZERO, _ZERO]
+            matched_peak = [_ZERO, _ZERO]
+            matched_dd = [_ZERO, _ZERO]
+            m_amb = m_liq = m_stop = m_target = 0
+            fold_matched_max = _ZERO
             bars = exposures = amb = liq = b_amb = b_liq = 0
             stop = target = abstain = b_stop = b_target = 0
             fold_strategy_max_loss = fold_benchmark_max_loss = _ZERO
@@ -221,6 +270,20 @@ def audit_costed_vision_intrabar_oos(
                 if direction == 0 or fold.selected_rule == "abstain":
                     abstain += 1
                     continue
+                # Reuse exactly the existing LONG result for this selected
+                # bar, but record it only when the strategy actually exposes.
+                matched_track(0, benchmark.worst_net_quote,
+                              matched_eq, matched_peak, matched_dd)
+                matched_track(1, benchmark.best_net_quote,
+                              matched_eq, matched_peak, matched_dd)
+                m_amb += int(benchmark.intrabar_ambiguous)
+                m_liq += int(benchmark.touched_liquidation_proxy)
+                m_stop += int(benchmark.touched_stop)
+                m_target += int(benchmark.touched_target)
+                fold_matched_max = max(
+                    fold_matched_max,
+                    -benchmark.worst_net_quote / assumptions.margin.requested_margin_quote,
+                    _ZERO)
                 long = (direction > 0) == (fold.selected_rule == "continuation")
                 outcome = stress_vision_candle(selected[i], long=long,
                                                assumptions=assumptions)
@@ -253,23 +316,41 @@ def audit_costed_vision_intrabar_oos(
             benchmark_targets += b_target
             strategy_max_loss = max(strategy_max_loss, fold_strategy_max_loss)
             benchmark_max_loss = max(benchmark_max_loss, fold_benchmark_max_loss)
+            matched_amb += m_amb
+            matched_liq += m_liq
+            matched_stops += m_stop
+            matched_targets += m_target
+            matched_max_loss = max(matched_max_loss, fold_matched_max)
             month_nets = tuple(totals[j] - month_totals_start[j] for j in range(4))
             margin_quote = assumptions.margin.requested_margin_quote
+            m_nets = tuple(matched_totals[j] - matched_start[j] for j in range(2))
+            fold_matched = MatchedLongBenchmark(
+                exposures, m_amb, m_liq, m_stop, m_target,
+                *m_nets, *(v / margin_quote for v in m_nets),
+                *matched_dd, fold_matched_max,
+                month_nets[0] - m_nets[1], month_nets[1] - m_nets[0])
             fold_audit = VisionStressFoldAudit(
                 k, bars, exposures, bars, amb, b_amb, liq, b_liq,
                 stop, target, b_stop, b_target, abstain,
                 *month_nets,
                 *(net / margin_quote for net in month_nets),
                 *monthly_dd, fold_strategy_max_loss, fold_benchmark_max_loss,
-                fold_decision_digest.hexdigest())
+                fold_decision_digest.hexdigest(), fold_matched)
             folds.append(fold_audit)
             # Keep the historical PRE21 financial digest byte-compatible:
             # the new selection commitment has its OWN independent field.
             legacy_fold = fold_audit.sanitized_report()
             legacy_fold.pop("decision_fingerprint_sha256")
+            legacy_fold.pop("matched_long")
             digest.update(json.dumps(
                 legacy_fold, sort_keys=True,
                 separators=(",", ":")).encode("ascii"))
+        margin_quote = assumptions.margin.requested_margin_quote
+        matched_aggregate = MatchedLongBenchmark(
+            n, matched_amb, matched_liq, matched_stops, matched_targets,
+            *matched_totals, *(v / margin_quote for v in matched_totals),
+            *matched_drawdowns, matched_max_loss,
+            totals[0] - matched_totals[1], totals[1] - matched_totals[0])
         return VisionStressOOS(
             n, ambiguous, liquidations, totals[0], totals[1], digest.hexdigest(),
             totals[2], totals[3], drawdowns[0], drawdowns[1],
@@ -278,4 +359,5 @@ def audit_costed_vision_intrabar_oos(
             strategy_max_loss, benchmark_max_loss,
             stops, targets, abstentions, benchmark_stops, benchmark_targets,
             *(net / assumptions.margin.requested_margin_quote for net in totals),
-            decision_fingerprint_sha256=decision_digest.hexdigest())
+            decision_fingerprint_sha256=decision_digest.hexdigest(),
+            matched_long=matched_aggregate)

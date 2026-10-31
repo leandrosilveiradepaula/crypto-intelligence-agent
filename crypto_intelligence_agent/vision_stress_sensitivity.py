@@ -40,6 +40,7 @@ class VisionSensitivityScenario:
             },
             "test_fold_count": len(a.fold_reports),
             "decision_fingerprint_sha256": a.decision_fingerprint_sha256,
+            "matched_long": a.matched_long.sanitized_report(),
             "strategy_worst_drawdown_proxy_quote": str(a.worst_drawdown_proxy_quote),
             "strategy_best_drawdown_proxy_quote": str(a.best_drawdown_proxy_quote),
             "benchmark_worst_drawdown_proxy_quote": str(a.benchmark_worst_drawdown_proxy_quote),
@@ -71,6 +72,7 @@ class VisionSensitivityScenario:
                 {
                     "test_month_number": f.test_month_number,
                     "decision_fingerprint_sha256": f.decision_fingerprint_sha256,
+                    "matched_long": f.matched_long.sanitized_report(),
                     "strategy_worst_drawdown_proxy_quote": str(f.strategy_worst_drawdown_proxy_quote),
                     "strategy_best_drawdown_proxy_quote": str(f.strategy_best_drawdown_proxy_quote),
                     "benchmark_worst_drawdown_proxy_quote": str(f.benchmark_worst_drawdown_proxy_quote),

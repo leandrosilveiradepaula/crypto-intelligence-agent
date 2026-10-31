@@ -44,6 +44,10 @@ class VisionStressSensitivityTests(unittest.TestCase):
             self.assertEqual(len(row["decision_fingerprint_sha256"]),64)
             self.assertIn("strategy_worst_drawdown_proxy_quote",row)
             self.assertIn("strategy_max_single_bar_loss_over_margin",row)
+            self.assertEqual(row["matched_long"]["exposures"],row["strategy_exposures"])
+            self.assertEqual(row["folds"][0]["matched_long"]["exposures"],
+                             row["folds"][0]["strategy_exposures"])
+            self.assertIn("strategy_worst_minus_matched_best_quote",row["matched_long"])
             self.assertIn("benchmark_best_drawdown_proxy_quote",row["folds"][0])
             self.assertIn("decision_fingerprint_sha256",row["folds"][0])
         self.assertEqual(
