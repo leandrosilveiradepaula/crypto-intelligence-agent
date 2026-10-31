@@ -17,6 +17,8 @@ from crypto_intelligence_agent.offline_paper_batch import run_durable_offline_pa
 from crypto_intelligence_agent.offline_paper_durable_cursor import (
     _load_cursor, _verify_cursor_orders,
 )
+from crypto_intelligence_agent.paper_open_health import audit_paper_open_health
+from crypto_intelligence_agent.paper_operator_status import inspect_local_paper_operator_status
 from crypto_intelligence_agent.paper_order_store import (
     SQLitePaperOrderJournal, _TABLES as _ORDER_TABLES, _VERSION as _ORDER_VERSION,
 )
@@ -81,8 +83,94 @@ def _opened_from_cursor(orders_path: Path):
         return entry.intent
 
 
+
+def _interruption_check(
+    orders: Path, positions: Path, *,
+    checkpoint: str, expected_reason: str, expected_open_allowed: bool,
+    expect_pending_gate: bool = False,
+    position_id: str | None = None, cutoff_ms: int | None = None,
+    incident_code: str | None = None, incident_severity: str | None = None,
+) -> dict[str, object]:
+    """Read-only observable checkpoint; expected controls must fail closed."""
+    health = audit_paper_open_health(orders, positions, decision_at_ms=cutoff_ms)
+    operator = inspect_local_paper_operator_status(orders)
+    if (health.reason != expected_reason or
+            health.new_open_allowed is not expected_open_allowed or
+            health.native_stop_verified or health.orders_sent or
+            not operator.durable_cursor_present or
+            (expect_pending_gate and operator.pending_or_unresolved_open_count < 1)):
+        raise DataValidationError("PAPER interruption health/operator guard mismatch")
+    # A health audit admitting a PENDING open never replaces the order risk
+    # gate (AUTO6). Report only local evidence, not trade authorization.
+    entry = {
+        "checkpoint": checkpoint,
+        "health_reason": health.reason,
+        "health_new_open_allowed_paper_only": health.new_open_allowed,
+        "pending_auto6_gate_required": expect_pending_gate,
+        "native_stop_verified": False,
+        "orders_sent": False,
+        "live_trading_authorized": False,
+    }
+    if position_id is not None:
+        if cutoff_ms is None or incident_code is None or incident_severity is None:
+            raise DataValidationError("explicit PAPER incident expectations required")
+        report = audit_selected_paper_portfolio_incidents(
+            positions, (position_id,), as_of_ms=cutoff_ms,
+            max_checkpoint_age_ms=10_000, opening_order_path=orders,
+        ).sanitized_report()
+        if (report["batch_block_code"] is not None or
+                len(report["positions"]) != 1 or
+                report["positions"][0]["incident_code"] != incident_code or
+                report["positions"][0]["severity"] != incident_severity or
+                report["native_stop_verified"] or report["orders_sent"]):
+            raise DataValidationError("PAPER interruption portfolio audit mismatch")
+        entry["incident_code"] = incident_code
+        entry["incident_severity"] = incident_severity
+    return entry
+
+
+def _isolated_identity_mismatch(
+    root: Path, orders: Path, opening_intent, opened_event: PaperOrderEvent,
+) -> dict[str, object]:
+    """Forge only an isolated AUTO4 fixture, NEVER mutate the causal path."""
+    isolated = root / "forged_position.sqlite"
+    fixture_position = SQLitePaperPositionJournal(isolated)
+    bad_event = PaperOrderEvent(
+        "fixture_pre10_other_open_fill", PaperOrderEventKind.FILL,
+        opened_event.event_at_ms, opening_intent.requested_units)
+    fixture_position.create_position(
+        position_id=_PID, opening_intent=opening_intent,
+        opening_events=(bad_event,), exit_plan=_plan(opening_intent.requested_units),
+        plan_version="fixture_pre10_bad_open_v1",
+        synthetic_lot_step_units=D("0.01"), as_of_ms=opened_event.event_at_ms)
+    health = audit_paper_open_health(
+        orders, isolated, decision_at_ms=opened_event.event_at_ms)
+    incident = audit_selected_paper_portfolio_incidents(
+        isolated, (_PID,), as_of_ms=opened_event.event_at_ms + 1,
+        max_checkpoint_age_ms=10_000,
+        opening_order_path=orders,
+    ).sanitized_report()
+    if (health.new_open_allowed or health.reason != "paper_open_health_unknown"
+            or len(health.fills) != 1 or
+            health.fills[0].reason != "opening_intent_or_fill_events_mismatch"
+            or incident["severity"] != "BLOCKED"
+            or incident["batch_block_code"] != "INVALID_OR_INCONSISTENT_SELECTED_JOURNALS"
+            or incident["observed_count"] != 0):
+        raise DataValidationError("forged PAPER position did not fail closed")
+    return {
+        "checkpoint": "isolated_auto4_mismatched_fill_identity",
+        "health_reason": health.reason,
+        "health_new_open_allowed_paper_only": False,
+        "portfolio_batch_block_code": incident["batch_block_code"],
+        "portfolio_severity": incident["severity"],
+        "native_stop_verified": False, "orders_sent": False,
+        "live_trading_authorized": False,
+    }
+
+
 def run_full_offline_paper_lifecycle() -> dict[str, object]:
     stages = []
+    checks = []
     with tempfile.TemporaryDirectory(prefix="cia_pre9_full_lifecycle_") as folder:
         root = Path(folder)
         orders_path = root / "orders.sqlite"
@@ -126,6 +214,11 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
             pass
         else:
             raise RuntimeError("PENDING without FILL created an invented position")
+        checks.append(_interruption_check(
+            orders_path, positions_path, checkpoint="pending_open_without_fill",
+            expected_reason="no_filled_open_or_position_requires_protection",
+            expected_open_allowed=True, expect_pending_gate=True,
+            cutoff_ms=opened.created_at_ms))
         stages.append("j2_risk_open_intent_reserved_without_fill")
 
         # An independent fixture event, NOT a market fill or an engine action.
@@ -138,6 +231,12 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
         if (filled.intent != opened
                 or filled.snapshot.filled_total_units != opened.requested_units):
             raise RuntimeError("AUTO2 fixture fill does not match generated OPEN")
+        checks.append(_interruption_check(
+            orders_path, positions_path, checkpoint="filled_open_without_auto4_position",
+            expected_reason="paper_open_unprotected",
+            expected_open_allowed=False, cutoff_ms=open_fill.event_at_ms))
+        checks.append(_isolated_identity_mismatch(
+            root, orders_path, filled.intent, open_fill))
         current = position.create_position(
             position_id=_PID, opening_intent=filled.intent,
             opening_events=filled.events, exit_plan=_plan(opened.requested_units),
@@ -159,6 +258,12 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
         )
         if recovered != current:
             raise RuntimeError("AUTO4 restart did not recover exact confirmed OPEN")
+        checks.append(_interruption_check(
+            orders_path, positions_path, checkpoint="auto4_open_confirmed_no_native_stop",
+            expected_reason="paper_open_unverified_protection",
+            expected_open_allowed=False, position_id=_PID,
+            cutoff_ms=open_fill.event_at_ms+1,
+            incident_code="PARTIALS_INCOMPLETE", incident_severity="REVIEW"))
         stages.append("explicit_fixture_open_fill_crosschecked_on_restart")
 
         for step in (1, 2, 3):
@@ -187,6 +292,12 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
                 or current.confirmed_remaining_units != D("0.12")
                 or current.runner_floor_units != D("0.12")):
             raise RuntimeError("synthetic 50/60/70 conservation failed")
+        checks.append(_interruption_check(
+            orders_path, positions_path, checkpoint="partial_exits_leave_runner",
+            expected_reason="paper_open_unverified_protection",
+            expected_open_allowed=False, position_id=_PID,
+            cutoff_ms=current.as_of_ms+1,
+            incident_code="RUNNER_UNPROTECTED", incident_severity="REVIEW"))
         stages.append("three_explicit_fixture_partial_fills")
 
         # Mark prices below are arbitrary invented values in quote units.
@@ -228,6 +339,13 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
         if (before_runner_fill.confirmed_remaining_units != D("0.12")
                 or before_runner_fill.runner_filled_units != 0):
             raise RuntimeError("reservation incorrectly invented a runner FILL")
+        checks.append(_interruption_check(
+            orders_path, positions_path, checkpoint="pending_runner_after_restart",
+            expected_reason="paper_open_health_unknown",
+            expected_open_allowed=False, position_id=_PID,
+            cutoff_ms=action_time+1,
+            incident_code="RUNNER_EXIT_PENDING_RECONCILIATION",
+            incident_severity="REVIEW"))
         stages.append("runner_reduce_only_pending_recovered_without_fill")
 
         explicit_runner_fill = PaperOrderEvent(
@@ -249,12 +367,19 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
                 or inspected["positions"][0]["incident_code"] != "RUNNER_CLOSED_PAPER_ONLY"
                 or inspected["positions"][0]["severity"] != "INFO"):
             raise RuntimeError("AUTO2/AUTO4 runner close or PRE8 audit diverged")
+        checks.append(_interruption_check(
+            orders_path, positions_path, checkpoint="fully_flat_after_runner_fill",
+            expected_reason="all_paper_positions_fully_flat_hypothetical_only",
+            expected_open_allowed=True, position_id=_PID,
+            cutoff_ms=after.as_of_ms+1,
+            incident_code="RUNNER_CLOSED_PAPER_ONLY", incident_severity="INFO"))
         stages.append("explicit_fixture_runner_fill_and_pre8_audit")
 
     return {
         "schema_version": "j6_full_offline_paper_lifecycle_v1",
         "mode": "offline_paper",
         "stages": stages,
+        "interruption_checks": checks,
         "strategy_open_intent_count": 1,
         "synthetic_open_fill_injected_explicitly": True,
         "synthetic_partial_fills_injected_explicitly": 3,

@@ -27,6 +27,31 @@ class FullOfflinePaperLifecycleTests(unittest.TestCase):
             "runner_reduce_only_pending_recovered_without_fill",
             "explicit_fixture_runner_fill_and_pre8_audit",
         ])
+        checks = first["interruption_checks"]
+        self.assertEqual([x["checkpoint"] for x in checks], [
+            "pending_open_without_fill",
+            "filled_open_without_auto4_position",
+            "isolated_auto4_mismatched_fill_identity",
+            "auto4_open_confirmed_no_native_stop",
+            "partial_exits_leave_runner",
+            "pending_runner_after_restart",
+            "fully_flat_after_runner_fill",
+        ])
+        self.assertTrue(checks[0]["pending_auto6_gate_required"])
+        self.assertTrue(checks[0]["health_new_open_allowed_paper_only"])
+        self.assertFalse(checks[1]["health_new_open_allowed_paper_only"])
+        self.assertFalse(checks[2]["health_new_open_allowed_paper_only"])
+        self.assertEqual(checks[2]["portfolio_batch_block_code"],
+                         "INVALID_OR_INCONSISTENT_SELECTED_JOURNALS")
+        self.assertEqual(checks[5]["incident_code"],
+                         "RUNNER_EXIT_PENDING_RECONCILIATION")
+        self.assertEqual(checks[6]["incident_code"], "RUNNER_CLOSED_PAPER_ONLY")
+        self.assertTrue(checks[6]["health_new_open_allowed_paper_only"])
+        for row in checks:
+            self.assertFalse(row["native_stop_verified"])
+            self.assertFalse(row["orders_sent"])
+            self.assertFalse(row["live_trading_authorized"])
+            self.assertNotIn("position_id", row)
         self.assertEqual(first["strategy_open_intent_count"], 1)
         self.assertEqual(first["opening_units"], "2")
         self.assertEqual(first["partial_exit_units"], "1.88")
@@ -42,6 +67,13 @@ class FullOfflinePaperLifecycleTests(unittest.TestCase):
         for flag in ("orders_sent", "native_stop_verified", "live_trading_authorized",
                      "approved_for_live_use", "financial_pnl_available"):
             self.assertFalse(first[flag])
+
+    def test_forged_healthy_audit_cannot_silently_pass(self):
+        from crypto_intelligence_agent.paper_open_health import PaperOpenHealth
+        with patch("scripts.demo_full_offline_paper_lifecycle.audit_paper_open_health",
+                   return_value=PaperOpenHealth((), True, "no_filled_open_or_position_requires_protection")):
+            with self.assertRaisesRegex(Exception, "PAPER interruption health"):
+                run_full_offline_paper_lifecycle()
 
     def test_cli_stdout_is_sanitized_and_disallows_operational_arguments(self):
         out = StringIO()
