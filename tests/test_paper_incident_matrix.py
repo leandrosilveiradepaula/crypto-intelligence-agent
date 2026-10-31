@@ -1,5 +1,6 @@
 """J6/PRE7 regression tests for the finite incident evidence matrix."""
 from dataclasses import replace
+from decimal import Decimal as D
 import json
 import unittest
 from unittest.mock import patch
