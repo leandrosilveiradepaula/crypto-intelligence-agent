@@ -14,8 +14,9 @@ inteiramente delegados ao `audit_costed_vision_intrabar_oos` PRE21.
 confundido com taxas/derrapagem de execução hipotética em cada cenário.
 
 O avaliador não implementa outra função de custos, um simulador de posições ou
-outro ledger. Reexecuta a mesma função PRE21 para cada cenário e compara a
-cobertura de **cada fold**: mês, barras, exposições, abstenções e exposição
+outro ledger. Reexecuta a mesma função PRE21 para cada cenário e exige uma **moeda sintética
+comum** entre os resultados em unidades quote (sem conversão cambial), além
+de comparar a cobertura de **cada fold**: mês, barras, exposições, abstenções e exposição
 do benchmark. Divergência de cobertura causa `DataValidationError`, nunca
 uma comparação enganosa. Uma seleção que se abstém integralmente continua
 possível e não é promovida a uma estratégia vencedora.
