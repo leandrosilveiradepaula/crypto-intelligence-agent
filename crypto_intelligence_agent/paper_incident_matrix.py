@@ -13,11 +13,15 @@ from decimal import Decimal
 from pathlib import Path
 import tempfile
 import sqlite3
+from unittest.mock import patch
 
 from .market_data import DataValidationError
 from .paper_position_reservations import SQLitePaperPositionJournal
 from .paper_runner_close_step import PaperRunnerCloseStepState, step_durable_paper_runner_close
-from .paper_runner_incident_audit import PaperIncidentCode, audit_paper_runner_incident
+from . import paper_runner_incident_audit as _incident_module
+from .paper_runner_incident_audit import (
+    PaperIncidentCode, PaperRunnerIncidentReport, audit_paper_runner_incident,
+)
 from .paper_runner_journal import append_paper_runner_mark, start_paper_runner_journal
 from .paper_runner_trailing import PaperRunnerMark, PaperRunnerTrailPolicy
 from .synthetic_order_lifecycle import (
@@ -78,7 +82,7 @@ class PaperIncidentMatrixReport:
             "blocked_expected_count": sum(x.validation_status == "BLOCKED_EXPECTED" for x in self.scenarios),
             "failure_count": sum(x.validation_status == "FAIL" for x in self.scenarios),
             "scenarios": [x.sanitized_report() for x in self.scenarios],
-            "j6_readiness": _j6_readiness_matrix(),
+            "j6_readiness": _j6_readiness_matrix(self.scenarios),
             "orders_sent": False,
             "native_stop_verified": False,
             "live_trading_authorized": False,
@@ -87,12 +91,15 @@ class PaperIncidentMatrixReport:
         }
 
 
-def _j6_readiness_matrix() -> list[dict[str, str]]:
-    """Evidence categories, not a percentage or release recommendation."""
+def _j6_readiness_matrix(scenarios: tuple[PaperIncidentScenarioResult, ...]) -> list[dict[str, str]]:
+    """Release gates cannot be marked proven if their local scenarios failed."""
+    passed = {x.scenario_id for x in scenarios if x.validation_status in ("PASS", "BLOCKED_EXPECTED")}
+    def evidence_state(*ids: str) -> str:
+        return "COMPROVADO_OFFLINE" if all(x in passed for x in ids) else "NAO_COMPROVADO_NESTA_EXECUCAO"
     return [
-        {"criterion": "persistencia_e_recovery_paper", "state": "COMPROVADO_OFFLINE", "evidence": "AUTO4/RUNNER2 replay e matriz finita"},
-        {"criterion": "idempotencia_e_reserva_local", "state": "COMPROVADO_OFFLINE", "evidence": "lock SQLite e cenarios concorrentes"},
-        {"criterion": "unknown_parcial_cancelamento", "state": "COMPROVADO_OFFLINE", "evidence": "auditor fail-closed"},
+        {"criterion": "persistencia_e_recovery_paper", "state": evidence_state("healthy_restart_fill", "before_reservation"), "evidence": "AUTO4/RUNNER2 replay e matriz finita"},
+        {"criterion": "idempotencia_e_reserva_local", "state": evidence_state("healthy_restart_fill", "concurrent_single_reservation"), "evidence": "lock SQLite e cenarios concorrentes"},
+        {"criterion": "unknown_parcial_cancelamento", "state": evidence_state("unknown_blocks_reconciliation", "partial_cancel_requires_review"), "evidence": "auditor fail-closed"},
         {"criterion": "feed_prospectivo_e_paper_24h", "state": "PENDENTE", "evidence": "requer dados reais validados"},
         {"criterion": "reconciliacao_exchange_e_stop_nativo", "state": "BLOQUEADO", "evidence": "sem conta, credencial ou gate de venue"},
         {"criterion": "funding_slippage_liquidacao_reais", "state": "PENDENTE", "evidence": "J3 e contratos de venue nao homologados"},
@@ -104,11 +111,20 @@ def _plan() -> SyntheticExitPlan:
     return SyntheticExitPlan(D(100), tuple(SyntheticExitTranche(ExitBasis.REMAINING_BALANCE, D(x)) for x in ("50", "60", "70")), D(6))
 
 
-def _report(scenario_id: str, expected: str, audit) -> PaperIncidentScenarioResult:
-    status = "PASS" if audit.code.value == expected else "FAIL"
-    if expected.startswith("BLOCKED:"):
-        expected_code = expected.split(":", 1)[1]
-        status = "BLOCKED_EXPECTED" if audit.code.value == expected_code else "FAIL"
+def _report(scenario_id: str, expected: str, audit: PaperRunnerIncidentReport,
+            *, invariants_hold: bool = True) -> PaperIncidentScenarioResult:
+    """Only evidence AND independent ledger invariants can satisfy an expectation."""
+    is_blocked = expected.startswith("BLOCKED:")
+    expected_code = expected.split(":", 1)[1] if is_blocked else expected
+    correct_code = audit.code.value == expected_code
+    if is_blocked:
+        valid = (correct_code and audit.severity.value == "BLOCKED"
+                 and audit.reconciliation_required and invariants_hold)
+        status = "BLOCKED_EXPECTED" if valid else "FAIL"
+    else:
+        valid = (correct_code and audit.severity.value in ("INFO", "REVIEW")
+                 and invariants_hold)
+        status = "PASS" if valid else "FAIL"
     return PaperIncidentScenarioResult(scenario_id, expected, audit.code.value, status,
                                        audit.code.value, audit.severity.value, audit.as_of_ms,
                                        audit.reconciliation_required, audit.reason)
@@ -154,7 +170,7 @@ def _concurrent_reservation(runner: Path, positions: Path, position_id: str) -> 
 
 
 def run_paper_incident_matrix() -> PaperIncidentMatrixReport:
-    """Execute a fixed finite suite. Any unexpected result is reported as FAIL."""
+    """Run isolated fixtures; mismatches become FAIL, unexpected errors fail closed."""
     results: list[PaperIncidentScenarioResult] = []
     with tempfile.TemporaryDirectory(prefix="cia_j6_pre7_") as directory:
         root = Path(directory)
