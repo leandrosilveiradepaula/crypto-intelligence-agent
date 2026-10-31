@@ -178,36 +178,69 @@ def run_paper_incident_matrix() -> PaperIncidentMatrixReport:
         store, pos, runner, pid = _fixture(root, "healthy")
         _trigger(runner, pos, pid)
         first = step_durable_paper_runner_close(runner, pos, pid, policy=_POLICY, as_of_ms=_T + 3100)
-        step_durable_paper_runner_close(runner, pos, pid, policy=_POLICY, as_of_ms=_T + 3200)
+        replay = step_durable_paper_runner_close(runner, pos, pid, policy=_POLICY, as_of_ms=_T + 3200)
+        pending = store.load(pid)
+        pending_ok = (first.state is PaperRunnerCloseStepState.RESERVED_PAPER_ONLY
+                      and replay.state is PaperRunnerCloseStepState.PENDING_RECONCILIATION_PAPER_ONLY
+                      and replay.created_intent_id is None and first.created_intent_id is not None
+                      and pending.runner_reserved_unfilled_units == D(6)
+                      and pending.runner_filled_units == 0
+                      and len([o for o in pending.exit_orders if o.tranche_step == 0]) == 1)
         store.append_exit_events(pid, first.created_intent_id, (PaperOrderEvent("fixture_pre7_runner_fill", PaperOrderEventKind.FILL, _T + 3201, D(6)),), as_of_ms=_T + 3201)
+        complete = store.load(pid)
         results.append(_report("healthy_restart_fill", PaperIncidentCode.RUNNER_CLOSED_PAPER_ONLY.value,
-                               audit_paper_runner_incident(pos, pid)))
+                               audit_paper_runner_incident(pos, pid),
+                               invariants_hold=(pending_ok and complete.confirmed_remaining_units == 0
+                                   and complete.filled_exit_units == D(100)
+                                   and complete.runner_filled_units == D(6)
+                                   and complete.runner_reserved_unfilled_units == 0)))
 
         # A pre-commit failure leaves no runner order; retry can safely reserve once.
         store, pos, runner, pid = _fixture(root, "precommit")
         _trigger(runner, pos, pid)
+        untouched = store.load(pid)
         results.append(_report("before_reservation", PaperIncidentCode.TRAILING_TRIGGERED_HYPOTHETICAL.value,
-                               audit_paper_runner_incident(pos, pid, runner_journal_path=runner, policy=_POLICY, as_of_ms=_T + 3100)))
+                               audit_paper_runner_incident(pos, pid, runner_journal_path=runner, policy=_POLICY, as_of_ms=_T + 3100),
+                               invariants_hold=(untouched.runner_filled_units == 0
+                                                and untouched.runner_reserved_unfilled_units == 0
+                                                and not any(o.tranche_step == 0 for o in untouched.exit_orders))))
 
         store, pos, runner, pid = _fixture(root, "unknown")
         _trigger(runner, pos, pid)
         reserved = step_durable_paper_runner_close(runner, pos, pid, policy=_POLICY, as_of_ms=_T + 3100)
         store.append_exit_events(pid, reserved.created_intent_id, (PaperOrderEvent("fixture_pre7_unknown", PaperOrderEventKind.UNKNOWN, _T + 3101),), as_of_ms=_T + 3101)
-        results.append(_report("unknown_blocks_reconciliation", "BLOCKED:" + PaperIncidentCode.RUNNER_EXIT_UNKNOWN_RECONCILIATION.value, audit_paper_runner_incident(pos, pid)))
+        uncertain = store.load(pid)
+        results.append(_report("unknown_blocks_reconciliation", "BLOCKED:" + PaperIncidentCode.RUNNER_EXIT_UNKNOWN_RECONCILIATION.value,
+                               audit_paper_runner_incident(pos, pid),
+                               invariants_hold=(uncertain.runner_reserved_unfilled_units == D(6)
+                                                and uncertain.runner_filled_units == 0)))
 
         store, pos, runner, pid = _fixture(root, "partial")
         _trigger(runner, pos, pid)
         reserved = step_durable_paper_runner_close(runner, pos, pid, policy=_POLICY, as_of_ms=_T + 3100)
         store.append_exit_events(pid, reserved.created_intent_id, (PaperOrderEvent("fixture_pre7_partial", PaperOrderEventKind.FILL, _T + 3101, D(2)), PaperOrderEvent("fixture_pre7_cancel", PaperOrderEventKind.CANCELLED, _T + 3102)), as_of_ms=_T + 3102)
-        results.append(_report("partial_cancel_requires_review", PaperIncidentCode.RUNNER_EXIT_PARTIALLY_FILLED.value, audit_paper_runner_incident(pos, pid)))
+        partial = store.load(pid)
+        results.append(_report("partial_cancel_requires_review", PaperIncidentCode.RUNNER_EXIT_PARTIALLY_FILLED.value,
+                               audit_paper_runner_incident(pos, pid),
+                               invariants_hold=(partial.runner_filled_units == D(2)
+                                                and partial.runner_reserved_unfilled_units == 0
+                                                and partial.runner_unallocated_units == D(4)
+                                                and partial.confirmed_remaining_units == D(4))))
 
         store, pos, runner, pid = _fixture(root, "concurrent")
         _trigger(runner, pos, pid)
         with ThreadPoolExecutor(max_workers=2) as pool:
             states = tuple(pool.map(lambda _: _concurrent_reservation(runner, pos, pid), range(2)))
         audit = audit_paper_runner_incident(pos, pid, runner_journal_path=runner, policy=_POLICY, as_of_ms=_T + 3200)
-        expected = PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED.value if PaperRunnerCloseStepState.RESERVED_PAPER_ONLY in states else "FAIL"
-        results.append(_report("concurrent_single_reservation", expected, audit))
+        concurrent = store.load(pid)
+        one_reservation = (states.count(PaperRunnerCloseStepState.RESERVED_PAPER_ONLY) == 1
+                           and sum(state is not None for state in states) in (1, 2)
+                           and concurrent.runner_reserved_unfilled_units == D(6)
+                           and concurrent.runner_filled_units == 0
+                           and concurrent.confirmed_remaining_units == D(6)
+                           and len([o for o in concurrent.exit_orders if o.tranche_step == 0]) == 1)
+        results.append(_report("concurrent_single_reservation", PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED.value,
+                               audit, invariants_hold=one_reservation))
 
         store, pos, runner, pid = _fixture(root, "incompatible")
         _trigger(runner, pos, pid)
