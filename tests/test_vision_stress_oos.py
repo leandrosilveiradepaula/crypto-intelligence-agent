@@ -206,7 +206,8 @@ class VisionStressOOSTests(unittest.TestCase):
             for month in group:
                 candles=[]
                 for candle in month.candles:
-                    candles.append(replace(candle,close=D("101")+D(n)/D("1000")))
+                    candles.append(replace(candle,close=D("101")+D(n)/D("1000"),
+                                           high=D("104"),low=D("99")))
                     n+=1
                 months.append(replace(month,candles=tuple(candles)))
             return tuple(months)
@@ -250,7 +251,7 @@ class VisionStressOOSTests(unittest.TestCase):
             short=audit()
         self.assertEqual(short.stressed_count,short.matched_long.exposures)
         self.assertGreater(short.stressed_count,0)
-        self.assertNotEqual(short.worst_net_quote,short.matched_long.worst_net_quote)
+        self.assertNotEqual(short.best_net_quote,short.matched_long.best_net_quote)
         self.assertEqual(short.matched_long.worst_net_quote,
                          one.matched_long.worst_net_quote)
         abstained=replace(trained,folds=tuple(
