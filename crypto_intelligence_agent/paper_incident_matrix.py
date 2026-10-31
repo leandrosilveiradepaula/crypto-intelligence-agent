@@ -249,12 +249,23 @@ def run_paper_incident_matrix() -> PaperIncidentMatrixReport:
             states = tuple(pool.map(lambda _: _concurrent_reservation(runner, pos, pid), range(2)))
         audit = audit_paper_runner_incident(pos, pid, runner_journal_path=runner, policy=_POLICY, as_of_ms=_T + 3200)
         concurrent = store.load(pid)
-        one_reservation = (states.count(PaperRunnerCloseStepState.RESERVED_PAPER_ONLY) == 1
-                           and sum(state is not None for state in states) in (1, 2)
-                           and concurrent.runner_reserved_unfilled_units == D(6)
-                           and concurrent.runner_filled_units == 0
-                           and concurrent.confirmed_remaining_units == D(6)
-                           and len([o for o in concurrent.exit_orders if o.tranche_step == 0]) == 1)
+        runner_orders = [o for o in concurrent.exit_orders if o.tranche_step == 0]
+        # Both callers can legitimately return RESERVED on the SAME
+        # deterministic intent (AUTO4 idempotent replay). Require one unique
+        # durable reservation, not exactly one API return value.
+        one_reservation = (
+            PaperRunnerCloseStepState.RESERVED_PAPER_ONLY in states
+            and all(state in (
+                None, PaperRunnerCloseStepState.RESERVED_PAPER_ONLY,
+                PaperRunnerCloseStepState.PENDING_RECONCILIATION_PAPER_ONLY,
+            ) for state in states)
+            and concurrent.runner_reserved_unfilled_units == D(6)
+            and concurrent.runner_filled_units == 0
+            and concurrent.confirmed_remaining_units == D(6)
+            and len(runner_orders) == 1
+            and runner_orders[0].intent.requested_units == D(6)
+            and runner_orders[0].snapshot.filled_total_units == 0
+            and runner_orders[0].events == ())
         results.append(_report("concurrent_single_reservation", PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED.value,
                                audit, invariants_hold=one_reservation))
 
