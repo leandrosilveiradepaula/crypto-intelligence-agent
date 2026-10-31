@@ -759,3 +759,8 @@ Executar `test_paper_runner_incident_audit.py` por discovery junto de regressõe
 
 ### J6/PRE7 #401 — matriz de incidentes reproduzível
 Executar `test_paper_incident_matrix.py`, PRE6 e regressões PRE4/PRE5. Verificar determinismo de duas matrizes, limpeza TEMP no Windows, no-network, CLI sem parâmetros operacionais, 11 cenários, quatro PASS e sete BLOCKED_EXPECTED, zero FAIL, incluindo stale RUNNER2, journal RUNNER2 ausente e mudança observada entre leituras; validação exige código, severidade, reconciliação e invariantes quantitativas independentes do status, e os gates de prontidão devem ser rebaixados quando testes falham, contabilidade 100=94+6 e reserva concorrente única. O JSON não pode conter caminhos, símbolo, preço, conta ou PnL. CI verde demonstra somente replay offline de contrato.
+
+
+### J6/PRE8 #403 — observabilidade batch de posições PAPER
+
+Usar SQLite real com duas posições no mesmo AUTO4, símbolos diferentes e checkpoints diversos; exigir classificação PRE6 equivalente, snapshot único, ordem de seleção ordinal, sem ID/símbolo/paths. UNKNOWN em um slot eleva severidade global, mas não confunde a outra posição. Idade fora do cutoff/futuro bloqueia o slot. Corrupção de apenas um registro ou AUTO2 opcional inválido bloqueia **todos os slots** sem resultado parcial. Validar no-network, read-only, rejeição de IDs repetidos, limites 128/idade, CLI sem argumentos live, determinismo e regressões PRE6/PRE7. CI Linux/docs, Windows/offline e Chrome/PAPER no SHA final; revisão e merge apenas sem produção, não homologa J6.
