@@ -764,3 +764,8 @@ Executar `test_paper_incident_matrix.py`, PRE6 e regressões PRE4/PRE5. Verifica
 ### J6/PRE8 #403 — observabilidade batch de posições PAPER
 
 Usar SQLite real com duas posições no mesmo AUTO4, símbolos diferentes e checkpoints diversos; exigir classificação PRE6 equivalente, snapshot único, ordem de seleção ordinal, sem ID/símbolo/paths. UNKNOWN em um slot eleva severidade global, mas não confunde a outra posição. Idade fora do cutoff/futuro bloqueia o slot. Corrupção de apenas um registro ou AUTO2 opcional inválido bloqueia **todos os slots** sem resultado parcial. Validar no-network, read-only, rejeição de IDs repetidos, limites 128/idade, CLI sem argumentos live, determinismo e regressões PRE6/PRE7. CI Linux/docs, Windows/offline e Chrome/PAPER no SHA final; revisão e merge apenas sem produção, não homologa J6.
+
+
+### J6/PRE9 #405 — pipeline causal completo com somente FILL de fixture
+
+Executar `python -m scripts.demo_full_offline_paper_lifecycle` duas vezes e comparar relatórios. Conferir mesma intenção OPEN gerada por J2/RiskGate e reconhecida em AUTO2/AUTO4, zero posição antes de evento FILL, abertura 2 unidades explícita, parciais 1+0,60+0,28, runner 0,12 REDUCE_ONLY PENDING sem FILL, replay/restart sem duplicação e fechamento somente após FILL sintético final com cross-check AUTO2 e PRE8. Testes de no-network, saneamento stdout, rejeição de flags de trading, recursos TEMP removidos e regressões PRE4-PRE8. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final; revisão de segurança/merge sem deploy. Não confirma J1, segurança de 50x ou J6 prospectiva.
