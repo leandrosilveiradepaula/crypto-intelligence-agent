@@ -50,6 +50,27 @@ class VisionStressOOSTests(unittest.TestCase):
                          first.fold_reports[0].bars_scored)
         self.assertGreaterEqual(first.strategy_max_single_bar_loss_over_margin,D("0"))
         self.assertGreaterEqual(first.benchmark_max_single_bar_loss_over_margin,D("0"))
+        margin=terms().margin.requested_margin_quote
+        for fold in first.fold_reports:
+            self.assertEqual(
+                fold.strategy_worst_cumulative_net_over_margin,
+                fold.strategy_worst_net_quote / margin)
+            self.assertEqual(
+                fold.strategy_best_cumulative_net_over_margin,
+                fold.strategy_best_net_quote / margin)
+            self.assertEqual(
+                fold.benchmark_worst_cumulative_net_over_margin,
+                fold.benchmark_worst_net_quote / margin)
+            self.assertEqual(
+                fold.benchmark_best_cumulative_net_over_margin,
+                fold.benchmark_best_net_quote / margin)
+        self.assertEqual(first.strategy_worst_cumulative_net_over_margin,
+                         first.worst_net_quote / margin)
+        self.assertEqual(first.benchmark_best_cumulative_net_over_margin,
+                         first.benchmark_best_net_quote / margin)
+        self.assertEqual(first.sanitized_report()["fold_coverage"][0][
+            "strategy_worst_cumulative_net_over_margin"],
+            str(first.worst_net_quote / margin))
         self.assertEqual(first.fold_reports[0].strategy_worst_net_quote,
                          first.worst_net_quote)
         self.assertEqual(first.fold_reports[0].benchmark_worst_net_quote,
