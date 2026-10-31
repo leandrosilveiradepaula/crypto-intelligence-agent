@@ -30,6 +30,14 @@ class VisionSensitivityScenario:
             "leverage_at_intent": margin.leverage_at_intent,
             "hypothetical_margin_quote": str(margin.requested_margin_quote),
             "hypothetical_entry_notional_quote": str(margin.entry_notional_quote),
+            "hypothetical_assumptions": {
+                name: str(getattr(self.assumptions, name))
+                for name in (
+                    "stop_fraction", "target_fraction", "maintenance_bps",
+                    "entry_fee_bps", "exit_fee_bps", "entry_slippage_bps",
+                    "exit_slippage_bps", "signed_funding_bps",
+                )
+            },
             "test_fold_count": len(a.fold_reports),
             "strategy_exposures": a.stressed_count,
             "strategy_abstentions": a.abstention_count,
@@ -70,8 +78,15 @@ class VisionSensitivityScenario:
                         f.strategy_best_cumulative_net_over_margin),
                     "benchmark_exposures": f.benchmark_exposures,
                     "benchmark_liquidation_proxy_count": f.benchmark_liquidation_possible_count,
+                    "benchmark_ambiguous_count": f.benchmark_ambiguous_count,
+                    "benchmark_stop_touched_count": f.benchmark_stop_touched_count,
+                    "benchmark_target_touched_count": f.benchmark_target_touched_count,
                     "benchmark_worst_conditional_net_quote": str(f.benchmark_worst_net_quote),
                     "benchmark_best_conditional_net_quote": str(f.benchmark_best_net_quote),
+                    "benchmark_worst_cumulative_net_over_margin": str(
+                        f.benchmark_worst_cumulative_net_over_margin),
+                    "benchmark_best_cumulative_net_over_margin": str(
+                        f.benchmark_best_cumulative_net_over_margin),
                 }
                 for f in a.fold_reports
             ],
