@@ -16,6 +16,7 @@ from .paper_order_store import (
 )
 from .paper_position_inspection import _read_database
 from .synthetic_manual_exit_replay import _utc_ms
+from .market_data import DataValidationError
 
 
 @dataclass(frozen=True)

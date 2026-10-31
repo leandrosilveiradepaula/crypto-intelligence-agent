@@ -293,9 +293,9 @@ class PaperRecoveryEndToEndTests(unittest.TestCase):
         source = recovery_module.inspect_local_paper_operator_status
         count = 0
 
-        def mutate_after_first_read(path):
+        def mutate_after_first_read(path, **kwargs):
             nonlocal count
-            result = source(path)
+            result = source(path, **kwargs)
             count += 1
             if count == 1:
                 self.orders.set_local_kill_switch(
