@@ -299,3 +299,8 @@ Uma intenção OPEN gerada pelo motor quantitativo J2/RiskGate deve permanecer a
 ## J3/PRE22 #409 — fragilidade OOS sob parâmetros financeiros, sem otimização ex post
 
 Um único histórico mensal e uma única regra OOS de seleção causal podem ser comparados sob 2–6 hipóteses de alavancagem, margem, taxa, slippage, funding e manutenção. A API PRE22 reusa PRE21 para todo cálculo e bloqueia qualquer variação de cobertura mensal por cenário, sem ranking da melhor configuração, ROI de capital, autorização de 50x ou ordem de exchange. Critérios e decisão D199 em `docs/J3_PRE22_OOS_STRESS_SENSITIVITY.md`. A dependência de evidência VPS J1 permanece externa e PRE22 não aciona sondagem/coleta.
+
+
+## J3/PRE23 #411 — sensibilidade OOS acessível por CLI owner-only
+
+Sem abrir novas fontes, a CLI Vision de pesquisa pessoal poderá computar uma grade de dois cenários (1x e Nx, N 2–200) com a mesma margem e seleção causal OOS, a partir de manifests locais auditados. Exige opção positiva, preserva comportamento legado sem o opt-in e mantém todos os gates de live/ordens falsos. A J1 Top50/VPS não é utilizada nem resolvida. Aceite exige CI, regressões POSIX e revisão da PR; D200/PRE23.
