@@ -202,3 +202,8 @@ Mostrar se as parciais foram preenchidas o suficiente para deixar o runner resid
 ### J3/PRE22 — sensibilidade financeira sem seleção retrospectiva
 
 Para um conjunto OOS com decisão por 24h já fechadas, manter regra/ativo/direção congelados entre cenários de custos, margem e alavancagem. `VisionStressAssumptions` modifica somente as hipóteses do ramo financeiro de `stress_vision_candle`, nunca os candles ou a escolha de oportunidade. O relatório registra perdas condicionais, ambiguidade, liquidação proxy e abstenções por fold; variações de alavancagem ou exposição não permitem supor monotonicidade de retorno. Desautorizar ranking de melhor configuração pós-teste, ROI de carteira, aprovação de PnL, segurança 50x ou sinal de execução. Contrato `docs/J3_PRE22_OOS_STRESS_SENSITIVITY.md`.
+
+
+### J3/PRE23 — comparar alavancagem sem escolher vencedora pós-amostra
+
+A CLI privada usa o histórico Vision já auditado e a mesma regra causal OOS treinada antes do mês de teste; varia somente o multiplicador 1x vs Nx sobre igual margem/termos, com nocional coerente em cada cenário. A diferença no resultado financeiro é hipotética e não implica segurança de 50x, retorno realizado ou melhor configuração. A escolha causal da entrada e a classificação de risco permanecem separadas de qualquer autorização real. PRE23 é opt-in exclusivo de pesquisa, contrato `docs/J3_PRE23_PRIVATE_OOS_LEVERAGE_CLI.md`.
