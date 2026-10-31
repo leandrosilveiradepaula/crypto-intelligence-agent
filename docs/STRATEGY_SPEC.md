@@ -196,3 +196,9 @@ Depois de preenchimentos confirmados das tranches e sem reservas/UNKNOWN, a parc
 ## J5/PRE14 — apresentação de runner não altera a estratégia
 
 Mostrar se as parciais foram preenchidas o suficiente para deixar o runner residual no PAPER; em qualquer caso informar ausência de stop confirmado. A UI não calcula preço de disparo, não altera percentuais, não reativa trailing após restart e não pode transformar status confirmado do runner em permissão de trading. O cálculo J4/RUNNER1 permanece separado e puramente hipotético.
+
+
+
+### J3/PRE22 — sensibilidade financeira sem seleção retrospectiva
+
+Para um conjunto OOS com decisão por 24h já fechadas, manter regra/ativo/direção congelados entre cenários de custos, margem e alavancagem. `VisionStressAssumptions` modifica somente as hipóteses do ramo financeiro de `stress_vision_candle`, nunca os candles ou a escolha de oportunidade. O relatório registra perdas condicionais, ambiguidade, liquidação proxy e abstenções por fold; variações de alavancagem ou exposição não permitem supor monotonicidade de retorno. Desautorizar ranking de melhor configuração pós-teste, ROI de carteira, aprovação de PnL, segurança 50x ou sinal de execução. Contrato `docs/J3_PRE22_OOS_STRESS_SENSITIVITY.md`.
