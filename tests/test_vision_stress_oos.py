@@ -35,6 +35,19 @@ class VisionStressOOSTests(unittest.TestCase):
                          first.fold_reports[0].bars_scored)
         self.assertEqual(first.fold_reports[0].strategy_ambiguous_count,
                          first.ambiguous_count)
+        self.assertEqual(first.fold_reports[0].strategy_stop_touched_count,
+                         first.stop_touched_count)
+        self.assertEqual(first.fold_reports[0].strategy_target_touched_count,
+                         first.target_touched_count)
+        self.assertEqual(first.fold_reports[0].benchmark_stop_touched_count,
+                         first.benchmark_stop_touched_count)
+        self.assertEqual(first.fold_reports[0].benchmark_target_touched_count,
+                         first.benchmark_target_touched_count)
+        self.assertEqual(first.fold_reports[0].strategy_abstention_count,
+                         first.abstention_count)
+        self.assertEqual(first.fold_reports[0].strategy_exposures +
+                         first.fold_reports[0].strategy_abstention_count,
+                         first.fold_reports[0].bars_scored)
         self.assertGreaterEqual(first.strategy_max_single_bar_loss_over_margin,D("0"))
         self.assertGreaterEqual(first.benchmark_max_single_bar_loss_over_margin,D("0"))
         self.assertEqual(first.fold_reports[0].strategy_worst_net_quote,

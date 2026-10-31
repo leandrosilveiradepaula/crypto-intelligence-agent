@@ -8,7 +8,7 @@ import json
 
 from .market_data import DataValidationError
 from .offline_vision_series import assemble_offline_vision_months
-from .vision_costed_oos import costed_vision_monthly_oos
+from .vision_costed_oos import causal_oos_bar_choice, costed_vision_monthly_oos
 from .vision_intrabar_stress import VisionStressAssumptions, stress_vision_candle
 
 _CTX = Context(prec=512)
@@ -26,6 +26,11 @@ class VisionStressFoldAudit:
     benchmark_ambiguous_count: int
     strategy_liquidation_possible_count: int
     benchmark_liquidation_possible_count: int
+    strategy_stop_touched_count: int
+    strategy_target_touched_count: int
+    benchmark_stop_touched_count: int
+    benchmark_target_touched_count: int
+    strategy_abstention_count: int
     strategy_worst_net_quote: Decimal
     strategy_best_net_quote: Decimal
     benchmark_worst_net_quote: Decimal
@@ -63,6 +68,11 @@ class VisionStressOOS:
     benchmark_liquidation_possible_count: int = 0
     strategy_max_single_bar_loss_over_margin: Decimal = _ZERO
     benchmark_max_single_bar_loss_over_margin: Decimal = _ZERO
+    stop_touched_count: int = 0
+    target_touched_count: int = 0
+    abstention_count: int = 0
+    benchmark_stop_touched_count: int = 0
+    benchmark_target_touched_count: int = 0
 
     def sanitized_report(self) -> dict:
         return {
@@ -82,6 +92,11 @@ class VisionStressOOS:
             "benchmark_max_single_bar_loss_over_margin": str(self.benchmark_max_single_bar_loss_over_margin),
             "benchmark_ambiguous_count": self.benchmark_ambiguous_count,
             "benchmark_liquidation_possible_count": self.benchmark_liquidation_possible_count,
+            "stop_touched_count": self.stop_touched_count,
+            "target_touched_count": self.target_touched_count,
+            "abstention_count": self.abstention_count,
+            "benchmark_stop_touched_count": self.benchmark_stop_touched_count,
+            "benchmark_target_touched_count": self.benchmark_target_touched_count,
             "fold_coverage": [fold.sanitized_report() for fold in self.fold_reports],
             "digest_sha256": self.digest_sha256,
             "financial_backtest_approved": False,
@@ -115,6 +130,7 @@ def audit_costed_vision_intrabar_oos(
         peaks = [_ZERO for _ in range(4)]
         drawdowns = [_ZERO for _ in range(4)]
         n = ambiguous = liquidations = benchmark_ambiguous = benchmark_liquidations = 0
+        stops = targets = abstentions = benchmark_stops = benchmark_targets = 0
         strategy_max_loss = benchmark_max_loss = _ZERO
         folds = []
         digest = sha256()
@@ -148,16 +164,12 @@ def audit_costed_vision_intrabar_oos(
             monthly_peak = [_ZERO for _ in range(4)]
             monthly_dd = [_ZERO for _ in range(4)]
             bars = exposures = amb = liq = b_amb = b_liq = 0
+            stop = target = abstain = b_stop = b_target = 0
             fold_strategy_max_loss = fold_benchmark_max_loss = _ZERO
             for i in range(bounds[k], bounds[k + 1]):
                 # Prior 24 CLOSED hourly bars only, never the target bar.
-                ranked = sorted((
-                    (s.symbol, sum(
-                        (c.documented_quote_volume for c in s.candles[i - 24:i]),
-                        _ZERO), j)
-                    for j, s in enumerate(series)
-                ), key=lambda item: (-item[1], item[0]))
-                selected = series[ranked[0][2]].candles
+                selected_index, direction = causal_oos_bar_choice(series, i)
+                selected = series[selected_index].candles
                 bars += 1
                 # Fixed LONG benchmark observes every OOS bar, even while the
                 # trained strategy abstains. Exposure counts disclose asymmetry.
@@ -167,19 +179,23 @@ def audit_costed_vision_intrabar_oos(
                 track(3, benchmark.best_net_quote, monthly_eq, monthly_peak, monthly_dd)
                 b_amb += int(benchmark.intrabar_ambiguous)
                 b_liq += int(benchmark.touched_liquidation_proxy)
+                b_stop += int(benchmark.touched_stop)
+                b_target += int(benchmark.touched_target)
                 fold_benchmark_max_loss = max(
                     fold_benchmark_max_loss,
                     -benchmark.worst_net_quote / assumptions.margin.requested_margin_quote,
                     _ZERO)
-                movement = selected[i - 1].close - selected[i - 2].close
-                if movement == 0 or fold.selected_rule == "abstain":
+                if direction == 0 or fold.selected_rule == "abstain":
+                    abstain += 1
                     continue
-                long = (movement > 0) == (fold.selected_rule == "continuation")
+                long = (direction > 0) == (fold.selected_rule == "continuation")
                 outcome = stress_vision_candle(selected[i], long=long,
                                                assumptions=assumptions)
                 exposures += 1
                 amb += int(outcome.intrabar_ambiguous)
                 liq += int(outcome.touched_liquidation_proxy)
+                stop += int(outcome.touched_stop)
+                target += int(outcome.touched_target)
                 track(0, outcome.worst_net_quote, monthly_eq, monthly_peak, monthly_dd)
                 track(1, outcome.best_net_quote, monthly_eq, monthly_peak, monthly_dd)
                 fold_strategy_max_loss = max(
@@ -197,10 +213,16 @@ def audit_costed_vision_intrabar_oos(
             liquidations += liq
             benchmark_ambiguous += b_amb
             benchmark_liquidations += b_liq
+            stops += stop
+            targets += target
+            abstentions += abstain
+            benchmark_stops += b_stop
+            benchmark_targets += b_target
             strategy_max_loss = max(strategy_max_loss, fold_strategy_max_loss)
             benchmark_max_loss = max(benchmark_max_loss, fold_benchmark_max_loss)
             fold_audit = VisionStressFoldAudit(
                 k, bars, exposures, bars, amb, b_amb, liq, b_liq,
+                stop, target, b_stop, b_target, abstain,
                 *(totals[j] - month_totals_start[j] for j in range(4)),
                 *monthly_dd, fold_strategy_max_loss, fold_benchmark_max_loss)
             folds.append(fold_audit)
@@ -212,4 +234,5 @@ def audit_costed_vision_intrabar_oos(
             totals[2], totals[3], drawdowns[0], drawdowns[1],
             drawdowns[2], drawdowns[3], tuple(folds),
             benchmark_ambiguous, benchmark_liquidations,
-            strategy_max_loss, benchmark_max_loss)
+            strategy_max_loss, benchmark_max_loss,
+            stops, targets, abstentions, benchmark_stops, benchmark_targets)

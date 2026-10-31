@@ -11,6 +11,26 @@ H=3600000
 CTX=Context(prec=100)
 MAX_ASSETS=50
 
+
+def causal_oos_bar_choice(series: tuple, index: int) -> tuple[int, int]:
+    """Return the asset index and prior-bar direction for one OOS decision.
+
+    The ranking window ends *before* ``index`` and the direction only uses the
+    two preceding closes.  This small pure primitive is deliberately shared by
+    the open-to-close legacy proxy and the intrabar evaluator: adding a risk
+    view must not silently change which historical opportunity it evaluates.
+    """
+    if type(series) is not tuple or not series or type(index) is not int or index < 24:
+        raise DataValidationError("causal OOS bar choice requires 24 prior bars")
+    ranked=sorted(((s.symbol,sum((c.documented_quote_volume for c in s.candles[index-24:index]),Decimal(0)),j)
+                   for j,s in enumerate(series)),key=lambda x:(-x[1],x[0]))
+    selected=ranked[0][2]
+    candles=series[selected].candles
+    if index >= len(candles) or index < 2:
+        raise DataValidationError("causal OOS bar is outside aligned history")
+    prior=candles[index-1].close-candles[index-2].close
+    return selected, 1 if prior>0 else (-1 if prior<0 else 0)
+
 @dataclass(frozen=True)
 class OOSCostFold:
     test_month_number:int
@@ -75,14 +95,10 @@ def costed_vision_monthly_oos(month_groups:tuple[tuple,...],*,as_of_ms:int,
         def scores(lo,hi):
             out=[]
             for i in range(max(24,lo),hi):
-                ranked=sorted(((s.symbol,sum((c.documented_quote_volume for c in s.candles[i-24:i]),Decimal(0)),j)
-                               for j,s in enumerate(series)),key=lambda x:(-x[1],x[0]))
-                j=ranked[0][2]
+                j,direction=causal_oos_bar_choice(series,i)
                 c=series[j].candles[i]
-                prev=series[j].candles[i-1]
-                if c.open<=0 or prev.close<=0:
+                if c.open<=0:
                     raise DataValidationError("invalid OOS price")
-                direction=1 if prev.close>series[j].candles[i-2].close else (-1 if prev.close<series[j].candles[i-2].close else 0)
                 base=(c.close-c.open)*Decimal(10000)/c.open
                 turnover=cost_bps_per_side*2
                 out.append((direction,base,turnover))
