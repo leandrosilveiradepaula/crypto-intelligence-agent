@@ -78,6 +78,8 @@ class PaperIncidentMatrixTests(unittest.TestCase):
         self.assertEqual(output["failure_count"], 1)
         self.assertEqual(gates["idempotencia_e_reserva_local"],
                          "NAO_COMPROVADO_NESTA_EXECUCAO")
+        self.assertEqual(gates["persistencia_e_recovery_paper"],
+                         "NAO_COMPROVADO_NESTA_EXECUCAO")
         self.assertEqual(gates["testnet_e_live"], "BLOQUEADO")
 
     def test_no_network_and_cli_stdout_are_safe(self):
