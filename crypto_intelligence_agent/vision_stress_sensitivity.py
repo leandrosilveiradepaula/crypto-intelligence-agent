@@ -126,6 +126,10 @@ def compare_costed_vision_oos_stress_scenarios(
             or any(type(t) is not VisionStressAssumptions for t in assumptions_grid)
             or len(set(assumptions_grid)) != len(assumptions_grid)):
         raise DataValidationError("2..6 distinct typed OOS finance assumptions required")
+    # Quote-valued conditional outcomes cannot be meaningfully compared
+    # without an FX basis; do not silently mix SYNTHETIC_USDT / USDC / QUOTE.
+    if len({case.margin.quote_currency for case in assumptions_grid}) != 1:
+        raise DataValidationError("sensitivity scenarios require one synthetic quote currency")
 
     cases: list[VisionSensitivityScenario] = []
     reference: tuple | None = None
