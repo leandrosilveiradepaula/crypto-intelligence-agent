@@ -122,7 +122,18 @@ def _report(scenario_id: str, expected: str, audit: PaperRunnerIncidentReport,
                  and audit.reconciliation_required and invariants_hold)
         status = "BLOCKED_EXPECTED" if valid else "FAIL"
     else:
-        valid = (correct_code and audit.severity.value in ("INFO", "REVIEW")
+        # Exact severity/reconciliation expectations prevent a benign-looking
+        # classification from satisfying an incident gate by code alone.
+        expected_flags = {
+            PaperIncidentCode.RUNNER_CLOSED_PAPER_ONLY.value: ("INFO", False),
+            PaperIncidentCode.TRAILING_TRIGGERED_HYPOTHETICAL.value: ("REVIEW", False),
+            PaperIncidentCode.RUNNER_EXIT_PARTIALLY_FILLED.value: ("REVIEW", True),
+            PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED.value: ("REVIEW", True),
+        }
+        expected_severity, expected_reconcile = expected_flags.get(expected_code, (None, None))
+        valid = (correct_code and expected_severity is not None
+                 and audit.severity.value == expected_severity
+                 and audit.reconciliation_required is expected_reconcile
                  and invariants_hold)
         status = "PASS" if valid else "FAIL"
     return PaperIncidentScenarioResult(scenario_id, expected, audit.code.value, status,
