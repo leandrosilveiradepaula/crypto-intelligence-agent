@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 
 from .market_data import DataValidationError
-from .paper_position_inspection import inspect_paper_position
+from .paper_position_inspection import PaperPositionInspection, inspect_paper_position
 from .paper_runner_journal import load_paper_runner_journal
 from .paper_runner_trailing import PaperRunnerTrailPolicy, PaperRunnerTrailState
 from .synthetic_manual_exit_replay import _utc_ms
@@ -84,33 +84,16 @@ def _report(code: PaperIncidentCode, severity: PaperIncidentSeverity, *, as_of_m
                                      reconcile, available, missing, reason)
 
 
-def audit_paper_runner_incident(
-    position_journal_path: str | Path, position_id: str, *,
-    runner_journal_path: str | Path | None = None,
-    policy: PaperRunnerTrailPolicy | None = None,
-    as_of_ms: int | None = None,
-) -> PaperRunnerIncidentReport:
-    """Audit exactly one selected PAPER position without writing either journal.
+def classify_inspected_paper_runner_incident(
+    inspection: "PaperPositionInspection", *, runner_journal_selected: bool = False,
+) -> PaperRunnerIncidentReport | None:
+    """Pure classification of an ALREADY verified AUTO4 position snapshot.
 
-    A RUNNER2 journal needs both its pinned policy and an explicit cutoff.  Once
-    AUTO4 contains a runner reservation, RUNNER2's old fingerprint is expected
-    to be stale; it is reported as superseded and is never re-armed or replayed.
+    None means only that an explicit RUNNER2 observation still needs replay.
+    Never fetches journals and never implies stop/native order confirmation.
     """
-    if ((runner_journal_path is None) != (policy is None)
-            or (runner_journal_path is None) != (as_of_ms is None)):
-        raise DataValidationError("RUNNER2 audit requires journal, policy and explicit cutoff together")
-    if runner_journal_path is not None:
-        if type(policy) is not PaperRunnerTrailPolicy:
-            raise DataValidationError("typed RUNNER2 policy required")
-        _utc_ms(as_of_ms, "RUNNER2 audit cutoff")
-    try:
-        inspection = inspect_paper_position(position_journal_path, position_id)
-    except DataValidationError:
-        return _report(PaperIncidentCode.JOURNAL_INVALID_OR_MISSING, PaperIncidentSeverity.BLOCKED,
-                       as_of_ms=None, residual=None, reserved=None, filled=None, reconcile=True,
-                       available=(), missing=("valid_auto4_position_journal",),
-                       reason="AUTO4 local indisponível, ausente ou inválido; nenhum estado confiável pode ser inferido.")
-
+    if type(inspection) is not PaperPositionInspection or type(runner_journal_selected) is not bool:
+        raise DataValidationError("verified PAPER inspection required")
     balance = inspection.balance
     base = ("auto4_position_replay", "synthetic_fixture_only")
     runner_orders = tuple(order for order in balance.exit_orders if order.tranche_step == 0)
@@ -159,7 +142,7 @@ def audit_paper_runner_incident(
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
                            reconcile=True, available=base + ("runner_exit_partial_fill_fixture",), missing=("terminal_reconciliation",),
                            reason="Saída residual parcialmente preenchida apenas na simulação.")
-        if runner_journal_path is not None:
+        if runner_journal_selected:
             return _report(PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED, PaperIncidentSeverity.REVIEW,
                            as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
                            reserved=balance.runner_reserved_unfilled_units, filled=balance.runner_filled_units,
@@ -195,12 +178,48 @@ def audit_paper_runner_incident(
                        reserved=balance.reserved_unfilled_units, filled=balance.filled_exit_units,
                        reconcile=balance.reserved_unfilled_units > 0, available=base, missing=("confirmed_partial_exits",),
                        reason="Parciais ainda não confirmam o saldo residual do runner.")
-    if runner_journal_path is None:
+    if not runner_journal_selected:
         return _report(PaperIncidentCode.RUNNER_UNPROTECTED, PaperIncidentSeverity.REVIEW,
                        as_of_ms=balance.as_of_ms, residual=balance.confirmed_remaining_units,
                        reserved=Decimal(0), filled=balance.runner_filled_units,
                        reconcile=False, available=base + ("confirmed_runner",), missing=("runner2_observation", "native_stop"),
                        reason="Runner confirmado, sem observação RUNNER2 e sem proteção nativa comprovada.")
+    return None
+
+
+def audit_paper_runner_incident(
+    position_journal_path: str | Path, position_id: str, *,
+    runner_journal_path: str | Path | None = None,
+    policy: PaperRunnerTrailPolicy | None = None,
+    as_of_ms: int | None = None,
+) -> PaperRunnerIncidentReport:
+    """Audit exactly one selected PAPER position without writing either journal.
+
+    A RUNNER2 journal needs both its pinned policy and an explicit cutoff.  Once
+    AUTO4 contains a runner reservation, RUNNER2's old fingerprint is expected
+    to be stale; it is reported as superseded and is never re-armed or replayed.
+    """
+    if ((runner_journal_path is None) != (policy is None)
+            or (runner_journal_path is None) != (as_of_ms is None)):
+        raise DataValidationError("RUNNER2 audit requires journal, policy and explicit cutoff together")
+    if runner_journal_path is not None:
+        if type(policy) is not PaperRunnerTrailPolicy:
+            raise DataValidationError("typed RUNNER2 policy required")
+        _utc_ms(as_of_ms, "RUNNER2 audit cutoff")
+    try:
+        inspection = inspect_paper_position(position_journal_path, position_id)
+    except DataValidationError:
+        return _report(PaperIncidentCode.JOURNAL_INVALID_OR_MISSING, PaperIncidentSeverity.BLOCKED,
+                       as_of_ms=None, residual=None, reserved=None, filled=None, reconcile=True,
+                       available=(), missing=("valid_auto4_position_journal",),
+                       reason="AUTO4 local indisponível, ausente ou inválido; nenhum estado confiável pode ser inferido.")
+
+    classified = classify_inspected_paper_runner_incident(
+        inspection, runner_journal_selected=runner_journal_path is not None)
+    if classified is not None:
+        return classified
+    balance = inspection.balance
+    base = ("auto4_position_replay", "synthetic_fixture_only")
     try:
         trail = load_paper_runner_journal(runner_journal_path, position_journal_path, position_id,
                                           policy=policy, as_of_ms=as_of_ms)
