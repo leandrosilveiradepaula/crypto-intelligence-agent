@@ -15,6 +15,7 @@ from .paper_order_store import (
     SQLitePaperOrderJournal, _TABLES as _ORDER_TABLES, _VERSION as _ORDER_VERSION,
 )
 from .paper_position_inspection import _read_database
+from .synthetic_manual_exit_replay import _utc_ms
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,7 @@ class PaperOperatorStatus:
 
 
 def inspect_local_paper_operator_status(
-    order_journal_path: str | Path,
+    order_journal_path: str | Path, *, decision_at_ms: int | None = None,
 ) -> PaperOperatorStatus:
     """Read one consistent SQLite snapshot with ZERO local writes.
 
@@ -70,12 +71,22 @@ def inspect_local_paper_operator_status(
     forged digest, misindexed order or corrupt replay always fail closed.
     This does not inspect AUTO4 positions or assert native stop protection.
     """
+    if decision_at_ms is not None:
+        _utc_ms(decision_at_ms, "PAPER operator decision cutoff")
     with _read_database(
         order_journal_path, _ORDER_TABLES, "paper_order_meta", _ORDER_VERSION,
     ) as connection:
         cursor = _load_cursor(connection)
         _verify_cursor_orders(connection, cursor)
         pause = _read_locked(connection)
+        if decision_at_ms is not None and (
+            (cursor is not None and
+             cursor.seal.decision_at_ms > decision_at_ms)
+            or pause.changed_at_ms > decision_at_ms
+        ):
+            raise DataValidationError(
+                "PAPER operator cursor or pause is newer than decision cutoff"
+            )
         pending, unresolved_unknown = (
             SQLitePaperOrderJournal._pending_open_from_connection(connection)
         )

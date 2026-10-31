@@ -214,6 +214,15 @@ def audit_paper_runner_incident(
                        available=(), missing=("valid_auto4_position_journal",),
                        reason="AUTO4 local indisponível, ausente ou inválido; nenhum estado confiável pode ser inferido.")
 
+    if as_of_ms is not None and inspection.balance.as_of_ms > as_of_ms:
+        return _report(
+            PaperIncidentCode.INSUFFICIENT_EVIDENCE,
+            PaperIncidentSeverity.BLOCKED,
+            as_of_ms=None, residual=None, reserved=None, filled=None,
+            reconcile=True, available=(),
+            missing=("causal_auto4_checkpoint",),
+            reason="Checkpoint AUTO4 futuro; estado PAPER nao observavel neste cutoff.",
+        )
     classified = classify_inspected_paper_runner_incident(
         inspection, runner_journal_selected=runner_journal_path is not None)
     if classified is not None:

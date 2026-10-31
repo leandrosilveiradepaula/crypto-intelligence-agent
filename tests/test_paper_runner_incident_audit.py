@@ -156,6 +156,29 @@ class PaperRunnerIncidentAuditTests(unittest.TestCase):
             runner_journal_path=self.runner, policy=policy(), as_of_ms=T+1100)
         self.assertEqual(explicit_old_trailing.code, PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED)
 
+    def test_future_auto4_runner_checkpoint_blocks_retrospective_audit(self):
+        self.fixture.start()
+        current = self.store.load(self.position_id)
+        intent = exit_order(
+            "audit_future_cutoff_runner", "6", current.as_of_ms-T, cap="6")
+        self.store.reserve_exit(
+            self.position_id, 0, intent, as_of_ms=current.as_of_ms+1)
+        before = self.path.read_bytes()
+        too_early = self.audit(
+            runner_journal_path=self.runner, policy=policy(),
+            as_of_ms=current.as_of_ms)
+        self.assertEqual(too_early.code, PaperIncidentCode.INSUFFICIENT_EVIDENCE)
+        self.assertEqual(too_early.severity, PaperIncidentSeverity.BLOCKED)
+        self.assertIsNone(too_early.residual_paper_units)
+        self.assertIsNone(too_early.reserved_units)
+        self.assertEqual(too_early.evidence_available, ())
+        self.assertEqual(too_early.evidence_missing, ("causal_auto4_checkpoint",))
+        later = self.audit(
+            runner_journal_path=self.runner, policy=policy(),
+            as_of_ms=current.as_of_ms+1)
+        self.assertEqual(later.code, PaperIncidentCode.RUNNER_CHECKPOINT_SUPERSEDED)
+        self.assertEqual(self.path.read_bytes(), before)
+
     def test_invalid_cutoff_or_policy_is_rejected_even_after_runner_reservation(self):
         current = self.store.load(self.position_id)
         intent = exit_order("audit_cutoff_runner", "6", current.as_of_ms - T, cap="6")

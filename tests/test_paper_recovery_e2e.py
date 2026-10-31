@@ -237,6 +237,28 @@ class PaperRecoveryEndToEndTests(unittest.TestCase):
         self.assertEqual(status.state, PaperRecoveryState.BLOCKED)
         self.assertEqual(status.reason, "paper_open_unverified_protection")
 
+    def test_recovery_cutoff_rejects_future_cursor_and_pause_without_mutation(self):
+        self.batch(1)
+        decision_at = self.cs[4].close_time_ms + 1000
+        before = (self.order_path.read_bytes(), self.position_path.read_bytes())
+        early = self.inspect(decision_at_ms=decision_at-1)
+        self.assertEqual(early.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(early.reason, "paper_journal_unverified")
+        exact = self.inspect(decision_at_ms=decision_at)
+        self.assertEqual(exact.state, PaperRecoveryState.PAPER_FLAT_HYPOTHETICAL_ONLY)
+        self.orders.set_local_kill_switch(
+            pause=True, expected_sequence=0, changed_at_ms=decision_at+1,
+        )
+        future_pause = self.inspect(decision_at_ms=decision_at)
+        self.assertEqual(future_pause.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(future_pause.reason, "paper_journal_unverified")
+        self.assertEqual(self.inspect(
+            decision_at_ms=decision_at+1).reason, "paper_operator_paused")
+        self.assertNotEqual(before[0], self.order_path.read_bytes())
+        self.assertEqual(before[1], self.position_path.read_bytes())
+        self.assert_no_authorization(early)
+        self.assert_no_authorization(future_pause)
+
     def test_persisted_pause_then_resume_changes_diagnostic(self):
         self.batch(1)
         at = self.cs[4].close_time_ms + 1_001
