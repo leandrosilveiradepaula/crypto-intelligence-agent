@@ -894,3 +894,8 @@ Branch `codex/issue-399-j6-pre6-paper-incident-audit` parte de `main=7819e05c8d1
 ## J6/PRE7 #401 — matriz offline em desenvolvimento, 30/10/2026
 
 Branch `codex/issue-401-j6-pre7-paper-readiness-matrix` parte de `main=0959c86fc611a1a313514fde1ab728925ac333ea`. Acrescenta laboratório temporário com 11 cenários após revisão de integração e relatório `paper_incident_matrix_v1`, incluindo saúde/restart, UNKNOWN, parcial/cancelamento, concorrência, incompatibilidade e corrupção. D195 e contrato PRE7 registram que os resultados são evidência offline, não homologação financeira. PR/CI ainda pendentes.
+
+
+## J6/PRE8 #403 — auditoria de uma carteira PAPER selecionada, 31/10/2026
+
+Base verificada `main=6ab7b3558b44bf03bc6fbede62f6060f76d1a250`, PRs abertas=0 no início. PRE7 #401/PR #402 integrada com 11 cenários, SHA revisado `d400cb752cff605f5c71123c25241648b95298e9`, CI Linux/docs+Windows `41173066212` e Chrome/PAPER `41173066163` SUCCESS. Issue #403 e branch `work/j6-pre8-batched-paper-incident-readonly` implementam classificador puro PRE6 compartilhado e auditor de 1–128 posições PAPER no mesmo snapshot AUTO4, cutoff/idade, blocos de integridade sem publicação parcial e JSON/CLI sanitizados. Testes e decisão D196; PR/CI/merge dessa etapa permanecem pendentes até validação do SHA. J1 owner-run VPS adiado; sem exchange, ordens, deploy, migrations ou gasto.

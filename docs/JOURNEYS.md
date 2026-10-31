@@ -279,3 +279,8 @@ A tela PAPER de posições selecionadas passa a identificar o runner residual a 
 ## J4/RUNNER2 #387 — replay durável de trailing PAPER
 
 O estado de trailing pode ser reconstruído após reinício por marks sintéticos duráveis em journal **separado**, sem recalcular extremos somente de uma janela truncada. A posição de runner permanece ancorada a um checkpoint validado e ao policy hash; mudanças na posição ou política falham sem rearmar silenciosamente. Estados hipotéticos terminais não são fills nem stops da exchange. J1 continua pendente na VPS por solicitação do proprietário, mas J4 progride offline.
+
+
+## J6/PRE8 #403 — auditoria simultânea de posições PAPER selecionadas (31/10/2026)
+
+A triagem PRE6 por uma posição não fornece fotografia simultânea de várias posições. PRE8 reutiliza o leitor `inspect_paper_positions` para um snapshot AUTO4 único de até 128 posições explicitamente escolhidas, classificando o incidente PRE6 por item, cutoff UTC e staleness, com bloqueio do lote inteiro se qualquer diário for inválido. Não agrega posições em carteira financeira ou conta de exchange, não ativa ordens, stop, feed real ou live. Gates e documentação em `docs/J6_PRE8_PAPER_PORTFOLIO_INCIDENTS.md`.
