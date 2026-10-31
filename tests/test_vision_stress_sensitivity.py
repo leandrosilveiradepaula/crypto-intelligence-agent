@@ -128,6 +128,11 @@ class VisionStressSensitivityTests(unittest.TestCase):
         ):
             with self.subTest(grid=str(invalid)[:50]), self.assertRaises(DataValidationError):
                 self.run_grid(invalid)
+        foreign = terms(50)
+        different_quote = replace(
+            foreign, margin=replace(foreign.margin, quote_currency="SYNTHETIC_USDC"))
+        with self.assertRaises(DataValidationError):
+            self.run_grid((terms(1), different_quote))
         with self.assertRaises(DataValidationError):
             self.run_grid((terms(1), terms(50)), groups=(self.a, self.a))
         with self.assertRaises(DataValidationError):
