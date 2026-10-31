@@ -85,8 +85,27 @@ class OOSRobustnessTests(unittest.TestCase):
         self.assertFalse(strict.sanitized_report()["all_synthetic_conditions_met"])
         self.assertEqual(strict.scenario_reports[0].exposure_count,
                          strict.scenario_reports[1].exposure_count)
-        self.assertIn("liquidation_proxy_fraction_exceeded",
+        # OHLC 99..104 does not touch the 50x liquidation proxy;
+        # it does touch the stop and target and is intrabar ambiguous.
+        self.assertIn("intrabar_ambiguity_fraction_exceeded",
                       strict.scenario_reports[1].rejection_codes)
+        self.assertNotIn("liquidation_proxy_fraction_exceeded",
+                         strict.scenario_reports[1].rejection_codes)
+        # Controlled counterfactual evidence with an actual proxy count:
+        # modify both fold and aggregate consistently so the risk auditor
+        # must detect liquidation, not a broken reconciliation.
+        cases = []
+        for case in g.scenarios:
+            folds = tuple(replace(
+                f, strategy_liquidation_possible_count=f.strategy_exposures)
+                for f in case.audit.fold_reports)
+            cases.append(replace(case, audit=replace(
+                case.audit, fold_reports=folds,
+                liquidation_possible_count=case.audit.stressed_count)))
+        forced_liq = audit_oos_robustness(
+            replace(g, scenarios=tuple(cases)), policy=policy())
+        self.assertIn("liquidation_proxy_fraction_exceeded",
+                      forced_liq.scenario_reports[1].rejection_codes)
         relaxed = policy(
             max_liquidation_proxy_fraction=D(1),
             max_intrabar_ambiguity_fraction=D(1),
