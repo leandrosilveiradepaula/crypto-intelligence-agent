@@ -26,8 +26,10 @@ possível e não é promovida a uma estratégia vencedora.
 A API `VisionStressSensitivity.sanitized_report()` produz
 `j3_pre22_oos_sensitivity_v1`. A lista de cenários preserva a ordem de
 entrada, com `ordinal=1..N`; **ordinal não é ranking de desempenho**.
-Cada cenário inclui alavancagem hipotética e margem fixada, contagens
-de exposição/abstenção, toques e ambiguidade, possível liquidação proxy,
+Cada cenário inclui alavancagem hipotética, margem e os parâmetros
+numéricos de stop/alvo, manutenção, fee, slippage e funding (todos declarados
+como hipóteses), contagens de exposição/abstenção, toques e ambiguidade,
+possível liquidação proxy,
 ramos líquidos condicionais adverso/favorável em unidades quote e somas por
 margem de referência, além de resumos por fold e digest do PRE21.
 Os agregados contam cenários com risco de liquidação e com resultado adverso
