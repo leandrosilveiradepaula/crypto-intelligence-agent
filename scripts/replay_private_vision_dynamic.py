@@ -17,6 +17,9 @@ from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginB
 from crypto_intelligence_agent.vision_intrabar_stress import VisionStressAssumptions
 from crypto_intelligence_agent.vision_stress_oos import audit_costed_vision_intrabar_oos
 from crypto_intelligence_agent.vision_stress_sensitivity import compare_costed_vision_oos_stress_scenarios
+from crypto_intelligence_agent.vision_oos_robustness import (
+    OOSRobustnessPolicy, audit_oos_robustness,
+)
 from crypto_intelligence_agent.vision_risk_sensitivity import VisionRiskShocks, audit_vision_risk_sensitivity
 from crypto_intelligence_agent.vision_costed_oos import costed_vision_monthly_oos
 from crypto_intelligence_agent.vision_dynamic_replay import replay_offline_vision_dynamic_ranking,HOUR_MS
@@ -39,11 +42,16 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
     stress_selection_cost_bps:Decimal=Decimal(0),
     costed_oos_bps:Decimal|None=None,
     risk_shocks:VisionRiskShocks|None=None,
-    audit_oos_leverage_pair:bool=False)->dict:
+    audit_oos_leverage_pair:bool=False,
+    oos_robustness_policy:OOSRobustnessPolicy|None=None)->dict:
     if allow_personal_nonproduction_research is not True or os.name!="posix":
         raise VisionReplayPrivateError("owner_only_research_opt_in_required")
     if type(manifest_paths) is not tuple or not 2<=len(manifest_paths)<=50:
         raise VisionReplayPrivateError("bounded_manifest_count_required")
+    if oos_robustness_policy is not None and (
+            type(oos_robustness_policy) is not OOSRobustnessPolicy
+            or audit_oos_leverage_pair is not True):
+        raise VisionReplayPrivateError("oos_robustness_requires_leverage_pair")
     if audit_oos_leverage_pair:
         if (type(stress_assumptions) is not VisionStressAssumptions
                 or not 2 <= stress_assumptions.margin.leverage_at_intent <= 200
@@ -110,6 +118,11 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
                     cost_bps_per_side=stress_selection_cost_bps,
                     assumptions_grid=(assumptions_1x,stress_assumptions))
                 report["hypothetical_oos_leverage_pair"]=leverage_pair.sanitized_report()
+                if oos_robustness_policy is not None:
+                    # Audit the SAME already-computed 1x/Nx stress grid:
+                    # no additional private manifest reads or stress reruns.
+                    report["hypothetical_oos_robustness"]=audit_oos_robustness(
+                        leverage_pair, policy=oos_robustness_policy).sanitized_report()
             if risk_shocks is not None:
                 sensitivity=audit_vision_risk_sensitivity(
                     tuple(data),as_of_ms=checked["end_open_exclusive_ms"]+HOUR_MS,
@@ -134,6 +147,14 @@ def main(argv:list[str]|None=None)->int:
     parser.add_argument("--audit-intrabar-stress",action="store_true")
     parser.add_argument("--audit-stress-sensitivity",action="store_true")
     parser.add_argument("--audit-oos-leverage-pair",action="store_true")
+    parser.add_argument("--audit-oos-robustness",action="store_true")
+    parser.add_argument("--robust-min-folds",type=int)
+    parser.add_argument("--robust-min-exposures-per-fold",type=int)
+    parser.add_argument("--robust-max-liquidation-fraction",type=Decimal)
+    parser.add_argument("--robust-max-ambiguity-fraction",type=Decimal)
+    parser.add_argument("--robust-max-single-loss-over-margin",type=Decimal)
+    parser.add_argument("--robust-max-drawdown-quote",type=Decimal)
+    parser.add_argument("--robust-require-nonnegative-adverse",action="store_true")
     parser.add_argument("--risk-extra-entry-fee-bps",type=Decimal)
     parser.add_argument("--risk-extra-exit-fee-bps",type=Decimal)
     parser.add_argument("--risk-extra-entry-slippage-bps",type=Decimal)
@@ -187,6 +208,25 @@ def main(argv:list[str]|None=None)->int:
             risk_shocks=VisionRiskShocks(*shock_values)
         elif any(x is not None for x in shock_values):
             raise VisionReplayPrivateError("risk shocks require explicit opt-in")
+        robustness_values = (
+            args.robust_min_folds, args.robust_min_exposures_per_fold,
+            args.robust_max_liquidation_fraction,
+            args.robust_max_ambiguity_fraction,
+            args.robust_max_single_loss_over_margin,
+            args.robust_max_drawdown_quote,
+        )
+        robustness_policy = None
+        if args.audit_oos_robustness:
+            if not args.audit_oos_leverage_pair or any(
+                    value is None for value in robustness_values):
+                raise VisionReplayPrivateError(
+                    "robustness_requires_leverage_pair_and_explicit_thresholds")
+            robustness_policy = OOSRobustnessPolicy(
+                *robustness_values,
+                require_nonnegative_adverse_fold=args.robust_require_nonnegative_adverse)
+        elif (any(value is not None for value in robustness_values)
+              or args.robust_require_nonnegative_adverse):
+            raise VisionReplayPrivateError("robustness_thresholds_require_opt_in")
         if args.costed_oos != (args.oos_cost_bps is not None):
             raise VisionReplayPrivateError("explicit costed OOS opt-in and cost required")
         report=private_vision_dynamic_replay(
@@ -198,7 +238,8 @@ def main(argv:list[str]|None=None)->int:
             stress_assumptions=stress,stress_selection_cost_bps=cost,
             costed_oos_bps=args.oos_cost_bps if args.costed_oos else None,
             risk_shocks=risk_shocks,
-            audit_oos_leverage_pair=args.audit_oos_leverage_pair)
+            audit_oos_leverage_pair=args.audit_oos_leverage_pair,
+            oos_robustness_policy=robustness_policy)
     except Exception:
         report={"schema_version":"vision-private-dynamic-replay-v1",
                 "status":"private_vision_dynamic_replay_rejected",
