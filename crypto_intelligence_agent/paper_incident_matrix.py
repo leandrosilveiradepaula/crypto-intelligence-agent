@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from pathlib import Path
 import tempfile
@@ -253,6 +253,48 @@ def run_paper_incident_matrix() -> PaperIncidentMatrixReport:
             con.execute("UPDATE paper_positions SET digest='bad' WHERE position_id=?", (pid,))
         results.append(_report("corrupt_auto4_digest", "BLOCKED:" + PaperIncidentCode.JOURNAL_INVALID_OR_MISSING.value,
                                audit_paper_runner_incident(pos, pid)))
+
+        # A real trigger journal becomes stale when its last mark is too old.
+        store, pos, runner, pid = _fixture(root, "stale")
+        _trigger(runner, pos, pid)
+        stale = audit_paper_runner_incident(
+            pos, pid, runner_journal_path=runner, policy=_POLICY, as_of_ms=_T + 10_000)
+        results.append(_report("stale_runner2_cutoff",
+                               "BLOCKED:" + PaperIncidentCode.INSUFFICIENT_EVIDENCE.value,
+                               stale, invariants_hold=not any(
+                                   o.tranche_step == 0 for o in store.load(pid).exit_orders)))
+
+        # No RUNNER2 file is created implicitly by a read-only audit.
+        store, pos, runner, pid = _fixture(root, "missingrunner")
+        missing_runner = audit_paper_runner_incident(
+            pos, pid, runner_journal_path=runner, policy=_POLICY, as_of_ms=_T + 100)
+        results.append(_report("missing_runner2_journal",
+                               "BLOCKED:" + PaperIncidentCode.INSUFFICIENT_EVIDENCE.value,
+                               missing_runner, invariants_hold=not runner.exists()))
+
+        # Deterministically model AUTO4 changing after RUNNER2 replay. The
+        # real observer must refuse the torn two-database observation.
+        store, pos, runner, pid = _fixture(root, "drift")
+        _trigger(runner, pos, pid)
+        from .paper_position_inspection import inspect_paper_position
+        before = inspect_paper_position(pos, pid)
+        changed = replace(before, balance=replace(
+            before.balance, as_of_ms=before.balance.as_of_ms + 1))
+        original_reader = _incident_module.inspect_paper_position
+        reads = 0
+        def drift_reader(position_path, position_id):
+            nonlocal reads
+            reads += 1
+            return changed if reads == 2 else original_reader(position_path, position_id)
+        with patch.object(_incident_module, "inspect_paper_position",
+                          side_effect=drift_reader):
+            drift = audit_paper_runner_incident(
+                pos, pid, runner_journal_path=runner, policy=_POLICY, as_of_ms=_T + 3100)
+        results.append(_report("auto4_drift_during_runner2_read",
+                               "BLOCKED:" + PaperIncidentCode.INSUFFICIENT_EVIDENCE.value,
+                               drift, invariants_hold=(
+                                   "stable_auto4_checkpoint" in drift.evidence_missing
+                                   and store.load(pid).runner_reserved_unfilled_units == 0)))
 
         missing = root / "missing.sqlite"
         results.append(_report("missing_auto4_journal", "BLOCKED:" + PaperIncidentCode.JOURNAL_INVALID_OR_MISSING.value,
