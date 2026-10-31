@@ -94,8 +94,13 @@ class PaperIncidentMatrixReport:
 def _j6_readiness_matrix(scenarios: tuple[PaperIncidentScenarioResult, ...]) -> list[dict[str, str]]:
     """Release gates cannot be marked proven if their local scenarios failed."""
     passed = {x.scenario_id for x in scenarios if x.validation_status in ("PASS", "BLOCKED_EXPECTED")}
+    # Integrity failures elsewhere in the same run invalidate aggregate
+    # readiness claims even when a narrower fixture happened to pass.
+    complete_run = bool(scenarios) and all(
+        x.validation_status in ("PASS", "BLOCKED_EXPECTED") for x in scenarios)
     def evidence_state(*ids: str) -> str:
-        return "COMPROVADO_OFFLINE" if all(x in passed for x in ids) else "NAO_COMPROVADO_NESTA_EXECUCAO"
+        return ("COMPROVADO_OFFLINE" if complete_run and all(x in passed for x in ids)
+                else "NAO_COMPROVADO_NESTA_EXECUCAO")
     return [
         {"criterion": "persistencia_e_recovery_paper", "state": evidence_state("healthy_restart_fill", "before_reservation"), "evidence": "AUTO4/RUNNER2 replay e matriz finita"},
         {"criterion": "idempotencia_e_reserva_local", "state": evidence_state("healthy_restart_fill", "concurrent_single_reservation"), "evidence": "lock SQLite e cenarios concorrentes"},
