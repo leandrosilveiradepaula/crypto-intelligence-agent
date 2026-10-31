@@ -39,6 +39,13 @@ class VisionSensitivityScenario:
                 )
             },
             "test_fold_count": len(a.fold_reports),
+            "decision_fingerprint_sha256": a.decision_fingerprint_sha256,
+            "strategy_worst_drawdown_proxy_quote": str(a.worst_drawdown_proxy_quote),
+            "strategy_best_drawdown_proxy_quote": str(a.best_drawdown_proxy_quote),
+            "benchmark_worst_drawdown_proxy_quote": str(a.benchmark_worst_drawdown_proxy_quote),
+            "benchmark_best_drawdown_proxy_quote": str(a.benchmark_best_drawdown_proxy_quote),
+            "strategy_max_single_bar_loss_over_margin": str(a.strategy_max_single_bar_loss_over_margin),
+            "benchmark_max_single_bar_loss_over_margin": str(a.benchmark_max_single_bar_loss_over_margin),
             "strategy_exposures": a.stressed_count,
             "strategy_abstentions": a.abstention_count,
             "strategy_liquidation_proxy_count": a.liquidation_possible_count,
@@ -63,6 +70,13 @@ class VisionSensitivityScenario:
             "folds": [
                 {
                     "test_month_number": f.test_month_number,
+                    "decision_fingerprint_sha256": f.decision_fingerprint_sha256,
+                    "strategy_worst_drawdown_proxy_quote": str(f.strategy_worst_drawdown_proxy_quote),
+                    "strategy_best_drawdown_proxy_quote": str(f.strategy_best_drawdown_proxy_quote),
+                    "benchmark_worst_drawdown_proxy_quote": str(f.benchmark_worst_drawdown_proxy_quote),
+                    "benchmark_best_drawdown_proxy_quote": str(f.benchmark_best_drawdown_proxy_quote),
+                    "strategy_max_single_bar_loss_over_margin": str(f.strategy_max_single_bar_loss_over_margin),
+                    "benchmark_max_single_bar_loss_over_margin": str(f.benchmark_max_single_bar_loss_over_margin),
                     "bars_scored": f.bars_scored,
                     "strategy_exposures": f.strategy_exposures,
                     "strategy_abstentions": f.strategy_abstention_count,
@@ -148,6 +162,7 @@ def compare_costed_vision_oos_stress_scenarios(
 
     cases: list[VisionSensitivityScenario] = []
     reference: tuple | None = None
+    reference_decisions: tuple | None = None
     for i, assumptions in enumerate(assumptions_grid, start=1):
         report = audit_costed_vision_intrabar_oos(
             month_groups, as_of_ms=as_of_ms,
@@ -163,9 +178,14 @@ def compare_costed_vision_oos_stress_scenarios(
              fold.benchmark_exposures)
             for fold in report.fold_reports
         )
+        decisions = (
+            report.decision_fingerprint_sha256,
+            tuple(f.decision_fingerprint_sha256 for f in report.fold_reports),
+        )
         if reference is None:
             reference = coverage
-        elif coverage != reference:
+            reference_decisions = decisions
+        elif coverage != reference or decisions != reference_decisions:
             raise DataValidationError("sensitivity grid changed frozen OOS decisions")
         cases.append(VisionSensitivityScenario(i, assumptions, report))
 
@@ -174,6 +194,7 @@ def compare_costed_vision_oos_stress_scenarios(
         "scenario_digests": [x.audit.digest_sha256 for x in cases],
         "cost_bps_per_side": str(cost_bps_per_side),
         "coverage": reference,
+        "decision_fingerprints": reference_decisions,
     }
     digest = sha256(json.dumps(
         digest_payload, separators=(",", ":"), sort_keys=True).encode("ascii")).hexdigest()

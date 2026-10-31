@@ -919,3 +919,8 @@ Base verificada `main=c852c4002b84b74be24b1dd986154c242971d09e`, zero PRs aberta
 ## J3/PRE23 #411 — CLI de pesquisa privada OOS 1x vs Nx (31/10/2026)
 
 Base `main=8dccd85d7d33836577a82a681b32a0f77f6b60e6`, nenhuma PR aberta antes da branch `work/j3-pre23-private-oos-leverage-cli`. PRE22 #409/PR #410 integrou comparador de 2–6 hipóteses com CI verde, review `5723543953`, D199. PRE23 integra esse mesmo comparador à CLI privada Vision já auditada, sem recarregar arquivos, com opt-in explícito, comparação 1x/Nx e todos os termos declarados; testes POSIX com manifests fictícios, retorno sanitizado e D200. Gate PR/CI SHA final pendente até comprovação. J1 #319 worker VPS teve apenas agendamento confirmado para 15:00:15 UTC, status final desconhecido; nenhum novo processo/SSH/retry. Sem live/testnet, ordem, deploy, gasto ou dados reais usados nesta engenharia.
+
+
+## J3/PRE24 #413 — integridade de decisões OOS, 31/10/2026
+
+Partindo de main 97a990c2f62fa6888e80c1c509df1ab453da7d8d (PRE23/PR #412 integrada, zero PRs abertas), PRE24 corrige a insuficiência de comparações por contagem: fingerprints de decisões OOS por fold e global permitem detectar seleção diferente com exposição igual; PRE22 falha fechado quando houver discrepância. Relatório aditivo inclui drawdown e perda máxima por margem, preservando digest financeiro PRE21. Branch work/j3-pre24-oos-decision-fingerprint-risk; issue #413. Testes/CI/revisão/merge dependem de evidência de execução, sem alegação antecipada. J1 #2/#319: worker agendado às 15:00:15 UTC, conclusão não verificável pelo GitHub, sem reiniciar. Sem dados reais, VPS, ordens, credenciais, deploy ou custo.

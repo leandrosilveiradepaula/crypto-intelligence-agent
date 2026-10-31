@@ -408,3 +408,8 @@ O CLI `scripts.demo_paper_runner_close_flow` usa os módulos de produção já a
 ### J3/PRE23 — relatório PRE22 na mesma CLI privada Vision
 
 `scripts.replay_private_vision_dynamic` mantém uma leitura validada de ZIPs/manifest/checksum POSIX, compartilhada com replay/ranking PRE21/PRE22. Somente no opt-in `--audit-oos-leverage-pair`, compõe duas bases tipadas com igual margem/termos e alavancagens 1x/Nx, chama `vision_stress_sensitivity.compare_costed_vision_oos_stress_scenarios` e adiciona `hypothetical_oos_leverage_pair` ao JSON sanitizado. Sem repetir arquivos, novo motor de venue, envio de ordens ou autorização de risco. Ver D200/PRE23.
+
+
+## J3/PRE24 #413 — integridade de decisões OOS, 31/10/2026
+
+Partindo de main 97a990c2f62fa6888e80c1c509df1ab453da7d8d (PRE23/PR #412 integrada, zero PRs abertas), PRE24 corrige a insuficiência de comparações por contagem: fingerprints de decisões OOS por fold e global permitem detectar seleção diferente com exposição igual; PRE22 falha fechado quando houver discrepância. Relatório aditivo inclui drawdown e perda máxima por margem, preservando digest financeiro PRE21. Branch work/j3-pre24-oos-decision-fingerprint-risk; issue #413. Testes/CI/revisão/merge dependem de evidência de execução, sem alegação antecipada. J1 #2/#319: worker agendado às 15:00:15 UTC, conclusão não verificável pelo GitHub, sem reiniciar. Sem dados reais, VPS, ordens, credenciais, deploy ou custo.

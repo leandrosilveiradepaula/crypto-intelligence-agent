@@ -15,9 +15,13 @@ class VisionStressOOSTests(unittest.TestCase):
                         cost_bps_per_side=D("0"),assumptions=terms())
         first=run((a,b))
         self.assertEqual(first,run((b,a)))
+        self.assertEqual(len(first.decision_fingerprint_sha256),64)
+        self.assertEqual(len(first.fold_reports[0].decision_fingerprint_sha256),64)
         result=first.sanitized_report()
         self.assertFalse(result["financial_backtest_approved"])
         self.assertFalse(result["orders_sent"])
+        self.assertEqual(result["decision_fingerprint_sha256"],
+                         first.decision_fingerprint_sha256)
         self.assertNotIn("BTCUSDT",str(result))
         self.assertGreaterEqual(first.best_net_quote,first.worst_net_quote)
         self.assertLessEqual(first.liquidation_possible_count,first.stressed_count)
@@ -150,6 +154,44 @@ class VisionStressOOSTests(unittest.TestCase):
             causal_oos_bar_choice(series,23)
         with self.assertRaises(DataValidationError):
             causal_oos_bar_choice(series,len(series[0].candles))
+
+    def test_decision_digest_not_financial_assumptions_and_no_future_leak(self):
+        from dataclasses import replace
+        a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
+        end=a[-1].end_open_exclusive_ms+3600000
+        def audit(groups,assumptions):
+            return audit_costed_vision_intrabar_oos(
+                groups,as_of_ms=end,cost_bps_per_side=D("0"),assumptions=assumptions)
+        low=audit((a,b),terms(1))
+        high=audit((a,b),terms(50))
+        self.assertEqual(low.decision_fingerprint_sha256,high.decision_fingerprint_sha256)
+        self.assertEqual(low.fold_reports[0].decision_fingerprint_sha256,
+                         high.fold_reports[0].decision_fingerprint_sha256)
+        # Alter only OOS high/low: risk changes, decisions do not.
+        month=list(a[-1].candles)
+        row=month[50]
+        month[50]=replace(row,high=row.high+D("10"))
+        altered=a[:-1]+(replace(a[-1],candles=tuple(month)),)
+        after=audit((altered,b),terms(1))
+        self.assertEqual(low.decision_fingerprint_sha256,
+                         after.decision_fingerprint_sha256)
+        # Change prior direction in the chosen asset and preserve OHLC
+        # validity: changing a past close must alter later causal decisions.
+        from crypto_intelligence_agent.offline_vision_series import assemble_offline_vision_months
+        from crypto_intelligence_agent.vision_costed_oos import causal_oos_bar_choice
+        aligned=tuple(assemble_offline_vision_months(g,as_of_ms=end) for g in (a,b))
+        first_index=len(a[0].candles)+50
+        chosen,_=causal_oos_bar_choice(aligned,first_index)
+        all_groups=[a,b]
+        selected_month=list(all_groups[chosen][-1].candles)
+        prior=selected_month[49]
+        selected_month[49]=replace(
+            prior,close=(prior.high if prior.close!=prior.high else prior.low))
+        all_groups[chosen]=all_groups[chosen][:-1]+(
+            replace(all_groups[chosen][-1],candles=tuple(selected_month)),)
+        modified=audit(tuple(all_groups),terms(1))
+        self.assertNotEqual(low.decision_fingerprint_sha256,
+                            modified.decision_fingerprint_sha256)
 
     def test_requires_explicit_and_valid_stress_terms(self):
         a,b=fixture("BTCUSDT"),fixture("ETHUSDT")
