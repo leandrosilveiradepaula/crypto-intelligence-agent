@@ -21,7 +21,10 @@ class PaperIncidentMatrixTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(first["schema_version"], "paper_incident_matrix_v1")
         self.assertEqual(first["scenario_count"], 11)
-        self.assertEqual(first["failure_count"], 0)
+        self.assertEqual(first["failure_count"], 0,
+                         [(x["scenario_id"], x["expected_outcome"], x["observed_outcome"],
+                           x["severity"], x["reconciliation_required"])
+                          for x in first["scenarios"] if x["validation_status"] == "FAIL"])
         self.assertEqual(first["pass_count"], 4)
         self.assertEqual(first["blocked_expected_count"], 7)
         self.assertTrue(first["temporary_journals_removed"])
