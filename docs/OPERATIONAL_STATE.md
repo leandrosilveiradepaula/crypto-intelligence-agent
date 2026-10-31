@@ -1033,3 +1033,9 @@ Base `main=0959c86fc611a1a313514fde1ab728925ac333ea`, issue #401 aberta e zero P
 #### Revisão de integração J3/PRE21 #407/PR #408, 31/10/2026
 
 Codex entregou a PR #408 inicialmente no head `d69db31dffc1e5684e35ab07eebc59cb35cef497`, com CI Linux/docs+Windows/offline `41204614829` e Chrome/PAPER `41204614787` SUCCESS, 1734 testes locais e 101 skips relatados. Revisão independente acrescentou campos por margem condicional em cada fold/agregado e testes causais de ranking 24h fechado/direção passada; verificação da nova CI no HEAD atualizado é obrigatória **antes de qualquer merge**. Não houve migração, operação financeira, VPS, credenciais, deploy nem orçamento adicional.
+
+
+
+## Checkpoint 31/10/2026 — J3/PRE22 #409 e worker VPS J1 sem confirmação
+
+Repositório `leandrosilveiradepaula/crypto-intelligence-agent`; `main=c852c4002b84b74be24b1dd986154c242971d09e` e zero PRs abertas no início. PRE21 #407/PR #408 integrada, head revisado `24e178b0eedce0bb502e7dfaf7b540634f04b64b`; CI final Linux/docs+Windows/offline `41206412328` e Chrome/PAPER `41206412464` SUCCESS. Branch `work/j3-pre22-oos-sensitivity-grid`, issue #409: `vision_stress_sensitivity.py`, testes de 1x/50x, custos, seleção causal idêntica, digest/privacidade, D199 e contrato `docs/J3_PRE22_OOS_STRESS_SENSITIVITY.md`. Próximo passo autorizado: abrir PR, validar CI Linux/Windows/Chrome no HEAD final, corrigir falhas, revisão, squash merge sem deploy e atualizar issue. **J1 #319 VPS:** owner informou launcher `SCHEDULED=true`, PID 835725, execução prevista 15:00:15 UTC; não existe evidência verificada aqui de exit status/GETs/SQLite/auditor após o horário. Não reiniciar ou mutar worker; só revisar logs read-only mediante acesso legítimo. J1 #2/#319 seguem abertas; J3 #4 não homologada. R$0 adicional e nenhuma operação real.

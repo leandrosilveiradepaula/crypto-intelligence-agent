@@ -293,3 +293,9 @@ A triagem PRE6 por uma posição não fornece fotografia simultânea de várias 
 ## J6/PRE9 #405 — identidade causal da entrada em fluxo PAPER completo
 
 Uma intenção OPEN gerada pelo motor quantitativo J2/RiskGate deve permanecer a mesma ao ser confirmada por FILL de fixture em AUTO2 e registrada em AUTO4; somente depois as parciais, trailing e runner podem afetar saldo sintético. PRE9 integra os componentes existentes em uma demo finita com checkpoints/read-only PRE8, sem implicar execução, stop nativo ou homologação de dados/conta. Ver `docs/J6_PRE9_FULL_OFFLINE_LIFECYCLE.md`.
+
+
+
+## J3/PRE22 #409 — fragilidade OOS sob parâmetros financeiros, sem otimização ex post
+
+Um único histórico mensal e uma única regra OOS de seleção causal podem ser comparados sob 2–6 hipóteses de alavancagem, margem, taxa, slippage, funding e manutenção. A API PRE22 reusa PRE21 para todo cálculo e bloqueia qualquer variação de cobertura mensal por cenário, sem ranking da melhor configuração, ROI de capital, autorização de 50x ou ordem de exchange. Critérios e decisão D199 em `docs/J3_PRE22_OOS_STRESS_SENSITIVITY.md`. A dependência de evidência VPS J1 permanece externa e PRE22 não aciona sondagem/coleta.

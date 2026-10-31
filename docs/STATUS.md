@@ -908,3 +908,9 @@ Base verificada `main=6ab7b3558b44bf03bc6fbede62f6060f76d1a250`, PRs abertas=0 n
 ## J6/PRE9 #405 — mesma intenção J2/RiskGate no ledger AUTO4, 31/10/2026
 
 Base verificada `main=46975938ec727489647edcc8173bf98f2e7657a8`, após PR #404/J6 PRE8 integrada com CI 41174110832 Linux/docs+Windows e 41174110831 Chrome/PAPER SUCCESS, review 5721532250. Issue #405 e branch `work/j6-pre9-causal-open-to-runner-paper` implementam demonstração de cadeia J2→AUTO2→AUTO4→RUNNER2→PRE4→PRE8 com intenção OPEN recuperada do cursor real e FILL de fixture isolado, parciais/trailing/runner e relatório sanitizado. Testes e D197 adicionados; PR/CI/merge ainda não presumidos. J1 VPS owner-run adiado, nenhuma ordem/endpoint/gasto.
+
+
+
+## J3/PRE22 #409 — grade de robustez de custos/alavancagem OOS, 31/10/2026
+
+Base verificada `main=c852c4002b84b74be24b1dd986154c242971d09e`, zero PRs abertas ao iniciar. PRE21 #407/PR #408 integrada com seleção causal 24h fechado, envelope OHLC condicional, D198, CI final Linux/Windows/Chrome SUCCESS. PRE22 #409 na branch `work/j3-pre22-oos-sensitivity-grid` adiciona comparador read-only de 2–6 cenários `VisionStressAssumptions` sobre mesmos folds e contagens, com sumário de fragilidade sob custos, alavancagem e liquidação proxy, testes numéricos/fail-closed/privacidade e D199. PR, CI e merge permanecem sujeitos a verificação. Última evidência de J1 VPS: worker agendado para 31/10 15:00:15 UTC, não comprovou captura nem status final. Sem reiniciar/coletar, credencial, ordem, deploy ou novos gastos.

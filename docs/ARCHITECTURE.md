@@ -397,3 +397,9 @@ O CLI `scripts.demo_paper_runner_close_flow` usa os módulos de produção já a
 ### J6/PRE9 — prova causal OPEN→AUTO4→runner em laboratório isolado
 
 `scripts.demo_full_offline_paper_lifecycle` reutiliza o gerador causal de intenção/risk da J2/J4, cursor durável e AUTO2, sem reconstruir um ID arbitrário de abertura. Uma injeção explicitamente sintética de FILL confirma a mesma intenção antes de registrar AUTO4, cujo cross-check AUTO2 verifica identidade, símbolo, evento e sequência. Os alvos PRE1/AUTO4 controlam parciais; RUNNER2/step PRE4 demonstram trailing/reserva recuperável do residual, FILL final separado, e PRE8 observa fechamento local. Sem novos writers, motor concorrente, atomicidade entre bancos ou execução financeira. Contrato `docs/J6_PRE9_FULL_OFFLINE_LIFECYCLE.md`.
+
+
+
+### J3/PRE22 — grade finita de hipóteses financeiras para folds OOS
+
+`vision_stress_sensitivity.compare_costed_vision_oos_stress_scenarios` é um adaptador read-only que valida uma grade finita (2–6 cenários tipados), chama o mesmo `audit_costed_vision_intrabar_oos` PRE21 para cada hipótese e exige identidade de contagens por fold para evitar comparação de decisões diferentes. Nenhuma nova primitiva de precificação, motor de ordens ou ledger. Relatório JSON versionado por ordinal sem identidades, com resultados condicionalmente adversos/favoráveis e flags de segurança negativas. D199 / `docs/J3_PRE22_OOS_STRESS_SENSITIVITY.md`.

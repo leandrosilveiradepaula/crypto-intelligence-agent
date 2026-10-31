@@ -778,3 +778,9 @@ Executar `python -m scripts.demo_full_offline_paper_lifecycle` duas vezes e comp
 #### Revisão PRE21 — causalidade explícita e métricas por margem
 
 A regressão adicional compara a primitiva `causal_oos_bar_choice` a uma seleção manual por volume das 24 barras anteriores e à direção dos dois closes anteriores; alterar volume/close na barra escolhida ou em barras futuras não altera o resultado da decisão. O relatório de stress deve incluir, por fold e no agregado, as somas líquidas condicionais normalizadas pela margem fixa hipotética por exposição, calculadas em contexto Decimal de alta precisão. Nenhuma métrica representa retorno composto ou exposição real da carteira.
+
+
+
+### J3/PRE22 #409 — grade OOS financeira com seleção fixa
+
+Executar `tests/test_vision_stress_sensitivity.py` junto com PRE21 (`tests/test_vision_stress_oos.py`) e regressões do motor intrabar. Duas alavancagens (1x/50x) sobre o mesmo histórico mensal devem preservar a **mesma** seleção e as mesmas contagens por fold; resultados das linhas devem ser os obtidos diretamente pelo auditor PRE21. Custos adicionais em cenário de exposição/termos fixos não podem melhorar o ramo líquido condicionado. Cobrir permutação de ativos, duplicidade de cenários, floats, limite 2–6, flags live/order falsas, digest, saída sem símbolos/paths, proibição de rede e detecção de contagens divergentes (falhar fechado). Documentar decisões D199 e aceitar somente com CI docs/Linux, Windows/offline e Chrome/PAPER SUCCESS no SHA exato, revisão e merge sem produção. J1 #2/#319 continua dependente de evidência privada de worker VPS, que **não** foi obtida pelo executor PRE22.
