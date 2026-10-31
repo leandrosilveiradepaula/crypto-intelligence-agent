@@ -4,6 +4,7 @@ No network, no market data output, no writes or trading. Not a live feed.
 """
 from __future__ import annotations
 import argparse
+from dataclasses import replace
 from decimal import Decimal
 from hashlib import sha256
 import json
@@ -15,6 +16,7 @@ from crypto_intelligence_agent.offline_vision_month import inspect_offline_visio
 from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginBasis
 from crypto_intelligence_agent.vision_intrabar_stress import VisionStressAssumptions
 from crypto_intelligence_agent.vision_stress_oos import audit_costed_vision_intrabar_oos
+from crypto_intelligence_agent.vision_stress_sensitivity import compare_costed_vision_oos_stress_scenarios
 from crypto_intelligence_agent.vision_risk_sensitivity import VisionRiskShocks, audit_vision_risk_sensitivity
 from crypto_intelligence_agent.vision_costed_oos import costed_vision_monthly_oos
 from crypto_intelligence_agent.vision_dynamic_replay import replay_offline_vision_dynamic_ranking,HOUR_MS
@@ -36,11 +38,17 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
     stress_assumptions:VisionStressAssumptions|None=None,
     stress_selection_cost_bps:Decimal=Decimal(0),
     costed_oos_bps:Decimal|None=None,
-    risk_shocks:VisionRiskShocks|None=None)->dict:
+    risk_shocks:VisionRiskShocks|None=None,
+    audit_oos_leverage_pair:bool=False)->dict:
     if allow_personal_nonproduction_research is not True or os.name!="posix":
         raise VisionReplayPrivateError("owner_only_research_opt_in_required")
     if type(manifest_paths) is not tuple or not 2<=len(manifest_paths)<=50:
         raise VisionReplayPrivateError("bounded_manifest_count_required")
+    if audit_oos_leverage_pair:
+        if (type(stress_assumptions) is not VisionStressAssumptions
+                or not 2 <= stress_assumptions.margin.leverage_at_intent <= 200
+                or risk_shocks is not None):
+            raise VisionReplayPrivateError("leverage_pair_requires_distinct_typed_stress_only")
     # Validate all private path, ZIP, checksum sidecars and shared month range
     # BEFORE any ranking or emitting results. Auditor does not write.
     try:
@@ -90,6 +98,18 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
                 cost_bps_per_side=stress_selection_cost_bps,
                 assumptions=stress_assumptions)
             report["hypothetical_intrabar_oos"]=stress.sanitized_report()
+            if audit_oos_leverage_pair:
+                # Fixed posted margin and finance assumptions, only leverage
+                # and corresponding entry notional differ. No inferred safe N.
+                margin=stress_assumptions.margin
+                basis_1x=replace(margin,leverage_at_intent=1,
+                                 entry_notional_quote=margin.requested_margin_quote)
+                assumptions_1x=replace(stress_assumptions,margin=basis_1x)
+                leverage_pair=compare_costed_vision_oos_stress_scenarios(
+                    tuple(data),as_of_ms=checked["end_open_exclusive_ms"]+HOUR_MS,
+                    cost_bps_per_side=stress_selection_cost_bps,
+                    assumptions_grid=(assumptions_1x,stress_assumptions))
+                report["hypothetical_oos_leverage_pair"]=leverage_pair.sanitized_report()
             if risk_shocks is not None:
                 sensitivity=audit_vision_risk_sensitivity(
                     tuple(data),as_of_ms=checked["end_open_exclusive_ms"]+HOUR_MS,
@@ -113,6 +133,7 @@ def main(argv:list[str]|None=None)->int:
     parser.add_argument("--max-candidates",type=int,default=50)
     parser.add_argument("--audit-intrabar-stress",action="store_true")
     parser.add_argument("--audit-stress-sensitivity",action="store_true")
+    parser.add_argument("--audit-oos-leverage-pair",action="store_true")
     parser.add_argument("--risk-extra-entry-fee-bps",type=Decimal)
     parser.add_argument("--risk-extra-exit-fee-bps",type=Decimal)
     parser.add_argument("--risk-extra-entry-slippage-bps",type=Decimal)
@@ -155,6 +176,11 @@ def main(argv:list[str]|None=None)->int:
             args.risk_extra_entry_slippage_bps,args.risk_extra_exit_slippage_bps,
             args.risk_extra_maintenance_bps,args.risk_funding_shock_bps)
         risk_shocks=None
+        if args.audit_oos_leverage_pair:
+            if (not args.audit_intrabar_stress or args.audit_stress_sensitivity
+                    or args.stress_leverage is None or args.stress_leverage < 2
+                    or args.stress_leverage > 200):
+                raise VisionReplayPrivateError("leverage_pair_requires_intrabar_and_distinct_leverage")
         if args.audit_stress_sensitivity:
             if not args.audit_intrabar_stress or any(x is None for x in shock_values):
                 raise VisionReplayPrivateError("sensitivity requires stress and all shocks")
@@ -171,7 +197,8 @@ def main(argv:list[str]|None=None)->int:
             step_hours=args.step_hours,max_candidates=args.max_candidates,
             stress_assumptions=stress,stress_selection_cost_bps=cost,
             costed_oos_bps=args.oos_cost_bps if args.costed_oos else None,
-            risk_shocks=risk_shocks)
+            risk_shocks=risk_shocks,
+            audit_oos_leverage_pair=args.audit_oos_leverage_pair)
     except Exception:
         report={"schema_version":"vision-private-dynamic-replay-v1",
                 "status":"private_vision_dynamic_replay_rejected",

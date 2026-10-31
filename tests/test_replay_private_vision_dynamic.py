@@ -70,6 +70,90 @@ class VisionReplayCLI(unittest.TestCase):
             self.assertFalse(extra["orders_sent"])
             self.assertNotIn("BTCUSDT",str(stressed))
 
+            from crypto_intelligence_agent.vision_stress_sensitivity import (
+                compare_costed_vision_oos_stress_scenarios,
+            )
+            from crypto_intelligence_agent.offline_vision_month import inspect_offline_vision_month
+            from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginBasis
+            from dataclasses import replace
+            from scripts.audit_private_bybit_json import _read_private_file
+            # Re-read only the already verified temporary fixture archives for
+            # an independent comparison against the underlying PRE22 auditor.
+            checked_groups=[]
+            for manifest_path in manifests:
+                manifest=json.loads(Path(manifest_path).read_text(encoding="ascii"))
+                months=[]
+                for entry in manifest["archives"]:
+                    raw=Path(manifest_path).parent/entry["name"]
+                    months.append(inspect_offline_vision_month(
+                        raw.read_bytes(),archive_name=entry["name"],
+                        expected_sha256=entry["sha256"],as_of_ms=manifest["as_of_ms"]))
+                checked_groups.append(tuple(months))
+            high=terms(50)
+            low=replace(high,margin=SyntheticMarginBasis(
+                high.margin.requested_margin_quote,1,
+                high.margin.requested_margin_quote,high.margin.quote_currency))
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                pair=private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    stress_assumptions=high,stress_selection_cost_bps=Decimal("0"),
+                    audit_oos_leverage_pair=True)
+            expected=compare_costed_vision_oos_stress_scenarios(
+                tuple(checked_groups),
+                as_of_ms=checked_groups[0][-1].end_open_exclusive_ms+HOUR_MS,
+                cost_bps_per_side=Decimal("0"),assumptions_grid=(low,high))
+            self.assertEqual(pair["hypothetical_oos_leverage_pair"],
+                             expected.sanitized_report())
+            self.assertEqual(
+                [case["leverage_at_intent"] for case in
+                 pair["hypothetical_oos_leverage_pair"]["scenarios"]],[1,50])
+            self.assertEqual(
+                pair["hypothetical_oos_leverage_pair"]["scenarios"][0]["hypothetical_margin_quote"],
+                pair["hypothetical_oos_leverage_pair"]["scenarios"][1]["hypothetical_margin_quote"])
+            self.assertFalse(pair["hypothetical_oos_leverage_pair"]["live_trading_authorized"])
+            self.assertNotIn("hypothetical_oos_leverage_pair",stressed)
+            self.assertNotIn("BTCUSDT",json.dumps(pair))
+            self.assertNotIn(str(root),json.dumps(pair))
+            with redirect_stdout(StringIO()) as leverage_output:
+                rc_pair=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-intrabar-stress",
+                    "--stress-margin-quote","2","--stress-leverage","50",
+                    "--stress-stop-fraction","0.01",
+                    "--stress-target-fraction","0.03",
+                    "--stress-maintenance-bps","0",
+                    "--stress-fee-bps","0",
+                    "--stress-slippage-bps","0",
+                    "--stress-funding-bps","0",
+                    "--stress-selection-cost-bps","0",
+                    "--audit-oos-leverage-pair"])
+            self.assertEqual(rc_pair,0)
+            cli_pair=json.loads(leverage_output.getvalue())
+            self.assertEqual(cli_pair["hypothetical_oos_leverage_pair"]["scenario_count"],2)
+            self.assertNotIn("BTCUSDT",leverage_output.getvalue())
+            self.assertNotIn(str(root),leverage_output.getvalue())
+            with redirect_stdout(StringIO()) as rejected_pair:
+                bad=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-oos-leverage-pair"])
+            self.assertEqual(bad,1)
+            self.assertEqual(json.loads(rejected_pair.getvalue())["status"],
+                             "private_vision_dynamic_replay_rejected")
+            with self.assertRaises(VisionReplayPrivateError):
+                private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    stress_assumptions=low,audit_oos_leverage_pair=True)
+
             from crypto_intelligence_agent.vision_risk_sensitivity import VisionRiskShocks
             with patch("socket.create_connection",side_effect=AssertionError("network")):
                 sensitivity=private_vision_dynamic_replay(

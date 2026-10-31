@@ -914,3 +914,8 @@ Base verificada `main=46975938ec727489647edcc8173bf98f2e7657a8`, após PR #404/J
 ## J3/PRE22 #409 — grade de robustez de custos/alavancagem OOS, 31/10/2026
 
 Base verificada `main=c852c4002b84b74be24b1dd986154c242971d09e`, zero PRs abertas ao iniciar. PRE21 #407/PR #408 integrada com seleção causal 24h fechado, envelope OHLC condicional, D198, CI final Linux/Windows/Chrome SUCCESS. PRE22 #409 na branch `work/j3-pre22-oos-sensitivity-grid` adiciona comparador read-only de 2–6 cenários `VisionStressAssumptions` sobre mesmos folds e contagens, com sumário de fragilidade sob custos, alavancagem e liquidação proxy, testes numéricos/fail-closed/privacidade e D199. PR, CI e merge permanecem sujeitos a verificação. Última evidência de J1 VPS: worker agendado para 31/10 15:00:15 UTC, não comprovou captura nem status final. Sem reiniciar/coletar, credencial, ordem, deploy ou novos gastos.
+
+
+## J3/PRE23 #411 — CLI de pesquisa privada OOS 1x vs Nx (31/10/2026)
+
+Base `main=8dccd85d7d33836577a82a681b32a0f77f6b60e6`, nenhuma PR aberta antes da branch `work/j3-pre23-private-oos-leverage-cli`. PRE22 #409/PR #410 integrou comparador de 2–6 hipóteses com CI verde, review `5723543953`, D199. PRE23 integra esse mesmo comparador à CLI privada Vision já auditada, sem recarregar arquivos, com opt-in explícito, comparação 1x/Nx e todos os termos declarados; testes POSIX com manifests fictícios, retorno sanitizado e D200. Gate PR/CI SHA final pendente até comprovação. J1 #319 worker VPS teve apenas agendamento confirmado para 15:00:15 UTC, status final desconhecido; nenhum novo processo/SSH/retry. Sem live/testnet, ordem, deploy, gasto ou dados reais usados nesta engenharia.

@@ -403,3 +403,8 @@ O CLI `scripts.demo_paper_runner_close_flow` usa os módulos de produção já a
 ### J3/PRE22 — grade finita de hipóteses financeiras para folds OOS
 
 `vision_stress_sensitivity.compare_costed_vision_oos_stress_scenarios` é um adaptador read-only que valida uma grade finita (2–6 cenários tipados), chama o mesmo `audit_costed_vision_intrabar_oos` PRE21 para cada hipótese e exige identidade de contagens por fold para evitar comparação de decisões diferentes. Nenhuma nova primitiva de precificação, motor de ordens ou ledger. Relatório JSON versionado por ordinal sem identidades, com resultados condicionalmente adversos/favoráveis e flags de segurança negativas. D199 / `docs/J3_PRE22_OOS_STRESS_SENSITIVITY.md`.
+
+
+### J3/PRE23 — relatório PRE22 na mesma CLI privada Vision
+
+`scripts.replay_private_vision_dynamic` mantém uma leitura validada de ZIPs/manifest/checksum POSIX, compartilhada com replay/ranking PRE21/PRE22. Somente no opt-in `--audit-oos-leverage-pair`, compõe duas bases tipadas com igual margem/termos e alavancagens 1x/Nx, chama `vision_stress_sensitivity.compare_costed_vision_oos_stress_scenarios` e adiciona `hypothetical_oos_leverage_pair` ao JSON sanitizado. Sem repetir arquivos, novo motor de venue, envio de ordens ou autorização de risco. Ver D200/PRE23.
