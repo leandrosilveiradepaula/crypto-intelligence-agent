@@ -73,6 +73,10 @@ class VisionStressSensitivityTests(unittest.TestCase):
         self.assertEqual(payload["schema_version"], "j3_pre22_oos_sensitivity_v1")
         self.assertEqual(payload["scenario_count"], 2)
         self.assertTrue(payload["selection_fixed_across_scenarios"])
+        self.assertEqual(payload["scenarios"][0]["hypothetical_assumptions"]["entry_fee_bps"], "0")
+        self.assertEqual(payload["scenarios"][1]["hypothetical_assumptions"]["signed_funding_bps"], "0")
+        self.assertIn("benchmark_worst_cumulative_net_over_margin",
+                      payload["scenarios"][0]["folds"][0])
         self.assertNotIn("best_scenario", payload)
         self.assertNotIn("recommended_leverage", payload)
         for key in ("marketwide_top50_verified", "source_authenticated",
