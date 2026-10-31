@@ -890,3 +890,7 @@ Confirmado J6/PRE4 #395/PR #396 integrada em `main=870bdfc2969af6a2c6fb87e91e4bb
 
 ## J6/PRE6 #399 — auditoria local de incidentes em preparação, 30/10/2026
 Branch `codex/issue-399-j6-pre6-paper-incident-audit` parte de `main=7819e05c8d1913b15c220b0f0bd5531e5e0c87c7`. Implementa observador read-only de um AUTO4 selecionado e RUNNER2 explicitamente opt-in, com saída JSON sanitizada e estados estáveis para runner não protegido, trailing hipotético, reserva/UNKNOWN/parcial/cancelamento, encerramento PAPER, checkpoint RUNNER2 superado e journal inválido. A tela mobile PAPER existente ganhou cartão de incidente por seleção explícita, sem controles de trade. Ainda requer PR e CI do novo head; nenhum dado de corretora, VPS, credencial, ordem, stop nativo, testnet/live, deploy ou gasto foi usado.
+
+## J6/PRE7 #401 — matriz offline em desenvolvimento, 30/10/2026
+
+Branch `codex/issue-401-j6-pre7-paper-readiness-matrix` parte de `main=0959c86fc611a1a313514fde1ab728925ac333ea`. Acrescenta laboratório temporário com 11 cenários após revisão de integração e relatório `paper_incident_matrix_v1`, incluindo saúde/restart, UNKNOWN, parcial/cancelamento, concorrência, incompatibilidade e corrupção. D195 e contrato PRE7 registram que os resultados são evidência offline, não homologação financeira. PR/CI ainda pendentes.
