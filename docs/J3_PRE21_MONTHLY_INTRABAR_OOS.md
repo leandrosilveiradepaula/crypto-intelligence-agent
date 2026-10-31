@@ -37,3 +37,6 @@ mantém `marketwide_top50_verified=false`, `source_authenticated=false`,
 `financial_backtest_approved=false`, `orders_sent=false` e
 `live_trading_authorized=false`. Não há rede, escrita, downloader, credencial,
 conta, testnet, live ou uso de VPS.
+
+
+A revisão de integração acrescenta resultados **líquidos acumulados divididos pela margem fixa hipotética por exposição** tanto em cada fold quanto no agregado: `strategy_worst_cumulative_net_over_margin`, `strategy_best_cumulative_net_over_margin` e equivalentes do benchmark. São somas condicionais por trade em unidade de margem de referência, **não** ROI sobre capital da carteira, nem rendimento composto. Não substituir risco real de liquidação por esses quocientes. Um teste independente confirma seleção por 24 barras fechadas e invariância a mudanças da barra atual/futuras.
