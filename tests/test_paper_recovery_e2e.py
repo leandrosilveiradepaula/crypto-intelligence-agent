@@ -237,6 +237,29 @@ class PaperRecoveryEndToEndTests(unittest.TestCase):
         self.assertEqual(status.state, PaperRecoveryState.BLOCKED)
         self.assertEqual(status.reason, "paper_open_unverified_protection")
 
+    def test_future_fill_is_not_past_recovery_evidence(self):
+        self.batch(2)
+        entry = self.existing_open()
+        at = entry.snapshot.as_of_ms
+        pending = self.inspect(decision_at_ms=at)
+        self.assertEqual(pending.state, PaperRecoveryState.BLOCKED)
+        fill = PaperOrderEvent(
+            "fixture_pre12_future_fill", PaperOrderEventKind.FILL,
+            at+1, D(2))
+        self.orders.append_events(entry.intent.intent_id, (fill,), as_of_ms=at+1)
+        frozen = (self.order_path.read_bytes(), self.position_path.read_bytes())
+        early = self.inspect(decision_at_ms=at)
+        self.assertEqual(early.state, PaperRecoveryState.UNVERIFIED)
+        self.assertEqual(early.reason, "paper_journal_unverified")
+        self.assertIsNone(early.operator)
+        late = self.inspect(decision_at_ms=at+1)
+        self.assertEqual(late.state, PaperRecoveryState.BLOCKED)
+        self.assertEqual(late.reason, "paper_open_unprotected")
+        self.assert_no_authorization(early)
+        self.assert_no_authorization(late)
+        self.assertEqual(
+            (self.order_path.read_bytes(), self.position_path.read_bytes()), frozen)
+
     def test_recovery_cutoff_rejects_future_cursor_and_pause_without_mutation(self):
         self.batch(1)
         decision_at = self.cs[4].close_time_ms + 1000

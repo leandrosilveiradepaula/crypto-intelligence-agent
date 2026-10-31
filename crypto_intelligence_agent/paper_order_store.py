@@ -384,7 +384,7 @@ class SQLitePaperOrderJournal:
 
     @staticmethod
     def _pending_open_from_connection(
-        conn: sqlite3.Connection,
+        conn: sqlite3.Connection, *, decision_at_ms: int | None = None,
     ) -> tuple[int, bool]:
         """Verify ALL relevant local PAPER OPEN events under one write lock."""
         rows = conn.execute(
@@ -399,6 +399,12 @@ class SQLitePaperOrderJournal:
             item = SQLitePaperOrderJournal._checked_entry(conn, row["intent_id"])
             # _checked_entry verifies the indexed effect against signed-off
             # canonical payload before we skip REDUCE_ONLY paper exits.
+            if decision_at_ms is not None and (
+                item.intent.created_at_ms > decision_at_ms or
+                item.snapshot.as_of_ms > decision_at_ms
+            ):
+                raise DataValidationError(
+                    "future PAPER intent or event checkpoint at operator cutoff")
             if item.intent.effect is not PaperOrderEffect.OPEN:
                 continue
             if item.snapshot.requires_reconciliation:

@@ -18,6 +18,9 @@ from crypto_intelligence_agent.offline_paper_durable_cursor import (
     _load_cursor, _verify_cursor_orders,
 )
 from crypto_intelligence_agent.paper_open_health import audit_paper_open_health
+from crypto_intelligence_agent.paper_recovery_status import (
+    inspect_local_paper_recovery_status, PaperRecoveryState,
+)
 from crypto_intelligence_agent.paper_operator_status import inspect_local_paper_operator_status
 from crypto_intelligence_agent.paper_order_store import (
     SQLitePaperOrderJournal, _TABLES as _ORDER_TABLES, _VERSION as _ORDER_VERSION,
@@ -231,6 +234,19 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
         if (filled.intent != opened
                 or filled.snapshot.filled_total_units != opened.requested_units):
             raise RuntimeError("AUTO2 fixture fill does not match generated OPEN")
+        early_open = inspect_local_paper_recovery_status(
+            orders_path, positions_path, decision_at_ms=open_fill.event_at_ms-1)
+        if (early_open.state is not PaperRecoveryState.UNVERIFIED
+                or early_open.reason != "paper_journal_unverified"
+                or early_open.operator is not None):
+            raise DataValidationError("future PAPER OPEN fill contaminated past recovery")
+        checks.append({
+            "checkpoint": "future_open_fill_rejected_at_prior_cutoff",
+            "recovery_state": early_open.state.value,
+            "health_reason": early_open.reason,
+            "native_stop_verified": False, "orders_sent": False,
+            "live_trading_authorized": False,
+        })
         checks.append(_interruption_check(
             orders_path, positions_path, checkpoint="filled_open_without_auto4_position",
             expected_reason="paper_open_unprotected",
@@ -367,6 +383,19 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
                 or inspected["positions"][0]["incident_code"] != "RUNNER_CLOSED_PAPER_ONLY"
                 or inspected["positions"][0]["severity"] != "INFO"):
             raise RuntimeError("AUTO2/AUTO4 runner close or PRE8 audit diverged")
+        early_runner = inspect_local_paper_recovery_status(
+            orders_path, positions_path, decision_at_ms=after.as_of_ms-1)
+        if (early_runner.state is not PaperRecoveryState.UNVERIFIED
+                or early_runner.reason != "paper_journal_unverified"
+                or early_runner.operator is not None):
+            raise DataValidationError("future PAPER runner fill contaminated past recovery")
+        checks.append({
+            "checkpoint": "future_runner_fill_rejected_at_prior_cutoff",
+            "recovery_state": early_runner.state.value,
+            "health_reason": early_runner.reason,
+            "native_stop_verified": False, "orders_sent": False,
+            "live_trading_authorized": False,
+        })
         checks.append(_interruption_check(
             orders_path, positions_path, checkpoint="fully_flat_after_runner_fill",
             expected_reason="all_paper_positions_fully_flat_hypothetical_only",

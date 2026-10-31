@@ -30,23 +30,27 @@ class FullOfflinePaperLifecycleTests(unittest.TestCase):
         checks = first["interruption_checks"]
         self.assertEqual([x["checkpoint"] for x in checks], [
             "pending_open_without_fill",
+            "future_open_fill_rejected_at_prior_cutoff",
             "filled_open_without_auto4_position",
             "isolated_auto4_mismatched_fill_identity",
             "auto4_open_confirmed_no_native_stop",
             "partial_exits_leave_runner",
             "pending_runner_after_restart",
+            "future_runner_fill_rejected_at_prior_cutoff",
             "fully_flat_after_runner_fill",
         ])
         self.assertTrue(checks[0]["pending_auto6_gate_required"])
         self.assertTrue(checks[0]["health_new_open_allowed_paper_only"])
-        self.assertFalse(checks[1]["health_new_open_allowed_paper_only"])
+        self.assertEqual(checks[1]["recovery_state"], "UNVERIFIED")
         self.assertFalse(checks[2]["health_new_open_allowed_paper_only"])
-        self.assertEqual(checks[2]["portfolio_batch_block_code"],
+        self.assertFalse(checks[3]["health_new_open_allowed_paper_only"])
+        self.assertEqual(checks[3]["portfolio_batch_block_code"],
                          "INVALID_OR_INCONSISTENT_SELECTED_JOURNALS")
-        self.assertEqual(checks[5]["incident_code"],
+        self.assertEqual(checks[6]["incident_code"],
                          "RUNNER_EXIT_PENDING_RECONCILIATION")
-        self.assertEqual(checks[6]["incident_code"], "RUNNER_CLOSED_PAPER_ONLY")
-        self.assertTrue(checks[6]["health_new_open_allowed_paper_only"])
+        self.assertEqual(checks[7]["recovery_state"], "UNVERIFIED")
+        self.assertEqual(checks[8]["incident_code"], "RUNNER_CLOSED_PAPER_ONLY")
+        self.assertTrue(checks[8]["health_new_open_allowed_paper_only"])
         for row in checks:
             self.assertFalse(row["native_stop_verified"])
             self.assertFalse(row["orders_sent"])
