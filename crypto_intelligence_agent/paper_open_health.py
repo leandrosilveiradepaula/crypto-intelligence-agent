@@ -263,7 +263,8 @@ def _audit_with_orders(
               and balance.confirmed_remaining_units == Decimal(0)
               and balance.reserved_unfilled_units == Decimal(0)
               and balance.unreserved_units == Decimal(0)
-              and balance.runner_floor_units == Decimal(0)
+              and balance.runner_unallocated_units == Decimal(0)
+              and balance.runner_filled_units == balance.runner_floor_units
               and balance.filled_exit_units == balance.initial_confirmed_units):
             fills.append(PaperOpenFillHealth(
                 entry.intent.intent_id, record.position_id,

@@ -192,6 +192,41 @@ class PaperOpenHealthTests(unittest.TestCase):
         self.assertEqual(h.reason, "paper_open_unverified_protection")
         self.assertFalse(h.closed_flat_paper_only)
 
+    def test_fully_filled_runner_with_nonzero_original_floor_is_flat_only(self):
+        self._position_with_exit(units=D(1), filled=D(1), floor=D(50))
+        before = audit_paper_open_health(self.orders_path, self.positions_path)
+        self.assertFalse(before.new_open_allowed)
+        self.assertFalse(before.closed_flat_paper_only)
+        runner = PaperOrderIntent(
+            "fixture_health_runner_exit", "fixture_health_runner_signal",
+            PaperVenue.BINANCE_USDM, "BTCUSDT", SyntheticSide.LONG,
+            PaperOrderSide.SELL, PaperOrderEffect.REDUCE_ONLY, D(1),
+            T + 4, D(1),
+        )
+        view = self.positions.reserve_exit(
+            "fixture_health_position", 0, runner, as_of_ms=T + 4)
+        self.assertEqual(view.runner_reserved_unfilled_units, D(1))
+        pending = audit_paper_open_health(self.orders_path, self.positions_path)
+        self.assertFalse(pending.new_open_allowed)
+        self.positions.append_exit_events(
+            "fixture_health_position", runner.intent_id,
+            (PaperOrderEvent("fixture_health_runner_fill", PaperOrderEventKind.FILL,
+                             T + 5, D(1)),),
+            as_of_ms=T + 5)
+        completed = self.positions.load("fixture_health_position")
+        self.assertEqual(completed.runner_floor_units, D(1))
+        self.assertEqual(completed.runner_filled_units, D(1))
+        self.assertEqual(completed.runner_unallocated_units, D(0))
+        self.assertEqual(completed.confirmed_remaining_units, D(0))
+        final = audit_paper_open_health(
+            self.orders_path, self.positions_path, decision_at_ms=T + 6)
+        self.assertTrue(final.new_open_allowed)
+        self.assertTrue(final.closed_flat_paper_only)
+        self.assertEqual(final.reason,
+                         "all_paper_positions_fully_flat_hypothetical_only")
+        self.assertFalse(final.native_stop_verified)
+        self.assertFalse(final.approved_for_live_use)
+
     def test_runner_floor_cannot_be_fully_consumed(self):
         self._position_with_exit(units=D(1), filled=D(1), floor=D(50))
         h = audit_paper_open_health(self.orders_path, self.positions_path)

@@ -16,3 +16,7 @@ Em todos os checkpoints, divergência de saúde/gravidade esperada levanta `Data
 
 ## Testes e limites
 `tests/test_full_offline_paper_lifecycle.py` verifica checkpoints exatos, sem rede, repetibilidade, curso 2→1.88→0.12→0, auditor forjado, ausência de FILL implícito e flags negativas. CI Linux/docs, Windows/offline e Chrome/PAPER deve ser SUCCESS no SHA revisado. Não existe atomicidade interbancos, reconciliação da corretora, stop nativo, homologação de dados ou trade live/testnet. J1 #319 permanece externa. Custo adicional R$ 0.
+
+
+## Falha do AUTO8 revelada pelo PRE10
+A primeira CI da PR #418 expôs uma condição conservadora incorreta no `paper_open_health`: um runner com piso residual definido continuava bloqueado após todos os eventos FILL REDUCE_ONLY confirmados, porque o gate exigia `runner_floor_units == 0`. O piso é a meta original, não o saldo ainda alocado. A condição correta exige `runner_unallocated_units == 0`, `runner_filled_units == runner_floor_units`, `confirmed_remaining_units == 0`, `filled_exit_units == initial_confirmed_units`, ausência de reservas e todos os exits terminais. Nenhuma abertura real é autorizada, apenas um novo ciclo PAPER hipotético. Teste regressivo `test_fully_filled_runner_with_nonzero_original_floor_is_flat_only`.
