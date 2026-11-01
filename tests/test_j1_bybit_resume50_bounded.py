@@ -148,6 +148,18 @@ class Resume50OfflineTests(unittest.TestCase):
             "/kline" in url and parse_qs(urlsplit(url).query)["limit"] == ["720"]
             for url in self.gets), 1)
         self.assertTrue(self.audit()["private_page_replay_passed"])
+        # Deselected series legitimately ends before newest PIT. Completed
+        # resume must be safely read as idempotent without a new GET.
+        frozen = self.db.read_bytes()
+        replay = owner_resume_private_j1(
+            database=self.db, max_assets=50,
+            allow_public_network=True, allow_private_storage=True,
+            confirm_region_and_personal_research=True,
+            client=self.transport_client(
+                lambda *_: self.fail("no GET after completed churn")),
+            clock_ms=self.clock)
+        self.assertEqual(replay["network_gets_attempted_this_run"], 0)
+        self.assertEqual(self.db.read_bytes(), frozen)
 
     def test_rate_limit_aborts_before_partial_pit_and_preserves_full_history(self):
         original = self.initial()
