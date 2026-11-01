@@ -483,3 +483,8 @@ bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quat
 ## J1/OPS7 — ACK de WebSocket linear com inscrição única
 
 `bybit_ws_supervisor._topic_batches` agrupa todo o escopo local revisado de 1 a 52 tópicos `kline.60` em uma assinatura única, protegida por limite de 21.000 caracteres JSON args, em vez dos seis lotes OPS3. O controlador aceita o ACK de Bybit linear com identificador ausente/vazio somente enquanto há **uma** inscrição no socket; mantém quarentena pré-ACK, deduplicação, parser de candle `confirm=true`, heartbeat, journal privado, reconexão bounded e abstenção em dados inválidos. Mudança não conecta à VPS por si e não comprova assinatura real aceita. D215 e `docs/J1_OPS7_SINGLE_ACK.md`.
+
+
+## J1/OPS8 — evidência do protocolo linear isolada do coletor
+
+`bybit_ws_linear_live_probe.py` é um observador de socket único de curta duração, sem GET/SQLite/ordens, com contrato de ACK Bybit V5 e validação de envelopes e rows de `kline.60` usando parser existente. A CLI `scripts.probe_bybit_ws_linear_live` requer três flags e usuário POSIX não-root; reporta contadores agregados sem symbols, timestamps precisos, preços e dados de conta. Nada habilita `systemd`, cuja homologação efetiva continua sujeita à validação da VPS. Ver D216 e `docs/J1_OPS8_LINEAR_HANDSHAKE_PROOF.md`.

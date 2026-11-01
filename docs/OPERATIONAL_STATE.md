@@ -1119,3 +1119,8 @@ Branch `work/issue-429-ops6-ws-systemd-service-health` criada a partir de main S
 ## J1/OPS7 #429 — checkpoint engenharia, 01/11/2026 UTC
 
 Objetivo: corrigir handshake Bybit linear que pode omitir ou esvaziar `req_id`; assinatura única para até 52 tópicos, limite 21.000 caracteres, ACK estrito/sem repetição e testes. Branch `work/issue-429-ops7-linear-single-ack` a partir de `main=896f5bde924dfe5135faad42172c4744d8c798d7`. Arquivos: `bybit_ws_supervisor.py`, testes de supervisor/piloto, D215 e `docs/J1_OPS7_SINGLE_ACK.md`. CI, revisão e merge aguardam. Próximo gate: homologaçao live **owner-only** em janela finita, sem ativar sistema 24/7 ou enviar ordens; aceitar apenas ACK/scope completo, logs sanitizados e privacidade, seguidos de soak/recuperação de lacunas. 37.470 candles REST e 2 PIT anteriores preservados; sem SSH neste chat e sem Top50 marketwide (#319).
+
+
+## J1/OPS8 #429 — checkpoint engenharia 01/11/2026 UTC
+
+Branch `work/issue-429-ops8-live-linear-52-handshake-proof` derivada de `main=b46424485e911dd4daebed8c35729ec0161b4ed7`; sem PR/CI comprovadas neste checkpoint inicial. Entrega nova: `crypto_intelligence_agent/bybit_ws_linear_live_probe.py`, `scripts/probe_bybit_ws_linear_live.py`, `tests/test_j1_ws_linear_live_probe.py`, `docs/J1_OPS8_LINEAR_HANDSHAKE_PROOF.md` e D216. Sonda independente do journal WS e REST, uma assinatura com 52 candidatos revisados, contagem post-ACK e velas confirmadas, somente aggregate status, 3 opt-ins e não-root. Teste live na VPS **não executado** e nenhuma ordem; próximo passo CI/testes SHA, correções e merge se seguro, depois uma única prova owner-only sem ativar systemd, condicionada a região/dependências/versão e controles do titular. J1 #319/#2 e #429 permanecem abertas.

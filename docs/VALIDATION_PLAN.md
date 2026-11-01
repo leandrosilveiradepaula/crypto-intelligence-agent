@@ -864,3 +864,8 @@ Rodar `python3 -m unittest discover -s tests -p test_j1_ws_owner_pilot.py -v`, s
 ## J1/OPS7 #429 — teste de assinatura Bybit linear única
 
 Executar `python3 -m unittest discover -s tests -p test_j1_ws_supervisor.py -v`, `test_j1_ws_owner_pilot.py`, `compileall`, docs gate e a suíte CI completa Linux/Windows/Chrome. Fixtures: 52 tópicos em **um único** pedido, ACK com `req_id` omitido, vazio ou correto, IDs incorretos, ACK duplicado, falha explícita, frames pré-ACK, replay, gap, heartbeat e ausência de rede/ordens. O sucesso offline não valida entrega live; uma futura sondagem owner-only deve comparar ACK da Bybit real e o registro sanitizado antes de habilitar `systemd`.
+
+
+## J1/OPS8 #429 — piloto de handshake read-only sem REST nem SQLite
+
+Testar `python3 -m unittest discover -s tests -p test_j1_ws_linear_live_probe.py -v`: 52 tópicos enviados num único subscribe, ACK `req_id` omitido/vazio/esperado, ID errado, NACK/ACK duplicado, pre-ACK sem certificação, vela aberta/fechada estrita, frame inesperado, clock inválido, ping/pong, timeout, transporte sem reconexão, limite 90s/1024 frames, opt-ins negativos antes de abrir socket e usuário root bloqueado. Executar compileall e CI Linux/docs, Windows/offline, Chrome/PAPER no SHA head e pós-merge. Probe live owner-only requer gate operacional separado, não é executado por CI; não altera banco REST EXIT5.

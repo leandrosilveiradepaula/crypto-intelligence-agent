@@ -994,3 +994,8 @@ Prepara pacote de supervisão operacional no branch `work/issue-429-ops6-ws-syst
 ## J1/OPS7 #429 — compatibilidade do ACK WS linear (01/11/2026)
 
 A implantação real segue pendente: OPS7 troca os seis `subscribe` por uma solicitação única de todos os 52 candidatos revisados, permitindo `req_id` ausente/vazio conforme formato Bybit linear sem ambiguidade entre lotes. Testes offline cobrem assinatura única, ACK duplicado/errado, pré-ACK e ausência de ordens. Branch `work/issue-429-ops7-linear-single-ack` derivada de `main=896f5bde924dfe5135faad42172c4744d8c798d7`; confirmar CI/merge SHA antes de declarar integrado. O serviço supervisonado OPS6 continua desativado na VPS. Coleta REST EXIT5: 37.470 candles, 2 PIT, 51 históricos, 10006 após 168 GET. J1 #2/#319 abertas.
+
+
+## J1/OPS8 #429 — sonda isolada de handshake linear (01/11/2026)
+
+Base main `b46424485e911dd4daebed8c35729ec0161b4ed7`; branch `work/issue-429-ops8-live-linear-52-handshake-proof`. Sonda POSIX owner-only com 52 tópicos candidatos revisados numa inscrição, janela finita <=90s/<=1024 frames, sem persistir, sem REST/ordens, ACK explícito e contadores sanitizados distinguindo assinatura/frames/candle fechado. Documentação D216 e `docs/J1_OPS8_LINEAR_HANDSHAKE_PROOF.md`; confirmar CI e revisão antes de merge. Piloto de persistência e systemd continuam **não homologados** na VPS. Histórico EXIT5 anterior 37.470 candles, 2 PIT, 51 históricos, erro 10006 após 168 GET permanece intocado; #319 marketwide e J1 #2 abertas.
