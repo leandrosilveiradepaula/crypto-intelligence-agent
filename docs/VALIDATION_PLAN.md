@@ -844,3 +844,8 @@ Testar 24h iniciais e pelo menos 3 fechamentos adicionais por fixture sem GET; 5
 ## J1/OPS3 #429 — validação offline de sessão, segurança e falha
 
 Executar python3 -m unittest discover -s tests -p test_j1_ws_supervisor.py -v, test_j1_ws_owner_lock.py -v, suíte completa, compileall, check_docs e CI Linux/Windows/Chrome. Exercitar 52 tópicos, ACKs duplicados/falsos/correlacionados, frame preACK, desconexão, reconexão, gap, vela aberta, heartbeat, orçamento e exclusão mútua owner-only 0700/0600 contra symlinks e hardlinks; testes POSIX pulados no Windows. Não interpretar fixtures como prova de feed real, mercado global ou lucro.
+
+
+## J1/OPS4 #429 — piloto restrito de instrumento e WS
+
+Testar test_j1_ws_owner_pilot.py em Linux POSIX: gate negativo sem I/O, dois GETs paginados para 52 membros, fail-stop 10006, menos de 50 candidatos, cursor repetido, propriedades 0700/0600, persistência de escopo com digest e reutilização sem GET, clock/expiração >48h, journal separado da SQLite REST, lock, estado de saúde sanitizado e zero ordens. Rodar suíte completa Linux/Windows (skips POSIX documentados), compileall, docs e Chrome/PAPER no SHA da PR e pós-merge. Uma fixture sintética não valida a disponibilidade WS live nem Top50 marketwide. Prova real owner-only fica para gate posterior; não rodar captura EXIT5.

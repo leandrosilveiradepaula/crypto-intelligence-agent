@@ -252,3 +252,8 @@ Fatos comprovados: o usuário rodou diagnóstico read-only na VPS; `capture_exit
 ## J1/OPS3 — precondição de sinais com WS confirmado
 
 Somente candles 1h confirm=true recebidos depois de inscrição validada podem alimentar o ranking local causal da OPS2. Dados incompletos/fechamentos perdidos impedem ranking e sinais; não usar ticker móvel nem candles abertos. O supervisor WS de pesquisa não habilita negociação live.
+
+
+## J1/OPS4 — estado de aquecimento e abstenção
+
+Sem 24 velas 1h fechadas de todos os integrantes do catálogo revisado, decisões locais permanecem em abstenção; o primeiro piloto WS não é automaticamente um histórico de 24 horas. Escopo privado expirado, lag, lacuna ou assinatura inválida bloqueiam ranking e sinais. Nenhum ativo extra ou PIT posterior é sintetizado. Nenhuma negociação é habilitada.

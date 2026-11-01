@@ -974,3 +974,8 @@ A execução EXIT5 da VPS terminou com `resume_exit_code=1`, Bybit `retCode=1000
 ## J1/OPS3 #429 — controlador WebSocket finito (01/11/2026)
 
 Entrega proposta no ramo work/issue-429-ops3-ws-ack-supervisor-lock, base main=8b4a358a3e6f96dd7b0cce1a388ab2dbaa5116e3. Implementa protocolo de subscribe/ACK com até 52 tópicos, heartbeat/pong, conexão/reconexão sob orçamento, lock exclusivo POSIX e relatórios sanitizados, usando journal WS já existente. EXIT5 owner-only terminou com 10006 após 168 GETs; auditoria íntegra 37.470 candles, 51 históricos, 50 seleção, 2 PIT, faltando terceiro PIT. Não há serviço WebSocket real ativado nem acesso remoto VPS; J1 #2 e Top50 #319 continuam abertos.
+
+
+## J1/OPS4 #429 — piloto finito WS sem ranking REST repetitivo (01/11/2026)
+
+Entrega de engenharia no ramo work/issue-429-ops4-owner-ws-catalog-pilot, sobre main=2756b583c82235bf41ebebc37f3933543b99ebd0 (OPS3 integrado e CI pós-merge verde). Contrato privado owner-only coleta no máximo quatro páginas de catálogo na primeira sessão, valida o escopo revisado de 50 a 52 contratos, persiste metadados em 0600, reutiliza sem GETs posteriores e recusa metadata expirada. Piloto invoca controlador WS OPS3 sob lock de escritor, audita janela de 24h de candles confirmados em journal distinto da SQLite REST, grava último status sanitizado. Não instala serviço 24/7 nem prova feed público ou Top50 global. Evidência VPS preservada: 37.470 candles, 2 PIT, 51 ativos históricos, 10006 em 168 GETs. J1 #2/#319 abertas.
