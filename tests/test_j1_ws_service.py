@@ -15,6 +15,7 @@ from scripts.render_j1_ws_service import render_j1_ws_unit
 from scripts.run_j1_ws_service import (
     OK, INVALID_ARGUMENTS, PROVIDER_DENIED, INTEGRITY_FAIL_STOP,
     OWNER_GATE_REQUIRED, TRANSIENT_TRANSPORT, STOPPED,
+    SERVICE_FRAME_CONTROL_RESERVE, SERVICE_REVIEWED_TOPIC_BUDGET,
     classify_owner_pilot_result, execute_owner_service_lease, main as run_main,
 )
 from crypto_intelligence_agent.j1_ws_service_health import (
@@ -66,6 +67,33 @@ class ServiceExitPolicyTests(unittest.TestCase):
         self.assertEqual(classify_owner_pilot_result(Result('pilot_arguments_invalid'))[0],
                          INVALID_ARGUMENTS)
 
+    def test_exhausted_frame_budget_fail_stops_without_silent_restart(self):
+        code, status, category = classify_owner_pilot_result(
+            Result('ws_pilot_degraded_abstain', 'frame_budget_exhausted'))
+        self.assertEqual(code, INTEGRITY_FAIL_STOP)
+        self.assertEqual(category, 'frame_budget_exhausted')
+        self.assertIn('frame_budget_exhausted', status)
+
+    def test_service_frame_envelope_covers_max_documented_rate(self):
+        for seconds in (300, 3300, 3590):
+            calls = []
+            def runner(**kwargs):
+                calls.append(kwargs)
+                return Result('ws_pilot_warming_up_abstain')
+            expected = 52 * seconds + SERVICE_FRAME_CONTROL_RESERVE
+            self.assertLessEqual(expected, 200_000)
+            got = execute_owner_service_lease(
+                directory='/private/ws', seconds=seconds,
+                allow_public_network=True, allow_public_websocket=True,
+                allow_private_storage=True, confirm_region_and_personal_research=True,
+                owner_check=lambda: True,
+                budget_factory=lambda **kwargs: kwargs,
+                runner=runner,
+            )
+            self.assertEqual(got[0], OK)
+            self.assertEqual(calls[0]['budget'],
+                             {'max_seconds': seconds, 'max_frames': expected})
+
     def test_absent_optin_returns_before_runner_or_budget_or_owner(self):
         def forbidden(**kwargs):
             self.fail('I/O forbidden before all opt-ins')
@@ -88,7 +116,12 @@ class ServiceExitPolicyTests(unittest.TestCase):
             budget_factory=lambda **kw: kw,
         )
         self.assertEqual(result[0], OK)
-        self.assertEqual(calls[0]['budget'], {'max_seconds': 3300})
+        self.assertEqual(calls[0]['budget'], {
+            'max_seconds': 3300,
+            'max_frames': 52 * 3300 + SERVICE_FRAME_CONTROL_RESERVE,
+        })
+        self.assertEqual(SERVICE_REVIEWED_TOPIC_BUDGET, 52)
+        self.assertGreater(calls[0]['budget']['max_frames'], 4096)
         self.assertTrue(calls[0]['allow_public_websocket'])
         self.assertEqual(len(calls), 1)
 

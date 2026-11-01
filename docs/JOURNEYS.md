@@ -384,3 +384,8 @@ Assinatura única de até 52 tópicos permite correlacionar com segurança ACK p
 ## J1/OPS8 #429 — homologação gradual de WebSocket linear
 
 Preparar sonda opcional curta e sem persistência para evidenciar ACK e entrega de frames dos 52 candidatos, sem copiar SQLite REST ou emitir ordens. Separar contrato de protocolo de prova de 24h e de implementação da supervisão contínua; guardas de opt-in/owner e CI antes de homologação VPS. Ver D216 e `docs/J1_OPS8_LINEAR_HANDSHAKE_PROOF.md`.
+
+
+## J1/OPS9 #429 — orçamento de serviço versus piloto
+
+Separar limite pequeno da sonda de pesquisa (4.096 frames) do lease de coleta de 52 tópicos por 55 minutos (até 175.696 mensagens), com teto explícito 200.000 e erro de cap tratado como falha de continuidade, não como feed saudável. D217 e `docs/J1_OPS9_HOURLY_FRAME_BUDGET.md`. Serviços ainda desativados, sem homologação de 24h; #319 marketwide aberta.

@@ -38,7 +38,11 @@ MAX_STREAM_TOPICS = 52
 MAX_LINEAR_ARGS_JSON_CHARS = 21_000
 MAX_EARLY_FRAMES = 128
 MAX_SESSIONS = 4
-MAX_FRAMES = 20_000
+# The small default pilot budget (4,096 frames) is unchanged. An explicitly
+# authorized 52-topic SERVICE lease can see one update per topic per second;
+# 52 * 3,590 = 186,680 frames before heartbeat/control overhead.
+# Keep a separate hard upper bound instead of ending a 55-minute lease early.
+MAX_FRAMES = 200_000
 MAX_SECONDS = 3_600
 PING_EVERY_SECONDS = 20.0
 PONG_DEADLINE_SECONDS = 45.0
@@ -170,8 +174,10 @@ def supervise_ws_research(
             if now + wait >= started + budget.max_seconds:
                 return report("ws_budget_ended_abstain", "reconnection_deferred")
             sleeper(wait)
-        if clock() - started >= budget.max_seconds or frames >= budget.max_frames:
+        if clock() - started >= budget.max_seconds:
             return report("ws_budget_ended_research_only")
+        if frames >= budget.max_frames:
+            return report("ws_frame_budget_exhausted_abstain", "frame_budget_exhausted")
         sessions += 1
         try:
             with closing(session_factory()) as session:
@@ -204,7 +210,12 @@ def supervise_ws_research(
                 while True:
                     now = clock()
                     remaining = started + budget.max_seconds - now
-                    if remaining <= 0 or frames >= budget.max_frames:
+                    if frames >= budget.max_frames:
+                        # A frame cap hit BEFORE the lease deadline is a loss
+                        # of continuity, never a successful hourly completion.
+                        return report("ws_frame_budget_exhausted_abstain",
+                                      "frame_budget_exhausted")
+                    if remaining <= 0:
                         return report("ws_budget_ended_research_only" if
                                       len(acknowledged_topics) == sum(map(len, groups))
                                       else "ws_budget_ended_abstain")

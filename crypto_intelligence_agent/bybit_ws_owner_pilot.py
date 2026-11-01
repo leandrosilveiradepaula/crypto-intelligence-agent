@@ -465,7 +465,8 @@ def run_owner_ws_pilot(*, directory: str | Path,
             if (outcome.sessions_fully_acknowledged == 0 or
                     outcome.status in ("ws_fail_closed_abstain",
                                        "ws_reconnect_budget_exhausted_abstain",
-                                       "ws_budget_ended_abstain")):
+                                       "ws_budget_ended_abstain",
+                                       "ws_frame_budget_exhausted_abstain")):
                 state = "ws_pilot_degraded_abstain"
             elif renewed and scope.observed_at_ms > decision:
                 state = "ws_pilot_scope_refreshed_waiting_next_closed_hour"

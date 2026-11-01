@@ -20,6 +20,12 @@ OWNER_GATE_REQUIRED = 77
 TRANSIENT_TRANSPORT = 75
 STOPPED = 130
 
+# Allow worst documented kline cadence (one frame per reviewed topic every
+# second), plus bounded ACK/ping/control headroom. Only the off-by-default
+# service raises the pilot's 4,096-frame default; no extra REST or orders.
+SERVICE_FRAME_CONTROL_RESERVE = 4_096
+SERVICE_REVIEWED_TOPIC_BUDGET = 52
+
 _SUCCESS = frozenset({
     "ws_pilot_sample_rank_ready_not_marketwide",
     "ws_pilot_warming_up_abstain",
@@ -40,6 +46,8 @@ def classify_owner_pilot_result(report) -> tuple[int, str, str | None]:
         return OK, status, None
     if status == "ws_pilot_catalog_denied_no_retry":
         return PROVIDER_DENIED, status, "provider_or_quota"
+    if status == "ws_pilot_degraded_abstain" and failure == "frame_budget_exhausted":
+        return INTEGRITY_FAIL_STOP, "ws_service_frame_budget_exhausted_abstain", failure
     if status == "owner_opt_in_required":
         return OWNER_GATE_REQUIRED, status, None
     if status == "pilot_arguments_invalid":
@@ -77,7 +85,11 @@ def execute_owner_service_lease(*, directory: str, seconds: int,
         if budget_factory is None:
             from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
             budget_factory = WSRunBudget
-        budget = budget_factory(max_seconds=seconds)
+        # A 52-topic 55-minute service lease needs up to ~171,600 market
+        # frames at the venue's documented 1s minimum push interval. The
+        # default 4,096-frame research lease must not govern service lifetime.
+        frame_budget = SERVICE_REVIEWED_TOPIC_BUDGET * seconds + SERVICE_FRAME_CONTROL_RESERVE
+        budget = budget_factory(max_seconds=seconds, max_frames=frame_budget)
         outcome = runner(
             directory=directory,
             budget=budget,

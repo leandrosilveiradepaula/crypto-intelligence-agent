@@ -869,3 +869,8 @@ Executar `python3 -m unittest discover -s tests -p test_j1_ws_supervisor.py -v`,
 ## J1/OPS8 #429 — piloto de handshake read-only sem REST nem SQLite
 
 Testar `python3 -m unittest discover -s tests -p test_j1_ws_linear_live_probe.py -v`: 52 tópicos enviados num único subscribe, ACK `req_id` omitido/vazio/esperado, ID errado, NACK/ACK duplicado, pre-ACK sem certificação, vela aberta/fechada estrita, frame inesperado, clock inválido, ping/pong, timeout, transporte sem reconexão, limite 90s/1024 frames, opt-ins negativos antes de abrir socket e usuário root bloqueado. Executar compileall e CI Linux/docs, Windows/offline, Chrome/PAPER no SHA head e pós-merge. Probe live owner-only requer gate operacional separado, não é executado por CI; não altera banco REST EXIT5.
+
+
+## J1/OPS9 #429 — envelope de 52 tópicos e aborto ao atingir frame cap
+
+Testar `test_j1_ws_supervisor.py`, `test_j1_ws_service.py`, `compileall`, suíte Linux/docs+Windows/offline+Chrome/PAPER no SHA head e pós merge. Verificar: default 4.096 frames preservado, limite global 200.000, serviço 300/3300/3590 segundos = 52×duração + 4.096, 6 frames recebidos sob cap 6 após ACK não podem virar sucesso, saída 66 e restart bloqueado em cap, 10006 e integridade; opt-ins e segurança anteriores. Não realizar execução real Bybit, REST GET, intervenção na VPS, release ou ordens.

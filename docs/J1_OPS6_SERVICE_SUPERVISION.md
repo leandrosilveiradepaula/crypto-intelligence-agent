@@ -27,3 +27,7 @@ Run the new dedicated offline tests plus the full GitHub Actions matrix. Cases i
 ## Limits and next authorized engineering task
 
 This increment is a **deployable but not deployed** service blueprint, with a bounded CLI and last-report monitor. It is not evidence of 24/7 operation, a marketwide Top50, WS provider acceptance, a safe REST backfill, profitable strategies or real trading. Next: a separately gated owner-only real WS pilot with authenticated transport evidence and live multi-topic ACK; instrument coverage #319; then controlled service activation and one-day soak with hourly continuity and gap monitoring. No VPS operation or new market request is part of OPS6.
+
+## Atualização OPS9 — capacidade do lease (01/11/2026)
+
+O template systemd permanece off-by-default. O adaptador de serviço deixa de aceitar implicitamente o orçamento de 4.096 frames do piloto e configura `52 * seconds + 4096` (175.696 para 3.300s) em um teto global 200.000. Estouro **antes** do fim normal produz abstenção categórica e exit 66, protegido por `RestartPreventExitStatus`. Evidências adicionais em `docs/J1_OPS9_HOURLY_FRAME_BUDGET.md` (D217). Isso não é demonstração de operação 24/7 na VPS.

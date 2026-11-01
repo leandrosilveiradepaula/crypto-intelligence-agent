@@ -999,3 +999,8 @@ A implantação real segue pendente: OPS7 troca os seis `subscribe` por uma soli
 ## J1/OPS8 #429 — sonda isolada de handshake linear (01/11/2026)
 
 Base main `b46424485e911dd4daebed8c35729ec0161b4ed7`; branch `work/issue-429-ops8-live-linear-52-handshake-proof`. Sonda POSIX owner-only com 52 tópicos candidatos revisados numa inscrição, janela finita <=90s/<=1024 frames, sem persistir, sem REST/ordens, ACK explícito e contadores sanitizados distinguindo assinatura/frames/candle fechado. Documentação D216 e `docs/J1_OPS8_LINEAR_HANDSHAKE_PROOF.md`; confirmar CI e revisão antes de merge. Piloto de persistência e systemd continuam **não homologados** na VPS. Histórico EXIT5 anterior 37.470 candles, 2 PIT, 51 históricos, erro 10006 após 168 GET permanece intocado; #319 marketwide e J1 #2 abertas.
+
+
+## J1/OPS9 #429 — envelope de frames proporcional ao lease (01/11/2026)
+
+Branch `work/issue-429-ops9-hourly-frame-budget` baseada em `main=7dd4224fb9a854e31d4f9c2d92ee3868ac38d704`, engenharia sem deploy. Serviço OPS6 configurava 3.300 segundos mas usava orçamento implícito de 4.096 frames; OPS9 explicita até 175.696 frames para os 52 tópicos e transforma esgotamento precoce em abstenção / exit 66 sem reinício automático. Default da sonda curta mantido. CI/revisão/merge ainda a comprovar. Prova real VPS 37.470 candles/2 PIT EXIT5 permanece; J1 #2, #319 e OPS1 #429 abertas. Detecção de gaps, retenção, homologação VPS e Top50 global ainda não concluídas.
