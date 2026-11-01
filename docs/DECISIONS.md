@@ -1197,3 +1197,8 @@ Issue #429 estabelece um observador de estado owner-only para os artefatos JSON 
 ## D210 — J1/OPS2: ranking local a partir de velas WS confirmadas (01/11/2026)
 
 Após EXIT5 owner-only falhar com Bybit `10006` no 168o GET (mas preservando 37.470 candles, 2 PIT, 51 ativos), não repetir a coleta REST para refazer o ranking horário. Implementar em modo **offline fixture** o reaproveitamento de `bybit_ws_offline_pipeline` e `bybit_closed_stream_cache`: somente `confirm=true` e ACK validado podem alimentar uma janela de 24 velas 1h fechadas por candidato revisado. Decisão exige universo revisado completo antes de selecionar até 50; faltar um candidato implica abstenção. A auditoria SQLite expõe ranking somente em memória, sem alterar digest, sanitação, nem alegar Top50 mercado. Sem abrir WebSocket real, sem acesso ao SQLite privado REST, sem ordens e sem serviço instalado. Contrato `docs/J1_OPS2_LOCAL_WS_24H.md`, issue #429.
+
+
+## D211 — J1/OPS3: supervisor WS limitado e lock owner-only (01/11/2026)
+
+Após EXIT5 Bybit 10006 em 168 GETs, OPS3 estabelece controlador finito de sessões WebSocket injetadas para até 52 candidatos revisados, 10 tópicos por subscribe, ACK correlacionado, quarentena pré-ACK, heartbeat, orçamento de frames/tempo/sessões, reconexão apenas para transporte, fail-closed em lacunas e frames inválidos. Reutilizar os validadores OPS2 e journal SQLite WS isolado; não migrar nem modificar SQLite REST owner-only. Lease POSIX exclusivo 0700/0600 com flock e sem exclusão do lockfile. Não há conexão real, ordens, systemd, implantação, Top50 marketwide, autenticação da origem ou permissão de trading nesta entrega. Contrato docs/J1_OPS3_WS_SUPERVISOR.md e issue #429.
