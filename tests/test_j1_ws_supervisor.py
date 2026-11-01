@@ -18,7 +18,7 @@ from crypto_intelligence_agent.bybit_paginated_universe_research import (
     BybitInstrumentScanResearch,
 )
 from crypto_intelligence_agent.bybit_ws_supervisor import (
-    MAX_STREAM_TOPICS, TOPICS_PER_REQUEST, WSRunBudget,
+    MAX_STREAM_TOPICS, TOPICS_PER_REQUEST, MAX_FRAMES, WSRunBudget,
     _topic_batches, supervise_ws_research,
 )
 from crypto_intelligence_agent.market_data import DataValidationError
@@ -338,9 +338,28 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(report.failure_category,"transport_disconnected")
         self.assertGreaterEqual(report.heartbeat_pings,1)
 
+    def test_frame_budget_end_is_abstention_not_success(self):
+        success = {"op": "subscribe", "success": True,
+                   "ret_msg": "subscribe", "conn_id": "fixture",
+                   "req_id": "cia-ws-1"}
+        pong = {"op": "ping", "ret_msg": "pong"}
+        s = Session(self.fake_clock, responses=[success] + [pong] * 12)
+        out = self.run_it(self.factory(s), budget=WSRunBudget(1, 6, 90))
+        self.assertEqual(out.status, "ws_frame_budget_exhausted_abstain")
+        self.assertEqual(out.failure_category, "frame_budget_exhausted")
+        self.assertEqual(out.frames_seen, 6)
+        self.assertEqual(out.closed_events_appended, 0)
+        self.assertTrue(s.closed)
+
+    def test_default_research_budget_remains_small_but_service_budget_valid(self):
+        self.assertEqual(WSRunBudget().max_frames, 4096)
+        self.assertGreater(MAX_FRAMES, 52 * 3590 + 4096)
+        self.assertEqual(WSRunBudget(max_frames=52 * 3300 + 4096).max_frames,
+                         52 * 3300 + 4096)
+
     def test_bounded_caps_and_no_socket_without_factory(self):
         for params in ((0,10,30),(5,10,30),(1,0,30),
-                       (1,20_001,30),(1,50,0),(1,50,3601),(1,50,1.0)):
+                       (1,MAX_FRAMES+1,30),(1,50,0),(1,50,3601),(1,50,1.0)):
             with self.subTest(params=params):
                 with self.assertRaises(DataValidationError):
                     WSRunBudget(*params)

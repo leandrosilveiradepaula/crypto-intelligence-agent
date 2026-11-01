@@ -488,3 +488,8 @@ bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quat
 ## J1/OPS8 — evidência do protocolo linear isolada do coletor
 
 `bybit_ws_linear_live_probe.py` é um observador de socket único de curta duração, sem GET/SQLite/ordens, com contrato de ACK Bybit V5 e validação de envelopes e rows de `kline.60` usando parser existente. A CLI `scripts.probe_bybit_ws_linear_live` requer três flags e usuário POSIX não-root; reporta contadores agregados sem symbols, timestamps precisos, preços e dados de conta. Nada habilita `systemd`, cuja homologação efetiva continua sujeita à validação da VPS. Ver D216 e `docs/J1_OPS8_LINEAR_HANDSHAKE_PROOF.md`.
+
+
+## J1/OPS9 — orçamento explícito de frames em serviço
+
+`WSRunBudget()` preserva 4.096 frames do piloto de pesquisa; o teto geral de segurança permite 200.000 somente quando chamado com valor explícito. `scripts.run_j1_ws_service` calcula 52 frames/s × segundos do lease + 4.096 frames de reserva e usa a mesma supervisão WS. O frame cap atingido antes do timeout representa perda de continuidade, propagado por `OwnerWSPilotReport` ao exit 66 do adaptador de systemd. Nenhuma alteração do banco REST EXIT5 ou das políticas PIT. Ver D217 / `docs/J1_OPS9_HOURLY_FRAME_BUDGET.md`.

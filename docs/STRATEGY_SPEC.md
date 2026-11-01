@@ -277,3 +277,8 @@ A ingestão de ranking só é liberada após um único ACK válido para todos os
 ## J1/OPS8 — prova de handshake não gera sinal
 
 Um ACK único para 52 tópicos não prova que todos os tópicos enviaram frames e não valida uma janela de 24 candles fechados. O observador de protocolo reporta `closed_24h_complete=false`, `marketwide_top50_verified=false`, `data_stored=false` e zero ordens em todos os cenários. Somente o journal auditado com escopo PIT causal poderá alimentar ranking. Sem execução de negociação.
+
+
+## J1/OPS9 — teto de frames não é hora fechada
+
+Fim de sessão por esgotamento de mensagens não pode ser classificado como feed íntegro, mesmo após ACK de 52 tópicos. Estratégias se abstêm até a janela fechada 24h ser auditada, com gaps e PIT válidos. Ampliar orçamento do serviço não autoriza inferência sobre Top50, trades, preenchimento sintético, liquidez ou risco.
