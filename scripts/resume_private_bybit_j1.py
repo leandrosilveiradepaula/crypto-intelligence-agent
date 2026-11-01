@@ -320,7 +320,8 @@ def owner_resume_private_j1(
         raise J1BybitCaptureError("resumed_history_final_audit_rejected")
     return {
         "status": "private_j1_two_distinct_updates_verified_not_top50",
-        "sample_assets": final["sample_asset_count"],
+        "sample_assets": final["latest_selected_asset_count"],
+        "distinct_stored_assets": final["distinct_stored_asset_count"],
         "stored_closed_candles": final["stored_closed_candle_rows"],
         "stored_page_count": final["stored_page_count"],
         "historical_hours_per_asset_at_initial_PIT": HISTORY_HOURS,
