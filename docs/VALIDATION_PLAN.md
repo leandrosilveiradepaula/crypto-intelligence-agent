@@ -834,3 +834,8 @@ Fatos comprovados: o usuário rodou diagnóstico read-only na VPS; `capture_exit
 ## J1/OPS1 #429 — matriz de observabilidade
 
 Executar `python3 -m unittest discover -s tests -p test_j1_ops_status.py -v` (28 testes POSIX, skips Windows esperados), `compileall`, docs gate, CI Linux/Windows/Chrome. Cobrir arquivo faltante, log em espera, recibo duplo zero, status final, 3 PITs, integridade, replay, 720h por ativo, churn 50..52, falha 10006, falha de leitura, JSON adulterado/chaves duplicadas, symlink/hardlink e limite de tamanho. Nunca atestar mercado Top50, sessão ativa ou negociação live por fixture, sem rede, SQLite, ordens, cron ou deploy.
+
+
+## J1/OPS2 #429 — validação de ranking local por 24h fechadas
+
+Testar 24h iniciais e pelo menos 3 fechamentos adicionais por fixture sem GET; 52 candidatos revisados e Top50 apenas quando todas as 52 séries tiverem 24 velas; abstenção quando faltar o 52º; alteração de ranking sob novo candle; idempotência de replay; ACK inexistente, vela aberta, frame atrasado, incompatibilidade PIT e gaps fail-closed. Executar `python3 -m unittest discover -s tests -p test_j1_ws_hourly_research.py -v`, `compileall`, documentação e CI Linux/Windows/Chrome antes e após merge. A ausência de GETs no teste NÃO constitui homologação WS live nem prova Top50 global.

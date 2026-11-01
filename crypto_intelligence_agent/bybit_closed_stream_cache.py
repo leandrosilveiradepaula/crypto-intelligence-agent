@@ -10,7 +10,7 @@ Provider shapes: https://bybit-exchange.github.io/docs/v5/websocket/public/kline
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from contextlib import closing
 from bisect import bisect_right
 from decimal import Context, Decimal, localcontext
@@ -332,6 +332,12 @@ class OfflineStreamAudit:
     missing_720h_hour_slots: int | None = None
     history_720h_digest_sha256: str | None = None
     pit_scope_count: int | None = None
+    # Local, reviewed 24h rank calculated in the SAME SQLite snapshot as
+    # rank_digest_sha256. Deliberately absent from sanitized_report/repr:
+    # the public diagnostics must not disclose symbols or financial values.
+    private_ranked_members: tuple[tuple[str, Decimal], ...] = field(
+        default_factory=tuple, repr=False, compare=False,
+    )
 
     def sanitized_report(self) -> dict:
         result = {
@@ -594,6 +600,7 @@ class SQLiteOfflineClosedStreamJournal:
                     len(values), rank_digest,
                     history_complete, history_missing, history_slots,
                     history_digest, len(epoch_times) if epoch_times is not None else None,
+                    tuple(values) if not missing else (),
                 )
         except sqlite3.DatabaseError:
             raise DataGapError("offline journal read-only audit failed") from None

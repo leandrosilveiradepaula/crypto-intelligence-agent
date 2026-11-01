@@ -453,3 +453,8 @@ Fatos comprovados: o usuário rodou diagnóstico read-only na VPS; `capture_exit
 ## J1/OPS1 #429 — fronteira de observabilidade privada
 
 `crypto_intelligence_agent/j1_ops_status.py` consome apenas recibo JSON, auditoria read-only já produzida e log sanitizado do EXIT5, nunca abrindo SQLite com writer concorrente. CLI opt-in `scripts.observe_private_j1_exit5` lê 3 nomes fixos com proteção owner/mode/size/symlink/hardlink; não verifica PID vivo, nem cria conexões. Status é contrato para futura UI/daemon, não segundo motor de velas. Futura implementação deve reutilizar `bybit_ws_offline_pipeline`, `bybit_closed_stream_cache`, `resume_private_bybit_j1`, sem deploy prematuro. `docs/J1_OPS1_STATUS.md`.
+
+
+## J1/OPS2 — atualização local de ranking fechado sem GET recorrente
+
+O coordenador offline `replay_offline_ws_closed_hour` recebe frames `kline.60` já capturados e reutiliza `ingest_offline_ws_batch` (ACK, timestamp e `confirm=true`), `SQLiteOfflineClosedStreamJournal` (identidade, replay e cronologia) e `audit` (somatório Decimal causal das 24 velas UTC fechadas). A lista ordenada para pesquisa fica somente em memória, sem símbolos no relatório público; qualquer candidato revisado sem janela completa bloqueia ranking. Não cria outra SQLite REST, não converte fonte WS em raw-pair REST e não autentica provedor. Contrato `docs/J1_OPS2_LOCAL_WS_24H.md`.
