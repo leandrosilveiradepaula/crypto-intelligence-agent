@@ -829,3 +829,8 @@ Base verificada `main=5c59103fa0718ed80e8e4bcb29daa40c6825eee1`, 0 PRs abertas; 
 ## J1/EXIT5 #427 — recuperação da prova VPS de 50 ativos (01/11/2026)
 
 Fatos comprovados: o usuário rodou diagnóstico read-only na VPS; `capture_exit_code=1`, `audit_exit_code=0`, 50 ativos, 36.000 candles 1h, 720h cada, 50 páginas, PIT único `2026-10-31 15:00 UTC`, `sqlite_integrity_passed=true`, `private_page_replay_passed=true`. Erro factual: `provider_rate_limit_no_retry`, retCode `10006`, etapa `closed_kline_24h`, após 157 GETs, captura já encerrada. A VPS estava no checkout `c852c4002b84b74be24b1dd986154c242971d09e`. Nenhuma mutação/GET foi executada nesta sessão pelo assistente. O caminho antigo `resume_private_bybit_j1` suporta apenas 13 ativos, então EXIT5 amplia para 50 dentro de `expanded-52` e catch-up de janelas 1..72h, preservando 720h iniciais. Dados existentes, ranking, flags live, e PIT atual não são presumidos marketwide. Issue #427, branch `work/j1-exit5-resume50-bounded`. CI e revisão obrigatórias antes do merge, sem deploy automático remoto. J1 #319 ainda aberta até 2 PIT posteriores reais confirmados pelo auditor VPS.
+
+
+## J1/OPS1 #429 — matriz de observabilidade
+
+Executar `python3 -m unittest discover -s tests -p test_j1_ops_status.py -v` (28 testes POSIX, skips Windows esperados), `compileall`, docs gate, CI Linux/Windows/Chrome. Cobrir arquivo faltante, log em espera, recibo duplo zero, status final, 3 PITs, integridade, replay, 720h por ativo, churn 50..52, falha 10006, falha de leitura, JSON adulterado/chaves duplicadas, symlink/hardlink e limite de tamanho. Nunca atestar mercado Top50, sessão ativa ou negociação live por fixture, sem rede, SQLite, ordens, cron ou deploy.
