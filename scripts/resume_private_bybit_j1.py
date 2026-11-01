@@ -310,7 +310,9 @@ def owner_resume_private_j1(
             or not final["private_page_replay_passed"]
             or not final["first_pit_720h_coverage"]
             or final["immutable_pit_snapshots"] - 1 < REQUIRED_DISTINCT_UPDATES
-            or final["sample_asset_count"] != max_assets):
+            or final["latest_selected_asset_count"] != max_assets
+            or final["sample_asset_count"] < max_assets
+            or final["sample_asset_count"] > (52 if variant == "expanded-52" else max_assets)):
         raise J1BybitCaptureError("resumed_history_final_audit_rejected")
     return {
         "status": "private_j1_two_distinct_updates_verified_not_top50",
