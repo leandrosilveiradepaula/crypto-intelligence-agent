@@ -13,6 +13,10 @@ from pathlib import Path
 import tempfile
 
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.offline_vision_month import OfflineVisionCandle
+from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginBasis
+from crypto_intelligence_agent.vision_intrabar_stress import VisionStressAssumptions
+from crypto_intelligence_agent.vision_path_outage import simulate_vision_path_outage
 from crypto_intelligence_agent.offline_paper_batch import run_durable_offline_paper_batch
 from crypto_intelligence_agent.offline_paper_durable_cursor import (
     _load_cursor, _verify_cursor_orders,
@@ -404,11 +408,40 @@ def run_full_offline_paper_lifecycle() -> dict[str, object]:
             incident_code="RUNNER_CLOSED_PAPER_ONLY", incident_severity="INFO"))
         stages.append("explicit_fixture_runner_fill_and_pre8_audit")
 
+    # An independent, strictly conditional market-outage counterfactual:
+    # no AUTO2/AUTO4 event may be generated from these assumed price paths.
+    outage_assumptions = VisionStressAssumptions(
+        SyntheticMarginBasis(D("2"), 1, D("2"), "SYNTHETIC_USDT"),
+        D("0.01"), D("0.03"), D("0"),
+        D("0"), D("0"), D("0"), D("0"), D("0"))
+    outage_bar = OfflineVisionCandle(
+        1000, 2000, D("100"), D("101"), D("90"), D("90"),
+        D("2"), D("200"))
+    hypothetical_paths = simulate_vision_path_outage(
+        outage_bar, long=True, assumptions=outage_assumptions)
+    if (len(hypothetical_paths) != 4
+            or hypothetical_paths[0].terminal != "stop"
+            or hypothetical_paths[1].terminal != "close"
+            or hypothetical_paths[3].terminal != "close"
+            or hypothetical_paths[1].conditional_net_quote
+               >= hypothetical_paths[0].conditional_net_quote):
+        raise DataValidationError("stop outage counterfactual not conservative")
+    outage_check = {
+        "checkpoint": "conditional_stop_unavailable_worsens_loss",
+        "path_count": len(hypothetical_paths),
+        "worse_than_assumed_stop": True,
+        "hypothetical_only": True,
+        "native_stop_verified": False,
+        "orders_sent": False,
+        "live_trading_authorized": False,
+    }
+
     return {
         "schema_version": "j6_full_offline_paper_lifecycle_v1",
         "mode": "offline_paper",
         "stages": stages,
         "interruption_checks": checks,
+        "stop_outage_research": outage_check,
         "strategy_open_intent_count": 1,
         "synthetic_open_fill_injected_explicitly": True,
         "synthetic_partial_fills_injected_explicitly": 3,
