@@ -140,6 +140,32 @@ class VisionReplayCLI(unittest.TestCase):
                     allow_personal_nonproduction_research=True,
                     first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
                     oos_robustness_policy=review_policy)
+            from crypto_intelligence_agent.vision_path_outage import (
+                audit_vision_oos_path_outage,
+            )
+            with patch("socket.create_connection",side_effect=AssertionError("network")):
+                path_audit=private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    stress_assumptions=high,stress_selection_cost_bps=Decimal("0"),
+                    audit_oos_leverage_pair=True,audit_oos_path_outage=True)
+            expected_paths=audit_vision_oos_path_outage(
+                tuple(checked_groups),
+                as_of_ms=checked_groups[0][-1].end_open_exclusive_ms+HOUR_MS,
+                cost_bps_per_side=Decimal("0"),comparison=expected)
+            self.assertEqual(path_audit["hypothetical_oos_path_outage"],
+                             expected_paths.sanitized_report())
+            self.assertFalse(path_audit["hypothetical_oos_path_outage"]["orders_sent"])
+            self.assertFalse(path_audit["hypothetical_oos_path_outage"]["fill_price_verified"])
+            self.assertNotIn("BTCUSDT",json.dumps(path_audit))
+            self.assertNotIn(str(root),json.dumps(path_audit))
+            with self.assertRaises(VisionReplayPrivateError):
+                private_vision_dynamic_replay(
+                    manifest_paths=tuple(manifests),
+                    allow_personal_nonproduction_research=True,
+                    first_decision_ms=first,last_decision_ms=first+24*HOUR_MS,
+                    stress_assumptions=high,audit_oos_path_outage=True)
             self.assertNotIn("hypothetical_oos_leverage_pair",stressed)
             self.assertNotIn("BTCUSDT",json.dumps(pair))
             self.assertNotIn(str(root),json.dumps(pair))
@@ -199,6 +225,38 @@ class VisionReplayCLI(unittest.TestCase):
                     "--audit-oos-robustness", "--robust-min-folds","1"])
             self.assertEqual(bad_robust,1)
             self.assertEqual(json.loads(invalid_robust.getvalue())["status"],
+                             "private_vision_dynamic_replay_rejected")
+            with redirect_stdout(StringIO()) as path_output:
+                rc_paths=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-intrabar-stress",
+                    "--stress-margin-quote","2","--stress-leverage","50",
+                    "--stress-stop-fraction","0.01",
+                    "--stress-target-fraction","0.03",
+                    "--stress-maintenance-bps","0",
+                    "--stress-fee-bps","0",
+                    "--stress-slippage-bps","0",
+                    "--stress-funding-bps","0",
+                    "--stress-selection-cost-bps","0",
+                    "--audit-oos-leverage-pair","--audit-oos-path-outage"])
+            self.assertEqual(rc_paths,0)
+            self.assertEqual(
+                json.loads(path_output.getvalue())["hypothetical_oos_path_outage"],
+                expected_paths.sanitized_report())
+            self.assertNotIn("BTCUSDT",path_output.getvalue())
+            self.assertNotIn(str(root),path_output.getvalue())
+            with redirect_stdout(StringIO()) as path_rejected:
+                bad_path=main([
+                    "--manifest",manifests[0],"--manifest",manifests[1],
+                    "--first-decision-ms",str(first),
+                    "--last-decision-ms",str(first+24*HOUR_MS),
+                    "--allow-personal-nonproduction-research",
+                    "--audit-oos-path-outage"])
+            self.assertEqual(bad_path,1)
+            self.assertEqual(json.loads(path_rejected.getvalue())["status"],
                              "private_vision_dynamic_replay_rejected")
             self.assertNotIn("BTCUSDT",leverage_output.getvalue())
             self.assertNotIn(str(root),leverage_output.getvalue())

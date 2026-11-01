@@ -1,0 +1,15 @@
+# J3/PRE27 + J6/PRE13 — Simulação condicional de STOP indisponível
+
+## Problema e contrato
+Candle OHLC fechado prova máximo/mínimo mas não ordena os ticks intrabar. O motor `simulate_vision_path_outage` avalia **quatro hipóteses**, em ordem estável: `high_first/available`, `high_first/unavailable`, `low_first/available`, `low_first/unavailable`. Para cada uma, avalia cruzamento do primeiro nível hipotético (TARGET, STOP se disponível e liquidação proxy positiva) ao caminhar OPEN→extremo 1→extremo 2→CLOSE. A ordem de segmentos é ficcional e **não reproduz um mercado real**. Stop e target são preços de preenchimento **assumidos**; liquidation proxy usa perda de margem e custos adversos PRE21, sem fingir execução a um limiar. Não há book, fila, gaps intra-bar, funding real ou liquidação nativa. Custos explícitos de fee/slippage/funding seguem `VisionStressAssumptions`. Preços do cenário nunca são exportados ao relatório público.
+
+## OOS sobre as mesmas decisões
+`audit_vision_oos_path_outage` recebe meses já carregados, `VisionStressSensitivity` PRE22 do par 1x/Nx, cutoff/custo de seleção congelados. Recalcula a **mesma escolha causal de 24 horas fechadas**, regra definida apenas no histórico anterior, reconstrói fingerprints PRE24 e compara identidade e quantidades contra os folds de entrada. Compõe totais condicionais de cada ramo, drawdown prefixo por fold e agregado, contagem de ramos de liquidação proxy e quantos candles com stop ausente atingem perda inferior à pior hipótese PRE21. Se o fingerprint, cobertura ou elegibilidade divergir, rejeita em vez de classificar cenário. Não executa backtest prospectivo, não produz ranking vencedor ou recomendação de leverage.
+
+A CLI `scripts.replay_private_vision_dynamic` inclui `--audit-oos-path-outage`, permitido **somente** junto com `--audit-intrabar-stress --audit-oos-leverage-pair`. Reutiliza os `month_groups` verificados em memória; sem network, novos arquivos e sem novo GET. O modo padrão continua idêntico, inclusive campos legados.
+
+## Demo J6/PRE13
+`scripts.demo_full_offline_paper_lifecycle` agrega `stop_outage_research` com um candle descartável construído em memória, simulando STOP disponível vs indisponível (close adverso) e testando que o segundo piora a perda condicional. AUTO2/AUTO4 e o runner continuam alimentados apenas por FILLs explicitamente injetados em fixtures separadas. Não afirmamos stop real, ordem de execução ou proteção nativa.
+
+## Gate de QA e riscos residuais
+Testes numéricos exatos LONG/SHORT, 1x/50x, custo e funding, ordem high/low e ausência de stop, mudança causal de fingerprint, permutação, zero exposição, serialização saneada, CLI somente pesquisa, no-network, regressão demo. CI Linux/docs, Windows/offline e Chrome/PAPER PASS no SHA de PR e no commit merge. Permanecem falsos: `intrabar_path_verified`, `fill_price_verified`, `liquidation_formula_verified`, `financial_backtest_approved`, `net_pnl_verified`, `live_trading_authorized`, `orders_sent`. Sem validação de volatilidade, spreads, latência, funding, keeper, ordens reais ou J1 Top50. Custo adicional R$0.
