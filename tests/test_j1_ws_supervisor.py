@@ -180,8 +180,9 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(result.subscriptions_sent, 6)
         self.assertEqual(result.subscriptions_acknowledged, 6)
         self.assertEqual(result.sessions_fully_acknowledged, 1)
-        self.assertEqual(len(session.sent), 6)
-        self.assertEqual(len({t for request in session.sent for t in request["args"]}), 52)
+        subscriptions = [item for item in session.sent if item["op"] == "subscribe"]
+        self.assertEqual(len(subscriptions), 6)
+        self.assertEqual(len({t for request in subscriptions for t in request["args"]}), 52)
         self.assertEqual(self.journal.audit(
             scope=reviewed, decision_at_ms=observed + 24*HOUR_MS,
             as_of_ms=observed+24*HOUR_MS+2000).persisted_rows, 0)
