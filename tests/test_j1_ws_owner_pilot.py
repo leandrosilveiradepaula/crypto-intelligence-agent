@@ -145,7 +145,7 @@ class OwnerPilotTests(unittest.TestCase):
         self.assertEqual(one.missing_24h_assets, 52)
         self.assertTrue(self.sessions[0].closed)
         self.assertEqual(len([s for s in self.sessions[0].sent
-                              if s['op'] == 'subscribe']), 6)
+                              if s['op'] == 'subscribe']), 1)
         self.assertEqual((self.directory/'ws-reviewed-scope.json').stat().st_mode & 0o777, 0o600)
         self.assertEqual((self.directory/'ws-confirmed.sqlite').stat().st_mode & 0o777, 0o600)
         health = json.loads((self.directory/'ws-pilot-health.json').read_text())

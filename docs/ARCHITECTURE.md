@@ -478,3 +478,8 @@ bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quat
 ## J1/OPS6 — supervisão operacional sem deploy
 
 `scripts.run_j1_ws_service` envolve o piloto OPS4/OPS5 em um lease explícito, com saídas categorizadas para serviço `systemd`. Template em `deploy/systemd/cia-j1-ws-owner.service.template` (não instalado) limita restart/permissions e usa `ReadWritePaths` somente no journal privado, sem write no repo. `scripts.render_j1_ws_service` só imprime unidade validada. `crypto_intelligence_agent/j1_ws_service_health.py` lê um snapshot JSON owner-only 0600, no máximo 4096 bytes, com idade máxima e status sanitizado; nunca toca SQLite nem afirma PID ativo. Contrato em `docs/J1_OPS6_SERVICE_SUPERVISION.md`. J1 #319 e #2 ainda abertas.
+
+
+## J1/OPS7 — ACK de WebSocket linear com inscrição única
+
+`bybit_ws_supervisor._topic_batches` agrupa todo o escopo local revisado de 1 a 52 tópicos `kline.60` em uma assinatura única, protegida por limite de 21.000 caracteres JSON args, em vez dos seis lotes OPS3. O controlador aceita o ACK de Bybit linear com identificador ausente/vazio somente enquanto há **uma** inscrição no socket; mantém quarentena pré-ACK, deduplicação, parser de candle `confirm=true`, heartbeat, journal privado, reconexão bounded e abstenção em dados inválidos. Mudança não conecta à VPS por si e não comprova assinatura real aceita. D215 e `docs/J1_OPS7_SINGLE_ACK.md`.

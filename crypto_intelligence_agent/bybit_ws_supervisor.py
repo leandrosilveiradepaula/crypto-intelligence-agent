@@ -28,8 +28,14 @@ from .bybit_public_ws_once import (
 from .bybit_ws_offline_pipeline import ingest_offline_ws_batch
 from .market_data import DataGapError, DataValidationError
 
-TOPICS_PER_REQUEST = 10  # Conservative until real Linear subscription validated.
+# Bybit's public LINEAR connection supports multiple subscribed topics, with
+# an args JSON budget of 21,000 characters. A SINGLE request is intentional:
+# the documented linear ACK may omit req_id or return req_id="" even when
+# the request supplied one. Multiple sequential requests with empty IDs
+# cannot be safely correlated to the requested chunk.
+TOPICS_PER_REQUEST = 52
 MAX_STREAM_TOPICS = 52
+MAX_LINEAR_ARGS_JSON_CHARS = 21_000
 MAX_EARLY_FRAMES = 128
 MAX_SESSIONS = 4
 MAX_FRAMES = 20_000
@@ -110,8 +116,13 @@ def _topic_batches(scope: OfflineReviewedStreamScope) -> tuple[tuple[str, ...], 
     topics = tuple(sorted("kline.60." + x.symbol for x in scope.contracts))
     if len(set(topics)) != len(topics):
         raise DataValidationError("duplicate WS topic in reviewed scope")
-    return tuple(tuple(topics[i:i + TOPICS_PER_REQUEST])
-                 for i in range(0, len(topics), TOPICS_PER_REQUEST))
+    # No multi-chunk fallback: a request split would reintroduce ambiguous
+    # ACK correlation on real Bybit LINEAR connections.
+    if (len(topics) > TOPICS_PER_REQUEST
+            or len(json.dumps(topics, separators=(",", ":"),
+                              ensure_ascii=True)) > MAX_LINEAR_ARGS_JSON_CHARS):
+        raise DataValidationError("linear subscribe args exceed bounded single request")
+    return (topics,)
 
 
 def supervise_ws_research(
@@ -125,10 +136,12 @@ def supervise_ws_research(
 ) -> WSRunReport:
     """Collect confirmed hourly WS events for a finite, *injected* lease.
 
-    One subscribe request is outstanding at a time. The exchange may omit
-    req_id on ACK: this remains unambiguous because there is one in flight.
-    Market frames arriving before the related ACK are bounded and quarantined;
-    they reach the existing strict ingester only after ALL ACKs were accepted.
+    A single 1..52-topic subscribe request is sent per socket. Bybit's
+    documented LINEAR ACK may have a missing or blank req_id; this is
+    unambiguous only for ONE request per connection. Never split into multiple
+    chunks while accepting uncorrelated acknowledgements.
+    Market frames arriving before the ACK are bounded and quarantined;
+    they reach the existing strict ingester only after that ACK was accepted.
     Recoverable transport exceptions reconnect at most max_sessions times.
     Corrupt frames, gap, malformed ACK, or stale candle fail CLOSED immediately.
     """
@@ -226,15 +239,13 @@ def supervise_ws_research(
                     if payload.get("op") == "subscribe":
                         if pending_index >= len(groups) or not _subscription_ack(payload):
                             raise DataValidationError("WS malformed or extra subscription ACK")
-                        # When several subscription chunks share one socket,
-                        # a missing req_id can misattribute a duplicated ACK
-                        # to the *next* chunk. Fail closed until a bounded
-                        # venue probe proves a stronger correlation contract.
-                        expected_req = f"cia-ws-{pending_index + 1}"
-                        if (payload.get("req_id") != expected_req
-                                if len(groups) > 1 else
-                                ("req_id" in payload
-                                 and payload["req_id"] != expected_req)):
+                        # The documented Bybit LINEAR ACK may omit req_id
+                        # or send an empty string, even for an explicit request.
+                        # Safe because _topic_batches only returns ONE batch.
+                        expected_req = "cia-ws-1"
+                        if (len(groups) != 1 or
+                                ("req_id" in payload and
+                                 payload["req_id"] not in ("", expected_req))):
                             raise DataValidationError("WS subscribe ACK correlation mismatch")
                         acknowledged_topics.update(groups[pending_index])
                         pending_index += 1

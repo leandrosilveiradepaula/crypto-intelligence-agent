@@ -989,3 +989,8 @@ Branch `work/issue-429-ops5-causal-catalog-renewal` derivada da main `3828fefa02
 ## J1/OPS6 #429 — blueprint de serviço off-by-default (01/11/2026)
 
 Prepara pacote de supervisão operacional no branch `work/issue-429-ops6-ws-systemd-service-health`, base `main=cb6455bc7ae630856f5cdb5232b360662e7c8caa`: adaptador de lease 3300s, classes de exit para impedir restart em 10006, template systemd com isolamento, renderizador sem install/enable e leitor seguro de último health owner-only. Testes POSIX locais 17 PASS e compileall PASS, unit `systemd-analyze verify` local PASS; CI/revisão/merge ainda devem ser conferidos. Não instalado na VPS, nenhum mercado ou ordem ativados. Banco REST antigo permanece 37.470 candles, 2 PIT e última falha 10006 após 168 GET. #429 e #319 seguem abertas.
+
+
+## J1/OPS7 #429 — compatibilidade do ACK WS linear (01/11/2026)
+
+A implantação real segue pendente: OPS7 troca os seis `subscribe` por uma solicitação única de todos os 52 candidatos revisados, permitindo `req_id` ausente/vazio conforme formato Bybit linear sem ambiguidade entre lotes. Testes offline cobrem assinatura única, ACK duplicado/errado, pré-ACK e ausência de ordens. Branch `work/issue-429-ops7-linear-single-ack` derivada de `main=896f5bde924dfe5135faad42172c4744d8c798d7`; confirmar CI/merge SHA antes de declarar integrado. O serviço supervisonado OPS6 continua desativado na VPS. Coleta REST EXIT5: 37.470 candles, 2 PIT, 51 históricos, 10006 após 168 GET. J1 #2/#319 abertas.

@@ -267,3 +267,8 @@ Ranking local sobre 24 velas 1h fechadas só usa snapshots de escopo conhecidos 
 ## J1/OPS6 — continuidade de processo não equivale a sinal
 
 Reiniciar um lease WebSocket só é permitido quando o gestor de serviço foi habilitado mediante gate e a falha é de transporte; a reconexão pode perder fechamentos UTC, tornando o ranking inválido até reparar lacunas com proveniência e quota. Estados operacionais e último health nunca autorizam posições, Top50 marketwide, fontes autenticadas ou ordens reais.
+
+
+## J1/OPS7 — escopo completo exigido antes de sinais
+
+A ingestão de ranking só é liberada após um único ACK válido para todos os candidatos da amostra revisada. ACK perdido, duplicado ou incongruente impede assumir que os 52 tópicos foram assinados, inclusive quando algumas velas chegam antes da confirmação. Nenhum sinal quando faltarem candles, sem presumir Top50 de mercado ou autorização de ordens.

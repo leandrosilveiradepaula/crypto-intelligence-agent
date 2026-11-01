@@ -859,3 +859,8 @@ Rodar `python3 -m unittest discover -s tests -p test_j1_ws_owner_pilot.py -v`, s
 ## J1/OPS6 #429 — testes de serviço desativado e health
 
 `python3 -m unittest discover -s tests -p test_j1_ws_service.py -v` cobre 17 testes: gates antes de qualquer I/O, classe de erro e códigos de saída (10006 fatal vs transporte transitório), config inválida, paths de injeção, cancelamento de operador, template sem instalação, opt-ins e hardening, última observação recente/antiga/futura/corrupta, owner 0700/0600, symlink/hardlink e ausência de alegação de PID vivo. Executar `compileall`, opcional `systemd-analyze verify` sobre unidade **renderizada localmente**, check_docs e CI Linux/docs, Windows/offline, Chrome/PAPER antes/pós-merge; o template não pode ativar rede sozinho.
+
+
+## J1/OPS7 #429 — teste de assinatura Bybit linear única
+
+Executar `python3 -m unittest discover -s tests -p test_j1_ws_supervisor.py -v`, `test_j1_ws_owner_pilot.py`, `compileall`, docs gate e a suíte CI completa Linux/Windows/Chrome. Fixtures: 52 tópicos em **um único** pedido, ACK com `req_id` omitido, vazio ou correto, IDs incorretos, ACK duplicado, falha explícita, frames pré-ACK, replay, gap, heartbeat e ausência de rede/ordens. O sucesso offline não valida entrega live; uma futura sondagem owner-only deve comparar ACK da Bybit real e o registro sanitizado antes de habilitar `systemd`.
