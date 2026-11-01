@@ -379,3 +379,8 @@ Adicionar lease finito de serviço, códigos de falha que bloqueiam reinício em
 ## J1/OPS7 #429 — compatibilidade ACK sem rede real
 
 Assinatura única de até 52 tópicos permite correlacionar com segurança ACK público linear cujo `req_id` pode vir vazio/ausente, mantendo abstenção em falhas, integridade e replay do journal. OPS6 segue modelo de serviço desativado; próxima etapa é teste owner-only real e homologação de continuidade. D215 / `docs/J1_OPS7_SINGLE_ACK.md`.
+
+
+## J1/OPS8 #429 — homologação gradual de WebSocket linear
+
+Preparar sonda opcional curta e sem persistência para evidenciar ACK e entrega de frames dos 52 candidatos, sem copiar SQLite REST ou emitir ordens. Separar contrato de protocolo de prova de 24h e de implementação da supervisão contínua; guardas de opt-in/owner e CI antes de homologação VPS. Ver D216 e `docs/J1_OPS8_LINEAR_HANDSHAKE_PROOF.md`.

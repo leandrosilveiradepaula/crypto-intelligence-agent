@@ -272,3 +272,8 @@ Reiniciar um lease WebSocket só é permitido quando o gestor de serviço foi ha
 ## J1/OPS7 — escopo completo exigido antes de sinais
 
 A ingestão de ranking só é liberada após um único ACK válido para todos os candidatos da amostra revisada. ACK perdido, duplicado ou incongruente impede assumir que os 52 tópicos foram assinados, inclusive quando algumas velas chegam antes da confirmação. Nenhum sinal quando faltarem candles, sem presumir Top50 de mercado ou autorização de ordens.
+
+
+## J1/OPS8 — prova de handshake não gera sinal
+
+Um ACK único para 52 tópicos não prova que todos os tópicos enviaram frames e não valida uma janela de 24 candles fechados. O observador de protocolo reporta `closed_24h_complete=false`, `marketwide_top50_verified=false`, `data_stored=false` e zero ordens em todos os cenários. Somente o journal auditado com escopo PIT causal poderá alimentar ranking. Sem execução de negociação.

@@ -96,9 +96,28 @@ class VisionDirectionalCLITests(unittest.TestCase):
                     "--audit-directional-oos",
                 ]), 0)
             public = out.getvalue()
-            for secret in (str(root), "BTCUSDT", "1250", entries[0]["name"]):
+            # Paths, symbols and private archive filenames must never be
+            # disclosed anywhere. Numeric fixture values must not appear in
+            # non-digest report fields, but may occur BY CHANCE inside an
+            # unrelated SHA-256 integrity digest (e.g. "...641250...").
+            for secret in (str(root), "BTCUSDT", entries[0]["name"]):
                 self.assertNotIn(secret, public)
-            self.assertFalse(json.loads(public)["orders_sent"])
+            document = json.loads(public)
+
+            def without_integrity_digests(value):
+                if isinstance(value, dict):
+                    return {
+                        key: without_integrity_digests(item)
+                        for key, item in value.items()
+                        if "sha256" not in key.lower()
+                    }
+                if isinstance(value, list):
+                    return [without_integrity_digests(item) for item in value]
+                return value
+
+            self.assertNotIn("1250", json.dumps(
+                without_integrity_digests(document), sort_keys=True))
+            self.assertFalse(document["orders_sent"])
 
 
 if __name__ == "__main__":
