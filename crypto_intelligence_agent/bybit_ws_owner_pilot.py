@@ -18,7 +18,7 @@ import tempfile
 from typing import Callable
 
 from .bybit_closed_stream_cache import (
-    HOUR_MS, OfflineReviewedStreamScope,
+    HOUR_MS, MAX_PIT_SCOPES, OfflineReviewedStreamScope,
     SQLiteOfflineClosedStreamJournal, _scope_contract_fingerprint,
 )
 from .bybit_instrument_volume_contract import BybitLinearInstrumentResearch
@@ -149,8 +149,10 @@ def _object_no_duplicates(items):
     return obj
 
 
-def _read_scope(path: Path, *, now_ms: int) -> OfflineReviewedStreamScope:
-    if type(now_ms) is not int or now_ms <= 0:
+def _read_scope(path: Path, *, now_ms: int,
+                enforce_fresh: bool = True) -> OfflineReviewedStreamScope:
+    if (type(now_ms) is not int or now_ms <= 0
+            or type(enforce_fresh) is not bool):
         raise DataValidationError("private scope evaluation clock invalid")
     _safe_stat(path.parent, directory=True)
     before = _safe_stat(path, directory=False)
@@ -185,7 +187,7 @@ def _read_scope(path: Path, *, now_ms: int) -> OfflineReviewedStreamScope:
         raise DataValidationError("private scope digest or canonical bytes invalid")
     observed = payload["observed_at_ms"]
     if (type(observed) is not int or observed <= 0 or observed > now_ms
-            or now_ms - observed > MAX_PILOT_SCOPE_AGE_MS
+            or (enforce_fresh and now_ms - observed > MAX_PILOT_SCOPE_AGE_MS)
             or type(payload["asserted_full_catalog_rows"]) is not int
             or payload["asserted_full_catalog_rows"] < 50
             or type(payload["contracts"]) is not list
@@ -223,6 +225,85 @@ def _read_scope(path: Path, *, now_ms: int) -> OfflineReviewedStreamScope:
     scope = OfflineReviewedStreamScope.from_scan(scan, registry_variant="expanded-52")
     _scope_contract_fingerprint(scope)
     return scope
+
+
+
+# The original OPS4 scope is immutable. New verified snapshots are appended to
+# an owner-only directory and never grafted onto REST history.
+_EPOCH_DIRECTORY = "ws-reviewed-epochs"
+
+
+def _read_epoch_chain(directory: Path, *, now_ms: int) -> tuple[OfflineReviewedStreamScope, ...]:
+    """Reconstitute exact PIT snapshots, including expired but authentic history."""
+    _safe_stat(directory, directory=True)
+    scopes = [_read_scope(directory / "ws-reviewed-scope.json",
+                          now_ms=now_ms, enforce_fresh=False)]
+    epoch_dir = directory / _EPOCH_DIRECTORY
+    if epoch_dir.exists() or epoch_dir.is_symlink():
+        _safe_stat(epoch_dir, directory=True)
+        entries = list(epoch_dir.iterdir())
+        if len(entries) > MAX_PIT_SCOPES - 1:
+            raise DataGapError("private WS catalog epoch budget exceeded")
+        by_stamp = []
+        for path in entries:
+            name = path.name
+            stamp_text = name[6:-5]
+            if (not name.startswith("scope-") or not name.endswith(".json")
+                    or not stamp_text.isascii() or not stamp_text.isdecimal()
+                    or str(int(stamp_text)) != stamp_text):
+                raise DataValidationError("private WS scope epoch filename invalid")
+            by_stamp.append((int(stamp_text), path))
+        for stamp, path in sorted(by_stamp):
+            epoch = _read_scope(path, now_ms=now_ms, enforce_fresh=False)
+            if epoch.observed_at_ms != stamp:
+                raise DataGapError("private WS scope epoch filename mismatch")
+            scopes.append(epoch)
+    fingerprint = _scope_contract_fingerprint(scopes[0])
+    for before, after in zip(scopes, scopes[1:]):
+        if (before.observed_at_ms >= after.observed_at_ms
+                or before.registry_sha256 != after.registry_sha256
+                or _scope_contract_fingerprint(after) != fingerprint):
+            # Different membership/leverage/tick/launch MUST start an explicitly
+            # reviewed new journal; it must not silently rewrite this one's PIT.
+            raise DataGapError("private WS scope epochs drifted or reordered")
+    return tuple(scopes)
+
+
+def _write_renewed_scope(directory: Path, previous: OfflineReviewedStreamScope,
+                         renewed: OfflineReviewedStreamScope) -> None:
+    """Append one checked same-identity review using an exclusive private file."""
+    _safe_stat(directory, directory=True)
+    if (renewed.observed_at_ms <= previous.observed_at_ms
+            or renewed.registry_sha256 != previous.registry_sha256
+            or _scope_contract_fingerprint(renewed) !=
+            _scope_contract_fingerprint(previous)):
+        raise DataGapError("catalog churn requires separately gated WS journal epoch")
+    epoch_dir = directory / _EPOCH_DIRECTORY
+    if not epoch_dir.exists() and not epoch_dir.is_symlink():
+        try:
+            epoch_dir.mkdir(mode=0o700)
+        except FileExistsError:
+            pass
+    _safe_stat(epoch_dir, directory=True)
+    path = epoch_dir / ("scope-" + str(renewed.observed_at_ms) + ".json")
+    _write_new_scope(path, renewed)
+
+
+def _audit_epoch_chain(*, journal: SQLiteOfflineClosedStreamJournal,
+                       epochs: tuple[OfflineReviewedStreamScope, ...],
+                       decision: int, now: int):
+    """Only admit review epochs actually known at the closed-hour decision."""
+    visible = tuple(s for s in epochs if s.observed_at_ms <= decision)
+    if visible:
+        return journal.audit(scope=visible[-1], historical_scopes=visible,
+                             decision_at_ms=decision, as_of_ms=now)
+    # A brand new scope often arrives seconds AFTER the last close. Never let
+    # a previous journal claim 24h coverage before the first review existed.
+    initial = journal.audit(scope=epochs[0], decision_at_ms=decision,
+                            as_of_ms=now)
+    if initial.persisted_rows or initial.rank_digest_sha256 is not None:
+        raise DataGapError("WS journal predates first reviewed scope")
+    return initial
 
 
 def _write_private_health(directory: Path, report: dict, *, now_ms: int) -> None:
@@ -265,6 +346,8 @@ class OwnerWSPilotReport:
     journal_rows: int | None = None
     last_evaluated_closed_hour_ms: int | None = None
     failure_category: str | None = None
+    scope_epochs: int = 0
+    scope_renewed: bool = False
 
     def sanitized_report(self) -> dict:
         return {
@@ -275,6 +358,8 @@ class OwnerWSPilotReport:
             "missing_24h_assets": self.missing_24h_assets,
             "complete_24h_assets": self.complete_24h_assets,
             "journal_rows": self.journal_rows,
+            "scope_epochs": self.scope_epochs,
+            "scope_renewed": self.scope_renewed,
             "last_evaluated_closed_hour_ms": self.last_evaluated_closed_hour_ms,
             "realtime_stream_verified": False,
             "marketwide_top50_verified": False,
@@ -298,7 +383,9 @@ def run_owner_ws_pilot(*, directory: str | Path,
     """One opt-in lease, no 24/7 restart: explicit gate before any I/O.
 
     A previous scope file is reloaded (0 new GETs) to keep journal identities
-    stable across sessions. On expiration/metadata change it FAILS CLOSED.
+    stable across sessions. Once expired, it is checked by bounded catalog
+    GETs, only unchanged membership/specs may append a new immutable PIT.
+    A changed catalog FAILS CLOSED without modifying the journal.
     Never synthesize PITs or graft REST candles into this WS-only journal.
     """
     if (os.name != "posix" or allow_public_network is not True
@@ -313,6 +400,8 @@ def run_owner_ws_pilot(*, directory: str | Path,
     path = d / "ws-confirmed.sqlite"
     scope_path = d / "ws-reviewed-scope.json"
     gets = pages = count = appended = 0
+    epochs: tuple[OfflineReviewedStreamScope, ...] = ()
+    renewed = False
     transport = client
     try:
         _safe_stat(d, directory=True)
@@ -326,12 +415,28 @@ def run_owner_ws_pilot(*, directory: str | Path,
         with exclusive_owner_ws_writer(journal=journal, allow_private_ws_writer=True):
             now = clock_ms()
             if scope_path.exists() or scope_path.is_symlink():
-                scope = _read_scope(scope_path, now_ms=now)
+                epochs = _read_epoch_chain(d, now_ms=now)
+                scope = epochs[-1]
+                if now - scope.observed_at_ms > MAX_PILOT_SCOPE_AGE_MS:
+                    # No 52x24h reranking GETs, no retries after provider 10006.
+                    if len(epochs) >= MAX_PIT_SCOPES:
+                        raise DataGapError("private WS scope epoch budget exhausted")
+                    transport = client if client is not None else BoundedBybitPublicClient()
+                    fresh, pages = _catalog_scope(client=transport, clock_ms=clock_ms)
+                    gets = transport.requests_attempted
+                    _write_renewed_scope(d, scope, fresh)
+                    scope = fresh
+                    epochs += (scope,)
+                    renewed = True
             else:
+                if ((d / _EPOCH_DIRECTORY).exists()
+                        or (d / _EPOCH_DIRECTORY).is_symlink()):
+                    raise DataGapError("private WS original scope missing")
                 transport = client if client is not None else BoundedBybitPublicClient()
                 scope, pages = _catalog_scope(client=transport, clock_ms=clock_ms)
                 gets = transport.requests_attempted
                 _write_new_scope(scope_path, scope)
+                epochs = (scope,)
             count = len(scope.contracts)
             now = clock_ms()
             decision = now // HOUR_MS * HOUR_MS
@@ -339,7 +444,7 @@ def run_owner_ws_pilot(*, directory: str | Path,
                 raise DataValidationError("pilot UTC close safety margin required")
             # Audit ALL existing WS rows against stored scope before new writes;
             # no duplicate producer, registry drift or hidden corrupt rows.
-            journal.audit(scope=scope, decision_at_ms=decision, as_of_ms=now)
+            _audit_epoch_chain(journal=journal, epochs=epochs, decision=decision, now=now)
             if session_factory is None:
                 from .bybit_public_ws_once import _real_session_factory
                 factory = _real_session_factory
@@ -355,13 +460,15 @@ def run_owner_ws_pilot(*, directory: str | Path,
             decision = now // HOUR_MS * HOUR_MS
             if now < decision + 1000:
                 raise DataValidationError("pilot UTC close safety margin required")
-            audited = journal.audit(scope=scope, decision_at_ms=decision,
-                                    as_of_ms=now)
+            audited = _audit_epoch_chain(journal=journal, epochs=epochs,
+                                         decision=decision, now=now)
             if (outcome.sessions_fully_acknowledged == 0 or
                     outcome.status in ("ws_fail_closed_abstain",
                                        "ws_reconnect_budget_exhausted_abstain",
                                        "ws_budget_ended_abstain")):
                 state = "ws_pilot_degraded_abstain"
+            elif renewed and scope.observed_at_ms > decision:
+                state = "ws_pilot_scope_refreshed_waiting_next_closed_hour"
             elif audited.missing_24h_symbols == 0 and audited.complete_24h_symbols == count:
                 state = "ws_pilot_sample_rank_ready_not_marketwide"
             else:
@@ -370,7 +477,8 @@ def run_owner_ws_pilot(*, directory: str | Path,
                                       audited.missing_24h_symbols,
                                       audited.complete_24h_symbols,
                                       audited.persisted_rows, decision,
-                                      outcome.failure_category)
+                                      outcome.failure_category,
+                                      scope_epochs=len(epochs), scope_renewed=renewed)
             _write_private_health(d, report.sanitized_report(), now_ms=now)
             return report
     except J1BybitCaptureError:

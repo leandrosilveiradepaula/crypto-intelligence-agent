@@ -979,3 +979,8 @@ Entrega proposta no ramo work/issue-429-ops3-ws-ack-supervisor-lock, base main=8
 ## J1/OPS4 #429 — piloto finito WS sem ranking REST repetitivo (01/11/2026)
 
 Entrega de engenharia no ramo work/issue-429-ops4-owner-ws-catalog-pilot, sobre main=2756b583c82235bf41ebebc37f3933543b99ebd0 (OPS3 integrado e CI pós-merge verde). Contrato privado owner-only coleta no máximo quatro páginas de catálogo na primeira sessão, valida o escopo revisado de 50 a 52 contratos, persiste metadados em 0600, reutiliza sem GETs posteriores e recusa metadata expirada. Piloto invoca controlador WS OPS3 sob lock de escritor, audita janela de 24h de candles confirmados em journal distinto da SQLite REST, grava último status sanitizado. Não instala serviço 24/7 nem prova feed público ou Top50 global. Evidência VPS preservada: 37.470 candles, 2 PIT, 51 ativos históricos, 10006 em 168 GETs. J1 #2/#319 abertas.
+
+
+## J1/OPS5 #429 — renovação causal de escopo WS (01/11/2026)
+
+Branch `work/issue-429-ops5-causal-catalog-renewal` derivada da main `3828fefa02b8ee00f145f357423e03ea95381d20`. O piloto passa a renovar catálogo `instruments-info` só ao expirar (48h), com máximo quatro GETs, sem refazer ranking 24h por REST e sem retry 10006. Escopo compatível é acrescentado como epoch PIT privado imutável e journal WS é auditado causalmente; churn bloqueia. Falta serviço 24/7 instalado e homologação WS live. VPS EXIT5 original permanece 37.470 candles, 2 PIT, 51 históricos, 10006 após 168 GETs. J1 #2/#319 seguem abertas. Evidências da PR/CI precisam ser verificadas antes de registrar integração.

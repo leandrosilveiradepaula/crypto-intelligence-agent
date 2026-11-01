@@ -849,3 +849,8 @@ Executar python3 -m unittest discover -s tests -p test_j1_ws_supervisor.py -v, t
 ## J1/OPS4 #429 — piloto restrito de instrumento e WS
 
 Testar test_j1_ws_owner_pilot.py em Linux POSIX: gate negativo sem I/O, dois GETs paginados para 52 membros, fail-stop 10006, menos de 50 candidatos, cursor repetido, propriedades 0700/0600, persistência de escopo com digest e reutilização sem GET, clock/expiração >48h, journal separado da SQLite REST, lock, estado de saúde sanitizado e zero ordens. Rodar suíte completa Linux/Windows (skips POSIX documentados), compileall, docs e Chrome/PAPER no SHA da PR e pós-merge. Uma fixture sintética não valida a disponibilidade WS live nem Top50 marketwide. Prova real owner-only fica para gate posterior; não rodar captura EXIT5.
+
+
+## J1/OPS5 #429 — testes de renovação PIT sem recaptura REST
+
+Rodar `python3 -m unittest discover -s tests -p test_j1_ws_owner_pilot.py -v`, suíte completa, `compileall`, `scripts/check_docs.py`, CI Linux/docs+Windows/offline+Chrome/PAPER no SHA exato antes/pós merge. Exercitar: primeiro catálogo 52 candidatos em 2 páginas, lease seguinte sem GETs, após 49h catálogo novo e 2 épocas imutáveis sem sobrescrever o primeiro, next lease sem GET, erro 10006 fail-stop sem criar epoch, churn 52→51 bloqueia sem iniciar WS, época com nome/permissão/código alterados recusada, auditoria não aplica revisão posterior ao fechamento anterior; nenhum GET de velas, ordem, alteração da SQLite REST ou implantação. Windows salta contratos POSIX. Fixture não certifica live nem Top50 global.

@@ -257,3 +257,8 @@ Somente candles 1h confirm=true recebidos depois de inscrição validada podem a
 ## J1/OPS4 — estado de aquecimento e abstenção
 
 Sem 24 velas 1h fechadas de todos os integrantes do catálogo revisado, decisões locais permanecem em abstenção; o primeiro piloto WS não é automaticamente um histórico de 24 horas. Escopo privado expirado, lag, lacuna ou assinatura inválida bloqueiam ranking e sinais. Nenhum ativo extra ou PIT posterior é sintetizado. Nenhuma negociação é habilitada.
+
+
+## J1/OPS5 — relógio causal de identidade e abstenção
+
+Ranking local sobre 24 velas 1h fechadas só usa snapshots de escopo conhecidos no momento da decisão; revisão de catálogo observada depois da hora fechada não pode validar retrospectivamente aquele sinal. Churn de contratos, expiração sem refresh válido ou ausência de candidato interrompem a decisão. Não usar ticker rolling, extrapolação, candle aberto nem dados sintéticos para continuação. Sem autoridade de ordens reais.
