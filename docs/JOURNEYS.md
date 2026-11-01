@@ -354,3 +354,8 @@ Primeira entrega: observador read-only do worker EXIT5, sucesso apenas se recibo
 ## J1/OPS2 #429 — janela causal móvel de 24 candles WS (offline)
 
 Incremento técnico independente do worker VPS: ingestão de velas já fornecidas e validadas pelo pipeline WS offline, ranking local de 24h fechadas, abstenção para candidato ausente e PIT sem lookahead. A issue #429 permanece aberta para supervisor 24/7, persistência de fluxo real e recuperação limitada de gaps, preservando J1 #319 como gate marketwide. Evidências e limites: `docs/J1_OPS2_LOCAL_WS_24H.md`, D210.
+
+
+## J1/OPS3 #429 — controlador WS e exclusão mútua
+
+Novo controlador limitado com sessões injetadas, subscribe multicandidato, ACK, heartbeat, fail-stop de dados inválidos, reconexão bounded e lease POSIX de escritor. Implementação sem rede nem serviço 24/7 ativado; requisitos e evidências em docs/J1_OPS3_WS_SUPERVISOR.md, D211. J1 #2/#319 seguem abertas.

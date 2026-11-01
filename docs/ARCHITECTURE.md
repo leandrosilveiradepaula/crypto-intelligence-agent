@@ -458,3 +458,8 @@ Fatos comprovados: o usuário rodou diagnóstico read-only na VPS; `capture_exit
 ## J1/OPS2 — atualização local de ranking fechado sem GET recorrente
 
 O coordenador offline `replay_offline_ws_closed_hour` recebe frames `kline.60` já capturados e reutiliza `ingest_offline_ws_batch` (ACK, timestamp e `confirm=true`), `SQLiteOfflineClosedStreamJournal` (identidade, replay e cronologia) e `audit` (somatório Decimal causal das 24 velas UTC fechadas). A lista ordenada para pesquisa fica somente em memória, sem símbolos no relatório público; qualquer candidato revisado sem janela completa bloqueia ranking. Não cria outra SQLite REST, não converte fonte WS em raw-pair REST e não autentica provedor. Contrato `docs/J1_OPS2_LOCAL_WS_24H.md`.
+
+
+## J1/OPS3 — supervisor de WebSocket por sessões finitas
+
+bybit_ws_supervisor.py usa sessões injetadas, múltiplos tópicos confirmados por ACK correlacionado, validação do pipeline offline, reconexão/heartbeat com limites explícitos. O lock privado POSIX de bybit_ws_owner_lock.py deve cobrir todo o futuro processo writer owner-only. Falha de ACK, gap, clock ou frame inválido resulta em abstenção, nunca em captura retroativa fingida. O banco REST original não é aberto nem sobrescrito. Ver D211 e docs/J1_OPS3_WS_SUPERVISOR.md.

@@ -969,3 +969,8 @@ Titular VPS: pré-auditoria 50 ativos/36.000 candles/1 PIT, backup e SHA `c3e199
 ## J1/OPS2 #429 — ranking por janela local WebSocket offline (01/11/2026)
 
 A execução EXIT5 da VPS terminou com `resume_exit_code=1`, Bybit `retCode=10006` após 168 GETs; auditoria `audit_exit_code=0` atestou 37.470 candles, 51 ativos históricos, 50 no último PIT, 2 snapshots, cobertura inicial 720h e replay/SQLite íntegros. **Ainda faltam prova de 3 PITs e Top50 mercado** (#319/#2 abertas). A próxima implementação #429/OPS2 calcula ranking local causal por 24 velas fechadas usando journal WebSocket offline; abstenção se qualquer candidato revisado faltar, sem repetir GET em fixture. Nenhum serviço 24/7 ou conexão real ativado.
+
+
+## J1/OPS3 #429 — controlador WebSocket finito (01/11/2026)
+
+Entrega proposta no ramo work/issue-429-ops3-ws-ack-supervisor-lock, base main=8b4a358a3e6f96dd7b0cce1a388ab2dbaa5116e3. Implementa protocolo de subscribe/ACK com até 52 tópicos, heartbeat/pong, conexão/reconexão sob orçamento, lock exclusivo POSIX e relatórios sanitizados, usando journal WS já existente. EXIT5 owner-only terminou com 10006 após 168 GETs; auditoria íntegra 37.470 candles, 51 históricos, 50 seleção, 2 PIT, faltando terceiro PIT. Não há serviço WebSocket real ativado nem acesso remoto VPS; J1 #2 e Top50 #319 continuam abertos.

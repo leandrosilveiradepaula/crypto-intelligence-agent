@@ -839,3 +839,8 @@ Executar `python3 -m unittest discover -s tests -p test_j1_ops_status.py -v` (28
 ## J1/OPS2 #429 — validação de ranking local por 24h fechadas
 
 Testar 24h iniciais e pelo menos 3 fechamentos adicionais por fixture sem GET; 52 candidatos revisados e Top50 apenas quando todas as 52 séries tiverem 24 velas; abstenção quando faltar o 52º; alteração de ranking sob novo candle; idempotência de replay; ACK inexistente, vela aberta, frame atrasado, incompatibilidade PIT e gaps fail-closed. Executar `python3 -m unittest discover -s tests -p test_j1_ws_hourly_research.py -v`, `compileall`, documentação e CI Linux/Windows/Chrome antes e após merge. A ausência de GETs no teste NÃO constitui homologação WS live nem prova Top50 global.
+
+
+## J1/OPS3 #429 — validação offline de sessão, segurança e falha
+
+Executar python3 -m unittest discover -s tests -p test_j1_ws_supervisor.py -v, test_j1_ws_owner_lock.py -v, suíte completa, compileall, check_docs e CI Linux/Windows/Chrome. Exercitar 52 tópicos, ACKs duplicados/falsos/correlacionados, frame preACK, desconexão, reconexão, gap, vela aberta, heartbeat, orçamento e exclusão mútua owner-only 0700/0600 contra symlinks e hardlinks; testes POSIX pulados no Windows. Não interpretar fixtures como prova de feed real, mercado global ou lucro.
