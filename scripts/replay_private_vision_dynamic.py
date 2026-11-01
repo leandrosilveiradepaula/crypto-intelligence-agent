@@ -17,6 +17,7 @@ from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginB
 from crypto_intelligence_agent.vision_intrabar_stress import VisionStressAssumptions
 from crypto_intelligence_agent.vision_stress_oos import audit_costed_vision_intrabar_oos
 from crypto_intelligence_agent.vision_stress_sensitivity import compare_costed_vision_oos_stress_scenarios
+from crypto_intelligence_agent.vision_path_outage import audit_vision_oos_path_outage
 from crypto_intelligence_agent.vision_oos_robustness import (
     OOSRobustnessPolicy, audit_oos_robustness,
 )
@@ -43,11 +44,14 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
     costed_oos_bps:Decimal|None=None,
     risk_shocks:VisionRiskShocks|None=None,
     audit_oos_leverage_pair:bool=False,
-    oos_robustness_policy:OOSRobustnessPolicy|None=None)->dict:
+    oos_robustness_policy:OOSRobustnessPolicy|None=None,
+    audit_oos_path_outage:bool=False)->dict:
     if allow_personal_nonproduction_research is not True or os.name!="posix":
         raise VisionReplayPrivateError("owner_only_research_opt_in_required")
     if type(manifest_paths) is not tuple or not 2<=len(manifest_paths)<=50:
         raise VisionReplayPrivateError("bounded_manifest_count_required")
+    if type(audit_oos_path_outage) is not bool or (audit_oos_path_outage and not audit_oos_leverage_pair):
+        raise VisionReplayPrivateError("path_outage_requires_leverage_pair")
     if oos_robustness_policy is not None and (
             type(oos_robustness_policy) is not OOSRobustnessPolicy
             or audit_oos_leverage_pair is not True):
@@ -118,6 +122,12 @@ def private_vision_dynamic_replay(*,manifest_paths:tuple[str,...],
                     cost_bps_per_side=stress_selection_cost_bps,
                     assumptions_grid=(assumptions_1x,stress_assumptions))
                 report["hypothetical_oos_leverage_pair"]=leverage_pair.sanitized_report()
+                if audit_oos_path_outage:
+                    report["hypothetical_oos_path_outage"] = audit_vision_oos_path_outage(
+                        tuple(data),
+                        as_of_ms=checked["end_open_exclusive_ms"]+HOUR_MS,
+                        cost_bps_per_side=stress_selection_cost_bps,
+                        comparison=leverage_pair).sanitized_report()
                 if oos_robustness_policy is not None:
                     # Audit the SAME already-computed 1x/Nx stress grid:
                     # no additional private manifest reads or stress reruns.
@@ -148,6 +158,7 @@ def main(argv:list[str]|None=None)->int:
     parser.add_argument("--audit-stress-sensitivity",action="store_true")
     parser.add_argument("--audit-oos-leverage-pair",action="store_true")
     parser.add_argument("--audit-oos-robustness",action="store_true")
+    parser.add_argument("--audit-oos-path-outage",action="store_true")
     parser.add_argument("--robust-min-folds",type=int)
     parser.add_argument("--robust-min-exposures-per-fold",type=int)
     parser.add_argument("--robust-max-liquidation-fraction",type=Decimal)
@@ -202,6 +213,8 @@ def main(argv:list[str]|None=None)->int:
                     or args.stress_leverage is None or args.stress_leverage < 2
                     or args.stress_leverage > 200):
                 raise VisionReplayPrivateError("leverage_pair_requires_intrabar_and_distinct_leverage")
+        if args.audit_oos_path_outage and not args.audit_oos_leverage_pair:
+            raise VisionReplayPrivateError("path_outage_requires_leverage_pair")
         if args.audit_stress_sensitivity:
             if not args.audit_intrabar_stress or any(x is None for x in shock_values):
                 raise VisionReplayPrivateError("sensitivity requires stress and all shocks")
@@ -239,7 +252,8 @@ def main(argv:list[str]|None=None)->int:
             costed_oos_bps=args.oos_cost_bps if args.costed_oos else None,
             risk_shocks=risk_shocks,
             audit_oos_leverage_pair=args.audit_oos_leverage_pair,
-            oos_robustness_policy=robustness_policy)
+            oos_robustness_policy=robustness_policy,
+            audit_oos_path_outage=args.audit_oos_path_outage)
     except Exception:
         report={"schema_version":"vision-private-dynamic-replay-v1",
                 "status":"private_vision_dynamic_replay_rejected",
