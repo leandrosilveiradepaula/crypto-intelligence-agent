@@ -964,3 +964,8 @@ Fatos comprovados: o usuário rodou diagnóstico read-only na VPS; `capture_exit
 ## J1/OPS1 #429 — observabilidade do EXIT5 (01/11/2026)
 
 Titular VPS: pré-auditoria 50 ativos/36.000 candles/1 PIT, backup e SHA `c3e199487e9ac807d8cc2a26b78529dcbb641b7a`, quatro testes PASS. O worker owner-only PID 905841 reportou `current_pit_verified` com 156 GETs e `waiting_for_next_closed_hour` às ~06:18 UTC. Não há auditoria final no checkpoint de engenharia; **não declarar 3 PITs comprovados**. Issue #429: novo leitor local de relatório `scripts.observe_private_j1_exit5` com 28 testes POSIX offline PASS, sem rede nem SQLite, e contrato `docs/J1_OPS1_STATUS.md`. Coletor 24/7 ainda não existe em produção. J1 #2/#319 abertas.
+
+
+## J1/OPS2 #429 — ranking por janela local WebSocket offline (01/11/2026)
+
+A execução EXIT5 da VPS terminou com `resume_exit_code=1`, Bybit `retCode=10006` após 168 GETs; auditoria `audit_exit_code=0` atestou 37.470 candles, 51 ativos históricos, 50 no último PIT, 2 snapshots, cobertura inicial 720h e replay/SQLite íntegros. **Ainda faltam prova de 3 PITs e Top50 mercado** (#319/#2 abertas). A próxima implementação #429/OPS2 calcula ranking local causal por 24 velas fechadas usando journal WebSocket offline; abstenção se qualquer candidato revisado faltar, sem repetir GET em fixture. Nenhum serviço 24/7 ou conexão real ativado.

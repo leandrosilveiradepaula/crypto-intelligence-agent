@@ -1192,3 +1192,8 @@ Evidência VPS sanitizada 31/10–01/11: primeira coleta do worker resultou em 5
 ## D209 — J1/OPS1: observabilidade privada antes do serviço 24/7 (01/11/2026)
 
 Issue #429 estabelece um observador de estado owner-only para os artefatos JSON do EXIT5, independente da captura, sem SSH presumido. `j1_ops_status.py` lê somente três arquivos do próprio titular com 0700/0600 e limites, recusa symlinks/hardlinks e não acessa SQLite em concorrência com writer. Sucesso requer comprovante de exit duplo zero, evento final e auditoria independente positiva (>=3 PITs, 50 ativos, 720h e replay íntegro); nenhum log de espera prova que PID está vivo. Serviço supervisor, WebSocket contínuo e painel pertencem a fases posteriores da #429. `marketwide_top50_verified=false`; não executar ordens, rede, deploy ou custos.
+
+
+## D210 — J1/OPS2: ranking local a partir de velas WS confirmadas (01/11/2026)
+
+Após EXIT5 owner-only falhar com Bybit `10006` no 168o GET (mas preservando 37.470 candles, 2 PIT, 51 ativos), não repetir a coleta REST para refazer o ranking horário. Implementar em modo **offline fixture** o reaproveitamento de `bybit_ws_offline_pipeline` e `bybit_closed_stream_cache`: somente `confirm=true` e ACK validado podem alimentar uma janela de 24 velas 1h fechadas por candidato revisado. Decisão exige universo revisado completo antes de selecionar até 50; faltar um candidato implica abstenção. A auditoria SQLite expõe ranking somente em memória, sem alterar digest, sanitação, nem alegar Top50 mercado. Sem abrir WebSocket real, sem acesso ao SQLite privado REST, sem ordens e sem serviço instalado. Contrato `docs/J1_OPS2_LOCAL_WS_24H.md`, issue #429.

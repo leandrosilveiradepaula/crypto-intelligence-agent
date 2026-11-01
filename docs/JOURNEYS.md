@@ -349,3 +349,8 @@ Fatos comprovados: o usuário rodou diagnóstico read-only na VPS; `capture_exit
 ## J1/OPS1 #429 — continuidade operacional e observação confiável
 
 Primeira entrega: observador read-only do worker EXIT5, sucesso apenas se recibo e auditoria forem coerentes, sem alegar que PID permanece ativo. A VPS original não foi tocada por esta PR. Faltam supervisor de serviço 24/7, WS confirmado, reconciliação compacta de lacunas e UI PT-BR; #319 segue indispensável para Top50 global. Contrato `docs/J1_OPS1_STATUS.md`, D209.
+
+
+## J1/OPS2 #429 — janela causal móvel de 24 candles WS (offline)
+
+Incremento técnico independente do worker VPS: ingestão de velas já fornecidas e validadas pelo pipeline WS offline, ranking local de 24h fechadas, abstenção para candidato ausente e PIT sem lookahead. A issue #429 permanece aberta para supervisor 24/7, persistência de fluxo real e recuperação limitada de gaps, preservando J1 #319 como gate marketwide. Evidências e limites: `docs/J1_OPS2_LOCAL_WS_24H.md`, D210.
