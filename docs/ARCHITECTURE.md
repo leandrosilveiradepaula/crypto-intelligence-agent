@@ -463,3 +463,8 @@ O coordenador offline `replay_offline_ws_closed_hour` recebe frames `kline.60` j
 ## J1/OPS3 — supervisor de WebSocket por sessões finitas
 
 bybit_ws_supervisor.py usa sessões injetadas, múltiplos tópicos confirmados por ACK correlacionado, validação do pipeline offline, reconexão/heartbeat com limites explícitos. O lock privado POSIX de bybit_ws_owner_lock.py deve cobrir todo o futuro processo writer owner-only. Falha de ACK, gap, clock ou frame inválido resulta em abstenção, nunca em captura retroativa fingida. O banco REST original não é aberto nem sobrescrito. Ver D211 e docs/J1_OPS3_WS_SUPERVISOR.md.
+
+
+## J1/OPS4 — ponte owner-only com catálogo privado e piloto WS finito
+
+bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quatro GETs de catálogo, armazenamento de escopo com digest em arquivo privado criado sem overwrite, reutilização por 48h, lease exclusivo via OPS3 e auditoria SQLite do journal WS isolado. API HTTP é apenas instruments-info inicial; nunca repete 52 GETs de candles por hora. Após opt-ins explícitos e preparação owner-only, CLI scripts.probe_bybit_ws_owner_pilot permite uma demonstração finita de sessão pública (sem credenciais), não uma implantação de daemon. Estado privado de última observação não prova processo rodando. Ver D212 e docs/J1_OPS4_OWNER_WS_PILOT.md.

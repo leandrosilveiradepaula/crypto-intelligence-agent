@@ -359,3 +359,8 @@ Incremento técnico independente do worker VPS: ingestão de velas já fornecida
 ## J1/OPS3 #429 — controlador WS e exclusão mútua
 
 Novo controlador limitado com sessões injetadas, subscribe multicandidato, ACK, heartbeat, fail-stop de dados inválidos, reconexão bounded e lease POSIX de escritor. Implementação sem rede nem serviço 24/7 ativado; requisitos e evidências em docs/J1_OPS3_WS_SUPERVISOR.md, D211. J1 #2/#319 seguem abertas.
+
+
+## J1/OPS4 #429 — ponte de catálogo para piloto WS owner-only
+
+Adicionar piloto finito de supervisão WS com catálogo completo paginado limitado, escopo revisado privado reutilizável, lock de escritor, journal separado e relatório de saúde. Sem substituição da coleta REST histórica, sem serviço contínuo instalado e sem ordens; Top50 global #319 ainda não comprovado. Ver docs/J1_OPS4_OWNER_WS_PILOT.md e D212.
