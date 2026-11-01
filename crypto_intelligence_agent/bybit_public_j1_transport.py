@@ -245,7 +245,7 @@ class BoundedBybitPublicClient:
             } and queries.get("interval") == ["60"]
                 and queries.get("limit", [""])[0].isascii()
                 and queries.get("limit", [""])[0].isdecimal()
-                and (int(queries["limit"][0]) in (*range(1, 73), 720)))
+                and int(queries["limit"][0]) in (*range(1, 73), 720)
                 and _SYMBOL.fullmatch(queries.get("symbol", [""])[0]) is not None)
             if allowed:
                 try:
