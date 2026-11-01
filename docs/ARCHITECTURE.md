@@ -468,3 +468,8 @@ bybit_ws_supervisor.py usa sessões injetadas, múltiplos tópicos confirmados p
 ## J1/OPS4 — ponte owner-only com catálogo privado e piloto WS finito
 
 bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quatro GETs de catálogo, armazenamento de escopo com digest em arquivo privado criado sem overwrite, reutilização por 48h, lease exclusivo via OPS3 e auditoria SQLite do journal WS isolado. API HTTP é apenas instruments-info inicial; nunca repete 52 GETs de candles por hora. Após opt-ins explícitos e preparação owner-only, CLI scripts.probe_bybit_ws_owner_pilot permite uma demonstração finita de sessão pública (sem credenciais), não uma implantação de daemon. Estado privado de última observação não prova processo rodando. Ver D212 e docs/J1_OPS4_OWNER_WS_PILOT.md.
+
+
+## J1/OPS5 — sequência de escopos WebSocket imutáveis
+
+`bybit_ws_owner_pilot.py` preserva o escopo inicial em `ws-reviewed-scope.json` e armazena renovações compatíveis em `ws-reviewed-epochs/scope-<UTC-ms>.json`, cada arquivo criado por O_EXCL, com identidade, checksum, relógio e 0600/0700. O journal WS offline é auditado por épocas PIT passadas (`historical_scopes`) para não aplicar catálogo futuro à hora anterior. Catálogo expirado dispara no máximo quatro GETs somente de instrumentos, sob lease exclusivo; diversidade de contratos bloqueia continuidade e demanda novo journal revisado. A SQLite REST original permanece intocada. Ver D213 e `docs/J1_OPS5_CAUSAL_CATALOG_RENEWAL.md`.

@@ -364,3 +364,8 @@ Novo controlador limitado com sessões injetadas, subscribe multicandidato, ACK,
 ## J1/OPS4 #429 — ponte de catálogo para piloto WS owner-only
 
 Adicionar piloto finito de supervisão WS com catálogo completo paginado limitado, escopo revisado privado reutilizável, lock de escritor, journal separado e relatório de saúde. Sem substituição da coleta REST histórica, sem serviço contínuo instalado e sem ordens; Top50 global #319 ainda não comprovado. Ver docs/J1_OPS4_OWNER_WS_PILOT.md e D212.
+
+
+## J1/OPS5 #429 — renovação PIT de escopo sem perder dados
+
+Adicionar renovação opt-in do catálogo após 48h somente se os contratos mantiverem a mesma identidade; acrescentar epochs imutáveis owner-only e auditar apenas snapshots causalmente admissíveis. Churn bloqueia a continuação até migração/journal revisado; nenhuma recaptura 720h, ativação 24/7 ou ordem. Contrato `docs/J1_OPS5_CAUSAL_CATALOG_RENEWAL.md`, D213. J1 #2/#319 permanecem abertas.

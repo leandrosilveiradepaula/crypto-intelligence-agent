@@ -35,6 +35,7 @@ def main(argv=None) -> int:
     return 0 if result.status in (
         "ws_pilot_sample_rank_ready_not_marketwide",
         "ws_pilot_warming_up_abstain",
+        "ws_pilot_scope_refreshed_waiting_next_closed_hour",
     ) else 1
 
 
