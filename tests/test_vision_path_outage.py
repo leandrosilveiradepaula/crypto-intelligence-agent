@@ -56,8 +56,10 @@ class PathOutageTests(unittest.TestCase):
         o=simulate_vision_path_outage(bar(o="100",h="105",l="90",c="91"),
                                       long=True,assumptions=terms(50,fee="10"))
         self.assertTrue(any(x.liquidation_proxy_touched for x in o))
-        self.assertTrue(all(x.terminal=="liquidation_proxy"
-                            for x in o if x.stop_state=="unavailable"))
+        # HIGH-first may hit target before the adverse excursion;
+        # LOW-first without stop reaches the liquidation proxy first.
+        self.assertEqual(o[1].terminal, "target")
+        self.assertEqual(o[3].terminal, "liquidation_proxy")
         self.assertLessEqual(o[-1].conditional_net_quote,-D(2))
         for x in o:
             self.assertNotIn("fill",str(x.sanitized_report()).lower())
