@@ -984,3 +984,8 @@ Entrega de engenharia no ramo work/issue-429-ops4-owner-ws-catalog-pilot, sobre 
 ## J1/OPS5 #429 — renovação causal de escopo WS (01/11/2026)
 
 Branch `work/issue-429-ops5-causal-catalog-renewal` derivada da main `3828fefa02b8ee00f145f357423e03ea95381d20`. O piloto passa a renovar catálogo `instruments-info` só ao expirar (48h), com máximo quatro GETs, sem refazer ranking 24h por REST e sem retry 10006. Escopo compatível é acrescentado como epoch PIT privado imutável e journal WS é auditado causalmente; churn bloqueia. Falta serviço 24/7 instalado e homologação WS live. VPS EXIT5 original permanece 37.470 candles, 2 PIT, 51 históricos, 10006 após 168 GETs. J1 #2/#319 seguem abertas. Evidências da PR/CI precisam ser verificadas antes de registrar integração.
+
+
+## J1/OPS6 #429 — blueprint de serviço off-by-default (01/11/2026)
+
+Prepara pacote de supervisão operacional no branch `work/issue-429-ops6-ws-systemd-service-health`, base `main=cb6455bc7ae630856f5cdb5232b360662e7c8caa`: adaptador de lease 3300s, classes de exit para impedir restart em 10006, template systemd com isolamento, renderizador sem install/enable e leitor seguro de último health owner-only. Testes POSIX locais 17 PASS e compileall PASS, unit `systemd-analyze verify` local PASS; CI/revisão/merge ainda devem ser conferidos. Não instalado na VPS, nenhum mercado ou ordem ativados. Banco REST antigo permanece 37.470 candles, 2 PIT e última falha 10006 após 168 GET. #429 e #319 seguem abertas.
