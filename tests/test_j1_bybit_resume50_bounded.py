@@ -140,6 +140,7 @@ class Resume50OfflineTests(unittest.TestCase):
         final = self.resume()
         self.assertEqual(final["sample_assets"], 50)
         self.assertEqual(final["stored_closed_candles"], 36000 + 50*13 + 720)
+        self.assertEqual(final["distinct_stored_assets"], 51)
         self.assertEqual(self.audit()["distinct_stored_asset_count"], 51)
         self.assertEqual(self.audit()["latest_selected_asset_count"], 50)
         self.assertEqual(final["immutable_pit_snapshots"], 3)
