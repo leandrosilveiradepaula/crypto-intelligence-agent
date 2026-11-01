@@ -168,20 +168,20 @@ class SupervisorTests(unittest.TestCase):
             observed, registry.sha256_digest, 1, 52, observed, contracts)
         reviewed = OfflineReviewedStreamScope.from_scan(scan, registry_variant="expanded-52")
         groups = _topic_batches(reviewed)
-        self.assertEqual(len(groups), 6)
-        self.assertEqual(tuple(len(x) for x in groups), (10, 10, 10, 10, 10, 2))
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(tuple(len(x) for x in groups), (52,))
         self.assertEqual(sum(map(len, groups)), MAX_STREAM_TOPICS)
-        self.assertEqual(TOPICS_PER_REQUEST, 10)
+        self.assertEqual(TOPICS_PER_REQUEST, 52)
         # The ACK contract is tested independently from the receiver parser.
         # A frame is quarantined until the final ACK; however the fake clock
         # still assigns its actual receipt time before storage.
         session = Session(self.fake_clock, auto_ack=True)
         result = self.run_it(self.factory(session), scope=reviewed)
-        self.assertEqual(result.subscriptions_sent, 6)
-        self.assertEqual(result.subscriptions_acknowledged, 6)
+        self.assertEqual(result.subscriptions_sent, 1)
+        self.assertEqual(result.subscriptions_acknowledged, 1)
         self.assertEqual(result.sessions_fully_acknowledged, 1)
         subscriptions = [item for item in session.sent if item["op"] == "subscribe"]
-        self.assertEqual(len(subscriptions), 6)
+        self.assertEqual(len(subscriptions), 1)
         self.assertEqual(len({t for request in subscriptions for t in request["args"]}), 52)
         self.assertEqual(self.journal.audit(
             scope=reviewed, decision_at_ms=observed + 24*HOUR_MS,
@@ -204,8 +204,10 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(self.journal.audit(scope=self.scope,
             decision_at_ms=DECISION,as_of_ms=DECISION+4000).persisted_rows,2)
 
-    def test_multiple_subscriptions_require_exact_correlated_ack(self):
-        observed = DECISION + 72*HOUR_MS
+    def test_single_linear_subscription_accepts_blank_or_missing_req_id(self):
+        # Bybit LINEAR ACK can omit req_id or reply with req_id=""; this
+        # is safe only because all reviewed topics use ONE request/socket.
+        observed = DECISION + 72 * HOUR_MS
         registry = load_reviewed_registry("expanded-52", as_of_ms=observed)
         symbols = tuple(a.base + "USDT" for a in registry.assets[:11])
         contracts = tuple(BybitLinearInstrumentResearch(
@@ -215,21 +217,36 @@ class SupervisorTests(unittest.TestCase):
             quantity_step=Decimal("0.001"), registry_sha256=registry.sha256_digest,
         ) for s in symbols)
         scan = BybitInstrumentScanResearch(
-            observed,registry.sha256_digest,1,11,observed,contracts)
-        reviewed = OfflineReviewedStreamScope.from_scan(scan,registry_variant="expanded-52")
-        self.assertEqual(len(_topic_batches(reviewed)),2)
+            observed, registry.sha256_digest, 1, 11, observed, contracts)
+        reviewed = OfflineReviewedStreamScope.from_scan(
+            scan, registry_variant="expanded-52")
+        self.assertEqual(len(_topic_batches(reviewed)), 1)
         for response in (
-            {"op":"subscribe","success":True,"ret_msg":"subscribe",
-             "conn_id":"fake"},
-            {"op":"subscribe","success":True,"ret_msg":"subscribe",
-             "conn_id":"fake","req_id":"cia-ws-2"},
+            {"op": "subscribe", "success": True, "ret_msg": "subscribe",
+             "conn_id": "fake"},
+            {"op": "subscribe", "success": True, "ret_msg": "subscribe",
+             "conn_id": "fake", "req_id": ""},
+            {"op": "subscribe", "success": True, "ret_msg": "subscribe",
+             "conn_id": "fake", "req_id": "cia-ws-1"},
         ):
             with self.subTest(response=response):
-                session=Session(self.fake_clock,responses=[response])
-                report=self.run_it(self.factory(session),scope=reviewed)
-                self.assertEqual(report.status,"ws_fail_closed_abstain")
-                self.assertEqual(report.subscriptions_acknowledged,0)
-                self.assertEqual(report.closed_events_appended,0)
+                session = Session(self.fake_clock, responses=[response])
+                result = self.run_it(self.factory(session), scope=reviewed)
+                self.assertEqual(result.subscriptions_sent, 1)
+                self.assertEqual(result.subscriptions_acknowledged, 1)
+                self.assertEqual(result.sessions_fully_acknowledged, 1)
+                self.assertEqual(result.closed_events_appended, 0)
+
+    def test_wrong_or_duplicate_linear_ack_fails_closed(self):
+        good = {"op": "subscribe", "success": True,
+                "ret_msg": "subscribe", "conn_id": "fake", "req_id": ""}
+        bad = dict(good, req_id="cia-ws-2")
+        for responses in ([bad], [good, good]):
+            with self.subTest(responses=responses):
+                session = Session(self.fake_clock, responses=responses)
+                result = self.run_it(self.factory(session))
+                self.assertEqual(result.status, "ws_fail_closed_abstain")
+                self.assertEqual(result.closed_events_appended, 0)
 
     def test_early_confirmed_frame_never_written_without_ack(self):
         first = self.first

@@ -374,3 +374,8 @@ Adicionar renovação opt-in do catálogo após 48h somente se os contratos mant
 ## J1/OPS6 #429 — gerenciador de execução preparado, não ativado
 
 Adicionar lease finito de serviço, códigos de falha que bloqueiam reinício em quota/corrupção/permissão, template systemd isolado desativado, renderizador não mutante e leitor de saúde owner-only. Software não demonstra serviço real contínuo. Próximas dependências: ACEITE de conexão real, gaps, denominador Top50 marketwide #319 e implantação supervisionada com gate; detalhes D214 e `docs/J1_OPS6_SERVICE_SUPERVISION.md`.
+
+
+## J1/OPS7 #429 — compatibilidade ACK sem rede real
+
+Assinatura única de até 52 tópicos permite correlacionar com segurança ACK público linear cujo `req_id` pode vir vazio/ausente, mantendo abstenção em falhas, integridade e replay do journal. OPS6 segue modelo de serviço desativado; próxima etapa é teste owner-only real e homologação de continuidade. D215 / `docs/J1_OPS7_SINGLE_ACK.md`.
