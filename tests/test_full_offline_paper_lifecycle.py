@@ -56,6 +56,15 @@ class FullOfflinePaperLifecycleTests(unittest.TestCase):
             self.assertFalse(row["orders_sent"])
             self.assertFalse(row["live_trading_authorized"])
             self.assertNotIn("position_id", row)
+        outage = first["stop_outage_research"]
+        self.assertEqual(outage["checkpoint"],
+                         "conditional_stop_unavailable_worsens_loss")
+        self.assertEqual(outage["path_count"], 4)
+        self.assertTrue(outage["worse_than_assumed_stop"])
+        self.assertTrue(outage["hypothetical_only"])
+        for flag in ("native_stop_verified", "orders_sent", "live_trading_authorized"):
+            self.assertFalse(outage[flag])
+        self.assertNotIn("conditional_net_quote", str(outage))
         self.assertEqual(first["strategy_open_intent_count"], 1)
         self.assertEqual(first["opening_units"], "2")
         self.assertEqual(first["partial_exit_units"], "1.88")
