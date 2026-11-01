@@ -97,8 +97,10 @@ def _private_state(target: Path):
     first = audit["first_pit_decision_ms"] - HISTORY_HOURS * HOUR_MS
     if (not members <= set(cursors)
             or any(start != first for start in initial.values())
-            or any(cursor < previous.decision_at_ms
-                   or cursor % HOUR_MS for cursor in cursors.values())
+            or any((cursor < previous.decision_at_ms
+                    if symbol in members else cursor > previous.decision_at_ms)
+                   or cursor % HOUR_MS
+                   for symbol, cursor in cursors.items())
             or len(members) > 50 or len(cursors) > 52):
         raise J1BybitCaptureError("private_research_cursor_or_scope_mismatch")
     variant = "expanded-52" if len(cursors) > 13 else REGISTRY
@@ -132,7 +134,9 @@ def _catchup_pages(
     for member in updated.ranked:
         cursor = cursors.get(member.symbol, start)
         if (cursor < start or cursor > updated.decision_at_ms
-                or cursor % HOUR_MS):
+                or cursor % HOUR_MS
+                or (member.symbol in cursors and
+                    updated.decision_at_ms - cursor > MAX_CATCHUP_HOURS * HOUR_MS)):
             raise J1BybitCaptureError("existing_private_series_ahead_of_observation")
         windows: list[tuple[int, int]] = []
         if member.symbol not in cursors:
