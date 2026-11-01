@@ -20,7 +20,8 @@ from typing import Callable
 
 from crypto_intelligence_agent.bybit_local_json_audit import audit_local_bybit_json
 from crypto_intelligence_agent.bybit_public_j1_transport import (
-    BoundedBybitPublicClient, J1BybitCaptureError,
+    BoundedBybitPublicClient, J1BybitCaptureError, MAX_GETS,
+    MIN_PUBLIC_GET_INTERVAL_SECONDS,
 )
 from crypto_intelligence_agent.bybit_research_cycle import BybitResearchRawPage
 from crypto_intelligence_agent.bybit_research_storage import SQLiteBybitResearchStore
@@ -94,13 +95,18 @@ def _private_state(target: Path):
     initial = {row["symbol"]: row["earliest"] for row in ends}
     members = {m.symbol for m in previous.ranked}
     first = audit["first_pit_decision_ms"] - HISTORY_HOURS * HOUR_MS
-    if (members != set(cursors)
+    if (not members <= set(cursors)
             or any(start != first for start in initial.values())
-            or any(cursor < previous.decision_at_ms
-                   or cursor % HOUR_MS for cursor in cursors.values())
-            or len(members) > 13):
+            or any((cursor < previous.decision_at_ms
+                    if symbol in members else cursor > previous.decision_at_ms)
+                   or cursor % HOUR_MS
+                   for symbol, cursor in cursors.items())
+            or len(members) > 50 or len(cursors) > 52):
         raise J1BybitCaptureError("private_research_cursor_or_scope_mismatch")
-    return store, previous, cursors, audit, first
+    variant = "expanded-52" if len(cursors) > 13 else REGISTRY
+    if (len(cursors) > 13 and len(previous.ranked) != 50):
+        raise J1BybitCaptureError("private_50_member_scope_mismatch")
+    return store, previous, cursors, audit, first, variant
 
 
 def _catchup_pages(
@@ -108,8 +114,6 @@ def _catchup_pages(
     previous, updated, cursors: dict[str, int], start: int,
     store: SQLiteBybitResearchStore,
 ) -> int:
-    if {m.symbol for m in previous.ranked} != {m.symbol for m in updated.ranked}:
-        raise J1BybitCaptureError("reviewed_sample_changed_requires_new_backfill")
     if previous.registry_sha256 != updated.registry_sha256:
         raise J1BybitCaptureError("reviewed_crypto_registry_changed")
     if updated.decision_at_ms <= previous.decision_at_ms:
@@ -117,22 +121,62 @@ def _catchup_pages(
     hours_elapsed = (updated.decision_at_ms - previous.decision_at_ms) // HOUR_MS
     if hours_elapsed > MAX_CATCHUP_HOURS:
         raise J1BybitCaptureError("resume_catchup_exceeds_144h_safety_limit")
-    # Collect + audit ALL missing closed pages before the first new SQLite
-    # row, just like J1's original 720h preflight. Failed network responses
-    # do not change the existing database.
-    pending: dict[str, tuple[BybitResearchRawPage, ...]] = {}
+    # Compose the entire capture plan before the first GET or write.
+    # New reviewed-52 members need their OWN 720h historical prefix;
+    # old unselected members retain immutable pages for future re-entry.
+    # Each suffix 1..72h is fetched in ONE page, not N separate 1h GETs.
+    extended = len(cursors) > 13
+    if not extended and {m.symbol for m in previous.ranked} != {
+            m.symbol for m in updated.ranked}:
+        raise J1BybitCaptureError("reviewed_sample_changed_requires_new_backfill")
+    plan: dict[str, tuple[tuple[int, int], ...]] = {}
     missing = 0
     for member in updated.ranked:
-        cursor = cursors[member.symbol]
-        if cursor > updated.decision_at_ms:
+        cursor = cursors.get(member.symbol, start)
+        if (cursor < start or cursor > updated.decision_at_ms
+                or cursor % HOUR_MS
+                or (member.symbol in cursors and
+                    updated.decision_at_ms - cursor > MAX_CATCHUP_HOURS * HOUR_MS)):
             raise J1BybitCaptureError("existing_private_series_ahead_of_observation")
-        pages = []
+        windows: list[tuple[int, int]] = []
+        if member.symbol not in cursors:
+            if not extended or cursor != start:
+                raise J1BybitCaptureError("new_asset_requires_reviewed_52_scope")
+            windows.append((start, HISTORY_HOURS))
+            cursor += HISTORY_HOURS * HOUR_MS
         while cursor < updated.decision_at_ms:
             remaining = (updated.decision_at_ms - cursor) // HOUR_MS
-            hours = 72 if remaining >= 72 else 24 if remaining >= 24 else 1
-            pages.append(_page(client, clock, member.symbol, cursor, hours))
+            hours = min(remaining, 72)
+            windows.append((cursor, hours))
             cursor += hours * HOUR_MS
             missing += hours
+        if not windows and member.symbol not in cursors:
+            raise J1BybitCaptureError("new_asset_incomplete_backfill")
+        plan[member.symbol] = tuple(windows)
+    expected_gets = 2 * sum(len(windows) for windows in plan.values())
+    if client.requests_attempted + expected_gets > MAX_GETS:
+        raise J1BybitCaptureError("resume_get_budget_exceeded_before_fetch")
+    if extended:
+        # The reviewed-52 rank has its own bounded six-minute PIT contract.
+        # Preserve enough time for strict 2s pacing + response jitter and
+        # the after-write audit before the UTC decision hour expires.
+        from crypto_intelligence_agent.bybit_top50_closed_hour_rank import (
+            MAX_BATCH_DURATION_MS,
+        )
+        remaining_ms = updated.decision_at_ms + HOUR_MS - clock()
+        needed_ms = int(expected_gets * MIN_PUBLIC_GET_INTERVAL_SECONDS * 1000)
+        if (needed_ms + 15_000 > remaining_ms
+                or needed_ms + 15_000 > MAX_BATCH_DURATION_MS):
+            raise J1BybitCaptureError("resume_52_get_time_budget_exceeded")
+    # Network failures retain all older pages and true PIT snapshots.
+    # No new PIT is written unless *every* page passes validation.
+    pending: dict[str, tuple[BybitResearchRawPage, ...]] = {}
+    for member in updated.ranked:
+        pages = []
+        for first_open, hours in plan[member.symbol]:
+            pages.append(_page(
+                client, clock, member.symbol, first_open, hours,
+                "expanded-52" if extended else REGISTRY))
         pending[member.symbol] = tuple(pages)
     for pages in pending.values():
         for page in pages:
@@ -154,7 +198,7 @@ def _catchup_pages(
                 raise J1BybitCaptureError("resume_missing_page_preflight_rejected") from None
     if clock() // HOUR_MS * HOUR_MS != updated.decision_at_ms:
         raise J1BybitCaptureError("resume_pit_hour_expired_before_write")
-    for pages in pending.values():
+    for symbol, pages in pending.items():
         for page in pages:
             store.commit_raw_pair(
                 instrument_raw=page.instrument_raw,
@@ -162,6 +206,7 @@ def _catchup_pages(
                 manifest=page.manifest,
                 capture_environment="private_local_unverified",
             )
+        cursors[symbol] = updated.decision_at_ms
     for member in updated.ranked:
         quality = store.quality_report(
             symbol=member.symbol, interval="1h",
@@ -197,17 +242,17 @@ def owner_resume_private_j1(
     """
     if (allow_public_network is not True or allow_private_storage is not True
             or confirm_region_and_personal_research is not True
-            or type(max_assets) is not int or not 1 <= max_assets <= 13
+            or type(max_assets) is not int or not 1 <= max_assets <= 50
             or os.name != "posix"):
         raise J1BybitCaptureError("resume_owner_opt_in_or_posix_required")
     path = _private_db_path(database)
     clock = clock_ms or _clock
     sleeper = sleep or time.sleep
     fetch = client or BoundedBybitPublicClient()
-    store, previous, cursors, initial_report, first = _private_state(path)
+    store, previous, cursors, initial_report, first, variant = _private_state(path)
     if len(previous.ranked) != max_assets:
         raise J1BybitCaptureError("resume_sample_size_does_not_match_private_history")
-    registry = load_reviewed_registry(REGISTRY, as_of_ms=clock())
+    registry = load_reviewed_registry(variant, as_of_ms=clock())
     if previous.registry_sha256 != registry.sha256_digest:
         raise J1BybitCaptureError("existing_snapshot_crypto_registry_changed")
     distinct = initial_report["immutable_pit_snapshots"] - 1
@@ -219,7 +264,7 @@ def owner_resume_private_j1(
         if cutoff - previous.decision_at_ms > MAX_CATCHUP_HOURS * HOUR_MS:
             raise J1BybitCaptureError("resume_catchup_exceeds_144h_safety_limit")
         if cutoff > previous.decision_at_ms:
-            current, _ = _observe(fetch, clock, max_assets)
+            current, _ = _observe(fetch, clock, max_assets, variant)
             _catchup_pages(
                 fetch, clock, previous=previous, updated=current,
                 cursors=cursors, start=first, store=store,
@@ -228,7 +273,7 @@ def owner_resume_private_j1(
             # had to be caught up. Never synthesize a PIT for missed hours.
             distinct += 1
             previous = current
-            cursors = {m.symbol: current.decision_at_ms for m in current.ranked}
+            cursors.update({m.symbol: current.decision_at_ms for m in current.ranked})
             _status_event(progress, phase="current_pit_verified",
                           completed=distinct,
                           network_gets=fetch.requests_attempted)
@@ -242,10 +287,10 @@ def owner_resume_private_j1(
                 sleeper(wait_ms / 1000)
             if clock() // HOUR_MS * HOUR_MS != next_decision:
                 raise J1BybitCaptureError("resume_hourly_observation_window_missed")
-            updated, _ = _observe(fetch, clock, max_assets)
+            updated, _ = _observe(fetch, clock, max_assets, variant)
             if updated.decision_at_ms != next_decision:
                 raise J1BybitCaptureError("resume_hourly_observation_not_consecutive")
-            if {m.symbol for m in previous.ranked} != {
+            if variant != "expanded-52" and {m.symbol for m in previous.ranked} != {
                     m.symbol for m in updated.ranked}:
                 raise J1BybitCaptureError("reviewed_sample_changed_requires_new_backfill")
             # This existing research DB may now exceed 720h. The original
@@ -256,7 +301,7 @@ def owner_resume_private_j1(
                 fetch, clock, previous=previous, updated=updated,
                 cursors=cursors, start=first, store=store,
             )
-            cursors = {m.symbol: updated.decision_at_ms for m in updated.ranked}
+            cursors.update({m.symbol: updated.decision_at_ms for m in updated.ranked})
             previous = updated
             distinct += 1
             _status_event(progress, phase="hourly_pit_verified",
@@ -269,11 +314,14 @@ def owner_resume_private_j1(
             or not final["private_page_replay_passed"]
             or not final["first_pit_720h_coverage"]
             or final["immutable_pit_snapshots"] - 1 < REQUIRED_DISTINCT_UPDATES
-            or final["sample_asset_count"] != max_assets):
+            or final["latest_selected_asset_count"] != max_assets
+            or final["sample_asset_count"] < max_assets
+            or final["sample_asset_count"] > (52 if variant == "expanded-52" else max_assets)):
         raise J1BybitCaptureError("resumed_history_final_audit_rejected")
     return {
         "status": "private_j1_two_distinct_updates_verified_not_top50",
-        "sample_assets": final["sample_asset_count"],
+        "sample_assets": final["latest_selected_asset_count"],
+        "distinct_stored_assets": final["distinct_stored_asset_count"],
         "stored_closed_candles": final["stored_closed_candle_rows"],
         "stored_page_count": final["stored_page_count"],
         "historical_hours_per_asset_at_initial_PIT": HISTORY_HOURS,
