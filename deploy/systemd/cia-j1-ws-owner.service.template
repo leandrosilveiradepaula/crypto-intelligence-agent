@@ -1,0 +1,38 @@
+# J1/OPS6: OFF BY DEFAULT. Never installed/enabled by CI or this template.
+# Render only after the separate owner-operated VPS/region/permissions gate.
+[Unit]
+Description=Crypto Intelligence Agent J1 owner-only WS research collector (NOT trading)
+Documentation=https://github.com/leandrosilveiradepaula/crypto-intelligence-agent
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=3600
+StartLimitBurst=6
+
+[Service]
+Type=simple
+User=@OWNER_USER@
+WorkingDirectory=@REPO_ROOT@
+Environment=PYTHONDONTWRITEBYTECODE=1
+UMask=0077
+ExecStart=@PYTHON_BIN@ -m scripts.run_j1_ws_service --directory @PRIVATE_DIR@ --seconds 3300 --allow-public-network --allow-public-websocket --allow-private-storage --confirm-region-and-personal-research
+Restart=always
+RestartSec=30s
+# 64 invalid config, 65 Bybit quota/denial, 66 integrity, 77 no owner permission, 130 operator stop.
+# These MUST NOT spin-restart. 75 is bounded transient transport, 0 is a
+# healthy finite lease that rolls into a new one only when the operator enables.
+RestartPreventExitStatus=64 65 66 77 130
+TimeoutStopSec=20s
+KillSignal=SIGINT
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=@PRIVATE_DIR@
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

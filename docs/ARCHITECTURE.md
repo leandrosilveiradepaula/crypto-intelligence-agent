@@ -473,3 +473,8 @@ bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quat
 ## J1/OPS5 — sequência de escopos WebSocket imutáveis
 
 `bybit_ws_owner_pilot.py` preserva o escopo inicial em `ws-reviewed-scope.json` e armazena renovações compatíveis em `ws-reviewed-epochs/scope-<UTC-ms>.json`, cada arquivo criado por O_EXCL, com identidade, checksum, relógio e 0600/0700. O journal WS offline é auditado por épocas PIT passadas (`historical_scopes`) para não aplicar catálogo futuro à hora anterior. Catálogo expirado dispara no máximo quatro GETs somente de instrumentos, sob lease exclusivo; diversidade de contratos bloqueia continuidade e demanda novo journal revisado. A SQLite REST original permanece intocada. Ver D213 e `docs/J1_OPS5_CAUSAL_CATALOG_RENEWAL.md`.
+
+
+## J1/OPS6 — supervisão operacional sem deploy
+
+`scripts.run_j1_ws_service` envolve o piloto OPS4/OPS5 em um lease explícito, com saídas categorizadas para serviço `systemd`. Template em `deploy/systemd/cia-j1-ws-owner.service.template` (não instalado) limita restart/permissions e usa `ReadWritePaths` somente no journal privado, sem write no repo. `scripts.render_j1_ws_service` só imprime unidade validada. `crypto_intelligence_agent/j1_ws_service_health.py` lê um snapshot JSON owner-only 0600, no máximo 4096 bytes, com idade máxima e status sanitizado; nunca toca SQLite nem afirma PID ativo. Contrato em `docs/J1_OPS6_SERVICE_SUPERVISION.md`. J1 #319 e #2 ainda abertas.

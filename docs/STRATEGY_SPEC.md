@@ -262,3 +262,8 @@ Sem 24 velas 1h fechadas de todos os integrantes do catálogo revisado, decisõe
 ## J1/OPS5 — relógio causal de identidade e abstenção
 
 Ranking local sobre 24 velas 1h fechadas só usa snapshots de escopo conhecidos no momento da decisão; revisão de catálogo observada depois da hora fechada não pode validar retrospectivamente aquele sinal. Churn de contratos, expiração sem refresh válido ou ausência de candidato interrompem a decisão. Não usar ticker rolling, extrapolação, candle aberto nem dados sintéticos para continuação. Sem autoridade de ordens reais.
+
+
+## J1/OPS6 — continuidade de processo não equivale a sinal
+
+Reiniciar um lease WebSocket só é permitido quando o gestor de serviço foi habilitado mediante gate e a falha é de transporte; a reconexão pode perder fechamentos UTC, tornando o ranking inválido até reparar lacunas com proveniência e quota. Estados operacionais e último health nunca autorizam posições, Top50 marketwide, fontes autenticadas ou ordens reais.

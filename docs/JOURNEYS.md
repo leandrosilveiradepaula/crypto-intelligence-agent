@@ -369,3 +369,8 @@ Adicionar piloto finito de supervisão WS com catálogo completo paginado limita
 ## J1/OPS5 #429 — renovação PIT de escopo sem perder dados
 
 Adicionar renovação opt-in do catálogo após 48h somente se os contratos mantiverem a mesma identidade; acrescentar epochs imutáveis owner-only e auditar apenas snapshots causalmente admissíveis. Churn bloqueia a continuação até migração/journal revisado; nenhuma recaptura 720h, ativação 24/7 ou ordem. Contrato `docs/J1_OPS5_CAUSAL_CATALOG_RENEWAL.md`, D213. J1 #2/#319 permanecem abertas.
+
+
+## J1/OPS6 #429 — gerenciador de execução preparado, não ativado
+
+Adicionar lease finito de serviço, códigos de falha que bloqueiam reinício em quota/corrupção/permissão, template systemd isolado desativado, renderizador não mutante e leitor de saúde owner-only. Software não demonstra serviço real contínuo. Próximas dependências: ACEITE de conexão real, gaps, denominador Top50 marketwide #319 e implantação supervisionada com gate; detalhes D214 e `docs/J1_OPS6_SERVICE_SUPERVISION.md`.
