@@ -162,6 +162,7 @@ class RenderUnitTests(unittest.TestCase):
         self.assertNotIn('systemctl enable', out)
         self.assertNotIn('systemctl start', out)
         self.assertNotIn('@', out)
+        self.assertNotIn('\\', out, 'systemd Linux paths must be POSIX even on Windows')
         self.assertNotIn('api_key', out.lower())
 
     def test_reject_injection_unsafe_paths_and_public_repo_writer(self):

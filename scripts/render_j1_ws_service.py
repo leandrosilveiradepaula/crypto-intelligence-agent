@@ -6,7 +6,7 @@ no state, network, filesystem or service-manager action is performed.
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 
 _TEMPLATE = (Path(__file__).resolve().parent.parent / "deploy" / "systemd"
@@ -15,12 +15,12 @@ _USERNAME = re.compile(r"[a-z_][a-z0-9_-]{0,31}\Z")
 _PATH = re.compile(r"/[A-Za-z0-9_./-]+\Z")
 
 
-def _path(value: str) -> Path:
+def _path(value: str) -> PurePosixPath:
     if (type(value) is not str or len(value) > 240
             or _PATH.fullmatch(value) is None
-            or ".." in Path(value).parts or "//" in value or value == "/"):
+            or ".." in PurePosixPath(value).parts or "//" in value or value == "/"):
         raise ValueError("unsafe absolute service path")
-    return Path(value)
+    return PurePosixPath(value)
 
 
 def render_j1_ws_unit(*, username: str, repo_root: str,
