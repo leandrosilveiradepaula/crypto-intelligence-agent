@@ -179,6 +179,49 @@ class LinearLiveProbeTests(unittest.TestCase):
         self.assertEqual(report.valid_market_frames, 0)
         self.assertFalse(report.sanitized_report()["all_topics_delivered_verified"])
 
+    def test_stamp_quarantine_cannot_hide_later_invalid_row(self):
+        base = market(closed=False)
+        bad_stamp = dict(base["data"][0], timestamp=START-1)
+        bad_ohlc = dict(base["data"][0], high="0.1")
+        bad_confirm = dict(base["data"][0], confirm="false")
+        for later in (bad_ohlc, bad_confirm):
+            with self.subTest(later=later):
+                frame = dict(base, data=[bad_stamp, later])
+                report, _ = self.run_probe([ACK, frame], diagnose=True)
+                self.assertEqual(report.status, "ws_frame_invalid_abstain")
+                self.assertEqual(report.valid_market_frames, 0)
+                self.assertEqual(report.validated_closed_events, 0)
+                self.assertEqual(report.quarantined_open_stamp_frames, 0)
+                self.assertIn(report.failure_category,
+                              ("kline_ohlc", "kline_confirmation"))
+
+    def test_bad_stamp_cannot_hide_own_invalid_financial_or_confirm(self):
+        base = market(closed=False)
+        for change in ({"high": "0.1"}, {"confirm": 0},
+                       {"open": "NaN"}, {"close": "not-a-number"}):
+            with self.subTest(change=change):
+                row = dict(base["data"][0], timestamp=START-1, **change)
+                report, _ = self.run_probe(
+                    [ACK, dict(base, data=[row])], diagnose=True)
+                self.assertEqual(report.status, "ws_frame_invalid_abstain")
+                self.assertNotEqual(report.failure_category, "clock_trade_stamp_before_open")
+                self.assertEqual(report.validated_closed_events, 0)
+                self.assertEqual(report.quarantined_open_stamp_frames, 0)
+                self.assertEqual(report.quarantined_closed_stamp_frames, 0)
+
+    def test_mixed_stamp_rows_quarantine_only_after_full_frame_validation(self):
+        base = market(closed=False)
+        first = dict(base["data"][0], timestamp=START-1)
+        second = dict(base["data"][0], timestamp=START+HOUR_MS)
+        report, _ = self.run_probe(
+            [ACK, dict(base, data=[first, second]), market(closed=True)],
+            diagnose=True)
+        self.assertEqual(report.status, "ws_timestamp_diagnostic_unverified")
+        self.assertEqual(report.quarantined_open_stamp_frames, 1)
+        self.assertEqual(report.validated_closed_events, 1)
+        self.assertEqual(report.valid_market_frames, 1)
+        self.assertFalse(report.sanitized_report()["all_topics_delivered_verified"])
+
     def test_closed_count_is_atomic_when_later_row_invalid(self):
         clean = dict(market(closed=True)["data"][0])
         invalid = dict(market(closed=False)["data"][0], timestamp=START-1)
