@@ -1244,3 +1244,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D221 (02/11/2026, J1/OPS14 #429): sonda owner-only OPS8 de 52 tópicos requer limite de frames coerente com até 90s de tráfego (8192 frames) e deve classificar esgotamento antecipado como abstenção, jamais como observação concluída. Uma única sessão; sem retry, GET REST, persistência, ordens, credenciais ou deploy. A validação de CI não comprova conexão real, origem de dados nem Top50.
+
+
+- D222 (02/11/2026, J1/OPS15 #429): uma sondagem pública de protocolo WS 52 tópicos pode usar runner GitHub Actions efêmero sem credenciais e sem persistência como evidência **apenas da rede do runner**, com disparo por comentário exato de issue #429 do proprietário, janela de 45s e orçamento 8192 frames. Não prova conectividade da VPS, não autoriza serviço 24/7, não reclassifica Top50, não habilita ordens, deploy, REST GET ou gastos. Registro de 52 candidatos expira em 05/11/2026 15:27:39 UTC; recusar expiração, não forjar revisão.
