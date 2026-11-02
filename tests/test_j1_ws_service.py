@@ -300,6 +300,17 @@ class ReadOnlyHealthTests(unittest.TestCase):
         self.write(report=dict(self.report, status='live_and_trading'))
         self.assertEqual(self.audit()['status'], 'health_untrusted_abstain')
 
+    def test_declared_gap_count_is_private_aggregate_not_live_proof(self):
+        self.write(report=dict(self.report, declared_gap_markers=2))
+        got = self.audit()
+        self.assertEqual(got['declared_gap_markers'], 2)
+        self.assertFalse(got['realtime_stream_verified'])
+        self.assertFalse(got['worker_running_verified'])
+        self.write(report=dict(self.report, declared_gap_markers=-1))
+        self.assertEqual(self.audit()['status'], 'health_untrusted_abstain')
+        self.write(report=dict(self.report, declared_gap_markers=True))
+        self.assertEqual(self.audit()['status'], 'health_untrusted_abstain')
+
     def test_future_clock_malformed_and_oversized_rejected(self):
         self.write(when=T+100_000)
         self.assertEqual(self.audit()['status'], 'health_untrusted_abstain')
