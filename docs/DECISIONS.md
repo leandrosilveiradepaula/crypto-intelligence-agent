@@ -1250,3 +1250,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D223 (02/11/2026, OPS16 #429): após prova real de 52 tópicos WS no runner GitHub, um único teste adicional pode atravessar fechamento de hora UTC para observar `confirm=true`; aguardar no máximo 20min e iniciar 30s antes de próxima hora, janela WS 90s, sem cron/retry/artefato/SQLite/REST/ordens/deploy. A execução é restrita a comentário literal owner-only na issue #429. A confirmação no GitHub não certifica rede VPS, 24h, origem autenticada ou Top50 marketwide. Recusar relógio atrasado ou observação fora da janela e nunca aumentar o tempo ilimitadamente.
+
+
+- D224 (02/11/2026, J1/OPS17 #450): uma falha real na janela de fechamento UTC só pode promover diagnóstico categórico e sanitizado de validação de kline, usando allowlist existente; não registrar payload, símbolo, OHLC, timestamp exato ou exceção do provedor. Não relaxar controle de relógio, integridade financeira ou `confirm` sem evidência. OPS16 no runner GitHub falhou em 19:00:00 UTC; causa específica ainda desconhecida sem categoria, e protocolo 52 tópicos antes do fechamento permanece comprovado.
