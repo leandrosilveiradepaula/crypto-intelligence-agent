@@ -1256,3 +1256,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D225 (02/11/2026, J1/OPS18 #452): o erro real `clock_trade_stamp` em duas viradas UTC exige distinguir **before/after** do intervalo e **open/closed** sem divulgar timestamps. O validador estrito `_validate_one_kline_row`, a ingestão e a auditoria SQLite mantêm intacto `start <= trade_ms <= end`; nada fora da janela pode ser aceito como candle. Uma opção explícita `--diagnose-trade-stamps`, somente na sonda efêmera WS52 owner-only, coloca esses frames em quarentena estatística e segue para observar outros frames, com resultado `ws_timestamp_diagnostic_unverified`. Contagem de eventos fechados só após validação integral de todas as linhas do frame. Nenhum relaxamento temporal, REST GET, journal, deploy VPS ou ordem real.
+
+
+- D226 (02/11/2026, J1/OPS19 #455): quarentena da sonda WS52 pode contornar *somente para fins de diagnóstico* a verificação de timestamp que já falhou, para examinar as demais regras de cada linha e TODAS as linhas do frame. Não substitui timestamps nem promove o frame à ingestão. Qualquer erro restante, inclusive OHLC, decimal, confirmação, relógio, envelope e linhas subsequentes, deve bloquear; contadores de quarentena atualizados apenas após validação integral, no máximo uma vez por frame. A restrição temporal de produção permanece idêntica.
