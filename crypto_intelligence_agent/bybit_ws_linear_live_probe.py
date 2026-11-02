@@ -48,6 +48,10 @@ class LinearWSProof:
     validated_closed_events: int = 0
     distinct_closed_topics: int = 0
     heartbeat_pongs: int = 0
+    quarantined_open_stamp_frames: int = 0
+    quarantined_closed_stamp_frames: int = 0
+    stamp_before_frames: int = 0
+    stamp_after_frames: int = 0
 
     def sanitized_report(self) -> dict:
         return {
@@ -60,6 +64,10 @@ class LinearWSProof:
             "distinct_topics_seen": self.distinct_topics_seen,
             "validated_closed_events": self.validated_closed_events,
             "distinct_closed_topics": self.distinct_closed_topics,
+            "quarantined_open_stamp_frames": self.quarantined_open_stamp_frames,
+            "quarantined_closed_stamp_frames": self.quarantined_closed_stamp_frames,
+            "stamp_before_frames": self.stamp_before_frames,
+            "stamp_after_frames": self.stamp_after_frames,
             "all_topics_delivered_verified": False,
             "closed_24h_complete": False,
             "marketwide_top50_verified": False,
@@ -89,6 +97,21 @@ def _validate_topics(topics: tuple[str, ...]) -> None:
         raise DataValidationError("invalid bounded single-request LINEAR topics")
 
 
+def _stamp_failure_class(row: dict) -> str:
+    """Fixed category only; never echo OHLC, symbol or timestamp."""
+    if type(row) is not dict:
+        return "clock_trade_stamp"
+    start, end, stamp = row.get("start"), row.get("end"), row.get("timestamp")
+    confirm = row.get("confirm")
+    if any(type(v) is not int for v in (start, end, stamp)) or type(confirm) is not bool:
+        return "clock_trade_stamp"
+    direction = "before" if stamp < start else "after" if stamp > end else "unknown"
+    if direction == "unknown":
+        return "clock_trade_stamp"
+    state = "closed" if confirm else "open"
+    return "clock_trade_stamp_" + direction + "_" + state
+
+
 def probe_linear_topics_once(
     *, session_factory: Callable[[], StreamSession],
     topics: tuple[str, ...],
@@ -96,18 +119,21 @@ def probe_linear_topics_once(
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     max_seconds: int = 35,
     max_frames: int = MAX_FRAMES,
+    diagnostic_trade_stamp: bool = False,
 ) -> LinearWSProof:
     """Single socket, single subscribe; count only strict post-ACK data frames."""
     _validate_topics(topics)
     if (not callable(session_factory) or not callable(clock)
             or not callable(wall_ms) or type(max_seconds) is not int
             or not 1 <= max_seconds <= MAX_SECONDS or type(max_frames) is not int
-            or not 1 <= max_frames <= MAX_FRAMES):
+            or not 1 <= max_frames <= MAX_FRAMES
+            or type(diagnostic_trade_stamp) is not bool):
         raise DataValidationError("invalid LINEAR proof capabilities or budget")
     started = clock()
     if type(started) not in (int, float) or not math.isfinite(started):
         raise DataValidationError("LINEAR proof monotonic clock invalid")
     frames = preack = valid = closed = pongs = ack = 0
+    quarantine_open = quarantine_closed = stamp_before = stamp_after = 0
     topics_seen: set[str] = set()
     closed_seen: set[str] = set()
     failure: str | None = None
@@ -120,7 +146,8 @@ def probe_linear_topics_once(
     def result() -> LinearWSProof:
         return LinearWSProof(status, failure, len(topics), ack, frames,
                              preack, valid, len(topics_seen), closed,
-                             len(closed_seen), pongs)
+                             len(closed_seen), pongs,
+                             quarantine_open, quarantine_closed, stamp_before, stamp_after)
 
     try:
         with closing(session_factory()) as session:
@@ -131,7 +158,8 @@ def probe_linear_topics_once(
                 now = clock()
                 remaining = started + max_seconds - now
                 if remaining <= 0:
-                    status = ("ws_ack_with_market_frames_unverified" if valid else
+                    status = ("ws_timestamp_diagnostic_unverified" if diagnostic_trade_stamp and ack
+                              else "ws_ack_with_market_frames_unverified" if valid else
                               "ws_ack_only_unverified" if ack else "ws_ack_missing_abstain")
                     return result()
                 if pending_ping is not None and now - pending_ping >= PONG_SECONDS:
@@ -195,11 +223,31 @@ def probe_linear_topics_once(
                         or type(rows) is not list or not 1 <= len(rows) <= 8):
                     raise DataValidationError("LINEAR proof market envelope invalid")
                 has_close = False
+                frame_closed = 0
+                quarantined = False
                 for row in rows:
                     if type(row) is not dict:
                         raise DataValidationError("LINEAR proof market row invalid")
-                    has_close |= _validate_one_kline_row(row, server, received)
-                    closed += int(row["confirm"] is True)
+                    try:
+                        has_close |= _validate_one_kline_row(row, server, received)
+                    except DataValidationError as error:
+                        if str(error) != "ws_clock_trade_stamp_invalid":
+                            raise
+                        failure = _stamp_failure_class(row)
+                        if not diagnostic_trade_stamp:
+                            raise
+                        is_closed = row.get("confirm") is True
+                        quarantine_closed += int(is_closed)
+                        quarantine_open += int(not is_closed)
+                        stamp_before += int("_before_" in failure)
+                        stamp_after += int("_after_" in failure)
+                        quarantined = True
+                        break
+                    frame_closed += int(row["confirm"] is True)
+                if quarantined:
+                    failure = None
+                    continue
+                closed += frame_closed
                 valid += 1
                 topics_seen.add(topic)
                 if has_close:
@@ -214,7 +262,9 @@ def probe_linear_topics_once(
         # Emit only a fixed allowlisted validation class, never raw provider
         # bytes, symbol, timestamp, exception text or OHLC values.
         if stage == "validate" and isinstance(error, DataValidationError):
-            failure = _safe_failure_category(error, "kline")
+            failure = (failure if str(error) == "ws_clock_trade_stamp_invalid"
+                       and failure and failure.startswith("clock_trade_stamp_")
+                       else _safe_failure_category(error, "kline"))
         else:
             failure = "processing"
         status = "ws_frame_invalid_abstain"
@@ -232,7 +282,8 @@ def owner_probe_linear_topics_once(*, allow_public_network: bool = False,
                                    session_factory=None,
                                    clock: Callable[[], float] = time.monotonic,
                                    wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
-                                   owner_check: Callable[[], bool] | None = None) -> LinearWSProof:
+                                   owner_check: Callable[[], bool] | None = None,
+                                   diagnostic_trade_stamp: bool = False) -> LinearWSProof:
     """Explicit permission gate *before* importing or opening a real socket."""
     if (allow_public_network is not True or allow_public_websocket is not True
             or confirm_region_and_personal_research is not True):
@@ -242,7 +293,8 @@ def owner_probe_linear_topics_once(*, allow_public_network: bool = False,
     if not owner_check():
         return LinearWSProof("ws_owner_posix_unprivileged_required", None, 0)
     if (type(seconds) is not int or not 1 <= seconds <= MAX_SECONDS
-            or type(max_frames) is not int or not 1 <= max_frames <= MAX_FRAMES):
+            or type(max_frames) is not int or not 1 <= max_frames <= MAX_FRAMES
+            or type(diagnostic_trade_stamp) is not bool):
         return LinearWSProof("ws_budget_invalid_abstain", None, 0)
     try:
         topics = reviewed_candidate_topics(at_ms=wall_ms())
@@ -253,4 +305,5 @@ def owner_probe_linear_topics_once(*, allow_public_network: bool = False,
         session_factory = _real_session_factory
     return probe_linear_topics_once(
         session_factory=session_factory, topics=topics, clock=clock,
-        wall_ms=wall_ms, max_seconds=seconds, max_frames=max_frames)
+        wall_ms=wall_ms, max_seconds=seconds, max_frames=max_frames,
+        diagnostic_trade_stamp=diagnostic_trade_stamp)

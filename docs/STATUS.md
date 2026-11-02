@@ -1044,3 +1044,8 @@ A prova pública GitHub WS52 anterior 41492753422 confirmou ACK e frames pós-AC
 ## J1/OPS17 — diagnóstico de validação no fechamento real (02/11/2026)
 
 OPS16 PR #449 integrada em main `145d9074a365f8ba75e8809dd7828bfebe82eb2d`; prova real GitHub runner `41505630514` cruzou janela UTC com sucesso (start 18:59:30Z) e falhou em 19:00:00.429Z: `ws_frame_invalid_abstain` categoria genérica `validate`, 1 ACK, 52 tópicos, 448 frames e 393 válidos após ACK, sem candle fechado comprovado. É erro de validação, **não** prova de incompatibilidade da Bybit nem de falha da VPS. Issue #450/OPS17 branch `work/issue-450-j1-ops17-close-frame-categories` instrumenta apenas categorias allowlist sem dados sensíveis, com testes adversariais. CI/revisão/merge ainda dependem do SHA. Sem repetição de probe, GET REST, dados armazenados ou ordens.
+
+
+## J1/OPS18 — diagnóstico causal do timestamp no rollover (02/11/2026)
+
+Prova real #41514590636 em SHA `bb58414a032fa9848ef9f439e05e29b1e7e01814`: ACK 1, 52/52 tópicos, 702 frames válidos, 0 closes, `clock_trade_stamp` no fechamento 20:00 UTC. Não sabemos se `timestamp` ficou antes de `start` ou depois de `end`, nem se era vela aberta ou fechada. Issue #452/branch `work/issue-452-j1-ops18-close-stamp-diagnostics`: categorias fixas before/after/open/closed, contagem atômica de fechamentos e modo de quarentena observacional opt-in na **mesma** sonda owner-only. O coletor/SQLite mantêm gates originais; testes/CI/merge pendentes de evidência. Não houve execução live OPS18, acesso VPS, ordens ou alteração do histórico REST.

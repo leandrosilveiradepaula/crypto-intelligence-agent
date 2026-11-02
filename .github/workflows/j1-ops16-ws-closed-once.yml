@@ -16,7 +16,7 @@ jobs:
     if: >-
       github.event.issue.number == 429 &&
       github.event.issue.pull_request == null &&
-      github.event.comment.body == '/probe-j1-ws52-closed-once-v1' &&
+      (github.event.comment.body == '/probe-j1-ws52-closed-once-v1' || github.event.comment.body == '/probe-j1-ws52-stamp-diagnostic-once-v1') &&
       github.event.comment.user.login == 'leandrosilveiradepaula' &&
       github.actor == 'leandrosilveiradepaula' &&
       github.repository == 'leandrosilveiradepaula/crypto-intelligence-agent'
@@ -40,9 +40,14 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: "1"
           PYTHONUNBUFFERED: "1"
+          STAMP_DIAGNOSTIC: ${{ github.event.comment.body == '/probe-j1-ws52-stamp-diagnostic-once-v1' }}
         run: |
           set -eu
+          FLAGS=""
+          if [ "$STAMP_DIAGNOSTIC" = "true" ]; then
+            FLAGS="--diagnose-trade-stamps"
+          fi
           python3 -m scripts.probe_bybit_ws_linear_live \
             --allow-public-network --allow-public-websocket \
             --confirm-region-and-personal-research \
-            --seconds 90 --max-frames 8192
+            --seconds 90 --max-frames 8192 $FLAGS

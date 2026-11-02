@@ -1253,3 +1253,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D224 (02/11/2026, J1/OPS17 #450): uma falha real na janela de fechamento UTC só pode promover diagnóstico categórico e sanitizado de validação de kline, usando allowlist existente; não registrar payload, símbolo, OHLC, timestamp exato ou exceção do provedor. Não relaxar controle de relógio, integridade financeira ou `confirm` sem evidência. OPS16 no runner GitHub falhou em 19:00:00 UTC; causa específica ainda desconhecida sem categoria, e protocolo 52 tópicos antes do fechamento permanece comprovado.
+
+
+- D225 (02/11/2026, J1/OPS18 #452): o erro real `clock_trade_stamp` em duas viradas UTC exige distinguir **before/after** do intervalo e **open/closed** sem divulgar timestamps. O validador estrito `_validate_one_kline_row`, a ingestão e a auditoria SQLite mantêm intacto `start <= trade_ms <= end`; nada fora da janela pode ser aceito como candle. Uma opção explícita `--diagnose-trade-stamps`, somente na sonda efêmera WS52 owner-only, coloca esses frames em quarentena estatística e segue para observar outros frames, com resultado `ws_timestamp_diagnostic_unverified`. Contagem de eventos fechados só após validação integral de todas as linhas do frame. Nenhum relaxamento temporal, REST GET, journal, deploy VPS ou ordem real.
