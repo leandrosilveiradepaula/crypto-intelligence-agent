@@ -1,0 +1,44 @@
+name: J1 OPS8 WS52 one-shot public protocol probe (owner-only)
+
+# Explicit owner comment on issue #429 only. Never run on push, PR or schedule.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: j1-ops8-ws52-once
+  cancel-in-progress: false
+
+jobs:
+  ws52-probe:
+    if: >-
+      github.event.issue.number == 429 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-j1-ws52-github-once-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula' &&
+      github.repository == 'leandrosilveiradepaula/crypto-intelligence-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout reviewed default branch without stored credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install free pinned public WS protocol dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+        run: python3 -m pip install --disable-pip-version-check --no-input websockets==15.0.1
+      - name: Probe exactly one public WS subscription (no GET or persistence)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_bybit_ws_linear_live \
+            --allow-public-network --allow-public-websocket \
+            --confirm-region-and-personal-research \
+            --seconds 45 --max-frames 8192
