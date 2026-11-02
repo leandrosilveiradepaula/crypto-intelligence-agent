@@ -350,6 +350,7 @@ class OwnerWSPilotReport:
     scope_epochs: int = 0
     scope_renewed: bool = False
     local_two_hour_continuity: bool = False
+    declared_gap_markers: int = 0
 
     def sanitized_report(self) -> dict:
         return {
@@ -363,6 +364,7 @@ class OwnerWSPilotReport:
             "scope_epochs": self.scope_epochs,
             "scope_renewed": self.scope_renewed,
             "local_two_hour_continuity": self.local_two_hour_continuity,
+            "declared_gap_markers": self.declared_gap_markers,
             "last_evaluated_closed_hour_ms": self.last_evaluated_closed_hour_ms,
             "realtime_stream_verified": False,
             "marketwide_top50_verified": False,
@@ -502,7 +504,8 @@ def run_owner_ws_pilot(*, directory: str | Path,
                                       audited.persisted_rows, decision,
                                       outcome.failure_category,
                                       scope_epochs=len(epochs), scope_renewed=renewed,
-                                      local_two_hour_continuity=locally_contiguous)
+                                      local_two_hour_continuity=locally_contiguous,
+                                      declared_gap_markers=audited.declared_gap_markers)
             _write_private_health(d, report.sanitized_report(), now_ms=now)
             return report
     except J1BybitCaptureError:
