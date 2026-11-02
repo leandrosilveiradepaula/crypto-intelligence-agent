@@ -30,6 +30,7 @@ from .bybit_public_j1_transport import (
 )
 from .bybit_ws_owner_lock import _safe_stat, exclusive_owner_ws_writer
 from .bybit_ws_supervisor import WSRunBudget, supervise_ws_research
+from .j1_ws_hourly_continuity import checkpoint_from_audit, compare_closed_hours
 from .market_data import DataGapError, DataValidationError
 from .research_registry_catalog import load_reviewed_registry
 
@@ -348,6 +349,7 @@ class OwnerWSPilotReport:
     failure_category: str | None = None
     scope_epochs: int = 0
     scope_renewed: bool = False
+    local_two_hour_continuity: bool = False
 
     def sanitized_report(self) -> dict:
         return {
@@ -360,6 +362,7 @@ class OwnerWSPilotReport:
             "journal_rows": self.journal_rows,
             "scope_epochs": self.scope_epochs,
             "scope_renewed": self.scope_renewed,
+            "local_two_hour_continuity": self.local_two_hour_continuity,
             "last_evaluated_closed_hour_ms": self.last_evaluated_closed_hour_ms,
             "realtime_stream_verified": False,
             "marketwide_top50_verified": False,
@@ -444,7 +447,10 @@ def run_owner_ws_pilot(*, directory: str | Path,
                 raise DataValidationError("pilot UTC close safety margin required")
             # Audit ALL existing WS rows against stored scope before new writes;
             # no duplicate producer, registry drift or hidden corrupt rows.
-            _audit_epoch_chain(journal=journal, epochs=epochs, decision=decision, now=now)
+            before_decision, before_now, before_scope = decision, now, scope
+            before_audit = _audit_epoch_chain(
+                journal=journal, epochs=epochs, decision=decision, now=now,
+            )
             if session_factory is None:
                 from .bybit_public_ws_once import _real_session_factory
                 factory = _real_session_factory
@@ -462,6 +468,22 @@ def run_owner_ws_pilot(*, directory: str | Path,
                 raise DataValidationError("pilot UTC close safety margin required")
             audited = _audit_epoch_chain(journal=journal, epochs=epochs,
                                          decision=decision, now=now)
+            # An ACK is not delivery. Only two complete, causally audited
+            # 24h windows with consecutive closed UTC hours and matching PIT
+            # contract identities may be labelled locally continuous.
+            locally_contiguous = False
+            if decision - before_decision == HOUR_MS:
+                prior = checkpoint_from_audit(
+                    audit=before_audit, decision_at_ms=before_decision,
+                    observed_at_ms=before_now, expected_contracts=len(before_scope.contracts),
+                    scope=before_scope,
+                )
+                current = checkpoint_from_audit(
+                    audit=audited, decision_at_ms=decision,
+                    observed_at_ms=now, expected_contracts=len(scope.contracts),
+                    scope=scope,
+                )
+                locally_contiguous = compare_closed_hours(prior, current)["complete_local_windows"]
             if (outcome.sessions_fully_acknowledged == 0 or
                     outcome.status in ("ws_fail_closed_abstain",
                                        "ws_reconnect_budget_exhausted_abstain",
@@ -479,7 +501,8 @@ def run_owner_ws_pilot(*, directory: str | Path,
                                       audited.complete_24h_symbols,
                                       audited.persisted_rows, decision,
                                       outcome.failure_category,
-                                      scope_epochs=len(epochs), scope_renewed=renewed)
+                                      scope_epochs=len(epochs), scope_renewed=renewed,
+                                      local_two_hour_continuity=locally_contiguous)
             _write_private_health(d, report.sanitized_report(), now_ms=now)
             return report
     except J1BybitCaptureError:
