@@ -193,6 +193,58 @@ class LinearLiveProbeTests(unittest.TestCase):
         self.assertEqual(diagnostic.valid_market_frames, 0)
         self.assertEqual(diagnostic.quarantined_open_stamp_frames, 1)
 
+    def test_quarantine_never_masks_malformed_later_row(self):
+        bad_stamp = dict(market()["data"][0], timestamp=START-1)
+        invalid_cases = (
+            dict(market()["data"][0], high="0.1"),
+            dict(market()["data"][0], confirm="true"),
+            dict(market()["data"][0], turnover="secret-nonnumeric"),
+            dict(market()["data"][0], interval="15"),
+            dict(market()["data"][0], surprise="secret"),
+        )
+        for malformed in invalid_cases:
+            with self.subTest(malformed=tuple(malformed)):
+                frame = dict(market(), data=[bad_stamp, malformed])
+                report, _ = self.run_probe([ACK, frame], diagnose=True)
+                self.assertEqual(report.status, "ws_frame_invalid_abstain")
+                self.assertEqual(report.quarantined_open_stamp_frames, 0)
+                self.assertEqual(report.quarantined_closed_stamp_frames, 0)
+                self.assertEqual(report.valid_market_frames, 0)
+                self.assertEqual(report.validated_closed_events, 0)
+                self.assertNotIn("secret", json.dumps(report.sanitized_report()))
+
+    def test_bad_stamp_and_bad_ohlc_on_same_row_still_abstains(self):
+        row = dict(market()["data"][0], timestamp=START-1, high="0.01")
+        result, _ = self.run_probe([ACK, dict(market(), data=[row])], diagnose=True)
+        self.assertEqual(result.status, "ws_frame_invalid_abstain")
+        self.assertEqual(result.failure_category, "kline_ohlc")
+        self.assertEqual(result.quarantined_open_stamp_frames, 0)
+
+    def test_multiple_stamp_anomalies_count_one_frame_per_bucket(self):
+        first = dict(market()["data"][0], timestamp=START-1, confirm=False)
+        second = dict(market(closed=True)["data"][0],
+                      timestamp=START+HOUR_MS, confirm=True)
+        frame = dict(market(), data=[first, second])
+        report, _ = self.run_probe([ACK, frame], diagnose=True)
+        self.assertEqual(report.status, "ws_timestamp_diagnostic_unverified")
+        self.assertEqual(report.quarantined_open_stamp_frames, 1)
+        self.assertEqual(report.quarantined_closed_stamp_frames, 1)
+        self.assertEqual(report.stamp_before_frames, 1)
+        self.assertEqual(report.stamp_after_frames, 1)
+        self.assertEqual(report.valid_market_frames, 0)
+        self.assertEqual(report.validated_closed_events, 0)
+
+    def test_quarantine_then_complete_valid_frame_is_not_certificate(self):
+        anomaly = dict(market(), data=[
+            dict(market()["data"][0], timestamp=START-1)])
+        result, _ = self.run_probe([ACK, anomaly, market(closed=True)], diagnose=True)
+        self.assertEqual(result.quarantined_open_stamp_frames, 1)
+        self.assertEqual(result.valid_market_frames, 1)
+        self.assertEqual(result.validated_closed_events, 1)
+        self.assertEqual(result.status, "ws_timestamp_diagnostic_unverified")
+        self.assertFalse(result.sanitized_report()["all_topics_delivered_verified"])
+        self.assertFalse(result.sanitized_report()["closed_24h_complete"])
+
     def test_unrelated_validation_still_fails_closed_in_diagnostic(self):
         broken = dict(market(), data=[dict(market()["data"][0], high="0.1")])
         report, _ = self.run_probe([ACK, broken], diagnose=True)
