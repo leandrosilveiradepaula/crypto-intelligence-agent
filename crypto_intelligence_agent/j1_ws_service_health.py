@@ -109,6 +109,10 @@ def read_owner_ws_health(directory: str | Path, *, now_ms: int | None = None,
             return _unverified("health_untrusted_abstain")
         missing = report.get("missing_24h_assets")
         complete = report.get("complete_24h_assets")
+        gap_markers = report.get("declared_gap_markers")
+        if gap_markers is not None and (type(gap_markers) is not int
+                                        or not 0 <= gap_markers <= 100_000):
+            return _unverified("health_untrusted_abstain")
         for count in (missing, complete):
             if count is not None and (type(count) is not int or not 0 <= count <= 500):
                 return _unverified("health_untrusted_abstain")
@@ -121,6 +125,7 @@ def read_owner_ws_health(directory: str | Path, *, now_ms: int | None = None,
             "last_sample_status": report["status"],
             "missing_24h_assets": missing,
             "complete_24h_assets": complete,
+            "declared_gap_markers": gap_markers,
         })
         return result
     except (OSError, ValueError, TypeError, UnicodeError, OverflowError):

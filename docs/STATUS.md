@@ -1009,3 +1009,8 @@ Branch `work/issue-429-ops9-hourly-frame-budget` baseada em `main=7dd4224fb9a854
 ## J1/OPS11 #440 — rotação segura ao fechamento UTC (02/11/2026)
 
 Branch `work/issue-440-j1-ops11-utc-lease-rotation`, base main `0e7125693037b04c184396529d5ea9c6e80f906f`: política offline de duração adaptativa do serviço WS para encerrar 3 a ~8m após candle UTC, teste exaustivo 3600 fases, template systemd continua desligado. Código de engenharia, não homologação VPS nem prova marketwide. Aguardam-se PR/CI/revisão/merge no SHA. Histórico EXIT5 intocado; J1 #2/#319 e OPS #429 abertas.
+
+
+## J1/OPS12 #442 — retomada de WS após lacunas (02/11/2026)
+
+Base main `98eba1dbae5b7dbd3a27e0087f6df68fb1594fa3`, branch `work/issue-442-j1-ops12-ws-explicit-gaps`. Modificação offline do journal separado WS: marcadores privados de gap atômicos com candle real, default estrito, opt-in owner pilot; auditoria valida salto e rejeita órfãos, ranking 24h continua abstendo até janela limpa. Testes e docs em revisão/CI; não afirmar PASS/merge sem resultado. Sem SSH/VPS, GET, ordem, custo, deploy ou mudança na SQLite REST EXIT5. J1 #2/#319/#429 permanecem abertas.

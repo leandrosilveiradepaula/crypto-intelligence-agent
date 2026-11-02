@@ -44,7 +44,8 @@ class OfflineWSBatch:
 def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                             scope: OfflineReviewedStreamScope,
                             journal: SQLiteOfflineClosedStreamJournal,
-                            require_ack: bool = True) -> OfflineWSBatch:
+                            require_ack: bool = True,
+                            allow_declared_gap: bool = False) -> OfflineWSBatch:
     """Consume a bounded pre-recorded batch, never making network calls.
 
     Each item carries its explicit receive timestamp, not process wall time.
@@ -52,7 +53,8 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
     """
     if (type(scope) is not OfflineReviewedStreamScope
             or type(journal) is not SQLiteOfflineClosedStreamJournal
-            or type(require_ack) is not bool):
+            or type(require_ack) is not bool
+            or type(allow_declared_gap) is not bool):
         raise DataValidationError("offline WS scope, journal or ACK policy invalid")
     count = opened = appended = replayed = 0
     ack = not require_ack
@@ -126,7 +128,7 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                 raise DataValidationError("offline WS confirm must be boolean")
         # No partially validated frame reaches the journal.
         if pending_closed:
-            outcome = journal.append(pending_closed[0])
+            outcome = journal.append(pending_closed[0], allow_declared_gap=allow_declared_gap)
             if outcome == "appended":
                 appended += 1
             elif outcome == "idempotent":
