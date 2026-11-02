@@ -106,6 +106,8 @@ def _stamp_failure_class(row: dict) -> str:
     if any(type(v) is not int for v in (start, end, stamp)) or type(confirm) is not bool:
         return "clock_trade_stamp"
     direction = "before" if stamp < start else "after" if stamp > end else "unknown"
+    if direction == "unknown":
+        return "clock_trade_stamp"
     state = "closed" if confirm else "open"
     return "clock_trade_stamp_" + direction + "_" + state
 
