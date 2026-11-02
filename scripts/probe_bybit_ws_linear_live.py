@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from crypto_intelligence_agent.bybit_ws_linear_live_probe import owner_probe_linear_topics_once
+from crypto_intelligence_agent.bybit_ws_linear_live_probe import MAX_FRAMES, owner_probe_linear_topics_once
 
 
 def main(argv=None) -> int:
@@ -17,7 +17,7 @@ def main(argv=None) -> int:
     p.add_argument("--allow-public-websocket", action="store_true")
     p.add_argument("--confirm-region-and-personal-research", action="store_true")
     p.add_argument("--seconds", type=int, default=35)
-    p.add_argument("--max-frames", type=int, default=512)
+    p.add_argument("--max-frames", type=int, default=MAX_FRAMES)
     args = p.parse_args(argv)
     report = owner_probe_linear_topics_once(
         allow_public_network=args.allow_public_network,
