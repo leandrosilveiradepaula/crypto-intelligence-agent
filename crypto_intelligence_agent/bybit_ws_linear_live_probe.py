@@ -243,8 +243,8 @@ def probe_linear_topics_once(
                 # No early break: quarantine may be decided only after all
                 # rows pass every non-trade-stamp validation rule.
                 frame_stamp_classes: set[str] = set()
-                frame_open_bands: set[int] = set()
-                frame_closed_bands: set[int] = set()
+                # One worst-case band per frame and open/closed class.
+                frame_open_band = frame_closed_band = -1
                 for row in rows:
                     if type(row) is not dict:
                         raise DataValidationError("LINEAR proof market row invalid")
@@ -266,7 +266,10 @@ def probe_linear_topics_once(
                         frame_stamp_classes.add(stamp_class)
                         if "_after_" in stamp_class:
                             index = _stamp_overrun_band(row)
-                            (frame_closed_bands if row["confirm"] else frame_open_bands).add(index)
+                            if row["confirm"] is True:
+                                frame_closed_band = max(frame_closed_band, index)
+                            else:
+                                frame_open_band = max(frame_open_band, index)
                         continue
                     frame_closed += int(row["confirm"] is True)
                 if frame_stamp_classes:
@@ -274,10 +277,10 @@ def probe_linear_topics_once(
                     quarantine_open += int(any("_open" in x for x in frame_stamp_classes))
                     stamp_before += int(any("_before_" in x for x in frame_stamp_classes))
                     stamp_after += int(any("_after_" in x for x in frame_stamp_classes))
-                    for index in frame_open_bands:
-                        open_bands[index] += 1
-                    for index in frame_closed_bands:
-                        closed_bands[index] += 1
+                    if frame_open_band >= 0:
+                        open_bands[frame_open_band] += 1
+                    if frame_closed_band >= 0:
+                        closed_bands[frame_closed_band] += 1
                     failure = None
                     continue
                 closed += frame_closed
