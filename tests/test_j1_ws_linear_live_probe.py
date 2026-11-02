@@ -243,6 +243,65 @@ class LinearLiveProbeTests(unittest.TestCase):
             _validate_one_kline_row(row, RECEIPT-500, RECEIPT,
                                     diagnostic_ignore_trade_stamp=1)
 
+    def test_stamp_after_excess_bands_at_exact_boundaries(self):
+        buckets = (
+            (1, "1ms"), (2, "2_1000ms"), (1000, "2_1000ms"),
+            (1001, "1001_5000ms"), (5000, "1001_5000ms"),
+            (5001, "over_5000ms"),
+        )
+        for closed in (False, True):
+            for delta, expected in buckets:
+                with self.subTest(closed=closed, delta=delta):
+                    row = dict(market(closed=closed)["data"][0],
+                               timestamp=START+HOUR_MS-1+delta)
+                    bad = dict(market(closed=closed), data=[row])
+                    report, _ = self.run_probe([ACK, bad], diagnose=True)
+                    self.assertEqual(report.status, "ws_timestamp_diagnostic_unverified")
+                    self.assertEqual(report.valid_market_frames, 0)
+                    self.assertEqual(report.validated_closed_events, 0)
+                    key = ("stamp_after_closed_excess_bands" if closed
+                           else "stamp_after_open_excess_bands")
+                    bins = report.sanitized_report()[key]
+                    self.assertEqual(sum(bins.values()), 1)
+                    self.assertEqual(bins[expected], 1)
+                    serialized = json.dumps(report.sanitized_report())
+                    self.assertNotIn(str(START), serialized)
+                    self.assertNotIn("USDT", serialized)
+
+    def test_stamp_bands_count_one_frame_using_max_excess_per_state(self):
+        base = START+HOUR_MS-1
+        rows = [
+            dict(market(closed=True)["data"][0], timestamp=base+1, confirm=True),
+            dict(market(closed=True)["data"][0], timestamp=base+5001, confirm=True),
+            dict(market(closed=False)["data"][0], timestamp=base+1000, confirm=False),
+        ]
+        report, _ = self.run_probe([ACK, dict(market(), data=rows)], diagnose=True)
+        bins = report.sanitized_report()
+        self.assertEqual(sum(bins["stamp_after_closed_excess_bands"].values()), 1)
+        self.assertEqual(sum(bins["stamp_after_open_excess_bands"].values()), 1)
+        self.assertEqual(bins["stamp_after_closed_excess_bands"]["over_5000ms"], 1)
+        self.assertEqual(bins["stamp_after_open_excess_bands"]["2_1000ms"], 1)
+        self.assertEqual(report.stamp_after_frames, 1)
+        self.assertEqual(report.validated_closed_events, 0)
+
+    def test_excess_bands_only_after_all_rows_pass_nonstamp_validation(self):
+        base = START+HOUR_MS-1
+        anomaly = dict(market(closed=True)["data"][0], timestamp=base+5001)
+        malformed = dict(market()["data"][0], high="0.10")
+        report, _ = self.run_probe(
+            [ACK, dict(market(), data=[anomaly, malformed])], diagnose=True)
+        self.assertEqual(report.status, "ws_frame_invalid_abstain")
+        self.assertEqual(report.quarantined_closed_stamp_frames, 0)
+        self.assertEqual(sum(report.stamp_after_closed_bands), 0)
+        self.assertEqual(report.validated_closed_events, 0)
+
+    def test_before_start_never_promotes_to_after_bands(self):
+        row = dict(market()["data"][0], timestamp=START-1)
+        report, _ = self.run_probe([ACK, dict(market(), data=[row])], diagnose=True)
+        self.assertEqual(report.stamp_before_frames, 1)
+        self.assertEqual(sum(report.stamp_after_open_bands), 0)
+        self.assertEqual(sum(report.stamp_after_closed_bands), 0)
+
     def test_unrelated_validation_still_fails_closed_in_diagnostic(self):
         broken = dict(market(), data=[dict(market()["data"][0], high="0.1")])
         report, _ = self.run_probe([ACK, broken], diagnose=True)
