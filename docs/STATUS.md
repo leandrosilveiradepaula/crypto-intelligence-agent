@@ -1004,3 +1004,8 @@ Base main `b46424485e911dd4daebed8c35729ec0161b4ed7`; branch `work/issue-429-ops
 ## J1/OPS9 #429 — envelope de frames proporcional ao lease (01/11/2026)
 
 Branch `work/issue-429-ops9-hourly-frame-budget` baseada em `main=7dd4224fb9a854e31d4f9c2d92ee3868ac38d704`, engenharia sem deploy. Serviço OPS6 configurava 3.300 segundos mas usava orçamento implícito de 4.096 frames; OPS9 explicita até 175.696 frames para os 52 tópicos e transforma esgotamento precoce em abstenção / exit 66 sem reinício automático. Default da sonda curta mantido. CI/revisão/merge ainda a comprovar. Prova real VPS 37.470 candles/2 PIT EXIT5 permanece; J1 #2, #319 e OPS1 #429 abertas. Detecção de gaps, retenção, homologação VPS e Top50 global ainda não concluídas.
+
+
+## J1/OPS11 #440 — rotação segura ao fechamento UTC (02/11/2026)
+
+Branch `work/issue-440-j1-ops11-utc-lease-rotation`, base main `0e7125693037b04c184396529d5ea9c6e80f906f`: política offline de duração adaptativa do serviço WS para encerrar 3 a ~8m após candle UTC, teste exaustivo 3600 fases, template systemd continua desligado. Código de engenharia, não homologação VPS nem prova marketwide. Aguardam-se PR/CI/revisão/merge no SHA. Histórico EXIT5 intocado; J1 #2/#319 e OPS #429 abertas.

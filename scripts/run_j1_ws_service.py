@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 from typing import Callable
 
 OK = 0
@@ -62,6 +63,8 @@ def execute_owner_service_lease(*, directory: str, seconds: int,
                                 allow_public_websocket: bool = False,
                                 allow_private_storage: bool = False,
                                 confirm_region_and_personal_research: bool = False,
+                                rotate_after_close: bool = False,
+                                clock_ms: Callable[[], int] | None = None,
                                 runner: Callable | None = None,
                                 budget_factory: Callable | None = None,
                                 owner_check: Callable[[], bool] | None = None,
@@ -72,13 +75,21 @@ def execute_owner_service_lease(*, directory: str, seconds: int,
                 confirm_region_and_personal_research is True)):
         return OWNER_GATE_REQUIRED, "owner_opt_in_required", None
     if (type(directory) is not str or not directory.startswith("/")
-            or type(seconds) is not int or not 300 <= seconds <= 3_590):
+            or type(seconds) is not int or not 300 <= seconds <= 3_590
+            or type(rotate_after_close) is not bool
+            or (rotate_after_close and seconds != 3590)
+            or (clock_ms is not None and not callable(clock_ms))):
         return INVALID_ARGUMENTS, "ws_service_invalid_configuration", None
     if owner_check is None:
         owner_check = lambda: os.name == "posix" and os.geteuid() != 0
     if not owner_check():
         return OWNER_GATE_REQUIRED, "owner_posix_unprivileged_required", None
     try:
+        effective_seconds = seconds
+        if rotate_after_close:
+            from crypto_intelligence_agent.j1_ws_utc_lease_rotation import plan_post_close_lease
+            read_clock = clock_ms if clock_ms is not None else lambda: time.time_ns() // 1_000_000
+            effective_seconds = plan_post_close_lease(now_utc_ms=read_clock(), max_seconds=seconds)
         if runner is None:
             from crypto_intelligence_agent.bybit_ws_owner_pilot import run_owner_ws_pilot
             runner = run_owner_ws_pilot
@@ -88,8 +99,8 @@ def execute_owner_service_lease(*, directory: str, seconds: int,
         # A 52-topic 55-minute service lease needs up to ~171,600 market
         # frames at the venue's documented 1s minimum push interval. The
         # default 4,096-frame research lease must not govern service lifetime.
-        frame_budget = SERVICE_REVIEWED_TOPIC_BUDGET * seconds + SERVICE_FRAME_CONTROL_RESERVE
-        budget = budget_factory(max_seconds=seconds, max_frames=frame_budget)
+        frame_budget = SERVICE_REVIEWED_TOPIC_BUDGET * effective_seconds + SERVICE_FRAME_CONTROL_RESERVE
+        budget = budget_factory(max_seconds=effective_seconds, max_frames=frame_budget)
         outcome = runner(
             directory=directory,
             budget=budget,
@@ -111,6 +122,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", required=True)
     parser.add_argument("--seconds", type=int, default=3300)
+    parser.add_argument("--rotate-after-close", action="store_true")
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--allow-public-websocket", action="store_true")
     parser.add_argument("--allow-private-storage", action="store_true")
@@ -118,6 +130,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     code, status, failure = execute_owner_service_lease(
         directory=args.directory, seconds=args.seconds,
+        rotate_after_close=args.rotate_after_close,
         allow_public_network=args.allow_public_network,
         allow_public_websocket=args.allow_public_websocket,
         allow_private_storage=args.allow_private_storage,

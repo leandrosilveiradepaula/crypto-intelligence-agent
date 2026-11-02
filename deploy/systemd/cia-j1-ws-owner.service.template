@@ -14,7 +14,7 @@ User=@OWNER_USER@
 WorkingDirectory=@REPO_ROOT@
 Environment=PYTHONDONTWRITEBYTECODE=1
 UMask=0077
-ExecStart=@PYTHON_BIN@ -m scripts.run_j1_ws_service --directory @PRIVATE_DIR@ --seconds 3300 --allow-public-network --allow-public-websocket --allow-private-storage --confirm-region-and-personal-research
+ExecStart=@PYTHON_BIN@ -m scripts.run_j1_ws_service --directory @PRIVATE_DIR@ --seconds 3590 --rotate-after-close --allow-public-network --allow-public-websocket --allow-private-storage --confirm-region-and-personal-research
 Restart=always
 RestartSec=30s
 # 64 invalid config, 65 Bybit quota/denial, 66 integrity, 77 no owner permission, 130 operator stop.
