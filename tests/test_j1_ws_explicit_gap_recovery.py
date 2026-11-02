@@ -5,6 +5,7 @@ import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from crypto_intelligence_agent.bybit_closed_stream_cache import HOUR_MS, SQLiteOfflineClosedStreamJournal
 from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
@@ -88,8 +89,9 @@ class GapRecoveryTests(unittest.TestCase):
 
     def test_gap_budget_and_untrusted_boolean(self):
         self.add(0)
-        with self.assertRaises(DataGapError):
-            self.add(170, allow=True)
+        with patch("crypto_intelligence_agent.bybit_closed_stream_cache.MAX_DECLARED_GAP_HOURS", 1):
+            with self.assertRaises(DataGapError):
+                self.add(3, allow=True)
         with self.assertRaises(DataValidationError):
             self.db.append(event("BTCUSDT", self.first+2*HOUR_MS, self.scope),
                            allow_declared_gap=1)
