@@ -186,6 +186,8 @@ class RenderUnitTests(unittest.TestCase):
         for flag in ('--allow-public-network', '--allow-public-websocket',
                      '--allow-private-storage', '--confirm-region-and-personal-research'):
             self.assertIn(flag, out)
+        self.assertIn('--seconds 3590 --rotate-after-close', out)
+        self.assertIn('RestartSec=30s', out)
         self.assertIn('Restart=always', out)
         self.assertIn('RestartPreventExitStatus=64 65 66 77 130', out)
         self.assertIn('StartLimitBurst=6', out)
