@@ -1024,3 +1024,8 @@ Branch `work/issue-444-j1-ops13-private-readiness`, base `main=8e37e0e4e7bf78831
 ## J1/OPS14 — corrigir teto do probe WS real (02/11/2026)
 
 Base GitHub `cf35e2acefe05f47be2fabed09b066976f0243b6`, branch `work/issue-429-ops14-live-probe-frame-budget`: a OPS8 mantém prova única read-only de 52 tópicos, mas sobe cap de 1024 para 8192 frames (52×90s) e diferencia saturação antecipada como abstenção. Testes adversariais e CLI/documentação atualizados. CI, revisão SHA e merge ainda pendentes. A VPS não foi acessada, #429/#319/#2 seguem abertas.
+
+
+## J1/OPS15 — prova GitHub-only WS52, isolada da VPS (02/11/2026)
+
+Base main `85c87d5c36ba12b1a3dc04cd816f166e0642c3c2`, branch `work/issue-429-ops8-github-ws52-one-shot`. Workflow owner-only por comentário exato em #429 prepara uma única sonda pública de 45s com até 8192 frames no runner efêmero e logs sanitizados. Testes estáticos, decisão D222 e contrato OPS8 alterados. PR/CI/revisão/merge e execução real ainda por comprovar; VPS e SQLite REST não foram acessados. Validade do registro encerra em 05/11/2026 15:27:39 UTC. J1 #2, universo #319, OPS #429 abertas.
