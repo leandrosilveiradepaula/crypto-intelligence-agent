@@ -1034,3 +1034,8 @@ Base main `85c87d5c36ba12b1a3dc04cd816f166e0642c3c2`, branch `work/issue-429-ops
 ## J1/OPS15 — protocolo público WS52 comprovado no GitHub, VPS pendente (02/11/2026)
 
 Workflow owner-only #41492753422 SUCCESS no `main=ed1f3235445741e82a82b68e7cb3f43aec5e0797`: 52 tópicos solicitados, ACK=1, frames totais=1.069, frames válidos pós-ACK=1.014, 52 tópicos distintos observados, 0 velas fechadas durante 45s. Fonte rede do runner GitHub, não VPS; sem SQLite/REST/ordens/credenciais. `all_topics_delivered_verified=false` e `marketwide_top50_verified=false`; Top50 #319/J1 #2/OPS #429 continuam abertas. A sonda pública não precisa ser repetida para a mesma prova de protocolo. CI pré-merge PR #447 verde; pós-merge validar SHA/run. Próximo gate real: homologar em VPS owner-only sem recomeçar EXIT5; registrar ACK, closes UTC, integridade 24h e soak controlado.
+
+
+## J1/OPS16 — prova de candle fechado ao cruzar UTC (02/11/2026)
+
+A prova pública GitHub WS52 anterior 41492753422 confirmou ACK e frames pós-ACK de 52 candidatos, mas nenhuma vela `confirm=true` em 45s. OPS16 branch `work/issue-429-ops16-hour-close-proof` prepara uma execução **única**, comentário exato owner-only #429, espera UTC limitada 20min, inicia 30s antes do próximo fechamento, recebe 90s/8192 frames e reporta somente contagens sanitizadas. Nenhum serviço contínuo, credencial, REST, persistência, ordem ou uso da VPS. CI/merge e execução real ainda pendentes até evidência. Top50 #319 e J1 #2 permanecem abertas.
