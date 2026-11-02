@@ -1049,3 +1049,8 @@ OPS16 PR #449 integrada em main `145d9074a365f8ba75e8809dd7828bfebe82eb2d`; prov
 ## J1/OPS18 — diagnóstico causal do timestamp no rollover (02/11/2026)
 
 Prova real #41514590636 em SHA `bb58414a032fa9848ef9f439e05e29b1e7e01814`: ACK 1, 52/52 tópicos, 702 frames válidos, 0 closes, `clock_trade_stamp` no fechamento 20:00 UTC. Não sabemos se `timestamp` ficou antes de `start` ou depois de `end`, nem se era vela aberta ou fechada. Issue #452/branch `work/issue-452-j1-ops18-close-stamp-diagnostics`: categorias fixas before/after/open/closed, contagem atômica de fechamentos e modo de quarentena observacional opt-in na **mesma** sonda owner-only. O coletor/SQLite mantêm gates originais; testes/CI/merge pendentes de evidência. Não houve execução live OPS18, acesso VPS, ordens ou alteração do histórico REST.
+
+
+## J1/OPS19 — quarentena sem ocultar erros adicionais (02/11/2026)
+
+Durante revisão da OPS18 no `main=cd256e1329c232cc450f481f69b5175c0bbab301`, observou-se que a sonda diagnóstica interrompia exame das linhas do frame no primeiro timestamp inválido. Issue #455 corrige esse caminho: checagem das demais condições da linha e todas as linhas posteriores antes de quarentena; qualquer outro defeito segue fail-closed; contadores agregados por frame, sem preço, símbolo, timestamp ou aprovação. Branch `work/issue-455-j1-ops19-atomic-diagnostic-frame`; CI/revisão/merge ainda pendentes. Prova OPS18 já em curso #41521829843 não alterada em voo.
