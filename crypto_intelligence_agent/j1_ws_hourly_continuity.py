@@ -5,10 +5,8 @@ This gate does not authenticate marketwide Top50 or a running service.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Callable
-
-from .bybit_closed_stream_cache import HOUR_MS, OfflineStreamAudit
+from dataclasses import dataclass, field
+from .bybit_closed_stream_cache import HOUR_MS, OfflineStreamAudit, OfflineReviewedStreamScope, _scope_contract_fingerprint
 from .market_data import DataValidationError
 
 
@@ -21,6 +19,7 @@ class HourlyContinuityCheckpoint:
     missing_contracts: int
     journal_digest_sha256: str
     rank_digest_sha256: str | None
+    private_scope_fingerprint: tuple = field(repr=False)
 
     def sanitized_report(self) -> dict:
         return {
@@ -29,7 +28,7 @@ class HourlyContinuityCheckpoint:
             "expected_contracts": self.expected_contracts,
             "complete_contracts": self.complete_contracts,
             "missing_contracts": self.missing_contracts,
-            "continuity_verified": self.missing_contracts == 0,
+            "continuity_verified": False,  # single snapshot never certifies continuity
             "marketwide_top50_verified": False,
             "source_authenticated": False,
             "orders_sent": False,
@@ -37,10 +36,13 @@ class HourlyContinuityCheckpoint:
 
 
 def checkpoint_from_audit(*, audit: OfflineStreamAudit, decision_at_ms: int,
-                          observed_at_ms: int, expected_contracts: int
+                          observed_at_ms: int, expected_contracts: int,
+                          scope: OfflineReviewedStreamScope
                           ) -> HourlyContinuityCheckpoint:
     """Require complete local 24h window; never infer delivery from subscribe ACK."""
-    if (type(audit) is not OfflineStreamAudit
+    if (type(scope) is not OfflineReviewedStreamScope
+            or len(scope.contracts) != expected_contracts
+            or type(audit) is not OfflineStreamAudit
             or type(decision_at_ms) is not int or decision_at_ms <= 0
             or decision_at_ms % HOUR_MS
             or type(observed_at_ms) is not int
@@ -54,10 +56,11 @@ def checkpoint_from_audit(*, audit: OfflineStreamAudit, decision_at_ms: int,
             or type(audit.journal_digest_sha256) is not str
             or len(audit.journal_digest_sha256) != 64):
         raise DataValidationError("untrusted hourly continuity audit")
+    fingerprint = _scope_contract_fingerprint(scope)
     return HourlyContinuityCheckpoint(
         decision_at_ms, observed_at_ms, expected_contracts,
         audit.complete_24h_symbols, audit.missing_24h_symbols,
-        audit.journal_digest_sha256, audit.rank_digest_sha256,
+        audit.journal_digest_sha256, audit.rank_digest_sha256, fingerprint,
     )
 
 
@@ -74,6 +77,7 @@ def compare_closed_hours(previous: HourlyContinuityCheckpoint,
     valid = (consecutive
              and previous.observed_at_ms < current.observed_at_ms
              and previous.expected_contracts == current.expected_contracts
+             and previous.private_scope_fingerprint == current.private_scope_fingerprint
              and previous.missing_contracts == 0
              and current.missing_contracts == 0
              and previous.complete_contracts == previous.expected_contracts
