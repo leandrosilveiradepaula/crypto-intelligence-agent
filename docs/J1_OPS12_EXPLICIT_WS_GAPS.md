@@ -26,3 +26,9 @@ CI Linux/docs, Windows/offline, Chrome/PAPER, revisão de compatibilidade, SHA d
 ## Limites relevantes
 
 Não existe reconciliação REST de candles ausentes nesta OPS. A antiga lacuna continua explicitamente registrada, sem preencher o OHLC. O limite de 168 horas exige nova intervenção técnica controlada se ultrapassado; não contornar com zero/reset. O teto de 100.000 linhas permanece e requer política de retenção futura. J1 #2/#319/#429 continuam abertas até cobertura real e homologação VPS. Nenhuma ordem real, credencial, deploy ou gasto.
+
+## Observabilidade privada
+
+O auditor publica somente `declared_gap_markers` agregado, sem símbolos, OHLC ou turnover. O relatório do piloto owner-only propaga o contador e o leitor de health valida intervalo 0..100000; mesmo fresco, esse último JSON informa `worker_running_verified=false`, `realtime_stream_verified=false` e `marketwide_top50_verified=false`. Nenhum contador de lacunas permite inferir saúde do processo ou substituir a grade 24h.
+
+O digest antigo do diário sem lacunas é preservado byte a byte. Apenas um diário com marcador explícito inclui marcadores no hash, para não invalidar fingerprints anteriores sem necessidade.
