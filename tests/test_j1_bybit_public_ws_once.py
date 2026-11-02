@@ -32,6 +32,31 @@ class Tests(unittest.TestCase):
         self.assertNotIn("private",str(report))
         self.assertNotIn("BTCUSDT",str(report))
         return report
+    def test_trade_stamp_skip_is_diagnostic_only_explicit(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import _validate_one_kline_row
+        from crypto_intelligence_agent.market_data import DataValidationError
+        row = dict(frame()["data"][0], timestamp=FIRST-1)
+        with self.assertRaises(DataValidationError):
+            _validate_one_kline_row(row, FIRST+HOUR_MS+1200, FIRST+HOUR_MS+2000)
+        self.assertTrue(_validate_one_kline_row(
+            row, FIRST+HOUR_MS+1200, FIRST+HOUR_MS+2000,
+            enforce_trade_stamp=False))
+        for invalid in (
+            dict(row, high="1"),
+            dict(row, confirm="true"),
+            dict(row, volume="not-a-decimal"),
+            dict(row, interval="15"),
+            dict(row, end=FIRST+HOUR_MS),
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(DataValidationError):
+                _validate_one_kline_row(
+                    invalid, FIRST+HOUR_MS+1200, FIRST+HOUR_MS+2000,
+                    enforce_trade_stamp=False)
+        with self.assertRaises(DataValidationError):
+            _validate_one_kline_row(
+                row, FIRST+HOUR_MS+1200, FIRST+HOUR_MS+2000,
+                enforce_trade_stamp=0)
+
     def test_closed_success(self):
         x=self.call([ACK,frame()]);self.assertEqual(x["confirmed_closed_events"],1)
         self.assertEqual(x["status"],"ws_one_closed_hour_observed_only")
