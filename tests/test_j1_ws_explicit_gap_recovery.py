@@ -1,6 +1,7 @@
 """OPS12: transactional gap markers, no fabricated bars and eventual recovery."""
 from contextlib import closing
 import json
+from hashlib import sha256
 import sqlite3
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -34,6 +35,16 @@ class GapRecoveryTests(unittest.TestCase):
     def gaps(self):
         with closing(sqlite3.connect(self.path)) as db:
             return db.execute("SELECT key,value FROM meta WHERE key LIKE 'gap:%'").fetchall()
+
+    def test_gap_free_journal_digest_stays_backward_compatible(self):
+        self.add(0)
+        payload = {"rows": [["BTCUSDT", self.first,
+                             event("BTCUSDT", self.first, self.scope).digest]],
+                   "schema": "j1-bybit-ws-closed-fixture-v1"}
+        canonical = json.dumps(payload, sort_keys=True, ensure_ascii=True,
+                               separators=(",", ":"), allow_nan=False)
+        self.assertEqual(self.audit().journal_digest_sha256,
+                         sha256(canonical.encode("ascii")).hexdigest())
 
     def test_default_strict_and_single_gap_replay_idempotence(self):
         self.add(0)
