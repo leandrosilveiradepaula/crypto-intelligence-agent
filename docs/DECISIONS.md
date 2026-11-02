@@ -1241,3 +1241,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D220 (02/11/2026, J1/OPS13 #444): saúde privada da coleta WS exige relatório somente leitura de janela 24h por PIT e capacidade restante do SQLite; limite de 100.000 linhas, projeção inteira `remaining_rows // (reviewed_contracts*24)` com alerta quando <=7 dias. Um snapshot completo e último health recente NÃO verificam PID, serviço 24/7, origem autenticada ou Top50 marketwide. Sem limpeza/retention automática, REST GET, deploy, ordens, migração ou gasto. Ação no host ainda requer gate owner-only.
+
+
+- D221 (02/11/2026, J1/OPS14 #429): sonda owner-only OPS8 de 52 tópicos requer limite de frames coerente com até 90s de tráfego (8192 frames) e deve classificar esgotamento antecipado como abstenção, jamais como observação concluída. Uma única sessão; sem retry, GET REST, persistência, ordens, credenciais ou deploy. A validação de CI não comprova conexão real, origem de dados nem Top50.

@@ -147,6 +147,25 @@ class LinearLiveProbeTests(unittest.TestCase):
                 self.assertEqual(r.status, "ws_frame_invalid_abstain")
                 self.assertEqual(r.validated_closed_events, 0)
 
+    def test_frame_cap_before_deadline_is_abstention_not_success(self):
+        result, session = self.run_probe(
+            [ACK, market(closed=False), market(closed=False)],
+            seconds=20, frames=3,
+        )
+        self.assertEqual(result.status, "ws_frame_budget_exhausted_abstain")
+        self.assertEqual(result.failure_category, "frame_budget")
+        self.assertEqual(result.subscription_acks, 1)
+        self.assertEqual(result.valid_market_frames, 2)
+        self.assertFalse(result.sanitized_report()["all_topics_delivered_verified"])
+        self.assertTrue(session.closed)
+
+    def test_service_sized_live_probe_budget_is_bounded(self):
+        from crypto_intelligence_agent.bybit_ws_linear_live_probe import MAX_FRAMES
+        self.assertGreaterEqual(MAX_FRAMES, 52 * 90)
+        self.assertLessEqual(MAX_FRAMES, 8192)
+        result, _ = self.run_probe([ACK], seconds=4, frames=MAX_FRAMES)
+        self.assertEqual(result.status, "ws_ack_only_unverified")
+
     def test_failed_socket_does_not_retry(self):
         result, _ = self.run_probe([ACK, OSError("offline EOF secret")])
         self.assertEqual(result.status, "ws_transport_abstain")

@@ -1019,3 +1019,8 @@ Base main `98eba1dbae5b7dbd3a27e0087f6df68fb1594fa3`, branch `work/issue-442-j1-
 ## OPS13 #444 — diagnóstico WS privado de 24h e capacidade (02/11/2026)
 
 Branch `work/issue-444-j1-ops13-private-readiness`, base `main=8e37e0e4e7bf78831f15cf9ba08ad92d6e755329`. Implementado auditor read-only owner-only com integridade do journal WS, escopo PIT, grade 24h, gaps, contagem de linhas e projeção de dias; testes POSIX offline e documentação, CI/merge ainda a validar. Sem rede/SQLite REST, ordens ou deploy. J1 #2/#319/#429 ainda abertas, VPS não homologada.
+
+
+## J1/OPS14 — corrigir teto do probe WS real (02/11/2026)
+
+Base GitHub `cf35e2acefe05f47be2fabed09b066976f0243b6`, branch `work/issue-429-ops14-live-probe-frame-budget`: a OPS8 mantém prova única read-only de 52 tópicos, mas sobe cap de 1024 para 8192 frames (52×90s) e diferencia saturação antecipada como abstenção. Testes adversariais e CLI/documentação atualizados. CI, revisão SHA e merge ainda pendentes. A VPS não foi acessada, #429/#319/#2 seguem abertas.
