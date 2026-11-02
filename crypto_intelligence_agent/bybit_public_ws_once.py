@@ -221,6 +221,7 @@ def _validate_kline_row_after_trade_stamp(row: dict, server: int, received_ms: i
     Diagnostic caller must invoke this exclusively after catching an exact
     trade-stamp range failure, and must never promote a quarantined candle.
     """
+    end = row["end"]
     if server > received_ms + 5000:
         raise DataValidationError("ws_clock_server_ahead_invalid")
     if received_ms - server > 30000:
