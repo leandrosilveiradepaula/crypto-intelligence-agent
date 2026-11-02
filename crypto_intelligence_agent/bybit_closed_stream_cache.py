@@ -35,6 +35,8 @@ MAX_SERVER_SKEW_MS = 30_000
 MAX_SCOPE_AGE_MS = 7 * 86_400_000
 MAX_FRAME_BYTES = 16_384
 MAX_JOURNAL_ROWS = 100_000
+MAX_DECLARED_GAP_HOURS = 168
+_GAP_KEY_PREFIX = 'gap:'
 MAX_SCOPE_CONTRACTS = 500
 MAX_PIT_SCOPES = 64
 HISTORICAL_HOURS = 720
@@ -416,17 +418,22 @@ class SQLiteOfflineClosedStreamJournal:
             objects = set(db.execute(
                 "SELECT type, name FROM sqlite_master "
                 "WHERE type IN ('table', 'trigger', 'view')"))
-            if meta != [("schema", _VERSION)] or objects != {
-                ("table", "meta"), ("table", "confirmed")
-            }:
+            if (not meta or ("schema", _VERSION) not in meta
+                    or len(meta) != len(set(key for key, _ in meta))
+                    or any(key != "schema" and not key.startswith(_GAP_KEY_PREFIX)
+                           for key, _ in meta)
+                    or len(meta) > MAX_JOURNAL_ROWS + 1 or objects != {
+                        ("table", "meta"), ("table", "confirmed")
+                    }):
                 raise DataGapError("offline journal schema mismatch")
         except sqlite3.DatabaseError:
             raise DataGapError("offline journal schema unreadable") from None
 
-    def append(self, event: OfflineConfirmedKline) -> str:
+    def append(self, event: OfflineConfirmedKline, *, allow_declared_gap: bool = False) -> str:
         if (type(event) is not OfflineConfirmedKline
                 or type(event.open_ms) is not int
-                or type(event.received_ms) is not int):
+                or type(event.received_ms) is not int
+                or type(allow_declared_gap) is not bool):
             raise DataValidationError("only parsed confirmed offline kline may be appended")
         payload = _validated_payload(event.payload, event.digest)
         if (payload["symbol"] != event.symbol
@@ -462,10 +469,24 @@ class SQLiteOfflineClosedStreamJournal:
                             or old["received_ms"] != newest[1]
                             or old["registry_sha256"] != newest[2]):
                         raise DataGapError("offline predecessor was corrupted")
-                if newest and (event.open_ms != newest[0] + HOUR_MS
-                               or event.received_ms <= newest[1]
-                               or event.registry_sha256 != newest[2]):
-                    raise DataGapError("offline kline gap, backfill or registry drift: abstain")
+                if newest and (event.received_ms <= newest[1]
+                               or event.registry_sha256 != newest[2]
+                               or event.open_ms <= newest[0]):
+                    raise DataGapError("offline kline backfill or registry drift: abstain")
+                if newest and event.open_ms != newest[0] + HOUR_MS:
+                    skipped = (event.open_ms - newest[0]) // HOUR_MS - 1
+                    if (not allow_declared_gap or skipped < 1
+                            or skipped > MAX_DECLARED_GAP_HOURS
+                            or event.open_ms - newest[0] != (skipped + 1) * HOUR_MS):
+                        raise DataGapError("offline kline gap exceeds declared budget: abstain")
+                    # Same transaction as the first real post-gap candle. The
+                    # marker records absence, never a synthetic bar or backfill.
+                    gap_key = f"{_GAP_KEY_PREFIX}{event.symbol}:{event.open_ms}"
+                    gap_value = _json({
+                        "previous_open_ms": newest[0],
+                        "missing_hours": skipped,
+                    })
+                    db.execute("INSERT INTO meta VALUES (?, ?)", (gap_key, gap_value))
                 db.execute(
                     "INSERT INTO confirmed VALUES (?, ?, ?, ?, ?, ?)",
                     (event.symbol, event.open_ms, event.received_ms,
@@ -502,6 +523,10 @@ class SQLiteOfflineClosedStreamJournal:
                 if db.execute("PRAGMA integrity_check").fetchone() != ("ok",):
                     raise DataGapError("offline journal integrity check failed")
                 self._check_schema(db)
+                gap_meta = db.execute(
+                    "SELECT key, value FROM meta WHERE key LIKE 'gap:%'"
+                ).fetchall()
+                expected_gaps = {}
                 rows = db.execute(
                     "SELECT symbol, open_ms, received_ms, registry_sha256, payload, digest "
                     "FROM confirmed ORDER BY symbol, open_ms"
@@ -532,13 +557,26 @@ class SQLiteOfflineClosedStreamJournal:
                             or data["scope_observed_ms"] != expected_scope_ms):
                         raise DataGapError("offline journal membership/identity changed")
                     earlier = last.get(symbol)
-                    if earlier and (open_ms != earlier[0] + HOUR_MS
-                                    or received_ms <= earlier[1]):
-                        raise DataGapError("offline journal chronology or gap detected")
+                    if earlier and received_ms <= earlier[1]:
+                        raise DataGapError("offline journal receipt chronology invalid")
+                    if earlier and open_ms != earlier[0] + HOUR_MS:
+                        skipped = (open_ms - earlier[0]) // HOUR_MS - 1
+                        if (skipped < 1 or skipped > MAX_DECLARED_GAP_HOURS
+                                or open_ms - earlier[0] != (skipped + 1) * HOUR_MS):
+                            raise DataGapError("offline journal gap outside bounded policy")
+                        expected_gaps[f"{_GAP_KEY_PREFIX}{symbol}:{open_ms}"] = _json({
+                            "previous_open_ms": earlier[0], "missing_hours": skipped,
+                        })
                     last[symbol] = (open_ms, received_ms)
                     by_symbol.setdefault(symbol, {})[open_ms] = data
                     summary.append([symbol, open_ms, digest])
-                journal_digest = _sha(_json({"rows": summary, "schema": _VERSION}))
+                if (len(gap_meta) != len(expected_gaps)
+                        or dict(gap_meta) != expected_gaps):
+                    raise DataGapError("offline journal gap markers missing, orphaned or tampered")
+                journal_digest = _sha(_json({
+                    "rows": summary, "gaps": sorted(expected_gaps.items()),
+                    "schema": _VERSION,
+                }))
                 missing = 0
                 values: list[tuple[str, Decimal]] = []
                 required = range(decision_at_ms - 24 * HOUR_MS,
