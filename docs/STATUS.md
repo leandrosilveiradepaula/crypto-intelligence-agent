@@ -1014,3 +1014,8 @@ Branch `work/issue-440-j1-ops11-utc-lease-rotation`, base main `0e7125693037b04c
 ## J1/OPS12 #442 — retomada de WS após lacunas (02/11/2026)
 
 Base main `98eba1dbae5b7dbd3a27e0087f6df68fb1594fa3`, branch `work/issue-442-j1-ops12-ws-explicit-gaps`. Modificação offline do journal separado WS: marcadores privados de gap atômicos com candle real, default estrito, opt-in owner pilot; auditoria valida salto e rejeita órfãos, ranking 24h continua abstendo até janela limpa. Testes e docs em revisão/CI; não afirmar PASS/merge sem resultado. Sem SSH/VPS, GET, ordem, custo, deploy ou mudança na SQLite REST EXIT5. J1 #2/#319/#429 permanecem abertas.
+
+
+## OPS13 #444 — diagnóstico WS privado de 24h e capacidade (02/11/2026)
+
+Branch `work/issue-444-j1-ops13-private-readiness`, base `main=8e37e0e4e7bf78831f15cf9ba08ad92d6e755329`. Implementado auditor read-only owner-only com integridade do journal WS, escopo PIT, grade 24h, gaps, contagem de linhas e projeção de dias; testes POSIX offline e documentação, CI/merge ainda a validar. Sem rede/SQLite REST, ordens ou deploy. J1 #2/#319/#429 ainda abertas, VPS não homologada.
