@@ -271,6 +271,29 @@ class LinearLiveProbeTests(unittest.TestCase):
         self.assertEqual(result.sanitized_report()["stamp_overrun_open_bands"]["2_to_1000ms"], 1)
         self.assertEqual(result.valid_market_frames, 0)
 
+    def test_multirow_distinct_bands_count_only_worst_per_frame(self):
+        end = START + HOUR_MS - 1
+        rows = [
+            dict(market(closed=True)["data"][0], timestamp=end+1, confirm=True),
+            dict(market(closed=True)["data"][0], timestamp=end+5001, confirm=True),
+            dict(market()["data"][0], timestamp=end+1000, confirm=False),
+        ]
+        packet = dict(market(), data=rows)
+        report, _ = self.run_probe([ACK, packet], diagnose=True)
+        bins = report.sanitized_report()
+        closed = bins["stamp_overrun_closed_bands"]
+        opened = bins["stamp_overrun_open_bands"]
+        self.assertEqual(sum(closed.values()), 1)
+        self.assertEqual(sum(opened.values()), 1)
+        self.assertEqual(closed["over_5000ms"], 1)
+        self.assertEqual(closed["1ms"], 0)
+        self.assertEqual(opened["2_to_1000ms"], 1)
+        self.assertEqual(report.quarantined_closed_stamp_frames, 1)
+        self.assertEqual(report.quarantined_open_stamp_frames, 1)
+        self.assertEqual(report.stamp_after_frames, 1)
+        self.assertEqual(report.validated_closed_events, 0)
+        self.assertFalse(bins["closed_24h_complete"])
+
     def test_strict_mode_never_counts_overrun_as_approved(self):
         stamp = START + HOUR_MS
         row = dict(market(closed=True)["data"][0], timestamp=stamp)
