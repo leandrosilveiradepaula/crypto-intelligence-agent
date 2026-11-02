@@ -201,7 +201,8 @@ def any_closed_after_full_validation(rows: list, server: int, received_ms: int) 
     return any_closed
 
 
-def _validate_one_kline_row(row: dict, server: int, received_ms: int) -> bool:
+def _validate_one_kline_row(row: dict, server: int, received_ms: int, *,
+                            diagnostic_ignore_trade_stamp: bool = False) -> bool:
     expected = {"start", "end", "interval", "open", "high", "low", "close", "volume", "turnover", "confirm", "timestamp"}
     if set(row) != expected:
         raise DataValidationError("ws_kline_fields_invalid")
@@ -210,7 +211,9 @@ def _validate_one_kline_row(row: dict, server: int, received_ms: int) -> bool:
         raise DataValidationError("ws_time_type_invalid")
     if row["interval"] != "60" or start <= 0 or start % HOUR_MS or end != start + HOUR_MS - 1:
         raise DataValidationError("ws_clock_grid_invalid")
-    if not start <= stamp <= end:
+    if type(diagnostic_ignore_trade_stamp) is not bool:
+        raise DataValidationError("ws_trade_stamp_diagnostic_flag_invalid")
+    if not diagnostic_ignore_trade_stamp and not start <= stamp <= end:
         raise DataValidationError("ws_clock_trade_stamp_invalid")
     if server > received_ms + 5000:
         raise DataValidationError("ws_clock_server_ahead_invalid")
