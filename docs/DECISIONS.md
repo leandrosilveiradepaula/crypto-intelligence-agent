@@ -1259,3 +1259,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D226 (02/11/2026, J1/OPS19 #456): em `diagnostic_trade_stamp` um row com timestamp fora da vela não pode encobrir erro de preço, estrutura, confirmação ou de outra linha do mesmo frame. A sonda revalida o row inteiro com somente o predicado de trade stamp desabilitado *para diagnóstico*, percorre todas as linhas, e quarentena o **frame completo** somente se nenhum outro erro existir. O parser de persistência e o default estrito permanecem intocados. Contadores before/after e open/closed são por frame e nenhum valor bruto é emitido.
+
+
+- D227 (02/11/2026, J1/OPS20 #460): uma prova real encontrou 52 eventos `confirm=true` e 2 abertos com `timestamp>end`, sem qualquer `timestamp<start`, mas não mediu a magnitude. Antes de ajustar qualquer contrato financeiro, a sonda opcional apenas classifica `timestamp-end` em faixas fixas `1ms`, `2_to_1000ms`, `1001_to_5000ms`, `over_5000ms`, separadas por `confirm=true/false`, por frame, após validação das demais invariantes (D226). Nunca emitir timestamp exato, símbolo, preço, payload; nenhum candle de quarentena é promovido a validado ou persistido, nenhum relaxamento em ingestão/SQLite. Novo teste público se necessário permanece único, owner-only, efêmero e sob gates.
