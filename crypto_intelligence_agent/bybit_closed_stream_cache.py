@@ -573,10 +573,12 @@ class SQLiteOfflineClosedStreamJournal:
                 if (len(gap_meta) != len(expected_gaps)
                         or dict(gap_meta) != expected_gaps):
                     raise DataGapError("offline journal gap markers missing, orphaned or tampered")
-                journal_digest = _sha(_json({
-                    "rows": summary, "gaps": sorted(expected_gaps.items()),
-                    "schema": _VERSION,
-                }))
+                # Preserve legacy fingerprints when no gap exists; include
+                # explicit markers only for journals with actual missing hours.
+                digest_body = {"rows": summary, "schema": _VERSION}
+                if expected_gaps:
+                    digest_body["gaps"] = sorted(expected_gaps.items())
+                journal_digest = _sha(_json(digest_body))
                 missing = 0
                 values: list[tuple[str, Decimal]] = []
                 required = range(decision_at_ms - 24 * HOUR_MS,
