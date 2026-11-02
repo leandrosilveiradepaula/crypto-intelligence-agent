@@ -340,6 +340,7 @@ class OfflineStreamAudit:
     private_ranked_members: tuple[tuple[str, Decimal], ...] = field(
         default_factory=tuple, repr=False, compare=False,
     )
+    declared_gap_markers: int = 0
 
     def sanitized_report(self) -> dict:
         result = {
@@ -350,6 +351,7 @@ class OfflineStreamAudit:
             "missing_24h_symbols": self.missing_24h_symbols,
             "complete_24h_symbols": self.complete_24h_symbols,
             "rank_digest_sha256": self.rank_digest_sha256,
+            "declared_gap_markers": self.declared_gap_markers,
             "source_authenticated": False, "marketwide_top50_verified": False,
             "canonical_ohlcv_approved": False, "rights_for_live_authorized": False,
             "network_requests": 0, "orders_sent": False,
@@ -641,6 +643,7 @@ class SQLiteOfflineClosedStreamJournal:
                     history_complete, history_missing, history_slots,
                     history_digest, len(epoch_times) if epoch_times is not None else None,
                     tuple(values) if not missing else (),
+                    declared_gap_markers=len(expected_gaps),
                 )
         except sqlite3.DatabaseError:
             raise DataGapError("offline journal read-only audit failed") from None
