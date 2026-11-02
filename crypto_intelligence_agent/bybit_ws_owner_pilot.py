@@ -459,7 +459,7 @@ def run_owner_ws_pilot(*, directory: str | Path,
             outcome = supervise_ws_research(
                 session_factory=factory, scope=scope, journal=journal,
                 budget=budget, clock=monotonic, wall_ms=clock_ms,
-                sleeper=sleeper,
+                sleeper=sleeper, allow_declared_gaps=True,
             )
             appended = outcome.closed_events_appended
             now = clock_ms()
