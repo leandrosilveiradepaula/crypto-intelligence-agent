@@ -159,6 +159,24 @@ class OwnerPilotTests(unittest.TestCase):
         self.assertEqual(two.status, 'ws_pilot_warming_up_abstain')
         self.assertEqual(len(self.sessions), 2)
 
+    def test_two_hour_continuity_stays_false_when_lease_does_not_cross_close(self):
+        first = self.call(client=self.client())
+        self.assertFalse(first.local_two_hour_continuity)
+        self.assertFalse(first.sanitized_report()['local_two_hour_continuity'])
+        second = self.call(client=self.client(blocked=True))
+        self.assertFalse(second.local_two_hour_continuity)
+        self.assertFalse(second.sanitized_report()['local_two_hour_continuity'])
+
+    def test_two_hour_continuity_is_not_inferred_from_ack_or_clock_advance(self):
+        first = self.call(client=self.client())
+        self.assertFalse(first.local_two_hour_continuity)
+        # Lease appears to finish one closed UTC hour later, but no confirmed
+        # candles arrived. The continuity label must remain false.
+        moments = iter((T, T + HOUR))
+        later = self.call(client=self.client(blocked=True), clock_ms=lambda: next(moments, T + HOUR))
+        self.assertFalse(later.local_two_hour_continuity)
+        self.assertFalse(later.sanitized_report()['marketwide_top50_verified'])
+
     def test_10006_is_fail_stop_after_single_get(self):
         c = self.client(blocked=True)
         got = self.call(client=c)
