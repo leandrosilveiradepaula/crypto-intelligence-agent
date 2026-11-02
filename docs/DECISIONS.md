@@ -1238,3 +1238,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D219 (02/11/2026, OPS12 #442): journal WS owner-only pode retomar após perda explícita e limitada de `confirm=true`, sem backfill ou candle fictício; permitir marker de lacuna 1..168h apenas no mesmo commit atômico de um novo candle real e apenas com opt-in no piloto, mantendo `append` estrito por padrão. Auditoria exige markers biunívocos e 24h fechadas por membro antes de ranking local; nunca atribuir marketwide Top50, origem autenticada, autorização de trading ou endpoint REST.
+
+
+- D220 (02/11/2026, J1/OPS13 #444): saúde privada da coleta WS exige relatório somente leitura de janela 24h por PIT e capacidade restante do SQLite; limite de 100.000 linhas, projeção inteira `remaining_rows // (reviewed_contracts*24)` com alerta quando <=7 dias. Um snapshot completo e último health recente NÃO verificam PID, serviço 24/7, origem autenticada ou Top50 marketwide. Sem limpeza/retention automática, REST GET, deploy, ordens, migração ou gasto. Ação no host ainda requer gate owner-only.
