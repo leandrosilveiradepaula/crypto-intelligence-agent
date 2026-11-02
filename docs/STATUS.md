@@ -1049,3 +1049,8 @@ OPS16 PR #449 integrada em main `145d9074a365f8ba75e8809dd7828bfebe82eb2d`; prov
 ## J1/OPS18 — diagnóstico causal do timestamp no rollover (02/11/2026)
 
 Prova real #41514590636 em SHA `bb58414a032fa9848ef9f439e05e29b1e7e01814`: ACK 1, 52/52 tópicos, 702 frames válidos, 0 closes, `clock_trade_stamp` no fechamento 20:00 UTC. Não sabemos se `timestamp` ficou antes de `start` ou depois de `end`, nem se era vela aberta ou fechada. Issue #452/branch `work/issue-452-j1-ops18-close-stamp-diagnostics`: categorias fixas before/after/open/closed, contagem atômica de fechamentos e modo de quarentena observacional opt-in na **mesma** sonda owner-only. O coletor/SQLite mantêm gates originais; testes/CI/merge pendentes de evidência. Não houve execução live OPS18, acesso VPS, ordens ou alteração do histórico REST.
+
+
+## J1/OPS19 — validação integral antes da quarentena diagnóstica (02/11/2026)
+
+Enquanto a prova real OPS18 GitHub #41521829843, no SHA `cd256e1329c232cc450f481f69b5175c0bbab301`, aguardava o UTC close, revisão detectou um caso em que a primeira linha de timestamp inválido encerrava a inspeção do frame e poderia ocultar outro defeito. Issue #454, branch `work/issue-454-j1-ops19-diagnostic-full-frame-validation`: a sonda verifica todos os campos/linhas antes de permitir quarentena de stamp, mantém ingestão estrita por padrão e contadores por frame, com testes de colisão timestamp+OHLC/confirm/decimal e linha posterior inválida. CI/PR/merge requerem evidência; não interromper nem repetir a prova #41521829843.
