@@ -76,14 +76,15 @@ ACK = {"op":"subscribe", "success":True, "ret_msg":"",
 
 class LinearLiveProbeTests(unittest.TestCase):
     def run_probe(self, sequence=(), *, auto_ack=None, seconds=4, topics=TOPICS,
-                  ping_pong=False, frames=512):
+                  ping_pong=False, frames=512, diagnose=False):
         clock = Clock()
         session = Session(clock, sequence, auto_ack=auto_ack, ping_pong=ping_pong)
         with patch("socket.create_connection", side_effect=AssertionError("network forbidden")):
             report = probe_linear_topics_once(
                 session_factory=lambda: session, topics=topics,
                 clock=clock, wall_ms=lambda: RECEIPT,
-                max_seconds=seconds, max_frames=frames)
+                max_seconds=seconds, max_frames=frames,
+                diagnostic_trade_stamp=diagnose)
         self.assertTrue(session.closed)
         self.assertEqual(len([x for x in session.sent if x["op"] == "subscribe"]), 1)
         self.assertEqual(session.sent[0]["args"], list(topics))
@@ -146,6 +147,58 @@ class LinearLiveProbeTests(unittest.TestCase):
                 r, _ = self.run_probe([ACK, bad])
                 self.assertEqual(r.status, "ws_frame_invalid_abstain")
                 self.assertEqual(r.validated_closed_events, 0)
+
+    def test_trade_stamp_direction_and_confirm_are_privately_classified(self):
+        for closed in (False, True):
+            for direction, stamp in (("before", START-1),
+                                     ("after", START+HOUR_MS)):
+                row = dict(market(closed=closed)["data"][0], timestamp=stamp)
+                bad = dict(market(closed=closed), data=[row])
+                report, _ = self.run_probe([ACK, bad])
+                expected = "clock_trade_stamp_" + direction + ("_closed" if closed else "_open")
+                self.assertEqual(report.failure_category, expected)
+                self.assertEqual(report.status, "ws_frame_invalid_abstain")
+                self.assertEqual(report.validated_closed_events, 0)
+                self.assertNotIn(str(stamp), json.dumps(report.sanitized_report()))
+
+    def test_diagnostic_quarantines_open_and_closed_no_false_approval(self):
+        open_bad = dict(market(closed=False), data=[
+            dict(market()["data"][0], timestamp=START-1, confirm=False)])
+        closed_bad = dict(market(closed=True), data=[
+            dict(market(closed=True)["data"][0],
+                 timestamp=START+HOUR_MS, confirm=True)])
+        report, _ = self.run_probe([ACK, open_bad, closed_bad],
+                                   frames=512, diagnose=True)
+        self.assertEqual(report.status, "ws_timestamp_diagnostic_unverified")
+        self.assertIsNone(report.failure_category)
+        self.assertEqual(report.quarantined_open_stamp_frames, 1)
+        self.assertEqual(report.quarantined_closed_stamp_frames, 1)
+        self.assertEqual(report.stamp_before_frames, 1)
+        self.assertEqual(report.stamp_after_frames, 1)
+        self.assertEqual(report.validated_closed_events, 0)
+        self.assertEqual(report.valid_market_frames, 0)
+        self.assertFalse(report.sanitized_report()["all_topics_delivered_verified"])
+
+    def test_closed_count_is_atomic_when_later_row_invalid(self):
+        clean = dict(market(closed=True)["data"][0])
+        invalid = dict(market(closed=False)["data"][0], timestamp=START-1)
+        multi = dict(market(closed=True), data=[clean, invalid])
+        report, _ = self.run_probe([ACK, multi])
+        self.assertEqual(report.status, "ws_frame_invalid_abstain")
+        self.assertEqual(report.valid_market_frames, 0)
+        self.assertEqual(report.validated_closed_events, 0)
+        self.assertEqual(report.failure_category, "clock_trade_stamp_before_open")
+        diagnostic, _ = self.run_probe([ACK, multi], diagnose=True)
+        self.assertEqual(diagnostic.validated_closed_events, 0)
+        self.assertEqual(diagnostic.valid_market_frames, 0)
+        self.assertEqual(diagnostic.quarantined_open_stamp_frames, 1)
+
+    def test_unrelated_validation_still_fails_closed_in_diagnostic(self):
+        broken = dict(market(), data=[dict(market()["data"][0], high="0.1")])
+        report, _ = self.run_probe([ACK, broken], diagnose=True)
+        self.assertEqual(report.status, "ws_frame_invalid_abstain")
+        self.assertEqual(report.failure_category, "kline_ohlc")
+        self.assertEqual(report.validated_closed_events, 0)
 
     def test_frame_cap_before_deadline_is_abstention_not_success(self):
         result, session = self.run_probe(
