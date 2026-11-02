@@ -1,0 +1,48 @@
+name: J1 OPS16 one-shot WS closed-candle proof (owner-only)
+# Only exact owner comment on issue #429, no schedule/push/PR/dispatch.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: j1-ops16-closed-once
+  cancel-in-progress: false
+
+jobs:
+  utc-close-once:
+    if: >-
+      github.event.issue.number == 429 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-j1-ws52-closed-once-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula' &&
+      github.repository == 'leandrosilveiradepaula/crypto-intelligence-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - name: Checkout reviewed main without retained credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned free public WebSocket dependency
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+        run: python3 -m pip install --disable-pip-version-check --no-input websockets==15.0.1
+      - name: Wait at most 20 minutes for the immediate next UTC close
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONUNBUFFERED: "1"
+        run: python3 -m scripts.wait_j1_ws_utc_close
+      - name: Observe one 90-second WS session across UTC hour close
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_bybit_ws_linear_live \
+            --allow-public-network --allow-public-websocket \
+            --confirm-region-and-personal-research \
+            --seconds 90 --max-frames 8192
