@@ -243,6 +243,66 @@ class LinearLiveProbeTests(unittest.TestCase):
             _validate_one_kline_row(row, RECEIPT-500, RECEIPT,
                                     diagnostic_ignore_trade_stamp=1)
 
+    def test_stamp_overrun_coarse_bands_are_exact_at_boundaries(self):
+        cases = ((1, "1ms"), (2, "2_to_1000ms"),
+                 (1000, "2_to_1000ms"), (1001, "1001_to_5000ms"),
+                 (5000, "1001_to_5000ms"), (5001, "over_5000ms"))
+        for closed in (False, True):
+            for delta, category in cases:
+                with self.subTest(closed=closed, delta=delta):
+                    stamp = START+HOUR_MS-1 + delta
+                    row = dict(market(closed=closed)["data"][0], timestamp=stamp)
+                    packet = dict(market(closed=closed), data=[row])
+                    result, _ = self.run_probe([ACK, packet], diagnose=True)
+                    bands = (result.sanitized_report()["stamp_overrun_closed_bands"]
+                             if closed else result.sanitized_report()["stamp_overrun_open_bands"])
+                    self.assertEqual(bands[category], 1)
+                    self.assertEqual(sum(bands.values()), 1)
+                    self.assertEqual(result.validated_closed_events, 0)
+                    self.assertNotIn(str(stamp), json.dumps(result.sanitized_report()))
+
+    def test_multirow_same_band_counts_one_frame(self):
+        end = START + HOUR_MS - 1
+        a = dict(market(closed=False)["data"][0], timestamp=end+2)
+        b = dict(market(closed=False)["data"][0], timestamp=end+1000)
+        packet = dict(market(), data=[a, b])
+        result, _ = self.run_probe([ACK, packet], diagnose=True)
+        self.assertEqual(result.quarantined_open_stamp_frames, 1)
+        self.assertEqual(result.sanitized_report()["stamp_overrun_open_bands"]["2_to_1000ms"], 1)
+        self.assertEqual(result.valid_market_frames, 0)
+
+    def test_multirow_distinct_bands_count_only_worst_per_frame(self):
+        end = START + HOUR_MS - 1
+        rows = [
+            dict(market(closed=True)["data"][0], timestamp=end+1, confirm=True),
+            dict(market(closed=True)["data"][0], timestamp=end+5001, confirm=True),
+            dict(market()["data"][0], timestamp=end+1000, confirm=False),
+        ]
+        packet = dict(market(), data=rows)
+        report, _ = self.run_probe([ACK, packet], diagnose=True)
+        bins = report.sanitized_report()
+        closed = bins["stamp_overrun_closed_bands"]
+        opened = bins["stamp_overrun_open_bands"]
+        self.assertEqual(sum(closed.values()), 1)
+        self.assertEqual(sum(opened.values()), 1)
+        self.assertEqual(closed["over_5000ms"], 1)
+        self.assertEqual(closed["1ms"], 0)
+        self.assertEqual(opened["2_to_1000ms"], 1)
+        self.assertEqual(report.quarantined_closed_stamp_frames, 1)
+        self.assertEqual(report.quarantined_open_stamp_frames, 1)
+        self.assertEqual(report.stamp_after_frames, 1)
+        self.assertEqual(report.validated_closed_events, 0)
+        self.assertFalse(bins["closed_24h_complete"])
+
+    def test_strict_mode_never_counts_overrun_as_approved(self):
+        stamp = START + HOUR_MS
+        row = dict(market(closed=True)["data"][0], timestamp=stamp)
+        packet = dict(market(closed=True), data=[row])
+        result, _ = self.run_probe([ACK, packet])
+        self.assertEqual(result.status, "ws_frame_invalid_abstain")
+        self.assertEqual(result.validated_closed_events, 0)
+        self.assertEqual(sum(result.sanitized_report()["stamp_overrun_closed_bands"].values()), 0)
+
     def test_unrelated_validation_still_fails_closed_in_diagnostic(self):
         broken = dict(market(), data=[dict(market()["data"][0], high="0.1")])
         report, _ = self.run_probe([ACK, broken], diagnose=True)
