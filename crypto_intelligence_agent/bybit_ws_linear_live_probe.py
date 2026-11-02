@@ -224,28 +224,41 @@ def probe_linear_topics_once(
                     raise DataValidationError("LINEAR proof market envelope invalid")
                 has_close = False
                 frame_closed = 0
-                quarantined = False
+                frame_quarantine_open = False
+                frame_quarantine_closed = False
+                frame_before = False
+                frame_after = False
                 for row in rows:
                     if type(row) is not dict:
                         raise DataValidationError("LINEAR proof market row invalid")
-                    try:
-                        has_close |= _validate_one_kline_row(row, server, received)
-                    except DataValidationError as error:
-                        if str(error) != "ws_clock_trade_stamp_invalid":
+                    if diagnostic_trade_stamp:
+                        # Validate every other financial/clock/shape condition
+                        # for ALL rows before deciding to quarantine a frame.
+                        # No timestamp is changed or synthesized.
+                        row_closed = _validate_one_kline_row(
+                            row, server, received, enforce_trade_stamp=False)
+                        classification = _stamp_failure_class(row)
+                        if classification != "clock_trade_stamp":
+                            frame_quarantine_closed |= row["confirm"] is True
+                            frame_quarantine_open |= row["confirm"] is False
+                            frame_before |= "_before_" in classification
+                            frame_after |= "_after_" in classification
+                    else:
+                        try:
+                            row_closed = _validate_one_kline_row(row, server, received)
+                        except DataValidationError as error:
+                            if str(error) == "ws_clock_trade_stamp_invalid":
+                                failure = _stamp_failure_class(row)
                             raise
-                        failure = _stamp_failure_class(row)
-                        if not diagnostic_trade_stamp:
-                            raise
-                        is_closed = row.get("confirm") is True
-                        quarantine_closed += int(is_closed)
-                        quarantine_open += int(not is_closed)
-                        stamp_before += int("_before_" in failure)
-                        stamp_after += int("_after_" in failure)
-                        quarantined = True
-                        break
+                    has_close |= row_closed
                     frame_closed += int(row["confirm"] is True)
-                if quarantined:
-                    failure = None
+                if frame_quarantine_open or frame_quarantine_closed:
+                    # Count per frame only after every row was fully checked.
+                    # Never promote quarantined market data to proof.
+                    quarantine_open += int(frame_quarantine_open)
+                    quarantine_closed += int(frame_quarantine_closed)
+                    stamp_before += int(frame_before)
+                    stamp_after += int(frame_after)
                     continue
                 closed += frame_closed
                 valid += 1
