@@ -1247,3 +1247,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D222 (02/11/2026, J1/OPS15 #429): uma sondagem pública de protocolo WS 52 tópicos pode usar runner GitHub Actions efêmero sem credenciais e sem persistência como evidência **apenas da rede do runner**, com disparo por comentário exato de issue #429 do proprietário, janela de 45s e orçamento 8192 frames. Não prova conectividade da VPS, não autoriza serviço 24/7, não reclassifica Top50, não habilita ordens, deploy, REST GET ou gastos. Registro de 52 candidatos expira em 05/11/2026 15:27:39 UTC; recusar expiração, não forjar revisão.
+
+
+- D223 (02/11/2026, OPS16 #429): após prova real de 52 tópicos WS no runner GitHub, um único teste adicional pode atravessar fechamento de hora UTC para observar `confirm=true`; aguardar no máximo 20min e iniciar 30s antes de próxima hora, janela WS 90s, sem cron/retry/artefato/SQLite/REST/ordens/deploy. A execução é restrita a comentário literal owner-only na issue #429. A confirmação no GitHub não certifica rede VPS, 24h, origem autenticada ou Top50 marketwide. Recusar relógio atrasado ou observação fora da janela e nunca aumentar o tempo ilimitadamente.
