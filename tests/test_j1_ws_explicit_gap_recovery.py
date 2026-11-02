@@ -68,6 +68,24 @@ class GapRecoveryTests(unittest.TestCase):
         self.assertEqual(audit.persisted_rows, 27)
         self.assertEqual(len(self.gaps()), 1)
 
+    def test_full_two_asset_window_recovers_local_rank_only(self):
+        for symbol in ("BTCUSDT", "ETHUSDT"):
+            self.assertEqual(self.db.append(event(symbol, self.first, self.scope)), "appended")
+            self.assertEqual(self.db.append(
+                event(symbol, self.first+2*HOUR_MS, self.scope),
+                allow_declared_gap=True,
+            ), "appended")
+            for offset in range(3, 28):
+                self.assertEqual(self.db.append(
+                    event(symbol, self.first+offset*HOUR_MS, self.scope)), "appended")
+        restored = self.audit(decision=self.first+28*HOUR_MS)
+        self.assertEqual(restored.missing_24h_symbols, 0)
+        self.assertEqual(restored.complete_24h_symbols, 2)
+        self.assertIsNotNone(restored.rank_digest_sha256)
+        self.assertEqual(restored.status, "offline_reviewed_24h_complete_not_top50")
+        self.assertFalse(restored.sanitized_report()["marketwide_top50_verified"])
+        self.assertEqual(len(self.gaps()), 2)
+
     def test_gap_budget_and_untrusted_boolean(self):
         self.add(0)
         with self.assertRaises(DataGapError):
