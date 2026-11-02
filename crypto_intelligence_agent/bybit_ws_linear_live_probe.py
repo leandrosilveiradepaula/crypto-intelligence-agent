@@ -25,7 +25,7 @@ from .research_registry_catalog import load_reviewed_registry
 
 MAX_TOPICS = 52
 MAX_ARGS_CHARS = 21_000
-MAX_FRAMES = 1_024
+MAX_FRAMES = 8_192  # 52 topics x 90s at 1/s + bounded control reserve
 MAX_SECONDS = 90
 MAX_EARLY_FRAMES = 128
 PONG_SECONDS = 45
@@ -95,7 +95,7 @@ def probe_linear_topics_once(
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     max_seconds: int = 35,
-    max_frames: int = 512,
+    max_frames: int = MAX_FRAMES,
 ) -> LinearWSProof:
     """Single socket, single subscribe; count only strict post-ACK data frames."""
     _validate_topics(topics)
@@ -204,8 +204,9 @@ def probe_linear_topics_once(
                 topics_seen.add(topic)
                 if has_close:
                     closed_seen.add(topic)
-            status = ("ws_ack_with_market_frames_unverified" if valid else
-                      "ws_ack_only_unverified" if ack else "ws_ack_missing_abstain")
+            # A frame cap reached before the time deadline is truncation,
+            # never evidence that the requested observation finished.
+            status, failure = "ws_frame_budget_exhausted_abstain", "frame_budget"
             return result()
     except (OSError, TimeoutError, RuntimeError, ImportError):
         status, failure = "ws_transport_abstain", stage
@@ -221,7 +222,7 @@ def owner_probe_linear_topics_once(*, allow_public_network: bool = False,
                                    allow_public_websocket: bool = False,
                                    confirm_region_and_personal_research: bool = False,
                                    seconds: int = 35,
-                                   max_frames: int = 512,
+                                   max_frames: int = MAX_FRAMES,
                                    session_factory=None,
                                    clock: Callable[[], float] = time.monotonic,
                                    wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
