@@ -1054,3 +1054,8 @@ Prova real #41514590636 em SHA `bb58414a032fa9848ef9f439e05e29b1e7e01814`: ACK 1
 ## J1/OPS19 — endurecer diagnóstico sem perder outras anomalias (02/11/2026)
 
 Revisão em OPS18 mostrou que um `break` após timestamp inválido poderia impedir validação das linhas posteriores e esconder OHLC/confirm inválidos no mesmo row. Issue #456/branch `work/issue-456-j1-ops19-full-frame-quarantine` elimina esse atalho, exige a validação integral das demais regras e só registra quarentena de frame após examinar todas as linhas. O modo normal segue estrito; SQLite, REST e execução real não mudaram. Testes adversariais e D226 adicionados. A prova anterior OPS18 `41521829843` já está em andamento no commit `cd256e13` e não deve ser repetida ou confundida com esta correção. PR/CI/revisão pendentes no momento deste registro.
+
+
+## J1/OPS20 — medir deslocamento temporal para decisão fundamentada (02/11/2026)
+
+A prova observacional real `41521829843` no runner GitHub (20:59:30–21:01:00 UTC, checkout OPS18 `cd256e13`) terminou SUCCESS, mas `status=ws_timestamp_diagnostic_unverified`: 1 ACK, 52/52 tópicos, 1.931 frames, 1.820 válidos, 52 frames confirm=true e 2 open em quarentena, 54 com `timestamp>end`, zero com timestamp antes do início, zero closes aprovados. O excesso não foi mensurado. OPS19 #456/PR #459 integrada em `main=b0701af94d8c014f6ca5b5a62d7d7792bb75b068` para validar todas as linhas; CI pós-merge ainda a confirmar. OPS20 #460 mede somente excesso em bandas anônimas fixas, sem relaxar parsers. PR/CI e nova prova ainda não concluídos. VPS/Top50/24h continuam pendentes.
