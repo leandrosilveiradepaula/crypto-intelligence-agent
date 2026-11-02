@@ -137,6 +137,7 @@ def supervise_ws_research(
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
+    allow_declared_gaps: bool = False,
 ) -> WSRunReport:
     """Collect confirmed hourly WS events for a finite, *injected* lease.
 
@@ -152,7 +153,8 @@ def supervise_ws_research(
     if (not callable(session_factory) or not callable(clock)
             or not callable(wall_ms) or not callable(sleeper)
             or type(journal) is not SQLiteOfflineClosedStreamJournal
-            or type(budget) is not WSRunBudget):
+            or type(budget) is not WSRunBudget
+            or type(allow_declared_gaps) is not bool):
         raise DataValidationError("injected WS research capabilities required")
     groups = _topic_batches(scope)
     all_topics = frozenset(topic for batch in groups for topic in batch)
@@ -201,6 +203,7 @@ def supervise_ws_research(
                     batch = ingest_offline_ws_batch(
                         frames=((frame, at_ms),), scope=scope,
                         journal=journal, require_ack=False,
+                        allow_declared_gap=allow_declared_gaps,
                     )
                     opened += batch.open_updates
                     appended += batch.appended
