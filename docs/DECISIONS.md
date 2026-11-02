@@ -1235,3 +1235,6 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D218 (02/11/2026, J1/OPS11 #440): leases WS com systemd **off-by-default** devem encerrar numa janela pós-fechamento UTC, não em períodos fixos que podem cortar o `confirm=true`. Planejamento determinístico exige duração entre 300 e 3590s, final 180..489s após o fechamento; modo explicitamente opt-in e frame-budget proporcional. Não supõe conectividade contínua nem autoriza deploy, ordens, GET REST ou classificação Top50 marketwide. Validar em CI antes de merge; homologação owner-only real separada.
+
+
+- D219 (02/11/2026, OPS12 #442): journal WS owner-only pode retomar após perda explícita e limitada de `confirm=true`, sem backfill ou candle fictício; permitir marker de lacuna 1..168h apenas no mesmo commit atômico de um novo candle real e apenas com opt-in no piloto, mantendo `append` estrito por padrão. Auditoria exige markers biunívocos e 24h fechadas por membro antes de ranking local; nunca atribuir marketwide Top50, origem autenticada, autorização de trading ou endpoint REST.
