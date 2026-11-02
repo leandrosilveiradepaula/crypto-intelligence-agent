@@ -1029,3 +1029,8 @@ Base GitHub `cf35e2acefe05f47be2fabed09b066976f0243b6`, branch `work/issue-429-o
 ## J1/OPS15 — prova GitHub-only WS52, isolada da VPS (02/11/2026)
 
 Base main `85c87d5c36ba12b1a3dc04cd816f166e0642c3c2`, branch `work/issue-429-ops8-github-ws52-one-shot`. Workflow owner-only por comentário exato em #429 prepara uma única sonda pública de 45s com até 8192 frames no runner efêmero e logs sanitizados. Testes estáticos, decisão D222 e contrato OPS8 alterados. PR/CI/revisão/merge e execução real ainda por comprovar; VPS e SQLite REST não foram acessados. Validade do registro encerra em 05/11/2026 15:27:39 UTC. J1 #2, universo #319, OPS #429 abertas.
+
+
+## J1/OPS15 — protocolo público WS52 comprovado no GitHub, VPS pendente (02/11/2026)
+
+Workflow owner-only #41492753422 SUCCESS no `main=ed1f3235445741e82a82b68e7cb3f43aec5e0797`: 52 tópicos solicitados, ACK=1, frames totais=1.069, frames válidos pós-ACK=1.014, 52 tópicos distintos observados, 0 velas fechadas durante 45s. Fonte rede do runner GitHub, não VPS; sem SQLite/REST/ordens/credenciais. `all_topics_delivered_verified=false` e `marketwide_top50_verified=false`; Top50 #319/J1 #2/OPS #429 continuam abertas. A sonda pública não precisa ser repetida para a mesma prova de protocolo. CI pré-merge PR #447 verde; pós-merge validar SHA/run. Próximo gate real: homologar em VPS owner-only sem recomeçar EXIT5; registrar ACK, closes UTC, integridade 24h e soak controlado.
