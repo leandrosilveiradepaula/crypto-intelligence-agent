@@ -1,7 +1,8 @@
 """Offline contract tests for OPS10 continuity gate."""
 import unittest
+from unittest.mock import patch
 
-from crypto_intelligence_agent.bybit_closed_stream_cache import OfflineStreamAudit, HOUR_MS
+from crypto_intelligence_agent.bybit_closed_stream_cache import OfflineStreamAudit, OfflineReviewedStreamScope, HOUR_MS
 from crypto_intelligence_agent.j1_ws_hourly_continuity import (
     checkpoint_from_audit, compare_closed_hours,
 )
@@ -9,17 +10,20 @@ from crypto_intelligence_agent.market_data import DataValidationError
 
 
 class HourlyContinuityTests(unittest.TestCase):
-    def checkpoint(self, hour, missing=0, expected=2, observed_offset=1000):
+    def checkpoint(self, hour, missing=0, expected=2, observed_offset=1000, identity='A'):
         audit = OfflineStreamAudit(
             status="offline_fixture_only", persisted_rows=48,
             observed_symbols=expected, journal_digest_sha256="a" * 64,
             missing_24h_symbols=missing, complete_24h_symbols=expected-missing,
             rank_digest_sha256="b" * 64 if not missing else None,
         )
-        return checkpoint_from_audit(
+        scope = OfflineReviewedStreamScope(1, 'a' * 64, tuple(range(expected)), expected)
+        with patch('crypto_intelligence_agent.j1_ws_hourly_continuity._scope_contract_fingerprint',
+                   return_value=((identity,),)):
+            return checkpoint_from_audit(
             audit=audit, decision_at_ms=hour * HOUR_MS,
             observed_at_ms=hour * HOUR_MS + observed_offset,
-            expected_contracts=expected,
+            expected_contracts=expected, scope=scope,
         )
 
     def test_consecutive_complete_hours(self):
@@ -42,6 +46,14 @@ class HourlyContinuityTests(unittest.TestCase):
         self.assertFalse(compare_closed_hours(self.checkpoint(500000),
                                               self.checkpoint(500001, expected=3)
                                               )["complete_local_windows"])
+
+    def test_same_count_different_contract_identity_abstains(self):
+        report = compare_closed_hours(self.checkpoint(500000, identity='A'),
+                                      self.checkpoint(500001, identity='B'))
+        self.assertFalse(report['complete_local_windows'])
+
+    def test_single_snapshot_never_certifies_continuity(self):
+        self.assertFalse(self.checkpoint(500000).sanitized_report()['continuity_verified'])
 
     def test_reverse_time_abstains(self):
         self.assertFalse(compare_closed_hours(self.checkpoint(500001),
