@@ -12,7 +12,7 @@ O resultado contém somente status categórico e contadores agregados: tópicos 
 
 ## Segurança e orçamento
 
-`crypto_intelligence_agent/bybit_ws_linear_live_probe.py` só abre um socket depois dos três opt-ins explícitos e de confirmar usuário POSIX **não-root**. A consulta ao registro local ocorre **depois** desses gates. A duração padrão é 35 segundos (máximo 90); orçamento padrão 512 frames (máximo 1.024); sem retry, sem backfill, sem GET e sem processo background. Só uma assinatura com todos os tópicos, req_id ausente/vazio/esperado no ACK. O frame de dados antes do ACK não é aceito como prova, e ACK duplicado, ID inesperado, tópico fora da lista, campo inválido ou dado temporal/financeiro inconsistente resultam em abstenção.
+`crypto_intelligence_agent/bybit_ws_linear_live_probe.py` só abre um socket depois dos três opt-ins explícitos e de confirmar usuário POSIX **não-root**. A consulta ao registro local ocorre **depois** desses gates. A duração padrão é 35 segundos (máximo 90); orçamento padrão 8.192 frames (máximo 8.192); sem retry, sem backfill, sem GET e sem processo background. Só uma assinatura com todos os tópicos, req_id ausente/vazio/esperado no ACK. O frame de dados antes do ACK não é aceito como prova, e ACK duplicado, ID inesperado, tópico fora da lista, campo inválido ou dado temporal/financeiro inconsistente resultam em abstenção.
 
 Para uma prova de fechamento é necessário atravessar um UTC boundary enquanto o socket recebe atualizações. A ausência de um `confirm=true` num teste de 35 segundos **não significa falha** da conexão, somente ausência de evidência de fechamento nessa janela.
 
@@ -24,7 +24,7 @@ O repositório mantém a CLI `python3 -m scripts.probe_bybit_ws_linear_live`. A 
 python3 -m scripts.probe_bybit_ws_linear_live \
   --allow-public-network --allow-public-websocket \
   --confirm-region-and-personal-research \
-  --seconds 45 --max-frames 512
+  --seconds 45 --max-frames 8192
 ```
 
 **Não executar como `root`, não instalar systemd e não misturar este probe com a coleta histórica.** Na VPS, deve ser usado o usuário não privilegiado da pesquisa e checkout no SHA aprovado da `main`. O operador deve validar primeiro a versão do Python e a presença da dependência `websockets`. A sondagem não exige nem cria diretório de dados, banco, pidfile ou configurações do sistema.
@@ -36,3 +36,7 @@ Executar `python3 -m unittest discover -s tests -p test_j1_ws_linear_live_probe.
 ## Próxima etapa operacional da #429
 
 Após a CI no SHA exato e um resultado real sanitizado dessa sondagem: decidir se o socket/handshake de 52 tópicos foi aceito, corrigir o comportamento específico observado, executar um piloto finito owner-only de candles confirmados em diretório **novo e separado**, e só então discutir a instalação/ativação de supervisão `systemd` com teste de 24h. Se o resultado for bloqueio regional, erro de rede ou indisponibilidade, não criar retries nem improvisar PIT. O principal trabalho J1 #319 ainda requer cobertura independente de todos os perpétuos elegíveis.
+
+## OPS14 — correção de truncamento da prova de 52 tópicos (02/11/2026)
+
+Com 52 tópicos e até 90s, o antigo teto de 512/1.024 frames era insuficiente para a cadência máxima documentada de cerca de um frame por tópico por segundo. O orçamento passa a 8.192 frames, limitado a uma única sessão de no máximo 90s, sem gravação, GET, retry, ordens, credenciais ou serviço de fundo. Esgotamento de frames antes do deadline agora retorna `ws_frame_budget_exhausted_abstain` com categoria `frame_budget`, nunca `ws_ack_with_market_frames_unverified` como se a observação houvesse terminado normalmente. O default da CLI acompanha o teto. Testes de saturação e orçamento de 52×90 foram adicionados. A prova operacional real continua pendente de executor owner-only na VPS; CI não a substitui.
