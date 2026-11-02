@@ -40,3 +40,26 @@ Após a CI no SHA exato e um resultado real sanitizado dessa sondagem: decidir s
 ## OPS14 — correção de truncamento da prova de 52 tópicos (02/11/2026)
 
 Com 52 tópicos e até 90s, o antigo teto de 512/1.024 frames era insuficiente para a cadência máxima documentada de cerca de um frame por tópico por segundo. O orçamento passa a 8.192 frames, limitado a uma única sessão de no máximo 90s, sem gravação, GET, retry, ordens, credenciais ou serviço de fundo. Esgotamento de frames antes do deadline agora retorna `ws_frame_budget_exhausted_abstain` com categoria `frame_budget`, nunca `ws_ack_with_market_frames_unverified` como se a observação houvesse terminado normalmente. O default da CLI acompanha o teto. Testes de saturação e orçamento de 52×90 foram adicionados. A prova operacional real continua pendente de executor owner-only na VPS; CI não a substitui.
+
+## OPS15 — prova pública descartável via GitHub Actions (owner-only)
+
+Quando SSH da VPS não está disponível, o workflow
+`.github/workflows/j1-ops8-ws52-one-shot.yml` permite uma **única sessão por
+comentário exato**, exclusivamente em issue #429 por usuário proprietário e
+`github.actor` correspondentes. Só o comentário literal
+`/probe-j1-ws52-github-once-v1` dispara o job. Nenhum push, PR, cron,
+`workflow_dispatch`, segredo ou token privado dispara a sondagem. O runner é
+descartável, o checkout não persiste credenciais, o único pacote adicional
+é `websockets==15.0.1`, a sessão é de 45 segundos com até 8192 frames,
+no máximo três minutos por job, e apenas JSON sanitizado segue aos logs.
+Não há artefatos de frames, banco, REST GET, execução de ordens ou deploy.
+
+O teste comprova o **caminho do runner GitHub**, que pode ter rota, IP e
+bloqueios distintos da VPS. ACK aceito não prova existência/entrega dos
+52 contratos, fluxo 24h, Top50 marketwide, credenciais de corretora ou serviço
+ativo na VPS. Um erro de transporte no runner também não prova falha na VPS.
+Qualquer resultado real deve ser interpretado com esse escopo e registrado
+sem inventar conclusões. Os nomes do registro revisado em 29/10/2026
+expiram para essa sonda em 05/11/2026 15:27:39 UTC; não estender validade sem
+nova revisão causal versionada. O job NÃO é uma ativação da coleta e
+não altera as exigências do piloto finito/soak owner-only na VPS.
