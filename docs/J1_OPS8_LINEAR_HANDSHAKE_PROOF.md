@@ -63,3 +63,8 @@ sem inventar conclusões. Os nomes do registro revisado em 29/10/2026
 expiram para essa sonda em 05/11/2026 15:27:39 UTC; não estender validade sem
 nova revisão causal versionada. O job NÃO é uma ativação da coleta e
 não altera as exigências do piloto finito/soak owner-only na VPS.
+
+
+## Evidência executada — runner GitHub, 02/11/2026
+
+A execução explícita **real** do workflow owner-only [#41492753422](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/41492753422) no SHA `ed1f3235445741e82a82b68e7cb3f43aec5e0797` concluiu SUCCESS: `topics_requested=52`, `subscription_acks=1`, `frames_received=1069`, `pre_ack_market_frames=52`, `valid_market_frames=1014`, `distinct_topics_seen=52`, `validated_closed_events=0`, `distinct_closed_topics=0`, `failure_category=null`. Flags de dados armazenados, HTTP GET, ordens, autenticação de origem, liberação marketwide e cobertura 24h permanecem false. Os 52 tópicos revisados transmitiram frames válidos **na rede do GitHub** durante 45s; nenhuma vela fechada foi observada na janela, o que não significa falha do socket. Isso **não é homologação da VPS** nem prova de lista Top50 por volume. Registro de 52 bases continua sujeito ao vencimento PIT de 05/11/2026 15:27:39 UTC. Repetir a mesma sondagem de protocolo não é requisito de aceite; próximo teste necessário é closed candle e soak owner-only na VPS, sob gate.
