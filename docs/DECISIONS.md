@@ -1262,3 +1262,5 @@ O lease systemd OPS6 usava por omissão somente 4.096 frames durante 3.300 segun
 
 
 - D227 (02/11/2026, J1/OPS20 #460): uma prova real encontrou 52 eventos `confirm=true` e 2 abertos com `timestamp>end`, sem qualquer `timestamp<start`, mas não mediu a magnitude. Antes de ajustar qualquer contrato financeiro, a sonda opcional apenas classifica `timestamp-end` em faixas fixas `1ms`, `2_to_1000ms`, `1001_to_5000ms`, `over_5000ms`, separadas por `confirm=true/false`, por frame, após validação das demais invariantes (D226). Nunca emitir timestamp exato, símbolo, preço, payload; nenhum candle de quarentena é promovido a validado ou persistido, nenhum relaxamento em ingestão/SQLite. Novo teste público se necessário permanece único, owner-only, efêmero e sob gates.
+
+OPS20 — Regra de agregação revisada na PR #461: em frames com múltiplas linhas, registrar **somente a banda de maior excedente por categoria open/closed, uma vez por frame**, após validação integral das linhas. A soma das quatro bandas por categoria não pode exceder o número de frames em quarentena dessa categoria. Isso evita dupla contagem e não aprova eventos confirmados.
