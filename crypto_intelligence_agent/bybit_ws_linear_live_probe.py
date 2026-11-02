@@ -19,6 +19,7 @@ from typing import Callable
 from .bybit_public_ws_once import (
     StreamSession, _bounded_json, _is_public_pong,
     _safe_failure_category, _subscription_ack, _validate_one_kline_row,
+    _validate_kline_row_after_trade_stamp,
 )
 from .market_data import DataValidationError
 from .research_registry_catalog import load_reviewed_registry
@@ -224,7 +225,9 @@ def probe_linear_topics_once(
                     raise DataValidationError("LINEAR proof market envelope invalid")
                 has_close = False
                 frame_closed = 0
-                quarantined = False
+                stamp_violation = None
+                # Validate EVERY row before a frame-level quarantine decision.
+                # A bad stamp never hides later invalid prices, confirm or clocks.
                 for row in rows:
                     if type(row) is not dict:
                         raise DataValidationError("LINEAR proof market row invalid")
@@ -233,19 +236,21 @@ def probe_linear_topics_once(
                     except DataValidationError as error:
                         if str(error) != "ws_clock_trade_stamp_invalid":
                             raise
-                        failure = _stamp_failure_class(row)
+                        direction = _stamp_failure_class(row)
                         if not diagnostic_trade_stamp:
+                            failure = direction
                             raise
-                        is_closed = row.get("confirm") is True
-                        quarantine_closed += int(is_closed)
-                        quarantine_open += int(not is_closed)
-                        stamp_before += int("_before_" in failure)
-                        stamp_after += int("_after_" in failure)
-                        quarantined = True
-                        break
+                        # This helper checks ALL rules that follow the strict
+                        # timestamp check, without manufacturing market data.
+                        _validate_kline_row_after_trade_stamp(row, server, received)
+                        if stamp_violation is None:
+                            stamp_violation = direction
                     frame_closed += int(row["confirm"] is True)
-                if quarantined:
-                    failure = None
+                if stamp_violation is not None:
+                    quarantine_closed += int(stamp_violation.endswith("_closed"))
+                    quarantine_open += int(stamp_violation.endswith("_open"))
+                    stamp_before += int("_before_" in stamp_violation)
+                    stamp_after += int("_after_" in stamp_violation)
                     continue
                 closed += frame_closed
                 valid += 1
