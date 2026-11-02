@@ -18,7 +18,7 @@ from typing import Callable
 
 from .bybit_public_ws_once import (
     StreamSession, _bounded_json, _is_public_pong,
-    _subscription_ack, _validate_one_kline_row,
+    _safe_failure_category, _subscription_ack, _validate_one_kline_row,
 )
 from .market_data import DataValidationError
 from .research_registry_catalog import load_reviewed_registry
@@ -210,8 +210,14 @@ def probe_linear_topics_once(
             return result()
     except (OSError, TimeoutError, RuntimeError, ImportError):
         status, failure = "ws_transport_abstain", stage
-    except (DataValidationError, ValueError, TypeError):
-        status, failure = "ws_frame_invalid_abstain", stage
+    except (DataValidationError, ValueError, TypeError) as error:
+        # Emit only a fixed allowlisted validation class, never raw provider
+        # bytes, symbol, timestamp, exception text or OHLC values.
+        if stage == "validate" and isinstance(error, DataValidationError):
+            failure = _safe_failure_category(error, "kline")
+        else:
+            failure = "processing"
+        status = "ws_frame_invalid_abstain"
     except Exception:
         # Unknown dependency/provider exceptions must not disclose payloads.
         status, failure = "ws_unexpected_failure_abstain", stage

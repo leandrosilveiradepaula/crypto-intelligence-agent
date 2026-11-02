@@ -1039,3 +1039,8 @@ Workflow owner-only #41492753422 SUCCESS no `main=ed1f3235445741e82a82b68e7cb3f4
 ## J1/OPS16 — prova de candle fechado ao cruzar UTC (02/11/2026)
 
 A prova pública GitHub WS52 anterior 41492753422 confirmou ACK e frames pós-ACK de 52 candidatos, mas nenhuma vela `confirm=true` em 45s. OPS16 branch `work/issue-429-ops16-hour-close-proof` prepara uma execução **única**, comentário exato owner-only #429, espera UTC limitada 20min, inicia 30s antes do próximo fechamento, recebe 90s/8192 frames e reporta somente contagens sanitizadas. Nenhum serviço contínuo, credencial, REST, persistência, ordem ou uso da VPS. CI/merge e execução real ainda pendentes até evidência. Top50 #319 e J1 #2 permanecem abertas.
+
+
+## J1/OPS17 — diagnóstico de validação no fechamento real (02/11/2026)
+
+OPS16 PR #449 integrada em main `145d9074a365f8ba75e8809dd7828bfebe82eb2d`; prova real GitHub runner `41505630514` cruzou janela UTC com sucesso (start 18:59:30Z) e falhou em 19:00:00.429Z: `ws_frame_invalid_abstain` categoria genérica `validate`, 1 ACK, 52 tópicos, 448 frames e 393 válidos após ACK, sem candle fechado comprovado. É erro de validação, **não** prova de incompatibilidade da Bybit nem de falha da VPS. Issue #450/OPS17 branch `work/issue-450-j1-ops17-close-frame-categories` instrumenta apenas categorias allowlist sem dados sensíveis, com testes adversariais. CI/revisão/merge ainda dependem do SHA. Sem repetição de probe, GET REST, dados armazenados ou ordens.

@@ -166,6 +166,41 @@ class LinearLiveProbeTests(unittest.TestCase):
         result, _ = self.run_probe([ACK], seconds=4, frames=MAX_FRAMES)
         self.assertEqual(result.status, "ws_ack_only_unverified")
 
+    def test_sanitized_kline_close_failure_categories_without_market_leak(self):
+        samples = (
+            ("ws_clock_trade_stamp_invalid", "clock_trade_stamp"),
+            ("ws_clock_closed_before_server_end", "clock_closed_before_server_end"),
+            ("ws_clock_closed_before_local_end", "clock_closed_before_local_end"),
+            ("ws_clock_closed_too_old", "clock_closed_too_old"),
+            ("ws_clock_grid_invalid", "clock_grid"),
+            ("ws_kline_fields_invalid", "kline_fields"),
+            ("ws_ohlc_invalid", "kline_ohlc"),
+            ("ws_confirm_type_invalid", "kline_confirmation"),
+            ("secret path /root/key and 123456", "kline_invalid"),
+        )
+        for internal_reason, expected in samples:
+            with self.subTest(internal_reason=internal_reason), patch(
+                "crypto_intelligence_agent.bybit_ws_linear_live_probe._validate_one_kline_row",
+                side_effect=DataValidationError(internal_reason),
+            ):
+                result, _ = self.run_probe([ACK, market(closed=True)])
+                self.assertEqual(result.status, "ws_frame_invalid_abstain")
+                self.assertEqual(result.failure_category, expected)
+                self.assertEqual(result.validated_closed_events, 0)
+                sanitized = json.dumps(result.sanitized_report())
+                self.assertNotIn("secret", sanitized)
+                self.assertNotIn("123456", sanitized)
+                self.assertNotIn("USDT", sanitized)
+
+    def test_non_validation_exception_is_generic_not_echoed(self):
+        with patch(
+            "crypto_intelligence_agent.bybit_ws_linear_live_probe._validate_one_kline_row",
+            side_effect=ValueError("secret credentials"),
+        ):
+            report, _ = self.run_probe([ACK, market(closed=True)])
+        self.assertEqual(report.failure_category, "processing")
+        self.assertNotIn("secret", json.dumps(report.sanitized_report()))
+
     def test_failed_socket_does_not_retry(self):
         result, _ = self.run_probe([ACK, OSError("offline EOF secret")])
         self.assertEqual(result.status, "ws_transport_abstain")
