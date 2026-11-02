@@ -193,6 +193,56 @@ class LinearLiveProbeTests(unittest.TestCase):
         self.assertEqual(diagnostic.valid_market_frames, 0)
         self.assertEqual(diagnostic.quarantined_open_stamp_frames, 1)
 
+    def test_trade_stamp_quarantine_never_hides_another_bad_row(self):
+        first = dict(market(closed=False)["data"][0], timestamp=START-1)
+        for later in (
+            dict(market()["data"][0], high="0.1"),
+            dict(market()["data"][0], confirm="false"),
+            dict(market()["data"][0], volume="NaN"),
+        ):
+            with self.subTest(later=later):
+                packet = dict(market(), data=[first, later])
+                report, _ = self.run_probe([ACK, packet], diagnose=True)
+                self.assertEqual(report.status, "ws_frame_invalid_abstain")
+                self.assertEqual(report.valid_market_frames, 0)
+                self.assertEqual(report.validated_closed_events, 0)
+                self.assertEqual(report.quarantined_open_stamp_frames, 0)
+
+    def test_trade_stamp_with_bad_ohlc_or_confirmation_fails_closed(self):
+        for bad_field, value in (("high", "0.1"), ("confirm", "false"),
+                                 ("turnover", "NaN")):
+            with self.subTest(field=bad_field):
+                row = dict(market()["data"][0], timestamp=START-1)
+                row[bad_field] = value
+                report, _ = self.run_probe([ACK, dict(market(), data=[row])],
+                                           diagnose=True)
+                self.assertEqual(report.status, "ws_frame_invalid_abstain")
+                self.assertEqual(report.validated_closed_events, 0)
+                self.assertEqual(report.quarantined_open_stamp_frames, 0)
+
+    def test_multiple_timestamp_rows_count_one_frame_and_no_close(self):
+        before = dict(market()["data"][0], timestamp=START-1, confirm=False)
+        after = dict(market(closed=True)["data"][0],
+                     timestamp=START+HOUR_MS, confirm=True)
+        packet = dict(market(), data=[before, after])
+        report, _ = self.run_probe([ACK, packet], diagnose=True)
+        self.assertEqual(report.status, "ws_timestamp_diagnostic_unverified")
+        self.assertEqual(report.quarantined_open_stamp_frames, 1)
+        self.assertEqual(report.quarantined_closed_stamp_frames, 1)
+        self.assertEqual(report.stamp_before_frames, 1)
+        self.assertEqual(report.stamp_after_frames, 1)
+        self.assertEqual(report.validated_closed_events, 0)
+        self.assertEqual(report.valid_market_frames, 0)
+
+    def test_default_strict_trade_stamp_gate_unchanged(self):
+        from crypto_intelligence_agent.bybit_public_ws_once import _validate_one_kline_row
+        row = dict(market()["data"][0], timestamp=START-1)
+        with self.assertRaises(DataValidationError):
+            _validate_one_kline_row(row, RECEIPT-500, RECEIPT)
+        with self.assertRaises(DataValidationError):
+            _validate_one_kline_row(row, RECEIPT-500, RECEIPT,
+                                    diagnostic_ignore_trade_stamp=1)
+
     def test_unrelated_validation_still_fails_closed_in_diagnostic(self):
         broken = dict(market(), data=[dict(market()["data"][0], high="0.1")])
         report, _ = self.run_probe([ACK, broken], diagnose=True)

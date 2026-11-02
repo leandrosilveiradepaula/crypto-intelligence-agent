@@ -224,7 +224,9 @@ def probe_linear_topics_once(
                     raise DataValidationError("LINEAR proof market envelope invalid")
                 has_close = False
                 frame_closed = 0
-                quarantined = False
+                # No early break: quarantine may be decided only after all
+                # rows pass every non-trade-stamp validation rule.
+                frame_stamp_classes: set[str] = set()
                 for row in rows:
                     if type(row) is not dict:
                         raise DataValidationError("LINEAR proof market row invalid")
@@ -233,18 +235,24 @@ def probe_linear_topics_once(
                     except DataValidationError as error:
                         if str(error) != "ws_clock_trade_stamp_invalid":
                             raise
-                        failure = _stamp_failure_class(row)
+                        stamp_class = _stamp_failure_class(row)
+                        failure = stamp_class
                         if not diagnostic_trade_stamp:
                             raise
-                        is_closed = row.get("confirm") is True
-                        quarantine_closed += int(is_closed)
-                        quarantine_open += int(not is_closed)
-                        stamp_before += int("_before_" in failure)
-                        stamp_after += int("_after_" in failure)
-                        quarantined = True
-                        break
+                        # Recheck OHLC, decimals, confirm and close/server
+                        # clocks with ONLY the trade-stamp predicate disabled.
+                        # This does NOT accept or store the invalid candle.
+                        _validate_one_kline_row(
+                            row, server, received,
+                            diagnostic_ignore_trade_stamp=True)
+                        frame_stamp_classes.add(stamp_class)
+                        continue
                     frame_closed += int(row["confirm"] is True)
-                if quarantined:
+                if frame_stamp_classes:
+                    quarantine_closed += int(any("_closed" in x for x in frame_stamp_classes))
+                    quarantine_open += int(any("_open" in x for x in frame_stamp_classes))
+                    stamp_before += int(any("_before_" in x for x in frame_stamp_classes))
+                    stamp_after += int(any("_after_" in x for x in frame_stamp_classes))
                     failure = None
                     continue
                 closed += frame_closed
