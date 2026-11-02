@@ -18,15 +18,18 @@ def main(argv=None) -> int:
     p.add_argument("--confirm-region-and-personal-research", action="store_true")
     p.add_argument("--seconds", type=int, default=35)
     p.add_argument("--max-frames", type=int, default=MAX_FRAMES)
+    p.add_argument("--diagnose-trade-stamps", action="store_true")
     args = p.parse_args(argv)
     report = owner_probe_linear_topics_once(
         allow_public_network=args.allow_public_network,
         allow_public_websocket=args.allow_public_websocket,
         confirm_region_and_personal_research=args.confirm_region_and_personal_research,
-        seconds=args.seconds, max_frames=args.max_frames)
+        seconds=args.seconds, max_frames=args.max_frames,
+        diagnostic_trade_stamp=args.diagnose_trade_stamps)
     print(json.dumps(report.sanitized_report(), sort_keys=True, separators=(",", ":")))
     return 0 if report.status in ("ws_ack_only_unverified",
-                                  "ws_ack_with_market_frames_unverified") else 1
+                                  "ws_ack_with_market_frames_unverified",
+                                  "ws_timestamp_diagnostic_unverified") else 1
 
 
 if __name__ == "__main__":
