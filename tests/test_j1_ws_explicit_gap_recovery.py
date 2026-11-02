@@ -55,6 +55,8 @@ class GapRecoveryTests(unittest.TestCase):
         self.assertEqual(len(self.gaps()), 1)
         self.assertEqual(self.add(2, allow=True), "idempotent")
         self.assertEqual(len(self.gaps()), 1)
+        self.assertEqual(self.audit().declared_gap_markers, 1)
+        self.assertEqual(self.audit().sanitized_report()["declared_gap_markers"], 1)
         self.assertEqual(self.audit().persisted_rows, 2)
         self.assertIsNone(self.audit().rank_digest_sha256)
         with self.assertRaises(DataGapError):
