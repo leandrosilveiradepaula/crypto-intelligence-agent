@@ -212,6 +212,15 @@ def _validate_one_kline_row(row: dict, server: int, received_ms: int) -> bool:
         raise DataValidationError("ws_clock_grid_invalid")
     if not start <= stamp <= end:
         raise DataValidationError("ws_clock_trade_stamp_invalid")
+    return _validate_kline_row_after_trade_stamp(row, server, received_ms)
+
+
+def _validate_kline_row_after_trade_stamp(row: dict, server: int, received_ms: int) -> bool:
+    """Validate the remaining strict rules only after fields/grid were checked.
+
+    Diagnostic caller must invoke this exclusively after catching an exact
+    trade-stamp range failure, and must never promote a quarantined candle.
+    """
     if server > received_ms + 5000:
         raise DataValidationError("ws_clock_server_ahead_invalid")
     if received_ms - server > 30000:
