@@ -35,6 +35,17 @@ _REQUEST_ID = "cia-probe-52"
 _TOPIC = re.compile(r"kline\.60\.[A-Z0-9]{2,30}USDT\Z")
 
 
+_EXCESS_BANDS = ("1ms", "2_1000ms", "1001_5000ms", "over_5000ms")
+
+
+def _positive_excess_band(*, stamp: int, end: int) -> int:
+    """Fixed bucket of positive overrun, never raw timestamp or offset."""
+    if type(stamp) is not int or type(end) is not int or stamp <= end:
+        raise DataValidationError("diagnostic positive trade-stamp excess required")
+    delta = stamp - end
+    return 0 if delta == 1 else 1 if delta <= 1000 else 2 if delta <= 5000 else 3
+
+
 @dataclass(frozen=True)
 class LinearWSProof:
     status: str
@@ -52,6 +63,8 @@ class LinearWSProof:
     quarantined_closed_stamp_frames: int = 0
     stamp_before_frames: int = 0
     stamp_after_frames: int = 0
+    stamp_after_open_bands: tuple[int, int, int, int] = (0, 0, 0, 0)
+    stamp_after_closed_bands: tuple[int, int, int, int] = (0, 0, 0, 0)
 
     def sanitized_report(self) -> dict:
         return {
@@ -68,6 +81,8 @@ class LinearWSProof:
             "quarantined_closed_stamp_frames": self.quarantined_closed_stamp_frames,
             "stamp_before_frames": self.stamp_before_frames,
             "stamp_after_frames": self.stamp_after_frames,
+            "stamp_after_open_excess_bands": dict(zip(_EXCESS_BANDS, self.stamp_after_open_bands)),
+            "stamp_after_closed_excess_bands": dict(zip(_EXCESS_BANDS, self.stamp_after_closed_bands)),
             "all_topics_delivered_verified": False,
             "closed_24h_complete": False,
             "marketwide_top50_verified": False,
@@ -134,6 +149,8 @@ def probe_linear_topics_once(
         raise DataValidationError("LINEAR proof monotonic clock invalid")
     frames = preack = valid = closed = pongs = ack = 0
     quarantine_open = quarantine_closed = stamp_before = stamp_after = 0
+    after_open_bands = [0, 0, 0, 0]
+    after_closed_bands = [0, 0, 0, 0]
     topics_seen: set[str] = set()
     closed_seen: set[str] = set()
     failure: str | None = None
@@ -147,7 +164,8 @@ def probe_linear_topics_once(
         return LinearWSProof(status, failure, len(topics), ack, frames,
                              preack, valid, len(topics_seen), closed,
                              len(closed_seen), pongs,
-                             quarantine_open, quarantine_closed, stamp_before, stamp_after)
+                             quarantine_open, quarantine_closed, stamp_before, stamp_after,
+                             tuple(after_open_bands), tuple(after_closed_bands))
 
     try:
         with closing(session_factory()) as session:
@@ -227,6 +245,7 @@ def probe_linear_topics_once(
                 # No early break: quarantine may be decided only after all
                 # rows pass every non-trade-stamp validation rule.
                 frame_stamp_classes: set[str] = set()
+                frame_open_excess_band = frame_closed_excess_band = -1
                 for row in rows:
                     if type(row) is not dict:
                         raise DataValidationError("LINEAR proof market row invalid")
@@ -246,6 +265,12 @@ def probe_linear_topics_once(
                             row, server, received,
                             diagnostic_ignore_trade_stamp=True)
                         frame_stamp_classes.add(stamp_class)
+                        if stamp_class.startswith("clock_trade_stamp_after_"):
+                            band = _positive_excess_band(stamp=row["timestamp"], end=row["end"])
+                            if row["confirm"] is True:
+                                frame_closed_excess_band = max(frame_closed_excess_band, band)
+                            else:
+                                frame_open_excess_band = max(frame_open_excess_band, band)
                         continue
                     frame_closed += int(row["confirm"] is True)
                 if frame_stamp_classes:
@@ -253,6 +278,10 @@ def probe_linear_topics_once(
                     quarantine_open += int(any("_open" in x for x in frame_stamp_classes))
                     stamp_before += int(any("_before_" in x for x in frame_stamp_classes))
                     stamp_after += int(any("_after_" in x for x in frame_stamp_classes))
+                    if frame_open_excess_band >= 0:
+                        after_open_bands[frame_open_excess_band] += 1
+                    if frame_closed_excess_band >= 0:
+                        after_closed_bands[frame_closed_excess_band] += 1
                     failure = None
                     continue
                 closed += frame_closed
