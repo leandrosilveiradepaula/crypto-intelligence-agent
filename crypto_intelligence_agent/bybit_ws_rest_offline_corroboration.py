@@ -81,7 +81,7 @@ def corroborate_anomalous_close_offline(
     if (any(type(x) is not int for x in (start, end, stamp))
             or not 0 < start < end < MAX_UTC_MS
             or end != start + HOUR_MS - 1 or start % HOUR_MS
-            or stamp <= end
+            or stamp <= end or stamp > server
             or not end + 1 <= server <= received_at_ms
             or received_at_ms - server > 30_000
             or not 1000 <= received_at_ms - (end + 1) <= 120_000
