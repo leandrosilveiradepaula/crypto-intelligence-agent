@@ -129,6 +129,17 @@ class OfflineCorroborationTests(unittest.TestCase):
                 with self.assertRaises(DataValidationError):
                     self.compare(frame=f, received=receipt)
 
+    def test_trade_timestamp_later_than_server_is_causally_invalid(self):
+        f = ws()
+        f["data"][0]["timestamp"] = f["ts"] + 1
+        with self.assertRaises(DataValidationError):
+            self.compare(frame=f)
+        f["data"][0]["timestamp"] = f["ts"]
+        # Causal timestamp is necessary but never sufficient for approval.
+        report = self.compare(frame=f)
+        self.assertEqual(report.status, "offline_values_match_unverified")
+        self.assertFalse(report.sanitized_report()["ws_candle_approved"])
+
     def test_malformed_or_open_row_never_matches(self):
         cases = (
             ("confirm", False), ("confirm", 1), ("timestamp", True),
