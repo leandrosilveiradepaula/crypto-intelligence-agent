@@ -178,7 +178,7 @@ class TimerTests(TestCase):
                         {"target_utc":"*-*-* 15:45 UTC"},
                         {"expected_sha":"b" * 39},
                         {"repo_root":"/tmp/a/../bad"},
-                        {"state_dir":str(self.repo / "children")},
+                        {"state_dir":"/home/cia-probe/agent/repo/children"},
                         {"python_bin":"/bin/sh --evil"}):
             with self.subTest(replace=replace), self.assertRaises(ValueError):
                 render_units(**(common | replace))
