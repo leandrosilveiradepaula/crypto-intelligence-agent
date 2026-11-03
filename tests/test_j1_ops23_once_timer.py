@@ -33,7 +33,7 @@ class TimerTests(TestCase):
     def fake_runner(self, argv, **kwargs):
         self.calls.append((tuple(argv), kwargs))
         report = dict(status="ws_rest_match_unverified", fields_compared=6,
-                      fields_equal=6, rest_gets=1, ws_candle_approved=False,
+                      fields_equal=6, rest_gets=1, ws_frames=45, ws_candle_approved=False,
                       canonical_ohlcv_approved=False, source_authenticated=False,
                       orders_sent=False, data_stored=False)
         return SimpleNamespace(returncode=0, stdout=json.dumps(report), stderr="")
@@ -109,6 +109,46 @@ class TimerTests(TestCase):
         self.state.symlink_to(self.repo)
         self.assertEqual(self.execute().status, "state_permissions_abstain")
         self.assertFalse(self.calls)
+
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
+    def test_allowlisted_diagnostic_counts_survive_without_raw_data(self):
+        seen = []
+        def diagnostic(argv, **kwargs):
+            seen.append(tuple(argv))
+            if len(seen) == 1:
+                return SimpleNamespace(returncode=0, stdout="{}", stderr="")
+            payload = dict(status="rest_rate_limit_abstain",
+                           ws_frames=77, rest_gets=1, fields_compared=0,
+                           fields_equal=0, ws_candle_approved=False,
+                           canonical_ohlcv_approved=False,
+                           source_authenticated=False, orders_sent=False,
+                           data_stored=False)
+            return SimpleNamespace(returncode=1, stdout=json.dumps(payload),
+                                   stderr="SECRET market-data bytes")
+        r = self.execute(runner=diagnostic)
+        self.assertEqual(r.status, "probe_abstained")
+        self.assertEqual(r.probe_status, "rest_rate_limit_abstain")
+        self.assertEqual((r.ws_frames, r.rest_gets, r.fields_compared), (77, 1, 0))
+        self.assertNotIn("SECRET", json.dumps(r.sanitized_report()))
+        self.assertEqual(self.execute().status, "already_attempted_abstain")
+
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
+    def test_unbounded_probe_counts_are_discarded(self):
+        seen = []
+        def corrupted(argv, **kwargs):
+            seen.append(tuple(argv))
+            if len(seen) == 1:
+                return SimpleNamespace(returncode=0, stdout="{}", stderr="")
+            payload = dict(status="rest_rate_limit_abstain", ws_frames=9999,
+                           rest_gets=999, fields_compared=0, fields_equal=0,
+                           ws_candle_approved=False, canonical_ohlcv_approved=False,
+                           source_authenticated=False, orders_sent=False,
+                           data_stored=False)
+            return SimpleNamespace(returncode=1, stdout=json.dumps(payload), stderr="")
+        r = self.execute(runner=corrupted)
+        self.assertEqual(r.status, "probe_report_invalid_abstain")
+        self.assertIsNone(r.probe_status)
+        self.assertEqual(r.rest_gets, 0)
 
     @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_failed_wait_still_consumes_once_marker(self):
