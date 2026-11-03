@@ -72,6 +72,25 @@ class OfflineCorroborationTests(unittest.TestCase):
         for secret in (SYMBOL, str(START), str(END), "1.03", "2.50"):
             self.assertNotIn(secret, json.dumps(report))
 
+    def test_early_ws_receipt_is_explicitly_diagnostic_and_never_approved(self):
+        early = END + 501
+        f = ws()
+        f["ts"] = early - 100
+        f["data"][0]["timestamp"] = END + 100
+        with self.assertRaises(DataValidationError):
+            self.compare(frame=f, received=early)
+        with patch("socket.create_connection", side_effect=AssertionError("no network")):
+            result = corroborate_anomalous_close_offline(
+                frame=f, received_at_ms=early, reference=rest(),
+                diagnostic_early_receipt=True)
+        self.assertEqual(result.fields_equal, 6)
+        self.assertEqual(result.status, "offline_values_match_unverified")
+        self.assertFalse(result.sanitized_report()["ws_candle_approved"])
+        with self.assertRaises(DataValidationError):
+            corroborate_anomalous_close_offline(
+                frame=f, received_at_ms=early, reference=rest(),
+                diagnostic_early_receipt=1)
+
     def test_each_financial_difference_remains_abstention(self):
         mutations = {
             "open": "1.002", "high": "1.031", "low": "0.989",
