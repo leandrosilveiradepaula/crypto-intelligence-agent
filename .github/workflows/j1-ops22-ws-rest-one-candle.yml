@@ -1,0 +1,48 @@
+name: J1 OPS22 single-candle WS x REST public corroboration (owner-only)
+
+# Explicit one-time issue comment by repository owner. No schedule or push.
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: j1-ops22-one-candle-once
+  cancel-in-progress: false
+
+jobs:
+  compare-once:
+    if: >-
+      github.event.issue.number == 429 &&
+      github.event.issue.pull_request == null &&
+      github.event.comment.body == '/probe-j1-ws-rest-one-candle-once-v1' &&
+      github.event.comment.user.login == 'leandrosilveiradepaula' &&
+      github.actor == 'leandrosilveiradepaula' &&
+      github.repository == 'leandrosilveiradepaula/crypto-intelligence-agent'
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - name: Checkout reviewed main without stored credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned free WS library
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+        run: python3 -m pip install --disable-pip-version-check --no-input websockets==15.0.1
+      - name: Wait bounded next UTC close or abstain
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONUNBUFFERED: "1"
+        run: python3 -m scripts.wait_j1_ws_utc_close
+      - name: Compare one public WS closed candle to max one public REST GET
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONUNBUFFERED: "1"
+        run: |
+          set -eu
+          python3 -m scripts.probe_j1_ws_rest_one_candle \
+            --allow-public-network --allow-public-websocket \
+            --allow-one-public-rest-get --confirm-region-and-personal-research
