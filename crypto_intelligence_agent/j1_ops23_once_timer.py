@@ -20,16 +20,42 @@ LEAD_SECONDS = 900
 START_GRACE_SECONDS = 15
 MAX_WAIT_SECONDS = 1200
 
+# Finite status vocabulary from the reviewed OPS22 runner. Never reflect arbitrary
+# child output, paths, HTTP bodies, OHLCV, or exception text to journald.
+_ALLOWED_PROBE_STATUSES = frozenset({
+    "ws_rest_match_unverified", "ws_rest_diverge_abstain",
+    "ws_no_qualifying_close_abstain", "ws_pong_timeout_abstain",
+    "ws_ack_invalid_abstain", "ws_unexpected_control_abstain",
+    "ws_preack_abstain", "ws_envelope_abstain", "ws_row_abstain",
+    "ws_close_chronology_abstain", "rest_window_abstain",
+    "rest_clock_abstain", "rest_rate_limit_abstain",
+    "rest_http_abstain", "rest_transport_abstain",
+    "rest_envelope_abstain", "rest_rejected_abstain",
+    "validation_abstain", "ws_transport_abstain", "unexpected_abstain",
+    "owner_opt_in_required", "owner_nonroot_required",
+    "registry_invalid_abstain", "capability_abstain", "clock_abstain",
+})
+
+
 
 @dataclass(frozen=True)
 class VPSOneShotResult:
     status: str
     launched: bool = False
+    probe_status: str | None = None
+    ws_frames: int = 0
+    rest_gets: int = 0
+    fields_compared: int = 0
+    fields_equal: int = 0
 
     def sanitized_report(self) -> dict:
         return {"status": self.status, "probe_launched": self.launched,
                 "data_stored_by_supervisor": False, "orders_sent": False,
-                "live_trading_authorized": False}
+                "live_trading_authorized": False,
+                "probe_status": self.probe_status, "ws_frames": self.ws_frames,
+                "rest_gets": self.rest_gets,
+                "fields_compared": self.fields_compared,
+                "fields_equal": self.fields_equal}
 
 
 def timer_date(target_utc: str) -> tuple[datetime, datetime]:
@@ -137,23 +163,32 @@ def launch_once(*, target_utc: str, expected_sha: str, repo_root: str,
                         "--allow-one-public-rest-get", "--confirm-region-and-personal-research"],
                        cwd=repo, env=env, timeout=120,
                        capture_output=True, text=True, check=False)
-        if probe.returncode != 0:
-            return VPSOneShotResult("probe_abstained", True)
         try:
             report = json.loads(probe.stdout)
         except (ValueError, TypeError):
-            return VPSOneShotResult("probe_report_invalid_abstain", True)
+            return VPSOneShotResult(
+                "probe_abstained" if probe.returncode else "probe_report_invalid_abstain", True)
         if (type(report) is not dict
-                or report.get("status") != "ws_rest_match_unverified"
-                or report.get("fields_compared") != 6
-                or report.get("fields_equal") != 6
-                or report.get("rest_gets") != 1
+                or report.get("status") not in _ALLOWED_PROBE_STATUSES
+                or any(type(report.get(key)) is not int or not 0 <= report[key] <= cap
+                       for key, cap in (
+                           ("ws_frames", 256), ("rest_gets", 1),
+                           ("fields_compared", 6), ("fields_equal", 6)))
+                or report["fields_equal"] > report["fields_compared"]
                 or report.get("ws_candle_approved") is not False
                 or report.get("canonical_ohlcv_approved") is not False
                 or report.get("source_authenticated") is not False
                 or report.get("orders_sent") is not False
                 or report.get("data_stored") is not False):
             return VPSOneShotResult("probe_report_invalid_abstain", True)
-        return VPSOneShotResult("probe_completed_unverified", True)
+        fields = (report["status"], report["ws_frames"], report["rest_gets"],
+                  report["fields_compared"], report["fields_equal"])
+        is_match = (probe.returncode == 0
+                    and report["status"] == "ws_rest_match_unverified"
+                    and report["rest_gets"] == 1
+                    and report["fields_compared"] == report["fields_equal"] == 6)
+        return VPSOneShotResult(
+            "probe_completed_unverified" if is_match else "probe_abstained",
+            True, *fields)
     except (ValueError, TypeError, OSError, subprocess.SubprocessError):
         return VPSOneShotResult("launcher_failure_abstain")
