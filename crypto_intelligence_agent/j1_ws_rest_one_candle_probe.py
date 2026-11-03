@@ -126,14 +126,25 @@ def compare_one_candle_once(
     started = clock()
     if type(started) not in (int, float) or not math.isfinite(started):
         return OneCandleCorroboration("clock_abstain")
+    last_ping = started
+    pending_ping = None
     try:
         with closing(session_factory()) as session:
             session.send(json.dumps({"op": "subscribe", "req_id": "cia-ops22-single",
                                      "args": [TOPIC]}, separators=(",", ":")))
             while frames < max_frames:
-                remaining = seconds - (clock() - started)
+                now_mono = clock()
+                remaining = seconds - (now_mono - started)
                 if remaining <= 0:
                     break
+                if pending_ping is not None and now_mono - pending_ping >= 45:
+                    outcome = "ws_pong_timeout_abstain"
+                    break
+                if now_mono - last_ping >= 20:
+                    session.send('{"op":"ping"}')
+                    last_ping = now_mono
+                    if pending_ping is None:
+                        pending_ping = now_mono
                 try:
                     data = session.recv(min(remaining, 5.0))
                 except TimeoutError:
@@ -141,6 +152,7 @@ def compare_one_candle_once(
                 frames += 1
                 frame = _bounded_json(data)
                 if _is_public_pong(frame):
+                    pending_ping = None
                     continue
                 if frame.get("op") == "subscribe":
                     if (ack or not _subscription_ack(frame) or
