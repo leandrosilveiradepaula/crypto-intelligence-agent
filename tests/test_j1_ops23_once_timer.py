@@ -78,6 +78,7 @@ class TimerTests(TestCase):
         self.assertEqual(r2.status, "already_attempted_abstain")
         self.assertEqual(len(self.calls), 2)
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_missed_window_and_clock_jump_never_attempt(self):
         for delta in (-1, 16, 90, 3600):
             with self.subTest(delta=delta):
@@ -86,6 +87,7 @@ class TimerTests(TestCase):
                 self.assertFalse(self.calls)
                 self.assertFalse((self.state / "ops22-one-shot-attempt.claim").exists())
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_unsynced_ntp_git_sha_and_owner_abstain(self):
         for update, expected in (
             ({"ntp_check": lambda: False}, "ntp_unsynced_abstain"),
@@ -153,8 +155,8 @@ class TimerTests(TestCase):
 
     def test_rendered_units_no_schedule_recurrence_no_install(self):
         s, t = render_units(owner="cia-probe", target_utc=TARGET, expected_sha=SHA,
-                            repo_root=str(self.repo), python_bin=self.python,
-                            state_dir=str(self.state))
+                            repo_root="/home/cia-probe/agent/repo", python_bin="/usr/bin/python3",
+                            state_dir="/home/cia-probe/agent/ops23-claims")
         self.assertIn("OnCalendar=2026-11-03 15:45:00 UTC", t)
         self.assertIn("Persistent=false", t)
         self.assertIn("AccuracySec=1s", t)
@@ -170,8 +172,8 @@ class TimerTests(TestCase):
 
     def test_render_rejects_input_injection(self):
         common = dict(owner="cia-probe", target_utc=TARGET, expected_sha=SHA,
-                      repo_root=str(self.repo), python_bin=self.python,
-                      state_dir=str(self.state))
+                      repo_root="/home/cia-probe/agent/repo", python_bin="/usr/bin/python3",
+                      state_dir="/home/cia-probe/agent/ops23-claims")
         for replace in ({"owner":"root;touch"}, {"owner":"root"},
                         {"target_utc":"*-*-* 15:45 UTC"},
                         {"expected_sha":"b" * 39},
