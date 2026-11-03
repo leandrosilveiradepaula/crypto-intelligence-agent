@@ -4,8 +4,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest import TestCase, main
+from unittest import TestCase, main, skipUnless
 import json
+import os
 
 from crypto_intelligence_agent.j1_ops23_once_timer import (
     timer_date, launch_once, check_utc_synced, check_git_sha,
@@ -56,6 +57,7 @@ class TimerTests(TestCase):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 timer_date(bad)
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_success_only_once_claim_before_probe(self):
         r = self.execute()
         self.assertEqual(r.status, "probe_completed_unverified")
@@ -95,6 +97,7 @@ class TimerTests(TestCase):
                 self.assertEqual(self.execute(**update).status, expected)
                 self.assertFalse(self.calls)
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_missing_insecure_and_symlink_state_rejected(self):
         self.state.chmod(0o755)
         self.assertEqual(self.execute().status, "state_permissions_abstain")
@@ -105,6 +108,7 @@ class TimerTests(TestCase):
         self.assertEqual(self.execute().status, "state_permissions_abstain")
         self.assertFalse(self.calls)
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_failed_wait_still_consumes_once_marker(self):
         def fail_wait(argv, **kw):
             self.calls.append(tuple(argv))
@@ -115,6 +119,7 @@ class TimerTests(TestCase):
         self.assertEqual(self.execute().status, "already_attempted_abstain")
         self.assertEqual(len(self.calls), 1)
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_invalid_probe_success_report_is_not_reported_as_success(self):
         def malformed(argv, **kwargs):
             self.calls.append(tuple(argv))
@@ -125,6 +130,7 @@ class TimerTests(TestCase):
         self.assertEqual(r.status, "probe_report_invalid_abstain")
         self.assertTrue(r.launched)
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_ntp_loss_between_wait_and_probe_abstains(self):
         calls = [True, False]
         result = self.execute(ntp_check=lambda: calls.pop(0))
@@ -132,6 +138,7 @@ class TimerTests(TestCase):
         self.assertEqual(len(self.calls), 1)
         self.assertEqual(self.execute().status, "already_attempted_abstain")
 
+    @skipUnless(os.name == "posix", "POSIX owner-only launcher")
     def test_failed_probe_returns_sanitized_status_no_retry(self):
         def fail_probe(argv, **kw):
             self.calls.append(tuple(argv))
