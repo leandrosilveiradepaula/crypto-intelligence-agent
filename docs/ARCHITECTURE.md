@@ -493,3 +493,8 @@ bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quat
 ## J1/OPS9 — orçamento explícito de frames em serviço
 
 `WSRunBudget()` preserva 4.096 frames do piloto de pesquisa; o teto geral de segurança permite 200.000 somente quando chamado com valor explícito. `scripts.run_j1_ws_service` calcula 52 frames/s × segundos do lease + 4.096 frames de reserva e usa a mesma supervisão WS. O frame cap atingido antes do timeout representa perda de continuidade, propagado por `OwnerWSPilotReport` ao exit 66 do adaptador de systemd. Nenhuma alteração do banco REST EXIT5 ou das políticas PIT. Ver D217 / `docs/J1_OPS9_HOURLY_FRAME_BUDGET.md`.
+
+
+## J1 OPS23 — scheduler operacional VPS, não GitHub (código off-by-default)
+
+Contrato de unidades de execução única: \`systemd.timer\` OneCalendar UTC **absoluto** -> \`systemd.service\` oneshot não-root -> lançador \`j1_ops23_once_timer.launch_once\` (NTP, SHA+árvore, hora exata, claim atômico em diretório privado) -> \`scripts.wait_j1_ws_utc_close\` (bounded 20min, hora-30s) -> script OPS22 (1 WS topic, <=1 REST GET, output sanitizado). Nenhum timer recorrente implementado nesta entrega, nenhum serviço VPS instalado; modelo contínuo OPS1 existente é distinto. Proteções \`Persistent=false\`, \`Restart=no\`, \`O_EXCL\`/fsync, \`ProtectSystem=strict\`, \`ReadWritePaths\` restrito. Detalhes e ativação futura sujeita a gate: \`docs/J1_OPS23_VPS_SYSTEMD_ONCE.md\`. O GitHub continua CI/fonte oficial, não assume agendamento determinístico.
