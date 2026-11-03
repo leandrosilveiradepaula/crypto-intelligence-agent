@@ -124,6 +124,28 @@ class WSOneCandleTests(unittest.TestCase):
                 self.assertEqual(result.fields_equal, 5)
                 self.assertEqual(len(gets), 1)
 
+    def test_single_topic_sends_bounded_public_ping_and_accepts_pong(self):
+        clock = FakeClock()
+        class PingSession(FakeSession):
+            def recv(self, timeout):
+                if self.frames and self.frames[0] is None:
+                    self.frames.pop(0)
+                    self.clock.tick += 22
+                    raise TimeoutError()
+                return super().recv(timeout)
+        session = PingSession([ACK, None, {"op": "ping", "ret_msg": "pong"}, ws()], clock)
+        calls = []
+        def fetch(start, end):
+            calls.append((start, end))
+            return rest()
+        result = compare_one_candle_once(
+            session_factory=lambda: session, rest_fetch_once=fetch,
+            clock=clock, wall_ms=lambda: AT, sleeper=lambda _: None)
+        self.assertTrue(session.closed)
+        self.assertEqual([m["op"] for m in session.sent], ["subscribe", "ping"])
+        self.assertEqual(result.status, "ws_rest_match_unverified")
+        self.assertEqual(calls, [(START, END)])
+
     def test_10006_is_one_get_without_retry(self):
         result, gets, _ = self.exercise(reference={"retCode": 10006})
         self.assertEqual(result.status, "rest_rate_limit_abstain")
