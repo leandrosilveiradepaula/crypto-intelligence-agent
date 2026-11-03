@@ -874,3 +874,8 @@ Testar `python3 -m unittest discover -s tests -p test_j1_ws_linear_live_probe.py
 ## J1/OPS9 #429 — envelope de 52 tópicos e aborto ao atingir frame cap
 
 Testar `test_j1_ws_supervisor.py`, `test_j1_ws_service.py`, `compileall`, suíte Linux/docs+Windows/offline+Chrome/PAPER no SHA head e pós merge. Verificar: default 4.096 frames preservado, limite global 200.000, serviço 300/3300/3590 segundos = 52×duração + 4.096, 6 frames recebidos sob cap 6 após ACK não podem virar sucesso, saída 66 e restart bloqueado em cap, 10006 e integridade; opt-ins e segurança anteriores. Não realizar execução real Bybit, REST GET, intervenção na VPS, release ou ordens.
+
+
+## J1 OPS23 — agendamento UTC one-shot VPS (sem deploy)
+
+Executar \`python -m unittest discover -s tests -p test_j1_ops23_once_timer.py -v\` no Linux/Windows com skips POSIX justificados. Cenários: calendário absoluto, 15min de antecedência, timeout/late/cold boot fail-closed, NTP ausente/perdido durante espera, SHA trocado ou árvore suja, conta root, symlink, permissão da pasta 0700, claim 0600 atômico, segundo disparo sem rede, falha de espera, 10006 ou outras abstenções OPS22 preservadas, saída de subprocesso inesperada sem vazamento, zero dados/ordens. Verificar \`systemd-analyze calendar\` e \`systemd-analyze verify\` com unidades geradas para paths reais de um ambiente controlado; o runner CI não possui o executável VPS, logo erro de caminho inexistente em fixture CI não é prova de falha da VPS. Gates GitHub Linux/docs, Windows/offline, Chrome/PAPER no head e pós-merge. Gate VPS futuro exige revisão SHA, NTP ativo, CI, não duplicidade com serviço legado, permissões, quota e prova real. Não tocar VPS antes disso; não chamar CI de homologação de mercado.
