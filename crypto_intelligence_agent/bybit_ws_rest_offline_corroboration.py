@@ -51,6 +51,7 @@ class OfflineCloseCorroboration:
 def corroborate_anomalous_close_offline(
     *, frame: dict, received_at_ms: int,
     reference: BybitLinearCandlePageResearch,
+    diagnostic_early_receipt: bool = False,
 ) -> OfflineCloseCorroboration:
     """Compare six exact decimal fields without normalizing a post-end stamp.
 
@@ -58,7 +59,12 @@ def corroborate_anomalous_close_offline(
     For a structurally valid anomalous frame, reports equality *only*:
     equality does not prove provenance, correct hour assignment, or permission
     to accept a candle. This function never returns data usable by the journal.
+    diagnostic_early_receipt only changes the *comparison's* receive-age
+    lower bound; parser, storage, and 1s close-safety remain unchanged.
     """
+    if type(diagnostic_early_receipt) is not bool:
+        raise DataValidationError("offline corroboration early-receipt opt-in invalid")
+    min_delay_ms = 0 if diagnostic_early_receipt else 1000
     if (type(frame) is not dict
             or set(frame) != {"topic", "type", "ts", "data"}
             or frame.get("type") != "snapshot"
@@ -84,7 +90,7 @@ def corroborate_anomalous_close_offline(
             or stamp <= end or stamp > server
             or not end + 1 <= server <= received_at_ms
             or received_at_ms - server > 30_000
-            or not 1000 <= received_at_ms - (end + 1) <= 120_000
+            or not min_delay_ms <= received_at_ms - (end + 1) <= 120_000
             or row.get("confirm") is not True):
         raise DataValidationError("offline corroboration WS close chronology invalid")
     # All other WS validation still runs, with only the already-known invalid
