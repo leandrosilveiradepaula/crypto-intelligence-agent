@@ -187,39 +187,74 @@ def compare_one_candle_once(
                         break
                     outcome = "ws_ack_missing_abstain"
                     continue
-                if (type(frame) is not dict or set(frame) !=
-                        {"topic", "type", "ts", "data"} or
-                        frame["topic"] != TOPIC or frame["type"] != "snapshot" or
-                        type(frame["ts"]) is not int or type(frame["data"]) is not list or
-                        len(frame["data"]) != 1 or type(frame["data"][0]) is not dict):
-                    outcome = "ws_envelope_abstain"
+                # Distinguish public protocol shape failures using fixed,
+                # non-sensitive categories; never log raw frame contents.
+                if type(frame) is not dict or set(frame) != {"topic", "type", "ts", "data"}:
+                    outcome = "ws_envelope_keys_abstain"
                     break
-                row = frame["data"][0]
+                if frame["topic"] != TOPIC:
+                    outcome = "ws_envelope_topic_abstain"
+                    break
+                if frame["type"] != "snapshot" or type(frame["ts"]) is not int:
+                    outcome = "ws_envelope_metadata_abstain"
+                    break
+                rows = frame["data"]
+                if type(rows) is not list or not 1 <= len(rows) <= 8:
+                    outcome = "ws_envelope_rows_abstain"
+                    break
+                if any(type(row) is not dict for row in rows):
+                    outcome = "ws_envelope_row_type_abstain"
+                    break
                 now = wall_ms()
                 if type(now) is not int or now <= 0:
                     outcome = "clock_abstain"
                     break
-                start, end, stamp = row.get("start"), row.get("end"), row.get("timestamp")
-                if (any(type(x) is not int for x in (start, end, stamp)) or
-                        start <= 0 or start % HOUR_MS or
-                        end != start + HOUR_MS - 1 or
-                        type(row.get("confirm")) is not bool):
+                # Validate EVERY row in the frame before selecting a candidate.
+                # In particular, a valid first close must not hide a corrupt
+                # second row. The normal ingestion parser is not modified.
+                last_hour = (now // HOUR_MS - 1) * HOUR_MS
+                eligible = []
+                invalid_row = False
+                invalid_close_chronology = False
+                for row in rows:
+                    start, end, stamp = (row.get("start"), row.get("end"),
+                                         row.get("timestamp"))
+                    if (any(type(x) is not int for x in (start, end, stamp))
+                            or start <= 0 or start % HOUR_MS
+                            or end != start + HOUR_MS - 1
+                            or type(row.get("confirm")) is not bool):
+                        invalid_row = True
+                        break
+                    # Keep the non-trade-stamp rules fully strict for ALL rows,
+                    # as in OPS21, including OHLC, receive/server age and close.
+                    try:
+                        _validate_one_kline_row(
+                            row, frame["ts"], now,
+                            diagnostic_ignore_trade_stamp=True)
+                    except DataValidationError:
+                        invalid_row = True
+                        break
+                    if row["confirm"] is True:
+                        if (start != last_hour or
+                                not end < stamp <= frame["ts"] <= now or
+                                not end + 1 <= now <= end + 120_001):
+                            invalid_close_chronology = True
+                            break
+                        eligible.append(row)
+                if invalid_row:
                     outcome = "ws_row_abstain"
                     break
-                # Do not trust a confirmed *different* hour, stale frame or
-                # future event. Only the most recently completed UTC hour.
-                last_hour = (now // HOUR_MS - 1) * HOUR_MS
-                if row["confirm"] is not True:
-                    _validate_one_kline_row(row, frame["ts"], now,
-                                            diagnostic_ignore_trade_stamp=True)
-                    continue
-                if (start != last_hour or not end < stamp <= frame["ts"] <= now or
-                        not end + 1 <= now <= end + 120_001):
+                if invalid_close_chronology:
                     outcome = "ws_close_chronology_abstain"
                     break
-                _validate_one_kline_row(row, frame["ts"], now,
-                                        diagnostic_ignore_trade_stamp=True)
-                candidate = frame
+                if len(eligible) > 1:
+                    outcome = "ws_multiple_closed_abstain"
+                    break
+                if not eligible:
+                    continue
+                # The offline six-field auditor consumes exactly ONE reviewed
+                # row, never the unfiltered multi-row provider envelope.
+                candidate = {**frame, "data": [eligible[0]]}
                 receipt = now
                 closed = 1
                 break
