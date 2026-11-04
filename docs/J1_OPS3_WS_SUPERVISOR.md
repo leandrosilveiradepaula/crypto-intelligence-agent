@@ -36,3 +36,7 @@ Integrar escopo real verificado PIT com o controlador sem fabricar metadados; pr
 
 - [Bybit WebSocket V5 Connect](https://bybit-exchange.github.io/docs/v5/ws/connect): endpoint linear, multi-topic subscribe, ACK, heartbeat 20s, limites de conexão.
 - [Bybit WebSocket V5 Kline](https://bybit-exchange.github.io/docs/v5/websocket/public/kline): `kline.60`, `confirm` e timestamps de candles 1h.
+
+## OPS28 — revisão do limite temporal de ACK
+
+D234 substitui o buffer retroativo pré-ACK da implementação original por **descarte bounded** de mensagens estruturais em tópicos revisados. Até 128 frames por sessão podem ser descartados, e apenas após o ACK válido, correlacionado de uma única inscrição, frames novos chegam à ingestão. O campo legado `early_frames_buffered` passa a zero; `preack_frames_discarded` registra somente contagem. Quadros malformados, tópico inesperado ou excesso param por integridade. Isso evita que uma confirmação futura reclassifique um candle antigo e mantém `timestamp<=end`, idempotência, gaps e fail-stop intactos. A documentação anterior nesta página descreve o contrato histórico inicial, não a política vigente. Nenhuma implantação na VPS nesta issue.
