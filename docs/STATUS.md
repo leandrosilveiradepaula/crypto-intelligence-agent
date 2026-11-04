@@ -1086,3 +1086,8 @@ A VPS comprovou início do timer `22:45:00Z` e tentativa finita até `22:59:32Z`
 ## J1/OPS26 — teste VPS 2 e correção estrutural (04/11/2026)
 
 A segunda sonda de candle na VPS foi de fato executada pela janela UTC: 26 frames WS, `ws_envelope_abstain`, 0 GET REST, 0 campos comparados, tentativa isolada consumida. Hipótese plausível, não confirmada, é incompatibilidade com formato multirow; a saída sanitizada não identifica o motivo exato. Issue #472 implementa diagnóstico por categorias fixas, tratamento de até oito linhas pós-ACK com validação completa e seleção única de candle fechado apenas para auditor não autorizador, sem mudar ingestão. Código/CI/merge e nova homologação da VPS devem ser evidenciados separadamente; cron antigo não deve ser reexecutado. J1 e Top50 continuam abertos.
+
+
+## J1/OPS27 #474 — gate de timestamp WebSocket antes de 24h (04/11/2026)
+
+OPS26 comprovou timer one-shot e igualdade 6/6 WS×REST de um único candle BTCUSDT do mesmo provedor na VPS (29 frames, 1 GET, 0 ordens/armazenamento); três markers preservados, timers desabilitados, sem 24h ativado. A anomalia `timestamp>end` observada em OPS18–20 permanece incompatível com o parser estrito da coleta: coincidência de valores de mercado não certifica causalidade. OPS27 prepara auditor offline por bandas de excedente e confirmação, testes de referência/duplicata/multirow/clock adversariais, e critérios de no-go em `docs/J1_OPS27_CAUSAL_ROLLOVER_GATE.md`; código da ingestão não é afrouxado. J1 #2/Top50 #319/OPS1 #429 ainda abertas e sem prova de serviço 24/7. CI/merge específicos devem ser confirmados.
