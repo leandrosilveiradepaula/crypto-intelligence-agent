@@ -1096,3 +1096,8 @@ OPS26 comprovou timer one-shot e igualdade 6/6 WS×REST de um único candle BTCU
 ## J1/OPS28 #476 — política causal pré-ACK para supervisor (04/11/2026)
 
 A revisão da OPS1 detectou que o supervisor multiativo `bybit_ws_supervisor.py` permitia replay de frames de mercado guardados antes da confirmação de assinatura, divergindo do probe OPS22/decisão D231. A OPS28 altera somente supervisor/testes: pré-ACK estrutural do tópico esperado é contado e descartado sob limite 128; ACK só libera quadros **novos**; frames inesperados ou acima do limite falham fechados sem escrita. `early_frames_buffered=0` e `preack_frames_discarded` tornam comportamento observável de forma sanitizada. Parser temporal estrito e quarentena D233 não são alterados. Branch/CI/merge devem ser verificados; serviço 24h e Top50 marketwide não estão homologados.
+
+
+## J1/OPS29 #478 — simulação de continuidade trans-horária (04/11/2026)
+
+A correção OPS28 foi integrada em `main=87f135a50bb4f40a1b7b205c0874ec37c73a0232` e 3/3 CI pós-merge aprovadas; nenhuma PR aberta na revisão inicial. A OPS29 adiciona `j1_ws_multihour_soak.py` e regressões para 30 horas sintéticas de 2 membros, uma sessão limitada a cada hora, 24h de warm-up e 7 decisões fechadas sucessivas, incluindo reconexão e descarte pré-ACK. O contrato exige auditoria SQLite real da fixture a cada fechamento, ACK e o mesmo fingerprint PIT, abstenção em gap, replay, conflito, clock inválido ou falha de integridade; sem legitimidade de feed real. Branch `work/issue-478-j1-ops29-multihour-soak`, CI/merge devem ser provados. VPS, sistema operacional e dados financeiros permanecem intocados. J1 #2, OPS1 #429 e Top50 #319 abertas.
