@@ -177,6 +177,17 @@ class OPS31Tests(TestCase):
             with self.subTest(field=list(change)):
                 self.assertIsNone(_validated_shadow_report(
                     report(**change), returncode=0))
+        self.assertIsNone(_validated_shadow_report(report(
+            status="shadow_closes_observed_quarantined",
+            unique_closed=0, closed_timestamp_bands=BANDS), returncode=0))
+        self.assertIsNone(_validated_shadow_report(report(
+            status="shadow_no_closed_candle_unverified"), returncode=0))
+        self.assertIsNotNone(_validated_shadow_report(report(
+            status="shadow_preack_budget_abstain", frames_seen=129,
+            postack_market_frames=0, preack_discarded=129,
+            unique_closed=0, closed_timestamp_bands=BANDS,
+            open_rows=0, open_timestamp_bands=BANDS,
+            topics_observed=0), returncode=1))
         self.assertIsNone(_validated_shadow_report(report(), returncode=1))
         self.assertIsNone(_validated_shadow_report(report(
             status="shadow_no_ack_abstain"), returncode=0))
@@ -191,6 +202,11 @@ class OPS31Tests(TestCase):
                 return SimpleNamespace(returncode=0, stdout="active\n")
             return unavailable(args, **kw)
         self.assertFalse(no_competing_collectors(run=active))
+        def active_old_timer(args, **kw):
+            if args[-1] == "cia-j1-ops26-retest3.timer":
+                return SimpleNamespace(returncode=0, stdout="active\n")
+            return unavailable(args, **kw)
+        self.assertFalse(no_competing_collectors(run=active_old_timer))
         self.assertFalse(no_competing_collectors(run=lambda *a, **kw:
                          SimpleNamespace(returncode=1, stdout="garbled")))
         self.assertFalse(no_competing_collectors(run=lambda *a, **kw:
