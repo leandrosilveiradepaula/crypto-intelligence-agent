@@ -200,6 +200,17 @@ class ShadowTests(unittest.TestCase):
                 self.assertEqual(result.status, expected)
                 self.assertTrue(session.closed)
 
+    def test_frozen_clock_timeouts_still_abort_with_bounded_receives(self):
+        fake = Clock()
+        session = Session([ACK], fake)
+        result = observe_shadow_once(
+            session_factory=lambda: session, topics=DEFAULT_TOPICS,
+            clock=lambda: 0, wall_ms=fake.wall,
+            max_seconds=1, max_frames=2)
+        self.assertEqual(result.status, "shadow_receive_budget_abstain")
+        self.assertTrue(session.closed)
+        self.assertEqual(result.sanitized_report()["storage_writes"], 0)
+
     def test_bad_caps_without_opening_network(self):
         called = []
         for topics in ((), ("bad",), DEFAULT_TOPICS * 27,
