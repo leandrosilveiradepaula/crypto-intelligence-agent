@@ -186,9 +186,24 @@ class ShadowTests(unittest.TestCase):
         self.assertEqual(z.unique_closed, 0)
         self.assertEqual(z.preack_discarded, 129)
 
+    def test_frame_cap_never_overwrites_integrity_failure(self):
+        for bad_frame, expected in (
+            (dict(market(), data=[]), "shadow_envelope_abstain"),
+            (market(), "shadow_frame_budget_abstain"),
+        ):
+            with self.subTest(expected=expected):
+                fake = Clock()
+                session = Session([ACK, bad_frame], fake)
+                result = observe_shadow_once(
+                    session_factory=lambda: session, topics=DEFAULT_TOPICS,
+                    clock=fake.clock, wall_ms=fake.wall, max_frames=2)
+                self.assertEqual(result.status, expected)
+                self.assertTrue(session.closed)
+
     def test_bad_caps_without_opening_network(self):
         called = []
-        for topics in ((), ("bad",), DEFAULT_TOPICS * 27):
+        for topics in ((), ("bad",), DEFAULT_TOPICS * 27,
+                       (["unhashable"],)):
             z = observe_shadow_once(
                 session_factory=lambda: called.append(True), topics=topics)
             self.assertEqual(z.status, "shadow_configuration_abstain")
