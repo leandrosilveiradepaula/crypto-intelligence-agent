@@ -128,6 +128,8 @@ class MultihourSoakTests(unittest.TestCase):
         self.assertEqual(output.acknowledged_leases, 7)
         self.assertEqual(output.recovered_connections, 1)
         self.assertEqual(output.preack_frames_discarded, 1)
+        final_audit, _ = self.audit(29)
+        self.assertEqual(final_audit.persisted_rows, 60)
         assert_report = output.sanitized_report()
         self.assertTrue(assert_report["local_fixture_soak_consistent"])
         for key in (
@@ -164,7 +166,7 @@ class MultihourSoakTests(unittest.TestCase):
 
     def test_candle_conflict_timestamp_and_malformed_fail_stop(self):
         f = message("BTCUSDT", FIRST)
-        f["data"][0]["close"] = "99"
+        f["data"][0]["turnover"] = "2.51"
         self.assertEqual(self.lease(0).closed_events_appended, 2)
         # Even a schema-compatible replay with changed OHLCV is forbidden.
         fake = FakeClock()
