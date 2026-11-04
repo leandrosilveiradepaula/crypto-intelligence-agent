@@ -161,9 +161,57 @@ class WSOneCandleTests(unittest.TestCase):
         self.assertEqual(result.status, "ws_no_qualifying_close_abstain")
         self.assertEqual(gets, [])
         result, gets, _ = self.exercise(include_ack=False)
-        self.assertEqual(result.status, "ws_preack_abstain")
+        self.assertEqual(result.status, "ws_ack_missing_abstain")
         self.assertEqual(gets, [])
         result, gets, _ = self.exercise(frames=[ACK, ws()])
+        self.assertEqual(result.status, "ws_ack_invalid_abstain")
+        self.assertEqual(gets, [])
+
+    def test_preack_market_then_ack_then_postack_closed_candle(self):
+        # The pre-ACK frame is dropped; ONLY the closed frame after ACK
+        # may become a candidate and trigger a single REST request.
+        result, gets, _ = self.exercise(
+            include_ack=False, frames=[ws(close=False), ACK, ws(close=True)])
+        self.assertEqual(result.status, "ws_rest_match_unverified")
+        self.assertEqual((result.fields_compared, result.fields_equal), (6, 6))
+        self.assertEqual(result.rest_gets, 1)
+        self.assertEqual(len(gets), 1)
+
+    def test_preack_closed_candle_never_promoted_after_ack(self):
+        # A closed candle received before ACK is never buffered or replayed.
+        result, gets, _ = self.exercise(
+            include_ack=False, frames=[ws(close=True), ACK])
+        self.assertEqual(result.status, "ws_no_qualifying_close_abstain")
+        self.assertEqual((result.fields_compared, result.fields_equal), (0, 0))
+        self.assertEqual(gets, [])
+
+    def test_preack_closed_candle_without_ack_never_calls_rest(self):
+        result, gets, _ = self.exercise(
+            include_ack=False, frames=[ws(close=True)])
+        self.assertEqual(result.status, "ws_ack_missing_abstain")
+        self.assertEqual(gets, [])
+        self.assertEqual(result.rest_gets, 0)
+
+    def test_preack_frame_limit_and_malformed_envelope_abstain(self):
+        for frames, status in (
+            ([ws(close=False)] * 9 + [ACK, ws()], "ws_preack_budget_abstain"),
+            ([{**ws(), "topic": "kline.60.ETHUSDT"}, ACK, ws()],
+             "ws_preack_envelope_abstain"),
+            ([{**ws(), "data": None}, ACK, ws()],
+             "ws_preack_envelope_abstain"),
+            ([{**ws(), "extra": "bad"}, ACK, ws()],
+             "ws_preack_envelope_abstain"),
+        ):
+            with self.subTest(status=status):
+                result, gets, _ = self.exercise(include_ack=False, frames=frames)
+                self.assertEqual(result.status, status)
+                self.assertEqual(result.rest_gets, 0)
+                self.assertEqual(gets, [])
+
+    def test_preack_then_wrong_ack_is_rejected(self):
+        wrong = dict(ACK, req_id="another-request")
+        result, gets, _ = self.exercise(
+            include_ack=False, frames=[ws(close=False), wrong, ws()])
         self.assertEqual(result.status, "ws_ack_invalid_abstain")
         self.assertEqual(gets, [])
 

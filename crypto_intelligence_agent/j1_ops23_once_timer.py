@@ -25,7 +25,9 @@ MAX_WAIT_SECONDS = 1200
 _ALLOWED_PROBE_STATUSES = frozenset({
     "ws_rest_match_unverified", "ws_rest_diverge_abstain",
     "ws_no_qualifying_close_abstain", "ws_pong_timeout_abstain",
-    "ws_ack_invalid_abstain", "ws_unexpected_control_abstain",
+    "ws_ack_invalid_abstain", "ws_ack_missing_abstain",
+    "ws_preack_budget_abstain", "ws_preack_envelope_abstain",
+    "ws_unexpected_control_abstain",
     "ws_preack_abstain", "ws_envelope_abstain", "ws_row_abstain",
     "ws_close_chronology_abstain", "rest_window_abstain",
     "rest_clock_abstain", "rest_rate_limit_abstain",

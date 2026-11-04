@@ -46,3 +46,10 @@ Somente após autorização aplicável, preparar usuário owner e pasta privada 
 Testes \`tests/test_j1_ops23_once_timer.py\` cobrem data UTC absoluta, calendário inválido, atraso de janela, NTP antes/depois da espera, SHA/árvore, permissão, symlink, execução concorrente/duplicada via \`O_EXCL\`, espera falha, JSON inseguro, resultado que abstém, paths maliciosos e não recorrência do template. Testes POSIX são ignorados no Windows; os testes puros rodam nas duas plataformas. GitHub CI precisa executar Linux/docs, Windows/offline, Chrome/PAPER no SHA exato, com nova verificação pós-merge.
 
 **Limites:** code/CI verde não prova VPS operacional, uptime, fonte autenticada, Top50 marketwide, 24h, rentabilidade ou segurança em 50x. O experimento ainda depende de uma execução real na rede da VPS, mediante gate distinto.
+
+
+## OPS25 — resultado VPS e tratamento de pre-ACK (03/11/2026)
+
+Execução owner-only real em `srv1319424`, serviço iniciado 2026-11-03 22:45:00Z e encerrado 22:59:32Z com `status=probe_abstained`, `probe_status=ws_preack_abstain`, `ws_frames=1`, `rest_gets=0`, `fields_compared=0`, `orders_sent=false`. Claim de tentativa presente e **não deve ser apagado**. Este resultado demonstra disparo systemd, não corroboração de candle. Não há payload bruto preservado que permita afirmar qual era o conteúdo exato do frame.
+
+OPS25 #469 corrige o comportamento estrito demais do observador OPS22: até oito envelopes do tópico único antes do ACK podem ser descartados **sem** validar OHLCV, armazenar, marcar `confirm=true`, solicitar REST ou promover retrospectivamente. Apenas um ACK válido e correlacionado habilita observação posterior; ACK ausente/errado/duplicado, tópico inesperado, estrutura incorreta ou excesso falham fechados. A comparação segue não autorizadora e a validação temporal estrita da ingestão não muda. Os motivos agregados `ws_ack_missing_abstain`, `ws_preack_envelope_abstain` e `ws_preack_budget_abstain` passam a integrar a allowlist do supervisor. CI/merge e eventual nova prova VPS devem ser verificados independentemente; a tentativa anterior é terminal e a instalação existente não deve ser reiniciada como retry.
