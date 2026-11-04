@@ -28,6 +28,7 @@ from .research_registry_catalog import load_reviewed_registry
 
 HOUR_MS = 3_600_000
 MAX_FRAMES = 256
+MAX_PREACK_MARKET_FRAMES = 8
 MAX_SECONDS = 90
 MAX_BODY_BYTES = 32_768
 MAX_WAIT_AFTER_WS_SECONDS = 3
@@ -120,6 +121,7 @@ def compare_one_candle_once(
             or not 2 <= max_frames <= MAX_FRAMES):
         return OneCandleCorroboration("capability_abstain")
     ack = frames = closed = gets = 0
+    preack_market_frames = 0
     outcome = "ws_no_qualifying_close_abstain"
     candidate = None
     receipt = 0
@@ -165,8 +167,25 @@ def compare_one_candle_once(
                     outcome = "ws_unexpected_control_abstain"
                     break
                 if not ack:
-                    outcome = "ws_preack_abstain"
-                    break
+                    # Bybit may deliver subscribed-topic data before ACK.
+                    # Discard a bounded number of structurally valid envelopes:
+                    # never buffer, validate as candle, or retroactively promote.
+                    if (type(frame) is not dict or set(frame) !=
+                            {"topic", "type", "ts", "data"} or
+                            frame.get("topic") != TOPIC or
+                            frame.get("type") != "snapshot" or
+                            type(frame.get("ts")) is not int or
+                            type(frame.get("data")) is not list or
+                            len(frame["data"]) != 1 or
+                            type(frame["data"][0]) is not dict):
+                        outcome = "ws_preack_envelope_abstain"
+                        break
+                    preack_market_frames += 1
+                    if preack_market_frames > MAX_PREACK_MARKET_FRAMES:
+                        outcome = "ws_preack_budget_abstain"
+                        break
+                    outcome = "ws_ack_missing_abstain"
+                    continue
                 if (type(frame) is not dict or set(frame) !=
                         {"topic", "type", "ts", "data"} or
                         frame["topic"] != TOPIC or frame["type"] != "snapshot" or
