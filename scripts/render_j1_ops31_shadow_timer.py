@@ -34,9 +34,9 @@ def render_units(*, owner: str, target_utc: str, expected_sha: str,
         "@OWNER@": owner,
         "@TARGET_UTC@": target_utc,
         "@EXPECTED_SHA@": expected_sha,
-        "@REPO_ROOT@": str(repo),
-        "@PYTHON_BIN@": str(py),
-        "@STATE_DIR@": str(state),
+        "@REPO_ROOT@": repo.as_posix(),
+        "@PYTHON_BIN@": py.as_posix(),
+        "@STATE_DIR@": state.as_posix(),
         "@CALENDAR_UTC@": launch.strftime("%Y-%m-%d %H:%M:%S UTC"),
     }
     for key, value in replacements.items():
