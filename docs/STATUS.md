@@ -1101,3 +1101,8 @@ A revisão da OPS1 detectou que o supervisor multiativo `bybit_ws_supervisor.py`
 ## J1/OPS29 #478 — simulação de continuidade trans-horária (04/11/2026)
 
 A correção OPS28 foi integrada em `main=87f135a50bb4f40a1b7b205c0874ec37c73a0232` e 3/3 CI pós-merge aprovadas; nenhuma PR aberta na revisão inicial. A OPS29 adiciona `j1_ws_multihour_soak.py` e regressões para 30 horas sintéticas de 2 membros, uma sessão limitada a cada hora, 24h de warm-up e 7 decisões fechadas sucessivas, incluindo reconexão e descarte pré-ACK. O contrato exige auditoria SQLite real da fixture a cada fechamento, ACK e o mesmo fingerprint PIT, abstenção em gap, replay, conflito, clock inválido ou falha de integridade; sem legitimidade de feed real. Branch `work/issue-478-j1-ops29-multihour-soak`, CI/merge devem ser provados. VPS, sistema operacional e dados financeiros permanecem intocados. J1 #2, OPS1 #429 e Top50 #319 abertas.
+
+
+## J1/OPS30 — observação WS shadow sem gravação (04/11/2026)
+
+Após simulação offline OPS29 de 30 horas e a prova real OPS26 de igualdade 6/6 em um candle BTCUSDT, a admissibilidade causal `timestamp>end` ainda bloqueia a promoção automática do feed ao journal 24/7. A issue #480 acrescenta observador independente de uma sessão WS finita, somente contadores anônimos por tópico/fechamento e bandas de timestamp (inclusive fora de end), preservando todas as validações de row exceto o predicado de pesquisa D233. Nenhum candle, símbolo, preço ou horário de negociação é armazenado/logado. CLI owner-only requer opt-ins de rede/WS/região; padrão não conecta. CI/merge e qualquer ativação VPS são etapas separadas. J1 #2, OPS1 #429 e Top50 #319 abertas.
