@@ -103,6 +103,7 @@ def observe_shadow_once(
     ack = False
     last_ping = started
     pending_ping = None
+    receive_attempts = 0
     status = "shadow_no_ack_abstain"
     try:
         with closing(session_factory()) as session:
@@ -122,6 +123,11 @@ def observe_shadow_once(
                     session.send('{"op":"ping"}')
                     last_ping = now_mono
                     pending_ping = now_mono
+                receive_attempts += 1
+                # Bound repeated timeouts even with a broken/injected clock.
+                if receive_attempts > max_frames * 4 + max_seconds:
+                    status = "shadow_receive_budget_abstain"
+                    break
                 try:
                     raw = session.recv(min(remaining, 5))
                 except TimeoutError:
