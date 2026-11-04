@@ -1091,3 +1091,8 @@ A segunda sonda de candle na VPS foi de fato executada pela janela UTC: 26 frame
 ## J1/OPS27 #474 — gate de timestamp WebSocket antes de 24h (04/11/2026)
 
 OPS26 comprovou timer one-shot e igualdade 6/6 WS×REST de um único candle BTCUSDT do mesmo provedor na VPS (29 frames, 1 GET, 0 ordens/armazenamento); três markers preservados, timers desabilitados, sem 24h ativado. A anomalia `timestamp>end` observada em OPS18–20 permanece incompatível com o parser estrito da coleta: coincidência de valores de mercado não certifica causalidade. OPS27 prepara auditor offline por bandas de excedente e confirmação, testes de referência/duplicata/multirow/clock adversariais, e critérios de no-go em `docs/J1_OPS27_CAUSAL_ROLLOVER_GATE.md`; código da ingestão não é afrouxado. J1 #2/Top50 #319/OPS1 #429 ainda abertas e sem prova de serviço 24/7. CI/merge específicos devem ser confirmados.
+
+
+## J1/OPS28 #476 — política causal pré-ACK para supervisor (04/11/2026)
+
+A revisão da OPS1 detectou que o supervisor multiativo `bybit_ws_supervisor.py` permitia replay de frames de mercado guardados antes da confirmação de assinatura, divergindo do probe OPS22/decisão D231. A OPS28 altera somente supervisor/testes: pré-ACK estrutural do tópico esperado é contado e descartado sob limite 128; ACK só libera quadros **novos**; frames inesperados ou acima do limite falham fechados sem escrita. `early_frames_buffered=0` e `preack_frames_discarded` tornam comportamento observável de forma sanitizada. Parser temporal estrito e quarentena D233 não são alterados. Branch/CI/merge devem ser verificados; serviço 24h e Top50 marketwide não estão homologados.

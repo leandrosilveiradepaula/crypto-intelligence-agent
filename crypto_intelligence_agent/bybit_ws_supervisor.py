@@ -84,6 +84,7 @@ class WSRunReport:
     early_frames_buffered: int
     heartbeat_pings: int
     heartbeat_pongs: int
+    preack_frames_discarded: int = 0
 
     def sanitized_report(self) -> dict:
         return {
@@ -99,6 +100,7 @@ class WSRunReport:
             "closed_events_appended": self.closed_events_appended,
             "identical_replays": self.identical_replays,
             "early_frames_buffered": self.early_frames_buffered,
+            "preack_frames_discarded": self.preack_frames_discarded,
             "heartbeat_pings": self.heartbeat_pings,
             "heartbeat_pongs": self.heartbeat_pongs,
             "http_gets": 0,
@@ -145,8 +147,8 @@ def supervise_ws_research(
     documented LINEAR ACK may have a missing or blank req_id; this is
     unambiguous only for ONE request per connection. Never split into multiple
     chunks while accepting uncorrelated acknowledgements.
-    Market frames arriving before the ACK are bounded and quarantined;
-    they reach the existing strict ingester only after that ACK was accepted.
+    Market frames arriving before the ACK are bounded and discarded;
+    no pre-ACK market frame is ever replayed or promoted into the journal.
     Recoverable transport exceptions reconnect at most max_sessions times.
     Corrupt frames, gap, malformed ACK, or stale candle fail CLOSED immediately.
     """
@@ -158,7 +160,7 @@ def supervise_ws_research(
         raise DataValidationError("injected WS research capabilities required")
     groups = _topic_batches(scope)
     all_topics = frozenset(topic for batch in groups for topic in batch)
-    frames = opened = appended = replayed = early_count = 0
+    frames = opened = appended = replayed = preack_discarded = 0
     sessions = complete_sessions = sends = acks = pings = pongs = 0
     started = clock()
     if type(started) not in (int, float) or not math.isfinite(started):
@@ -167,7 +169,8 @@ def supervise_ws_research(
     def report(status: str, failure: str | None = None) -> WSRunReport:
         return WSRunReport(status, failure, sessions, complete_sessions,
                            max(0, sessions - 1), sends, acks, frames, opened,
-                           appended, replayed, early_count, pings, pongs)
+                           appended, replayed, 0, pings, pongs,
+                           preack_discarded)
 
     for attempt in range(budget.max_sessions):
         if attempt:
@@ -185,7 +188,7 @@ def supervise_ws_research(
             with closing(session_factory()) as session:
                 pending_index = 0
                 acknowledged_topics: set[str] = set()
-                early: list[tuple[str | bytes, int]] = []
+                preack_session_frames = 0
                 last_ping = clock()
                 pending_ping: float | None = None
                 received_attempts = 0
@@ -268,9 +271,6 @@ def supervise_ws_research(
                             subscribe(pending_index)
                         else:
                             complete_sessions += 1
-                            for buffered, buffered_ms in early:
-                                ingest(buffered, buffered_ms)
-                            early.clear()
                         continue
                     if payload.get("op") is not None:
                         raise DataValidationError("unexpected WS control frame")
@@ -278,10 +278,22 @@ def supervise_ws_research(
                             or payload["topic"] not in all_topics):
                         raise DataValidationError("unexpected WS market topic")
                     if pending_index < len(groups):
-                        if len(early) >= MAX_EARLY_FRAMES:
-                            raise DataValidationError("WS early frame budget exceeded")
-                        early.append((raw, at_ms))
-                        early_count += 1
+                        # Provider messages can race their subscribe ACK. A
+                        # recognized topic does NOT establish subscription
+                        # acknowledgement: discard structurally sane pre-ACK
+                        # frames without retaining data, prices, or receipt.
+                        if (set(payload) != {"topic", "type", "ts", "data"}
+                                or payload.get("type") != "snapshot"
+                                or type(payload.get("ts")) is not int
+                                or type(payload.get("data")) is not list
+                                or not 1 <= len(payload["data"]) <= 8
+                                or any(type(row) is not dict
+                                       for row in payload["data"])):
+                            raise DataValidationError("invalid pre-ACK WS envelope")
+                        preack_session_frames += 1
+                        preack_discarded += 1
+                        if preack_session_frames > MAX_EARLY_FRAMES:
+                            raise DataValidationError("WS pre-ACK frame budget exceeded")
                         continue
                     ingest(raw, at_ms)
         except (DataGapError, DataValidationError, ValueError, TypeError):

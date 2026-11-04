@@ -24,3 +24,8 @@ Testes offline exigidos: 52 tópicos/1 pedido; ACK sem req_id, vazio ou correto;
 ## Continuidade
 
 Após integrar este contrato, priorizar homologação owner-only do handshake e coleta por 24h fechadas; se houver lacuna, abster até reconciliar com proveniência e orçamento em vez de tentar um novo backfill de 720h. Não executar ordens nem habilitar produção.
+
+
+## OPS28 — correção de promoção retroativa pré-ACK (04/11/2026)
+
+O supervisor multiativo inicialmente retinha até 128 frames antes do ACK e os enviava para ingestão após a confirmação. Isso promovia retroativamente um frame não confirmado, diferentemente da sonda OPS22 que comprovou o handshake real. A decisão D234 altera o comportamento: envelopes pré-ACK de tópicos esperados e forma básica válida são **descartados** (máximo 128 por sessão), sem guardar conteúdo, candle, horário, preço ou fazer replay após ACK. ACK correto habilita somente frames subsequentes. Estrutura ou tópico inesperado/limite ultrapassado encerram por integridade sem restart; desconexão sem ACK deixa zero writes. O status sanitizado expõe `preack_frames_discarded` e `early_frames_buffered=0`, nunca valores reais. Esse descarte pode criar faltas horárias que devem continuar aparecendo como gaps; não completar ranking com dados ausentes. Regressões em `test_j1_ws_supervisor.py`. Nenhuma mudança no parser estrito de `timestamp`, na VPS ou no serviço off-by-default.
