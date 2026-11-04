@@ -219,7 +219,8 @@ def observe_shadow_once(
                 status = ("shadow_closes_observed_quarantined"
                           if seen_closed else "shadow_no_closed_candle_unverified")
             if (frames >= max_frames and ack
-                    and status == "shadow_no_closed_candle_unverified"):
+                    and status in ("shadow_no_closed_candle_unverified",
+                                   "shadow_closes_observed_quarantined")):
                 # Budget exhaustion may not overwrite a stronger integrity
                 # rejection from the final frame.
                 status = "shadow_frame_budget_abstain"
