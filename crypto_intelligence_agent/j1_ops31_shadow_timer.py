@@ -24,6 +24,7 @@ START_GRACE_SECONDS = 15
 CHILD_TIMEOUT_SECONDS = 205
 SHADOW_SECONDS = 180
 SHADOW_FRAMES = 1024
+MAX_PREACK_EXCEEDED = 129  # observer counts the one frame that breaches 128
 CLAIM_NAME = "ops31-shadow-one-shot-attempt.claim"
 EXPECTED_TOPICS = 2
 
@@ -51,6 +52,8 @@ _BANDS = frozenset({
 _NO_CONCURRENT = (
     "cia-j1-ws-owner.service", "cia-j1-ops22-once.service",
     "cia-j1-ops25-retest2.service", "cia-j1-ops26-retest3.service",
+    "cia-j1-ops22-once.timer", "cia-j1-ops25-retest2.timer",
+    "cia-j1-ops26-retest3.timer", "cia-j1-ws-owner.timer",
 )
 
 
@@ -133,7 +136,7 @@ def _validated_shadow_report(raw, *, returncode: int) -> dict | None:
     )):
         return None
     counts = (
-        ("frames_seen", SHADOW_FRAMES), ("preack_discarded", 128),
+        ("frames_seen", SHADOW_FRAMES), ("preack_discarded", MAX_PREACK_EXCEEDED),
         ("postack_market_frames", SHADOW_FRAMES),
         ("topics_observed", EXPECTED_TOPICS),
         ("unique_closed", EXPECTED_TOPICS),
@@ -152,6 +155,15 @@ def _validated_shadow_report(raw, *, returncode: int) -> dict | None:
         if any(type(v) is not int or not 0 <= v <= limit
                for v in obj.values()):
             return None
+    if (raw["preack_discarded"] == MAX_PREACK_EXCEEDED
+            and raw["status"] != "shadow_preack_budget_abstain"):
+        return None
+    if (raw["status"] == "shadow_closes_observed_quarantined"
+            and raw["unique_closed"] == 0):
+        return None
+    if (raw["status"] == "shadow_no_closed_candle_unverified"
+            and raw["unique_closed"] != 0):
+        return None
     if (sum(raw["closed_timestamp_bands"].values()) != raw["unique_closed"]
             or sum(raw["open_timestamp_bands"].values()) != raw["open_rows"]
             or raw["postack_market_frames"] > raw["frames_seen"]
