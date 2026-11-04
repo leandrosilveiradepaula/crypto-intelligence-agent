@@ -223,6 +223,11 @@ class OPS31Tests(TestCase):
         self.assertIn("User=cia-probe", service)
         self.assertIn("Restart=no", service)
         self.assertIn("ReadWritePaths=" + args["state_dir"], service)
+        # Generated systemd units target POSIX VPS even when tests run Windows.
+        self.assertIn("WorkingDirectory=" + args["repo_root"], service)
+        self.assertIn("ExecStart=" + args["python_bin"], service)
+        self.assertNotIn("\\\\", service)
+        self.assertNotIn("\\\\", timer)
         self.assertIn("--expected-sha " + SHA, service)
         self.assertIn("OnCalendar=2026-11-05 03:59:00 UTC", timer)
         self.assertIn("Persistent=false", timer)
