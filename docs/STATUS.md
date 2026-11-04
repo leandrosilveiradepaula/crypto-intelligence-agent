@@ -1081,3 +1081,8 @@ Issue #466; branch `work/j1-ops23-systemd-once-timer` baseada em `main=0c1802001
 ## J1/OPS25 — problema de frame pré-ACK no teste VPS de 03/11/2026
 
 A VPS comprovou início do timer `22:45:00Z` e tentativa finita até `22:59:32Z`, mas primeiro frame WS antes da confirmação de subscribe causou `ws_preack_abstain` (`ws_frames=1`, `rest_gets=0`, `fields_compared=0`). O claim de uso único permanece presente. Issue #469/branch `work/issue-469-j1-ops25-preack-bound` implementa descarte bounded de até oito envelopes de mercado antes do ACK e exige ACK válido + frame **posterior** para qualquer comparação. Nenhuma leitura REST, coleta histórica, ordem, reinício ou instalação foi executada nesta correção de código; teste real de WS×REST e homologação de Top50/J1 continuam pendentes. CI/revisão/merge devem ser provados antes de marcar integrado.
+
+
+## J1/OPS26 — teste VPS 2 e correção estrutural (04/11/2026)
+
+A segunda sonda de candle na VPS foi de fato executada pela janela UTC: 26 frames WS, `ws_envelope_abstain`, 0 GET REST, 0 campos comparados, tentativa isolada consumida. Hipótese plausível, não confirmada, é incompatibilidade com formato multirow; a saída sanitizada não identifica o motivo exato. Issue #472 implementa diagnóstico por categorias fixas, tratamento de até oito linhas pós-ACK com validação completa e seleção única de candle fechado apenas para auditor não autorizador, sem mudar ingestão. Código/CI/merge e nova homologação da VPS devem ser evidenciados separadamente; cron antigo não deve ser reexecutado. J1 e Top50 continuam abertos.

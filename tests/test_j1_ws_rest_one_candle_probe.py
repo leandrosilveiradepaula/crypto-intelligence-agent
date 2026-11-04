@@ -215,6 +215,59 @@ class WSOneCandleTests(unittest.TestCase):
         self.assertEqual(result.status, "ws_ack_invalid_abstain")
         self.assertEqual(gets, [])
 
+    def test_two_rows_with_single_postack_close_compare_once(self):
+        # A multi-row envelope may include the still-open row followed by the
+        # one eligible close; only that close enters the OPS21 single-row audit.
+        frame = ws(close=True)
+        frame["data"] = [ws(close=False)["data"][0], frame["data"][0]]
+        result, gets, _ = self.exercise(frames=[frame])
+        self.assertEqual(result.status, "ws_rest_match_unverified")
+        self.assertEqual((result.fields_compared, result.fields_equal), (6, 6))
+        self.assertEqual(result.rest_gets, 1)
+        self.assertEqual(len(gets), 1)
+
+    def test_multirow_close_selection_is_order_independent(self):
+        frame = ws(close=True)
+        frame["data"] = [frame["data"][0], ws(close=False)["data"][0]]
+        result, gets, _ = self.exercise(frames=[frame])
+        self.assertEqual(result.status, "ws_rest_match_unverified")
+        self.assertEqual(len(gets), 1)
+
+    def test_multirow_invalid_later_row_blocks_candidate(self):
+        frame = ws(close=True)
+        bad = dict(ws(close=False)["data"][0], high="-1")
+        frame["data"] = [frame["data"][0], bad]
+        result, gets, _ = self.exercise(frames=[frame])
+        self.assertEqual(result.status, "ws_row_abstain")
+        self.assertEqual(gets, [])
+
+    def test_multirow_duplicate_confirmed_close_is_never_selected(self):
+        frame = ws(close=True)
+        frame["data"] = [frame["data"][0], dict(frame["data"][0])]
+        result, gets, _ = self.exercise(frames=[frame])
+        self.assertEqual(result.status, "ws_multiple_closed_abstain")
+        self.assertEqual(gets, [])
+
+    def test_multirow_envelope_failure_categories_are_sanitized(self):
+        base = ws()
+        for frame, status in (
+            ({**base, "topic": "kline.60.ETHUSDT"}, "ws_envelope_topic_abstain"),
+            ({**base, "type": "delta"}, "ws_envelope_metadata_abstain"),
+            ({**base, "ts": "invalid"}, "ws_envelope_metadata_abstain"),
+            ({**base, "data": []}, "ws_envelope_rows_abstain"),
+            ({**base, "data": [base["data"][0]] * 9}, "ws_envelope_rows_abstain"),
+            ({**base, "data": [None]}, "ws_envelope_row_type_abstain"),
+            ({**base, "other": "secret"}, "ws_envelope_keys_abstain"),
+        ):
+            with self.subTest(status=status):
+                result, gets, _ = self.exercise(frames=[frame])
+                self.assertEqual(result.status, status)
+                self.assertEqual(result.rest_gets, 0)
+                self.assertEqual(gets, [])
+                report = json.dumps(result.sanitized_report())
+                self.assertNotIn("secret", report)
+                self.assertNotIn("ETHUSDT", report)
+
     def test_invalid_ws_is_rejected_without_get(self):
         modifications = (
             ("confirm", 1), ("timestamp", END), ("timestamp", END + 9000),
