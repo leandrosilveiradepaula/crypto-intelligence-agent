@@ -1106,3 +1106,8 @@ A correção OPS28 foi integrada em `main=87f135a50bb4f40a1b7b205c0874ec37c73a02
 ## J1/OPS30 — observação WS shadow sem gravação (04/11/2026)
 
 Após simulação offline OPS29 de 30 horas e a prova real OPS26 de igualdade 6/6 em um candle BTCUSDT, a admissibilidade causal `timestamp>end` ainda bloqueia a promoção automática do feed ao journal 24/7. A issue #480 acrescenta observador independente de uma sessão WS finita, somente contadores anônimos por tópico/fechamento e bandas de timestamp (inclusive fora de end), preservando todas as validações de row exceto o predicado de pesquisa D233. Nenhum candle, símbolo, preço ou horário de negociação é armazenado/logado. CLI owner-only requer opt-ins de rede/WS/região; padrão não conecta. CI/merge e qualquer ativação VPS são etapas separadas. J1 #2, OPS1 #429 e Top50 #319 abertas.
+
+
+## J1/OPS31 #482 — preparo do piloto shadow owner-only na VPS (04/11/2026)
+
+OPS30 #480/PR #481 integrada, CI pré e pós-merge 3/3 SUCCESS em `main=6bf647aa354abfe5228a34be0a84a5ff687ca0f3`. Issue #482, branch `work/issue-482-j1-ops31-shadow-one-shot`: novo launcher de timer absoluto, claim privado, render-only systemd, validação de retorno/histogramas e regressões adversariais; D237 e `J1_OPS31_SHADOW_ONESHOT.md`. Código aprovado não equivale a coleta real. VPS ainda no SHA observado `229969952c3c0bcd06b35f7b828eac21c9bd1498`, três claims intactos, serviço contínuo off. PR/CI/merge do OPS31 exigem provas separadas; #429 OPS1, #319 Top50 e #2 J1 abertas.

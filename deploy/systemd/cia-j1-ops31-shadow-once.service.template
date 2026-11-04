@@ -1,0 +1,29 @@
+# J1/OPS31: OFF BY DEFAULT. No REST, SQLite, credentials or trading.
+[Unit]
+Description=J1 one-shot 2-topic public WS shadow (research quarantine)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=@OWNER@
+WorkingDirectory=@REPO_ROOT@
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=@PYTHON_BIN@ -m scripts.run_j1_ops31_shadow_once --target-utc @TARGET_UTC@ --expected-sha @EXPECTED_SHA@ --repo-root @REPO_ROOT@ --python-bin @PYTHON_BIN@ --state-dir @STATE_DIR@
+TimeoutStartSec=225
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=@STATE_DIR@
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal
