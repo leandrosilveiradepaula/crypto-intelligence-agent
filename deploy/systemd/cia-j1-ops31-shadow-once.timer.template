@@ -1,0 +1,13 @@
+# J1/OPS31: one absolute UTC execution; does not catch up.
+[Unit]
+Description=J1 one-shot public WS shadow timer (OFF by default)
+
+[Timer]
+OnCalendar=@CALENDAR_UTC@
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=cia-j1-ops31-shadow-once.service
+
+[Install]
+WantedBy=timers.target
