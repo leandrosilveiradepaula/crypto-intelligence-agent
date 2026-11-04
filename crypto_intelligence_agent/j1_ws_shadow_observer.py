@@ -60,7 +60,6 @@ class ShadowWSReport:
             "closed_timestamp_bands": dict(zip(_BANDS, self.closed_bands)),
             "open_timestamp_bands": dict(zip(_BANDS, self.open_bands)),
             "pong_frames": self.pong_frames,
-            "public_ws_connections": 1 if self.frames_seen else 0,
             "rest_gets": 0, "storage_writes": 0, "orders_sent": False,
             "source_authenticated": False,
             "canonical_ohlcv_approved": False,
@@ -219,8 +218,10 @@ def observe_shadow_once(
             if ack and status in ("shadow_no_closed_candle_unverified", "shadow_no_ack_abstain"):
                 status = ("shadow_closes_observed_quarantined"
                           if seen_closed else "shadow_no_closed_candle_unverified")
-            if frames >= max_frames and ack:
-                # Saturation is not a successful complete observation.
+            if (frames >= max_frames and ack
+                    and status == "shadow_no_closed_candle_unverified"):
+                # Budget exhaustion may not overwrite a stronger integrity
+                # rejection from the final frame.
                 status = "shadow_frame_budget_abstain"
     except (DataValidationError, OSError, RuntimeError, ValueError, TypeError, ImportError):
         status = "shadow_transport_or_validation_abstain"
