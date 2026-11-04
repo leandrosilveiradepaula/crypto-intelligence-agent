@@ -51,7 +51,12 @@ class Session:
         self.closed = False
 
     def send(self, payload):
-        self.sent.append(json.loads(payload))
+        item = json.loads(payload)
+        self.sent.append(item)
+        if item.get("op") == "ping":
+            # A healthy fake connection acknowledges public heartbeats, so
+            # finite leases reach their deadline without a false pong timeout.
+            self.events.append({"op": "ping", "ret_msg": "pong"})
 
     def recv(self, timeout):
         if self.events:
