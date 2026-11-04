@@ -84,8 +84,8 @@ def observe_shadow_once(
     """
     abstain = ShadowWSReport("shadow_configuration_abstain")
     if (type(topics) is not tuple or not 1 <= len(topics) <= MAX_TOPICS
-            or len(topics) != len(set(topics))
             or any(type(t) is not str or _TOPIC.fullmatch(t) is None for t in topics)
+            or len(topics) != len(set(topics))
             or type(max_seconds) is not int or not 1 <= max_seconds <= MAX_SECONDS
             or type(max_frames) is not int or not 2 <= max_frames <= MAX_FRAMES
             or not callable(session_factory) or not callable(clock) or not callable(wall_ms)):
