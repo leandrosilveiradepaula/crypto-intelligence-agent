@@ -173,8 +173,8 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(sum(map(len, groups)), MAX_STREAM_TOPICS)
         self.assertEqual(TOPICS_PER_REQUEST, 52)
         # The ACK contract is tested independently from the receiver parser.
-        # A frame is quarantined until the final ACK; however the fake clock
-        # still assigns its actual receipt time before storage.
+        # Frames before ACK are discarded; the journal receives only frames
+        # observed after acknowledgement, with their original receipt time.
         session = Session(self.fake_clock, auto_ack=True)
         result = self.run_it(self.factory(session), scope=reviewed)
         self.assertEqual(result.subscriptions_sent, 1)
@@ -187,9 +187,8 @@ class SupervisorTests(unittest.TestCase):
             scope=reviewed, decision_at_ms=observed + 24*HOUR_MS,
             as_of_ms=observed+24*HOUR_MS+2000).persisted_rows, 0)
 
-    def test_pre_ack_frame_is_quarantined_then_validated(self):
-        # Market frames can precede an ACK. They cannot be stored until the
-        # complete set of subscriptions is acknowledged.
+    def test_pre_ack_close_discarded_even_after_valid_ack(self):
+        # A correct ACK does not retroactively admit an earlier close.
         last = self.first + 23*HOUR_MS
         session = Session(self.fake_clock, responses=[
             (message("BTCUSDT", last), DECISION+2000),
@@ -199,10 +198,74 @@ class SupervisorTests(unittest.TestCase):
             OSError("EOF"),
         ])
         report = self.run_it(self.factory(session))
-        self.assertEqual(report.early_frames_buffered,1)
-        self.assertEqual(report.closed_events_appended,2)
+        self.assertEqual(report.early_frames_buffered, 0)
+        self.assertEqual(report.preack_frames_discarded, 1)
+        self.assertEqual(report.sanitized_report()["preack_frames_discarded"], 1)
+        self.assertEqual(report.closed_events_appended, 1)
         self.assertEqual(self.journal.audit(scope=self.scope,
-            decision_at_ms=DECISION,as_of_ms=DECISION+4000).persisted_rows,2)
+            decision_at_ms=DECISION,as_of_ms=DECISION+4000).persisted_rows,1)
+
+    def test_preack_close_is_not_replayed_when_ack_has_no_postack_market(self):
+        last = self.first + 23*HOUR_MS
+        session = Session(self.fake_clock, responses=[
+            (message("BTCUSDT",last), DECISION+2000),
+            {"op": "subscribe", "success": True, "ret_msg": "subscribe",
+             "conn_id": "fake", "req_id": "cia-ws-1"},
+            OSError("EOF"),
+        ])
+        result = self.run_it(self.factory(session))
+        self.assertEqual(result.closed_events_appended, 0)
+        self.assertEqual(result.early_frames_buffered, 0)
+        self.assertEqual(result.preack_frames_discarded, 1)
+        self.assertEqual(self.journal.audit(scope=self.scope,
+            decision_at_ms=DECISION, as_of_ms=DECISION+4000).persisted_rows,0)
+
+    def test_postack_close_still_ingested_after_ignored_preack_update(self):
+        last = self.first + 23*HOUR_MS
+        session = Session(self.fake_clock, responses=[
+            (message("BTCUSDT",last,confirmed=False), DECISION+2000),
+            {"op": "subscribe", "success": True, "ret_msg": "subscribe",
+             "conn_id": "fake", "req_id": "cia-ws-1"},
+            (message("BTCUSDT",last), DECISION+2000),
+            OSError("EOF"),
+        ])
+        result = self.run_it(self.factory(session))
+        self.assertEqual(result.preack_frames_discarded, 1)
+        self.assertEqual(result.closed_events_appended, 1)
+        self.assertEqual(result.open_updates, 0)
+        self.assertEqual(self.journal.audit(scope=self.scope,
+            decision_at_ms=DECISION,as_of_ms=DECISION+4000).persisted_rows,1)
+
+    def test_preack_malformed_or_excess_frames_fail_without_journal_writes(self):
+        valid = message("BTCUSDT",self.first)
+        bad_frames = (
+            {"topic":"kline.60.BTCUSDT", "type":"delta", "ts":DECISION, "data":[]},
+            {"topic":"kline.60.BTCUSDT", "type":"snapshot",
+             "ts":DECISION, "data":[]},
+            {**valid,"other":"malformed"},
+            {**valid,"data":[valid["data"][0]] * 9},
+            {**valid,"data":[None]},
+        )
+        for bad in bad_frames:
+            with self.subTest(case=str(bad.keys())):
+                session = Session(self.fake_clock, responses=[
+                    bad, {"op":"subscribe", "success":True,
+                          "ret_msg":"subscribe","conn_id":"fixture",
+                          "req_id":"cia-ws-1"}])
+                report = self.run_it(self.factory(session))
+                self.assertEqual(report.status, "ws_fail_closed_abstain")
+                self.assertEqual(report.closed_events_appended,0)
+                self.assertEqual(self.journal.audit(scope=self.scope,
+                    decision_at_ms=DECISION,as_of_ms=DECISION+4000).persisted_rows,0)
+        session = Session(self.fake_clock, responses=[
+            valid for _ in range(129)])
+        report = self.run_it(self.factory(session),
+                             budget=WSRunBudget(1, 200, 90))
+        self.assertEqual(report.status, "ws_fail_closed_abstain")
+        self.assertEqual(report.preack_frames_discarded,129)
+        self.assertEqual(report.closed_events_appended,0)
+        self.assertEqual(report.early_frames_buffered,0)
+
 
     def test_single_linear_subscription_accepts_blank_or_missing_req_id(self):
         # Bybit LINEAR ACK can omit req_id or reply with req_id=""; this
@@ -253,7 +316,8 @@ class SupervisorTests(unittest.TestCase):
         early = (message("BTCUSDT", first), first + HOUR_MS + 2000)
         session = Session(self.fake_clock, responses=[early, OSError("EOF")])
         report = self.run_it(self.factory(session))
-        self.assertEqual(report.early_frames_buffered, 1)
+        self.assertEqual(report.early_frames_buffered, 0)
+        self.assertEqual(report.preack_frames_discarded, 1)
         self.assertEqual(report.closed_events_appended, 0)
         self.assertEqual(self.journal.audit(scope=self.scope,
             decision_at_ms=DECISION, as_of_ms=DECISION+4000).persisted_rows, 0)
