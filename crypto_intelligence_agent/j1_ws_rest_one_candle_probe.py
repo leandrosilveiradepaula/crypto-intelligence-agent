@@ -162,6 +162,7 @@ def compare_one_candle_once(
                         outcome = "ws_ack_invalid_abstain"
                         break
                     ack = 1
+                    outcome = "ws_no_qualifying_close_abstain"
                     continue
                 if "op" in frame:
                     outcome = "ws_unexpected_control_abstain"
