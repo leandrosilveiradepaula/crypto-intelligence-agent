@@ -389,3 +389,8 @@ Preparar sonda opcional curta e sem persistência para evidenciar ACK e entrega 
 ## J1/OPS9 #429 — orçamento de serviço versus piloto
 
 Separar limite pequeno da sonda de pesquisa (4.096 frames) do lease de coleta de 52 tópicos por 55 minutos (até 175.696 mensagens), com teto explícito 200.000 e erro de cap tratado como falha de continuidade, não como feed saudável. D217 e `docs/J1_OPS9_HOURLY_FRAME_BUDGET.md`. Serviços ainda desativados, sem homologação de 24h; #319 marketwide aberta.
+
+
+## J1/OPS33 — candidato Binance USD-M para contrato causal verificável
+
+OPS33 #486 cria um observador sombra finito Binance WS após D238/OPS32, sem permitir fonte canônica nem trocar venue. Reutiliza validação Decimal/UTC, ACK, corte de `x=true` e cronologia, no máximo dois ativos, claim exclusivo e timer systemd não-recorrente off por padrão. Prova live é separada da aprovação do código; TOP50/24h ficam pendentes. Ver D239 e `docs/J1_OPS33_BINANCE_FINITE_SHADOW.md`.

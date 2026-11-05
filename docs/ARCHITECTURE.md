@@ -503,3 +503,8 @@ Contrato de unidades de execução única: `systemd.timer` OneCalendar UTC **abs
 ## J1/OPS32 — seleção causal de fonte **somente offline**
 
 `j1_causal_source_decision.py` é um avaliador puro sem rede/DB/ordens entre envelopes Bybit V5 linear e Binance USD-M. Uma única venue por análise, 1..2 transportes distintos (WS/REST) e mesma hora UTC fechada; WS exige confirmação explícita, ACK prévio do caller (não autentica fonte) e clocks servidor/recepção; REST exige cutoff de consulta posterior ao fechamento e não se presume final. D238 veta `timestamp>end` do WS Bybit sem substituí-lo por `ts`, não misturando valores de exchanges. Sem interface com SQLite ou parser persistente; saída `source_closed_research_unverified` nunca autoriza gravação. Ver `docs/J1_OPS32_CAUSAL_SOURCE_DECISION.md` e issue #484.
+
+
+## J1/OPS33 — observador Binance USD-M /market/stream isolado
+
+Observador `j1_binance_ws_shadow_observer.py` com uma sessão WS pública **injeção de transporte**, uma SUBSCRIBE/ACK única e exatamente dois tópicos, validação causal de `k.x`, `k.t/T`, `E`, OHLCV, volume base/turnover quote e controle pré-ACK. CLI `scripts.observe_j1_binance_shadow_once` é non-root/opt-in e carrega a conexão somente após gates; nenhuma rede por default. Launcher `j1_ops33_binance_timer` exige NTP, SHA+clean tree, claim O_EXCL persistente em state privado, ausência de coletores simultâneos e saída sanitizada, mais timer absoluto OFF (templates em `deploy/systemd`). Nenhum DB/serviço 24h/ordem. D239 e `docs/J1_OPS33_BINANCE_FINITE_SHADOW.md`.
