@@ -399,3 +399,8 @@ OPS33 #486 cria um observador sombra finito Binance WS após D238/OPS32, sem per
 ## J1/OPS34 — vínculo causal Binance, identidade contrato e Top50
 
 OPS34 #488 implementa etapa de pesquisa **offline** após shadow OPS33 na VPS: confirma formato PERPETUAL/TRADING/USDT/COIN no catálogo capturado e revalidado PIT, registro de identidade cripto independente existente, completude de 24 candles fechados para cada contrato revisado elegível e rank por coluna quote turnover USDT. A captura e o registro não autenticam o universo inteiro nem direitos, e o código não grava nem negocia. D240; ver `docs/J1_OPS34_BINANCE_CONTRACT_PIT_TOP50.md`.
+
+
+## J1/OPS35 — auditor metadata-only com observabilidade sem dados brutos
+
+OPS35 #490 implementa observador único e opt-in de `/fapi/v1/exchangeInfo` para verificar catálogo Binance e lacuna de identidade revisada sob D241, com dois GETs no máximo e guardas de região/root/registry PIT, sem ordens, candles ou cache. A validação offline do código e uma futura execução na VPS são evidências distintas; Top50/24h permanece pendente. Ver `docs/J1_OPS35_BINANCE_METADATA_ONCE.md`.

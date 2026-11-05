@@ -919,3 +919,8 @@ Teste focal `python -m unittest discover -s tests -p test_j1_binance_shadow.py -
 ## J1/OPS34 #488 — USD-M/crypto PIT e ranking de 24 fechamentos Binance
 
 Testes focais `python -m unittest discover -s tests -p test_j1_binance_top50_pit.py -q`, regressões de OPS32/OPS33, docs/sintaxe e suites GitHub Linux/docs, Windows/offline e Chrome/PAPER (pré/pós-merge head exato). Cobrir catálogo exchangeInfo pre/post e digests, declaração de completude não autenticadora, metadados distintos (UM/CM, USDC, futuro com vencimento, TradFi), registry SHA e as-of, 52 candidatos sintéticos sem marketwide, 23/25 horas, gap/duplicata/reordenação, consulta antes do fechamento, requisições sequenciais sem overlaps, OHLCV/quote/base/taker, endpoint errado, preços adversariais e aggregate OPS33 não reconstituível. Proibir network real, deploy VPS, escrita SQLite, cron, ordens e uso de `serverTime` do exchangeInfo como relógio.
+
+
+## J1/OPS35 #490 — snapshot metadata-only Binance finito (D241)
+
+Foco `python -m unittest discover -s tests -p test_j1_binance_metadata_probe.py -q` (16 testes locais em shim compatível, confirmar suíte de integração no GitHub). Cobrir defaults sem rede, root/opt-in, 2 GETs exatos, fail-stop HTTP, JSON duplicate/NaN/oversize, catalog drift, clock, registry as-of antes de GET, conta de elegíveis/desconhecidos/excluídos e flags de não autorização. Regressões OPS34/33 e CI Linux/docs, Windows/offline, Chrome/PAPER head/pós-merge; nenhum deploy, acesso à VPS, API live ou SQLite enquanto a issue for implementada.
