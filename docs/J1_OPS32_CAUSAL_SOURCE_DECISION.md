@@ -1,0 +1,38 @@
+# J1/OPS32 — fonte causal para velas horárias, sem normalizar timestamps
+
+## Decisão D238 (05/11/2026)
+
+A OPS31 executou de fato na VPS (02:59:00–03:02:02 UTC, `Result=success`, `ExecMainStatus=0`, timer `disabled` depois): **229 frames, 2 fechamentos únicos, 2 `timestamp>end`**, zero updates abertos com esse excesso, 2 pré-ACK descartados, nenhum replay, GET REST, escrita de candle ou ordem. Claim OPS31 + claims OPS23/25/26 preservadas. A prova demonstra observação causal de *dois tópicos*, não comportamento de todos os contratos. Evidências operacionais: issues [#482](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/482) e [#429](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/issues/429).
+
+**NO-GO:** nunca atribuir automaticamente o `timestamp` de último negócio pós-`end` à vela anterior; nem corrigir para `end`, nem substituir pelo `ts`, nem liberar `parse_offline_confirmed_kline`, nem iniciar o serviço 24h. A igualdade 6/6 WS×REST da OPS26 foi do **mesmo** provedor e não demonstra independência ou correção da hora de negócio. Preservar D233 e D234.
+
+**GO somente para pesquisa offline:** comparar os contratos temporais. `j1_causal_source_decision.py` é um *gate de decisão sem I/O*; nenhum candidato sai aprovado para persistência, feed canônico ou ordens. Define dois venues mutuamente exclusivos, observa no máximo duas fontes da **mesma** corretora, exige a hora UTC fechada mais recente para aquele instante de recepção, igualdade decimal exata de OHLCV (open, high, low, close, volume **base**, turnover **quote**) e identidade da hora, sem converter preços nem misturar mercados. Quando a evidência WS Bybit conflita com seu intervalo, **veta** o fallback REST silencioso. Todos os campos do relatório são de uma allowlist não sensível.
+
+## Matriz causal (referências oficiais verificadas em 05/11/2026)
+
+| Fonte | Campos de fechamento e volume | Limite do contrato | Política OPS32 |
+| --- | --- | --- | --- |
+| **Bybit V5 linear WS** | `start`, `end`, `confirm`, `timestamp` (último negócio), `ts` (geração da mensagem); volume base / turnover quote | `confirm=true` não transforma `timestamp>end` em negócio dentro da vela | Validar ACK prévio, envelope e UTC. `timestamp>end` sempre `bybit_ws_stamp_overrun_quarantine` |
+| **Bybit V5 linear REST** | `list[0]` início, `list[1..6]` OHLC, volume base e turnover quote; não há `confirm` | Resposta pode conter vela aberta; horário de resposta, por si, não é prova independente de finalização | Consultar somente em fixture com request após fechamento +60s, um row da hora anterior, relógio/escopo; resultado *research_unverified* |
+| **Binance USD-M WS** | evento `E`, kline `k.t`/`k.T`, `k.x` fechamento explícito, `k.v` base / `k.q` quote | `E` é hora de evento, **não** último negócio e não deve ser confundido com preço/mark | Exigir `k.x=true`, `E > T`, ACK previamente verificado pelo caller, recepção causal, OHLCV íntegro, resultado *research_unverified* |
+| **Binance USD-M REST** | `/fapi/v1/klines`: 12 colunas; 0 abertura, 6 fechamento e 5/7 volumes base/quote; sem `x` | Requer cutoff de consulta pós-fechamento e associação externa ao request, sem autenticação embutida na linha | Mesmo cutoff de +60s, uma linha fechada, anti-stale, sem alegação de proveniência |
+
+Fontes: [Bybit WS kline](https://bybit-exchange.github.io/docs/v5/websocket/public/kline), [Bybit V5 REST kline](https://bybit-exchange.github.io/docs/v5/market/kline), [Binance USD-M WS kline](https://developers.binance.com/docs/derivatives/usds-margined-futures/websocket-market-streams/Kline-Candlestick-Streams), [Binance USD-M REST klines](https://developers.binance.com/docs/derivatives/usds-margined-futures/market-data/rest-api/Kline-Candlestick-Data). A consulta à documentação não executa endpoints de dados de mercado.
+
+## Contrato do módulo e limites
+
+- `SourceEvidence` recebe payload **já disponível** pelo caller, provider explícito `bybit_v5_linear` ou `binance_usdm`, um símbolo USDT, interval `1h`, `received_at_ms`, `requested_at_ms` para REST e `ack_verified` para WS. Um booleano de ACK informado pelo caller **não autentica rede**. Nenhuma leitura de arquivo, tabela, socket ou credenciais ocorre aqui.
+- A única vela analisável deve ser a última hora UTC fechada no relógio de recepção (`start = (receipt // 3600000 - 1) * 3600000` e `end = start + 3599999`); recibo no máximo 10min depois. WS requer evento de servidor após o `end`, antes do receipt, atraso servidor→receipt <=30s. REST requer request desde +60s após fechamento e duração <=30s. Esses limites são **hipóteses conservadoras de pesquisa**, não garantia da corretora.
+- `bybit_ws_stamp_overrun_quarantine` mantém o bloco inteiro em quarentena mesmo quando outro endpoint retorna OHLCV idêntico. Duas fontes da mesma venue só corroboram se hora/valor Decimal forem idênticos; sem validar proveniência, ainda é apenas `source_closed_research_unverified`. `source_hours_diverge_abstain` veta falsa igualdade entre horas distintas.
+- Qualquer schema inesperado, `confirm=false` / `x=false`, preço/volume inválido, relógio futuro, stale/replay, 2 frames REST, duplicata de transporte, símbolo diferente, mismatch venue, falta de ACK ou discrepância econômica => abstenção. Não há dados parciais exportados, nem prova da integridade de **frames anteriores** fora do input.
+- Sem transformações de timestamps, replay, fallback silencioso, migração, alterações dos parsers já existentes, ordens, GET ou ativação de `systemd`. `ws_candle_approved=false`, `canonical_ohlcv_approved=false`, `source_authenticated=false`, `marketwide_top50_verified=false`, `continuous_collector_authorized=false`, `live_trading_authorized=false` mesmo com resultado positivo.
+
+## Próxima decisão operacional (sem nova sonda nesta issue)
+
+**Preferência de arquitetura condicional:** testar em próxima jornada/piloto autorizada a semântica explícita `x=true` da Binance USD-M como **candidata a fonte primária futura**, em vez de remapear o WS Bybit. A seleção de venue é decisão de produto do titular; nenhum código muda a corretora automaticamente. Alternativamente Bybit REST após UTC+60s pode ser pesquisado com orçamento rate limit e reconciliação, mas ausência de final flag requer verificação adicional de estabilidade; não é licença para gravar candles canônicos.
+
+Critérios antes de uma próxima prova real: revisão das regras regionais e de armazenamento; definição versionada da venue e do contrato de volume; sonda isolada sem persistência, com comprovação do ACK e da fronteira entre subscribe/market, `x=true`/`confirm=true`, relógio servidor/recepção, OHLCV6, comportamento de reconexão, atualização PIT e tratamento explícito de gaps. Somente então discutir piloto 24h com exclusão mútua de escritor e auditoria 24 fechamentos/membro, sem reset do histórico REST. J1 #2, OPS1 #429 e TOP50 #319 permanecem abertas. O universo Top50 é **independente** da seleção temporal de uma vela.
+
+## Aceite de engenharia
+
+`python -m unittest discover -s tests -p test_j1_causal_source_decision.py -q` testa Bybit WS/REST e Binance WS/REST em fixtures, overrun OPS31, falso matching 6/6, UTC boundaries, cross-hour, no-lookahead, falso `x`/`confirm`, OHLCV Decimal, volume/turnover, ACK, requests prematuros, stale, divergência e flags negativas. Também rodar a suíte offline total e CI Linux/docs, Windows/offline e Chrome/PAPER no SHA final. **Passar em testes não homologa a J1 nem uma fonte live**.

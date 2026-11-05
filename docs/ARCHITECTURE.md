@@ -498,3 +498,8 @@ bybit_ws_owner_pilot.py coordena cadastro da amostra revisada em no máximo quat
 ## J1 OPS23 — scheduler operacional VPS, não GitHub (código off-by-default)
 
 Contrato de unidades de execução única: `systemd.timer` OneCalendar UTC **absoluto** -> `systemd.service` oneshot não-root -> lançador `j1_ops23_once_timer.launch_once` (NTP, SHA+árvore, hora exata, claim atômico em diretório privado) -> `scripts.wait_j1_ws_utc_close` (bounded 20min, hora-30s) -> script OPS22 (1 WS topic, <=1 REST GET, output sanitizado). Nenhum timer recorrente implementado nesta entrega, nenhum serviço VPS instalado; modelo contínuo OPS1 existente é distinto. Proteções `Persistent=false`, `Restart=no`, `O_EXCL`/fsync, `ProtectSystem=strict`, `ReadWritePaths` restrito. Detalhes e ativação futura sujeita a gate: `docs/J1_OPS23_VPS_SYSTEMD_ONCE.md`. O GitHub continua CI/fonte oficial, não assume agendamento determinístico.
+
+
+## J1/OPS32 — seleção causal de fonte **somente offline**
+
+`j1_causal_source_decision.py` é um avaliador puro sem rede/DB/ordens entre envelopes Bybit V5 linear e Binance USD-M. Uma única venue por análise, 1..2 transportes distintos (WS/REST) e mesma hora UTC fechada; WS exige confirmação explícita, ACK prévio do caller (não autentica fonte) e clocks servidor/recepção; REST exige cutoff de consulta posterior ao fechamento e não se presume final. D238 veta `timestamp>end` do WS Bybit sem substituí-lo por `ts`, não misturando valores de exchanges. Sem interface com SQLite ou parser persistente; saída `source_closed_research_unverified` nunca autoriza gravação. Ver `docs/J1_OPS32_CAUSAL_SOURCE_DECISION.md` e issue #484.
