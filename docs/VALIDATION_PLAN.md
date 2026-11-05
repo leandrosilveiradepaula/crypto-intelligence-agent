@@ -924,3 +924,8 @@ Testes focais `python -m unittest discover -s tests -p test_j1_binance_top50_pit
 ## J1/OPS35 #490 — snapshot metadata-only Binance finito (D241)
 
 Foco `python -m unittest discover -s tests -p test_j1_binance_metadata_probe.py -q` (16 testes locais em shim compatível, confirmar suíte de integração no GitHub). Cobrir defaults sem rede, root/opt-in, 2 GETs exatos, fail-stop HTTP, JSON duplicate/NaN/oversize, catalog drift, clock, registry as-of antes de GET, conta de elegíveis/desconhecidos/excluídos e flags de não autorização. Regressões OPS34/33 e CI Linux/docs, Windows/offline, Chrome/PAPER head/pós-merge; nenhum deploy, acesso à VPS, API live ou SQLite enquanto a issue for implementada.
+
+
+## J1/OPS35 D242 — censo sem registro PIT e regressões
+
+Suíte focal ampliada de 16 para 26 testes em `test_j1_binance_metadata_probe.py`: registry ausente no modo catalog-only, rejeição de registro mesmo fresco, flags fail-closed, sem símbolos/segredos, opt-in nonroot, clock, delta entre snapshots, duplicate JSON, expiração da identidade no primeiro GET ou antes do segundo, e CLI sem leitura do registry em modo de censo. Regressão `test_j1_binance_top50_pit.py` 26 testes. Testes locais em ambiente shim 52/52 PASS, compileall PASS; CI GitHub Linux/docs, Windows/offline e Chrome/PAPER no SHA de head e pós-merge obrigatória. Nunca afirmar que o censo validou Top50/contrato USD-M.

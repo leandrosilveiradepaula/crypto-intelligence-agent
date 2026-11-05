@@ -48,6 +48,8 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--confirm-region-and-personal-research", action="store_true")
+    parser.add_argument("--catalog-only-unverified", action="store_true",
+                        help="Bounded unverified catalogue census, no identity review")
     args = parser.parse_args(argv)
     # Importing Python module does not create an HTTP session. Registry loading
     # is local read-only and happens only after explicit network/owner gate.
@@ -60,9 +62,12 @@ def main(argv=None) -> int:
     else:
         try:
             now_ms = int(time.time() * 1000)
-            registry = load_reviewed_registry("expanded-52", as_of_ms=now_ms)
+            registry = (None if args.catalog_only_unverified else
+                        load_reviewed_registry("expanded-52", as_of_ms=now_ms))
             report = capture_binance_metadata_once(
-                registry=registry, allow_public_network=True,
+                registry=registry,
+                catalog_only_unverified=args.catalog_only_unverified,
+                allow_public_network=True,
                 confirm_region_and_personal_research=True,
                 owner_check=lambda: True, fetch=bounded_binance_get,
                 utc_ms=lambda: int(time.time() * 1000))
@@ -71,7 +76,10 @@ def main(argv=None) -> int:
             report = MetadataProbeReport("metadata_local_registry_or_config_abstain")
     print(json.dumps(report.sanitized_report(), sort_keys=True,
                      separators=(",", ":"), allow_nan=False))
-    return 0 if report.status == "metadata_catalog_pair_research_unverified" else 1
+    return 0 if report.status in {
+        "metadata_catalog_pair_research_unverified",
+        "metadata_catalog_only_unverified",
+    } else 1
 
 
 if __name__ == "__main__":

@@ -15,3 +15,31 @@ Após a captura o código revalida cada JSON com proibição de chaves duplicada
 Executar `python -m unittest discover -s tests -p test_j1_binance_metadata_probe.py -q`, regressões OPS34/OPS33/OPS32, validação de sintaxe/docs, CI Linux/docs, Windows/offline e Chrome/PAPER pré e pós-merge. Casos de 0 opt-in, root, limite de duas GETs, erro HTTP sem retries, oversized/empty/nonbytes, JSON duplicate/NaN, mudança de catálogo, campos duplicados, relógio NTP/captura, registro PIT futuro/velho, TradFi/expiring, sem autenticidade, saída allowlisted e ausência de rede/dados em defaults.
 
 **Próximo gate:** somente após PR/CI e nova revisão válida do registro PIT caso necessário, considerar um único comando de homologação owner-only na VPS para consultar catálogo, com SHA Git limpo, acesso regional permitido, custo R$0, claims OPS23/25/26/31/33 intactos e ausência de serviço concorrente. A execução é informativa e não deve iniciar 24h, backfill, SQLite ou ordens. Issues J1 #2, Top50 #319 e OPS1 #429 continuam abertas.
+
+## Continuidade offline proposta — captura isolada da revisão PIT
+
+A revisão de identidade com sete dias de validade e a captura de *metadados*
+representam duas evidências diferentes. Para evitar que um registro expirado
+inviabilize qualquer auditoria descritiva do catálogo, uma ampliação de escopo
+**explícita e separada** da OPS35 aceita `--catalog-only-unverified` em conjunto
+com os dois opt-ins de rede e a verificação non-root. Esse modo **não carrega
+registro de identidades**, não classifica qualquer candidato como crypto
+revisado, e não converte um GET em prova de identidade USD-M. A saída tem
+`status=metadata_catalog_only_unverified`, `identity_registry_applied=false`,
+`reviewed_crypto_perpetuals=0`, a contagem de contratos com formato potencial,
+a contagem de excluídos e o hash agregado dos catálogos pre/post. Nunca contém
+símbolos ou velas. Os invariantes de autorização de persistência, Top50,
+contrato, fonte e ordens permanecem **false**.
+
+A auditoria convencional **continua exigindo o registro atual antes do primeiro
+GET**. Se a revisão vencer durante a janela de duas consultas, o primeiro
+resultado não é promovido e a segunda requisição é bloqueada caso ainda não
+seja iniciada. Não se alteram carimbos PIT, janela de sete dias nem versões
+registradas. Nas duas modalidades continuam obrigatórios os opt-ins, restrição
+regional aplicável, resposta limitada, URL fixa, não-root e fail-stop HTTP.
+
+Este adendo especifica o contrato de engenharia da D242. A validação e a
+integração do código são etapas separadas de qualquer execução real na VPS:
+**não autoriza disparar consulta, instalar serviço nem ativar coleta contínua**.
+A aprovação de um relatório de metadados não equivale à homologação de sinais,
+identidade de contratos, Top50 marketwide, fonte canônica ou negociação.

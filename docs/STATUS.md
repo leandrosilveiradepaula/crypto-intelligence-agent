@@ -1131,3 +1131,8 @@ OPS33 #486 fechada: VPS Binance 178 frames, dois closes causais, timer disabled,
 ## J1/OPS35 #490 — preparação de auditoria Binance metadata-only (05/11/2026)
 
 OPS34 #488/PR #489 integrada em main `1dffc83277aacd73c29207fc942674a9ce2ec253`, CI 3/3 pré e pós verde. OPS35 branch `work/issue-490-j1-ops35-binance-metadata-once` desenvolve GET-only exchangeInfo via cliente limitado (2 GETs, 2MiB, 8s, sem retry e sem credenciais), catálogo pre/post, registry PIT as-of, saída sanitizada e zero escrita/ordem. 16 testes locais PASS com shims; CI e merge ainda precisam ser verificados separadamente. Região, quota e registros atuais não foram testados na VPS. Top50 marketwide, contrato autenticado e coletor 24/7 continuam NO-GO.
+
+
+## OPS35 D242 — separação de censo e identidade (05/11/2026)
+
+Branch `work/issue-490-ops35-catalog-only-observation` preparada a partir de `main=b3c4473cd7d961642a6ccd9813aada1c5db36e9e`; implementa modo catalog-only explícito para metadata Binance sem registro PIT, flags sempre false, e reforça expiração do modo de identidade durante a janela de dois GETs. 26 testes locais do probe + 26 do ranking OPS34 em ambiente de shims PASS; integração GitHub/CI/merge requer comprovação independente neste checkpoint. Nenhum acesso real de mercado, deploy ou alteração SQLite/ordens. #490 permanece aberta até prova owner-only de metadados. J1 #2, #319 e #429 abertas.
