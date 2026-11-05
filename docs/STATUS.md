@@ -1121,3 +1121,8 @@ OPS31 #482 está concluída com evidência real da VPS: 229 frames, 2 fechamento
 ## J1/OPS33 #486 — preparação da alternativa causal Binance (05/11/2026)
 
 OPS32 #484/PR #485 integrada em `main=ccbb62406c8af46b1a3e23cedab7db0e327450f9`, CI pré e pós-merge 3/3 verde. OPS33 branch `work/issue-486-j1-ops33-binance-shadow-once`: implementação offline de 2 tópicos públicos Binance com `k.x` e gate OPS32, clock/ACK, contador sanitizado, opt-in non-root, lançador isolado one-claim e templates `systemd` sem instalação; 20 testes locais PASS sob shims de dependência para unidade focal (não prova integração completa). CI/PR/merge exigem gates reais SHA. Ainda NO-GO para serviço 24h e Top50. VPS OPS31 teve 2/2 closes Bybit em quarentena; timer desativado e claims preservados.
+
+
+## J1/OPS34 #488 — auditoria de contrato e Top50 Binance offline (05/11/2026)
+
+OPS33 #486 fechada: VPS Binance 178 frames, dois closes causais, timer disabled, cinco claims preservados, nenhuma gravação/ordem. Branch `work/issue-488-j1-ops34-binance-pit-top50` a partir de `main=7964fa4d149eca64ddfe82df7851470b1b5c7a3a`, sem PR aberta na inspeção inicial. `j1_binance_top50_pit.py` e regressões adversariais (26 testes locais via shims compatíveis, **CI integrada ainda gate separado**) + guia D240. `marketwide_top50_verified=false` e `usdm_contract_verified=false` sem autenticação/censo/24h reais de todo o mercado. Próximo: review, CI PR Linux/Windows/Chrome, merge sem deploy se verde e CI pós-merge. Não repetir sondas OPS31/33, nem iniciar 24h/ordens.

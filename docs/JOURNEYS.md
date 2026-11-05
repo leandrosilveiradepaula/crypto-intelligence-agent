@@ -394,3 +394,8 @@ Separar limite pequeno da sonda de pesquisa (4.096 frames) do lease de coleta de
 ## J1/OPS33 — candidato Binance USD-M para contrato causal verificável
 
 OPS33 #486 cria um observador sombra finito Binance WS após D238/OPS32, sem permitir fonte canônica nem trocar venue. Reutiliza validação Decimal/UTC, ACK, corte de `x=true` e cronologia, no máximo dois ativos, claim exclusivo e timer systemd não-recorrente off por padrão. Prova live é separada da aprovação do código; TOP50/24h ficam pendentes. Ver D239 e `docs/J1_OPS33_BINANCE_FINITE_SHADOW.md`.
+
+
+## J1/OPS34 — vínculo causal Binance, identidade contrato e Top50
+
+OPS34 #488 implementa etapa de pesquisa **offline** após shadow OPS33 na VPS: confirma formato PERPETUAL/TRADING/USDT/COIN no catálogo capturado e revalidado PIT, registro de identidade cripto independente existente, completude de 24 candles fechados para cada contrato revisado elegível e rank por coluna quote turnover USDT. A captura e o registro não autenticam o universo inteiro nem direitos, e o código não grava nem negocia. D240; ver `docs/J1_OPS34_BINANCE_CONTRACT_PIT_TOP50.md`.
