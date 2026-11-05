@@ -270,7 +270,11 @@ class CatalogOnlyUnverifiedModeTests(unittest.TestCase):
         from crypto_intelligence_agent.j1_binance_metadata_probe import MetadataProbeReport
         from scripts import probe_binance_exchange_info_once as cli
         out=StringIO()
-        with (patch.object(cli.os,"geteuid",return_value=1000),
+        from types import SimpleNamespace
+        # Windows has no os.geteuid; inject only a fake CLI OS, never mutate
+        # the process-wide os module or require POSIX APIs on the CI host.
+        fake_os = SimpleNamespace(name="posix", geteuid=lambda: 1000)
+        with (patch.object(cli,"os",fake_os),
               patch.object(cli,"load_reviewed_registry",side_effect=AssertionError("registry read")),
               patch.object(cli,"capture_binance_metadata_once",return_value=MetadataProbeReport(
                     "metadata_catalog_only_unverified")) as capture,
