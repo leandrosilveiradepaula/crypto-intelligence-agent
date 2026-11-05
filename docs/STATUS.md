@@ -1126,3 +1126,8 @@ OPS32 #484/PR #485 integrada em `main=ccbb62406c8af46b1a3e23cedab7db0e327450f9`,
 ## J1/OPS34 #488 — auditoria de contrato e Top50 Binance offline (05/11/2026)
 
 OPS33 #486 fechada: VPS Binance 178 frames, dois closes causais, timer disabled, cinco claims preservados, nenhuma gravação/ordem. Branch `work/issue-488-j1-ops34-binance-pit-top50` a partir de `main=7964fa4d149eca64ddfe82df7851470b1b5c7a3a`, sem PR aberta na inspeção inicial. `j1_binance_top50_pit.py` e regressões adversariais (26 testes locais via shims compatíveis, **CI integrada ainda gate separado**) + guia D240. `marketwide_top50_verified=false` e `usdm_contract_verified=false` sem autenticação/censo/24h reais de todo o mercado. Próximo: review, CI PR Linux/Windows/Chrome, merge sem deploy se verde e CI pós-merge. Não repetir sondas OPS31/33, nem iniciar 24h/ordens.
+
+
+## J1/OPS35 #490 — preparação de auditoria Binance metadata-only (05/11/2026)
+
+OPS34 #488/PR #489 integrada em main `1dffc83277aacd73c29207fc942674a9ce2ec253`, CI 3/3 pré e pós verde. OPS35 branch `work/issue-490-j1-ops35-binance-metadata-once` desenvolve GET-only exchangeInfo via cliente limitado (2 GETs, 2MiB, 8s, sem retry e sem credenciais), catálogo pre/post, registry PIT as-of, saída sanitizada e zero escrita/ordem. 16 testes locais PASS com shims; CI e merge ainda precisam ser verificados separadamente. Região, quota e registros atuais não foram testados na VPS. Top50 marketwide, contrato autenticado e coletor 24/7 continuam NO-GO.

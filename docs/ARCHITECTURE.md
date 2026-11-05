@@ -513,3 +513,8 @@ Observador `j1_binance_ws_shadow_observer.py` com uma sessão WS pública **inje
 ## J1/OPS34 — auditor offline de catálogo Binance e ranking PIT
 
 `j1_binance_top50_pit.py` consome capturas *injetadas* e imutáveis `BinanceCatalogCapture` e `BinanceKlineCapture`, valida digests, cronologia externa da requisição/recepção, catálogo completo conforme declaração não autenticadora e diffs pre/post, registro CryptoRegistrySnapshot revalidado pela história existente, 24 candles 1h estritamente fechados para cada elegível revisado; ordena por turnover quote USDT Decimal, nunca rolling ticker. `bind_binance_ws_close_to_catalog_offline` liga somente fixtures OPS32 x=true/ACK à identidade como **pesquisa**, sem converter o agregado real OPS33 em candles históricos. Nenhuma rede, DB, ordem, provedor definitivo, Top50 de mercado ou coleta 24h. D240 e `docs/J1_OPS34_BINANCE_CONTRACT_PIT_TOP50.md`.
+
+
+## J1/OPS35 — captura Binance exchangeInfo one-shot sem estado persistente
+
+`j1_binance_metadata_probe.capture_binance_metadata_once` trabalha com transporte e relógio injetados: opt-in owner-only, validar registry imutável pré-rede, executar no máximo 2 GETs do URL fixo e validar pre/post com `_catalog` da OPS34, devolvendo apenas contagens/digests não autentificadores. A CLI `scripts.probe_binance_exchange_info_once` não conecta por default; em execução explicitamente permitida, o fetcher isola HTTPS, desabilita redirects/proxies, limita 2MiB/8s e não repete HTTP proibido. Nenhum dado em SQLite, candles, 24/7, migrations ou ordens. D241 / `docs/J1_OPS35_BINANCE_METADATA_ONCE.md`.
