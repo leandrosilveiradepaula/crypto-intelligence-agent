@@ -508,3 +508,8 @@ Contrato de unidades de execução única: `systemd.timer` OneCalendar UTC **abs
 ## J1/OPS33 — observador Binance USD-M /market/stream isolado
 
 Observador `j1_binance_ws_shadow_observer.py` com uma sessão WS pública **injeção de transporte**, uma SUBSCRIBE/ACK única e exatamente dois tópicos, validação causal de `k.x`, `k.t/T`, `E`, OHLCV, volume base/turnover quote e controle pré-ACK. CLI `scripts.observe_j1_binance_shadow_once` é non-root/opt-in e carrega a conexão somente após gates; nenhuma rede por default. Launcher `j1_ops33_binance_timer` exige NTP, SHA+clean tree, claim O_EXCL persistente em state privado, ausência de coletores simultâneos e saída sanitizada, mais timer absoluto OFF (templates em `deploy/systemd`). Nenhum DB/serviço 24h/ordem. D239 e `docs/J1_OPS33_BINANCE_FINITE_SHADOW.md`.
+
+
+## J1/OPS34 — auditor offline de catálogo Binance e ranking PIT
+
+`j1_binance_top50_pit.py` consome capturas *injetadas* e imutáveis `BinanceCatalogCapture` e `BinanceKlineCapture`, valida digests, cronologia externa da requisição/recepção, catálogo completo conforme declaração não autenticadora e diffs pre/post, registro CryptoRegistrySnapshot revalidado pela história existente, 24 candles 1h estritamente fechados para cada elegível revisado; ordena por turnover quote USDT Decimal, nunca rolling ticker. `bind_binance_ws_close_to_catalog_offline` liga somente fixtures OPS32 x=true/ACK à identidade como **pesquisa**, sem converter o agregado real OPS33 em candles históricos. Nenhuma rede, DB, ordem, provedor definitivo, Top50 de mercado ou coleta 24h. D240 e `docs/J1_OPS34_BINANCE_CONTRACT_PIT_TOP50.md`.

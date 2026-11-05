@@ -914,3 +914,8 @@ Foco: `python -m unittest discover -s tests -p test_j1_causal_source_decision.py
 ## J1/OPS33 #486 — prova Binance shadow finita offline D239
 
 Teste focal `python -m unittest discover -s tests -p test_j1_binance_shadow.py -q` (20 testes locais sob shims temporários; suíte integrada GitHub deve passar independentemente); regressões OPS31/32, CI Linux/docs + Windows/offline + Chrome/PAPER no SHA head e pós-merge. Cenários: subscribe combinado `id` único, ACK inválido/duplicado, pré-ACK não promovido, congelamento do relógio limitado, frame budget 1024 e sessão 180s, wrapper/symbol mismatch, `x=true` apenas da hora UTC fechada, evento E/recepção, `x=false` aberto, volume/turnover Decimal, OHLC, duplicate/conflito, stdout sanitizado, e claimed O_EXCL sem retry, root/NTP/git/permissões e units OFF. Proibir rede real, REST/SQLite, deploy ou trading. Ver `docs/J1_OPS33_BINANCE_FINITE_SHADOW.md`.
+
+
+## J1/OPS34 #488 — USD-M/crypto PIT e ranking de 24 fechamentos Binance
+
+Testes focais `python -m unittest discover -s tests -p test_j1_binance_top50_pit.py -q`, regressões de OPS32/OPS33, docs/sintaxe e suites GitHub Linux/docs, Windows/offline e Chrome/PAPER (pré/pós-merge head exato). Cobrir catálogo exchangeInfo pre/post e digests, declaração de completude não autenticadora, metadados distintos (UM/CM, USDC, futuro com vencimento, TradFi), registry SHA e as-of, 52 candidatos sintéticos sem marketwide, 23/25 horas, gap/duplicata/reordenação, consulta antes do fechamento, requisições sequenciais sem overlaps, OHLCV/quote/base/taker, endpoint errado, preços adversariais e aggregate OPS33 não reconstituível. Proibir network real, deploy VPS, escrita SQLite, cron, ordens e uso de `serverTime` do exchangeInfo como relógio.
