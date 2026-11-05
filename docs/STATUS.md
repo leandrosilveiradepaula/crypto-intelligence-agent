@@ -1116,3 +1116,8 @@ OPS30 #480/PR #481 integrada, CI pré e pós-merge 3/3 SUCCESS em `main=6bf647aa
 ## J1/OPS32 #484 — decisão causal offline (05/11/2026)
 
 OPS31 #482 está concluída com evidência real da VPS: 229 frames, 2 fechamentos únicos, ambos com `timestamp>end`, sem REST/writes/ordens, serviço SUCCESS, timer desabilitado e 4 claims preservados. D238 declara NO-GO para promoção dos candles Bybit WS e para coletor 24h. Branch `work/issue-484-j1-ops32-causal-source-decision` desenvolve avaliador offline Bybit V5/Binance USD-M WS/REST com fechamento explícito, clocks, anti-lookahead, OHLCV Decimal, unidade de volume e quarentena; 15 testes focais executados localmente e PASS. **PR/CI/merge ainda precisam de confirmação independente**; código offline não prova feed live nem escolhe venue final. Próxima gate: CI, review e merge sem deploy se verde. J1 #2/OPS1 #429/Top50 #319 continuam abertas.
+
+
+## J1/OPS33 #486 — preparação da alternativa causal Binance (05/11/2026)
+
+OPS32 #484/PR #485 integrada em `main=ccbb62406c8af46b1a3e23cedab7db0e327450f9`, CI pré e pós-merge 3/3 verde. OPS33 branch `work/issue-486-j1-ops33-binance-shadow-once`: implementação offline de 2 tópicos públicos Binance com `k.x` e gate OPS32, clock/ACK, contador sanitizado, opt-in non-root, lançador isolado one-claim e templates `systemd` sem instalação; 20 testes locais PASS sob shims de dependência para unidade focal (não prova integração completa). CI/PR/merge exigem gates reais SHA. Ainda NO-GO para serviço 24h e Top50. VPS OPS31 teve 2/2 closes Bybit em quarentena; timer desativado e claims preservados.
