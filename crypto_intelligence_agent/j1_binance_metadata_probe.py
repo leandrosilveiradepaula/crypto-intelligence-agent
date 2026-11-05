@@ -35,6 +35,7 @@ class MetadataProbeReport:
     plausible_unreviewed: int = 0
     excluded_non_perp_or_non_usdt: int = 0
     catalog_digest_sha256: str | None = None
+    identity_registry_applied: bool = False
 
     def sanitized_report(self) -> dict:
         return {
@@ -45,6 +46,7 @@ class MetadataProbeReport:
             "plausible_unreviewed": self.plausible_unreviewed,
             "excluded_non_perp_or_non_usdt": self.excluded_non_perp_or_non_usdt,
             "catalog_membership_sha256": self.catalog_digest_sha256,
+            "identity_registry_applied": self.identity_registry_applied,
             "catalog_completeness_authenticated": False,
             "usdm_contract_verified": False,
             "crypto_identity_independently_authenticated": False,
@@ -69,6 +71,10 @@ def _parse_json(data: bytes) -> dict:
     try:
         value = json.loads(data, object_pairs_hook=no_duplicates,
                            parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
+    except DataValidationError:
+        # Preserve the explicit, sanitised duplicate-key failure instead of
+        # collapsing it into an unrelated JSON syntax failure.
+        raise
     except (ValueError, UnicodeDecodeError, RecursionError):
         raise DataValidationError("metadata_json_abstain") from None
     if type(value) is not dict:
@@ -86,7 +92,8 @@ def _error_class(exc: Exception) -> str:
     return "metadata_transport_or_validation_abstain"
 
 
-def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot,
+def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot | None = None,
+    catalog_only_unverified: bool = False,
     allow_public_network: bool = False,
     confirm_region_and_personal_research: bool = False,
     owner_check: Callable[[], bool] = lambda: False,
@@ -94,6 +101,13 @@ def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot,
     utc_ms: Callable[[], int] | None = None,
 ) -> MetadataProbeReport:
     """At most 2 GETs with no retry; hold no payload after returning.
+
+    Default requires a fresh PIT identity registry before any GET. The extra
+    opt-in catalog-only mode deliberately SKIPS identity classification: it
+    accepts *no registry*, discloses no market symbols and can never authorize
+    marketwide, OHLCV, USD-M identity, persistence or trading. This permits a
+    bounded public metadata census when the reviewed registry is stale,
+    WITHOUT backdating or weakening its freshness check for identity mode.
 
     The real fetch implementation must enforce the same byte cap, no redirect,
     origin pin, 8s timeout and access restriction policy independently.
@@ -107,25 +121,43 @@ def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot,
     completed = []
     attempted = 0
     try:
-        if type(registry) is not CryptoRegistrySnapshot:
-            raise DataValidationError("metadata_registry_invalid")
+        if type(catalog_only_unverified) is not bool:
+            raise DataValidationError("metadata_mode_invalid")
+        history = None
+        if catalog_only_unverified:
+            # No synthetic or stale registry can be slipped into this mode.
+            if registry is not None:
+                raise DataValidationError("metadata_registry_not_allowed_in_catalog_only")
+            reviewed = frozenset()
+        else:
+            if type(registry) is not CryptoRegistrySnapshot:
+                raise DataValidationError("metadata_registry_invalid")
+            history = CryptoRegistryHistory((registry,))
         first_request = utc_ms()
         if type(first_request) is not int or first_request <= 0:
             raise DataValidationError("metadata_clock_abstain")
-        # Reject stale/future identity before any HTTP attempt, not after.
-        reviewed = CryptoRegistryHistory((registry,)).as_of(
-            first_request, max_age_ms=MAX_REGISTRY_AGE_MS,
-        ).verified_crypto_bases
+        if history is not None:
+            # Reject stale/future identity before any HTTP attempt, not after.
+            reviewed = history.as_of(first_request,
+                max_age_ms=MAX_REGISTRY_AGE_MS).verified_crypto_bases
         for idx in range(MAX_GETS):
             requested = first_request if idx == 0 else utc_ms()
             if type(requested) is not int or requested <= 0:
                 raise DataValidationError("metadata_clock_abstain")
+            if completed and requested <= completed[-1][0].received_at_ms:
+                raise DataValidationError("metadata_clock_abstain")
+            if history is not None:
+                # A registry expiring DURING a capture cannot be accepted.
+                # In particular, never make a second GET after expiry.
+                history.as_of(requested, max_age_ms=MAX_REGISTRY_AGE_MS)
             attempted += 1
             raw = fetch(URL, MAX_BODY_BYTES)
             received = utc_ms()
             if (type(received) is not int or received < requested
                     or received - requested > MAX_CLOCK_SKEW_MS):
                 raise DataValidationError("metadata_clock_abstain")
+            if history is not None:
+                history.as_of(received, max_age_ms=MAX_REGISTRY_AGE_MS)
             payload = _parse_json(raw)
             capture = BinanceCatalogCapture(payload, requested, received,
                                              content_sha256(payload),
@@ -138,9 +170,11 @@ def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot,
         plausible = [row for row in pre[1].values() if _eligible_shape(row)]
         reviewed_count = sum(row["baseAsset"] in reviewed for row in plausible)
         return MetadataProbeReport(
-            "metadata_catalog_pair_research_unverified", attempted,
+            ("metadata_catalog_only_unverified" if catalog_only_unverified
+             else "metadata_catalog_pair_research_unverified"), attempted,
             len(completed), len(pre[1]), reviewed_count,
             len(plausible)-reviewed_count, len(pre[1])-len(plausible), pre[2],
+            identity_registry_applied=(not catalog_only_unverified),
         )
     except (DataValidationError, ValueError, TypeError, KeyError, RuntimeError,
             OSError, TimeoutError, OverflowError, AttributeError) as exc:

@@ -404,3 +404,8 @@ OPS34 #488 implementa etapa de pesquisa **offline** após shadow OPS33 na VPS: c
 ## J1/OPS35 — auditor metadata-only com observabilidade sem dados brutos
 
 OPS35 #490 implementa observador único e opt-in de `/fapi/v1/exchangeInfo` para verificar catálogo Binance e lacuna de identidade revisada sob D241, com dois GETs no máximo e guardas de região/root/registry PIT, sem ordens, candles ou cache. A validação offline do código e uma futura execução na VPS são evidências distintas; Top50/24h permanece pendente. Ver `docs/J1_OPS35_BINANCE_METADATA_ONCE.md`.
+
+
+## J1/OPS35 D242 — censo de metadados não é aprovação de ativo
+
+Pesquisa Binance recebe modo de censo estritamente observacional, sem registro PIT nem símbolos de saída, útil mesmo quando registro de identidade expira, mas incapaz de autorizar contrato USD-M, ranking Top50, persistência ou negociação. Modo padrão de identidade continua exigindo revisão fresca durante toda a operação. Testar ambos e CI antes de integração. Issue #490.

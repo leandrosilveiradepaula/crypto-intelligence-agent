@@ -162,5 +162,130 @@ class MetadataProbeOfflineTests(unittest.TestCase):
         self.assertNotIn("https://",json.dumps(report.sanitized_report()))
 
 
+
+class CatalogOnlyUnverifiedModeTests(unittest.TestCase):
+    """A stale identity registry must never be silently renewed by a GET."""
+
+    def _census(self, *, raw=None, times=None, allow=True, owner=True, registry=None):
+        calls = []
+        clock = iter(times or [AT, AT + 10, AT + 30, AT + 50])
+        messages = iter(raw or [json.dumps(payload()).encode()] * 2)
+
+        def fetch(url, limit):
+            calls.append((url, limit))
+            return next(messages)
+
+        report = capture_binance_metadata_once(
+            catalog_only_unverified=True,
+            registry=registry,
+            allow_public_network=allow,
+            confirm_region_and_personal_research=allow,
+            owner_check=lambda: owner,
+            fetch=fetch,
+            utc_ms=lambda: next(clock),
+        )
+        return report, calls
+
+    def test_no_registry_catalog_census_is_not_identity_or_marketwide(self):
+        report, calls = self._census()
+        self.assertEqual(report.status, "metadata_catalog_only_unverified")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(report.catalog_rows, 2)
+        self.assertEqual(report.reviewed_crypto_perpetuals, 0)
+        self.assertEqual(report.plausible_unreviewed, 2)
+        self.assertFalse(report.identity_registry_applied)
+        self.assertIsNotNone(report.catalog_digest_sha256)
+        display = json.dumps(report.sanitized_report(), sort_keys=True)
+        for protected in ("marketwide_top50_verified", "usdm_contract_verified",
+                          "canonical_ohlcv_approved", "continuous_collector_authorized",
+                          "crypto_identity_independently_authenticated", "network_source_authenticated"):
+            self.assertFalse(report.sanitized_report()[protected])
+        self.assertNotIn("BTCUSDT", display)
+        self.assertNotIn("ETHUSDT", display)
+        self.assertNotIn('"o"', display)
+
+    def test_catalog_only_refuses_supplied_even_fresh_registry_before_network(self):
+        registry = registry_for(("BTC",), observed=AT-1000)
+        report, calls = self._census(registry=registry)
+        self.assertEqual(report.status, "metadata_transport_or_validation_abstain")
+        self.assertEqual(report.requested, 0)
+        self.assertFalse(calls)
+
+    def test_catalog_only_requires_both_optins_and_nonroot(self):
+        for kwargs in ({"allow":False},{"owner":False}):
+            with self.subTest(kwargs=kwargs):
+                report,calls = self._census(**kwargs)
+                self.assertNotEqual(report.status, "metadata_catalog_only_unverified")
+                self.assertFalse(calls)
+
+    def test_catalog_only_never_swallows_catalog_drift(self):
+        b=payload([instrument("BTC"),instrument("NEW")])
+        report,calls=self._census(raw=[json.dumps(payload()).encode(),json.dumps(b).encode()])
+        self.assertEqual(len(calls),2)
+        self.assertNotEqual(report.status,"metadata_catalog_only_unverified")
+        self.assertIsNone(report.catalog_digest_sha256)
+
+    def test_catalog_only_never_swallows_duplicate_json(self):
+        report,calls=self._census(raw=[b'{"symbols":[],"symbols":[]}']*2)
+        self.assertEqual(len(calls),1)
+        self.assertEqual(report.status,"metadata_duplicate_keys_abstain")
+
+    def test_catalog_only_rejects_nonboolean_mode_without_network(self):
+        calls=[]
+        result=capture_binance_metadata_once(
+            catalog_only_unverified=1,
+            registry=None, allow_public_network=True,
+            confirm_region_and_personal_research=True,
+            owner_check=lambda:True,
+            fetch=lambda *_: calls.append(True), utc_ms=lambda:AT)
+        self.assertEqual(result.status,"metadata_transport_or_validation_abstain")
+        self.assertFalse(calls)
+
+    def test_registry_still_cannot_be_stale_or_future_in_ordinary_mode(self):
+        for observed in (AT-8*86400000,AT+1000):
+            with self.subTest(observed=observed):
+                report,calls=case(registry=registry_for(("BTC",),observed=observed))
+                self.assertNotEqual(report.status,"metadata_catalog_pair_research_unverified")
+                self.assertFalse(calls)
+
+    def test_registry_expiring_between_gets_blocks_second_http(self):
+        from crypto_intelligence_agent.j1_binance_top50_pit import MAX_REGISTRY_AGE_MS
+        registry=registry_for(("BTC",),observed=AT-MAX_REGISTRY_AGE_MS+15)
+        report,calls=case(registry=registry)
+        self.assertNotEqual(report.status,"metadata_catalog_pair_research_unverified")
+        self.assertEqual(len(calls),1)
+        self.assertFalse(report.identity_registry_applied)
+
+    def test_registry_expiring_during_first_get_abstains(self):
+        from crypto_intelligence_agent.j1_binance_top50_pit import MAX_REGISTRY_AGE_MS
+        registry=registry_for(("BTC",),observed=AT-MAX_REGISTRY_AGE_MS+5)
+        report,calls=case(registry=registry)
+        self.assertNotEqual(report.status,"metadata_catalog_pair_research_unverified")
+        self.assertEqual(len(calls),1)
+
+    def test_cli_catalog_mode_does_not_load_any_registry_or_open_network(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from unittest.mock import patch
+        from crypto_intelligence_agent.j1_binance_metadata_probe import MetadataProbeReport
+        from scripts import probe_binance_exchange_info_once as cli
+        out=StringIO()
+        from types import SimpleNamespace
+        # Windows has no os.geteuid; inject only a fake CLI OS, never mutate
+        # the process-wide os module or require POSIX APIs on the CI host.
+        fake_os = SimpleNamespace(name="posix", geteuid=lambda: 1000)
+        with (patch.object(cli,"os",fake_os),
+              patch.object(cli,"load_reviewed_registry",side_effect=AssertionError("registry read")),
+              patch.object(cli,"capture_binance_metadata_once",return_value=MetadataProbeReport(
+                    "metadata_catalog_only_unverified")) as capture,
+              redirect_stdout(out)):
+            rc=cli.main(["--catalog-only-unverified","--allow-public-network",
+                         "--confirm-region-and-personal-research"])
+        self.assertEqual(rc,0)
+        kwargs=capture.call_args.kwargs
+        self.assertIsNone(kwargs["registry"])
+        self.assertTrue(kwargs["catalog_only_unverified"])
+        self.assertFalse(json.loads(out.getvalue())["marketwide_top50_verified"])
+
 if __name__ == "__main__":
     unittest.main()

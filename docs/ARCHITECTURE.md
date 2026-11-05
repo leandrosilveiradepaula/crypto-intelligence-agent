@@ -518,3 +518,8 @@ Observador `j1_binance_ws_shadow_observer.py` com uma sessão WS pública **inje
 ## J1/OPS35 — captura Binance exchangeInfo one-shot sem estado persistente
 
 `j1_binance_metadata_probe.capture_binance_metadata_once` trabalha com transporte e relógio injetados: opt-in owner-only, validar registry imutável pré-rede, executar no máximo 2 GETs do URL fixo e validar pre/post com `_catalog` da OPS34, devolvendo apenas contagens/digests não autentificadores. A CLI `scripts.probe_binance_exchange_info_once` não conecta por default; em execução explicitamente permitida, o fetcher isola HTTPS, desabilita redirects/proxies, limita 2MiB/8s e não repete HTTP proibido. Nenhum dado em SQLite, candles, 24/7, migrations ou ordens. D241 / `docs/J1_OPS35_BINANCE_METADATA_ONCE.md`.
+
+
+## J1/OPS35 D242 — dois modos causalmente separados
+
+`capture_binance_metadata_once` mantém o modo padrão que exige registro PIT validado no primeiro request, em cada response e antes do próximo request; ao expirar, encerra sem promover o snapshot. O modo explícito `catalog_only_unverified=true` **proíbe** fornecer registro, retorna apenas censo de formato não revisado e hash agregado; não faz classificação de identidade nem alimenta `rank_bybit_reviewed_closed_24h_pit` ou o rank Binance. CLI opt-in `--catalog-only-unverified` continua com nonroot, HTTPS fixa, 2 GETs, timeout/limite e sem escrita. Todas as flags de autorização permanecem falsas. D242.
