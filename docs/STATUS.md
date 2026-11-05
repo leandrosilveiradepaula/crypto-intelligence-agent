@@ -1111,3 +1111,8 @@ Após simulação offline OPS29 de 30 horas e a prova real OPS26 de igualdade 6/
 ## J1/OPS31 #482 — preparo do piloto shadow owner-only na VPS (04/11/2026)
 
 OPS30 #480/PR #481 integrada, CI pré e pós-merge 3/3 SUCCESS em `main=6bf647aa354abfe5228a34be0a84a5ff687ca0f3`. Issue #482, branch `work/issue-482-j1-ops31-shadow-one-shot`: novo launcher de timer absoluto, claim privado, render-only systemd, validação de retorno/histogramas e regressões adversariais; D237 e `J1_OPS31_SHADOW_ONESHOT.md`. Código aprovado não equivale a coleta real. VPS ainda no SHA observado `229969952c3c0bcd06b35f7b828eac21c9bd1498`, três claims intactos, serviço contínuo off. PR/CI/merge do OPS31 exigem provas separadas; #429 OPS1, #319 Top50 e #2 J1 abertas.
+
+
+## J1/OPS32 #484 — decisão causal offline (05/11/2026)
+
+OPS31 #482 está concluída com evidência real da VPS: 229 frames, 2 fechamentos únicos, ambos com `timestamp>end`, sem REST/writes/ordens, serviço SUCCESS, timer desabilitado e 4 claims preservados. D238 declara NO-GO para promoção dos candles Bybit WS e para coletor 24h. Branch `work/issue-484-j1-ops32-causal-source-decision` desenvolve avaliador offline Bybit V5/Binance USD-M WS/REST com fechamento explícito, clocks, anti-lookahead, OHLCV Decimal, unidade de volume e quarentena; 15 testes focais executados localmente e PASS. **PR/CI/merge ainda precisam de confirmação independente**; código offline não prova feed live nem escolhe venue final. Próxima gate: CI, review e merge sem deploy se verde. J1 #2/OPS1 #429/Top50 #319 continuam abertas.

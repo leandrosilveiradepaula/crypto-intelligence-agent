@@ -27,3 +27,8 @@ Opcionalmente, um único close anômalo pode ser comparado com página REST de p
 ## Evidência e lacunas
 
 O histórico real de 6/6 está registrado nas issues #464/#468/#429; a biblioteca OPS27 utiliza fixtures sintéticas e não preserva WS/REST reais. Portanto o relatório não demonstra rentabilidade, marketwide, direitos, origem autenticada, recuperação de lacunas, serviço ativo nem coleta contínua. Nenhuma instalação, ordem ou nova execução de rede foi autorizada por esta implementação.
+
+
+## Evolução D238 — OPS32 (05/11/2026)
+
+A OPS31 #482 confirmou na VPS 2/2 fechamentos únicos com `timestamp>end` (229 frames) e encerrou o timer sem retries, sem REST ou escritos. O diagnóstico D233 continua sendo um **veto** à ingestão WS Bybit, não um incentivo a normalizar o relógio. A OPS32 #484 adicionou a matriz de fontes/selector offline `j1_causal_source_decision.py` e testes Bybit/Binance em `docs/J1_OPS32_CAUSAL_SOURCE_DECISION.md`. Nenhuma admissibilidade do parser persistente foi alterada, e o Top50/24h permanece bloqueado.
