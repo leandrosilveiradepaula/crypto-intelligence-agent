@@ -550,3 +550,8 @@ A camada `j1_local_health` v2 valida `PRAGMA table_info` dos quatro objetos exis
 ## J3/PRE28 — risco de correlação causal por carteira (D248)
 
 `synthetic_portfolio_correlation_gate.audit_synthetic_causal_correlation` integra, de forma opt-in, PRE19+PRE20: repete os replays tipados para observar somente pernas OPEN a cada tick, mantém estatísticas incrementais por par e utiliza retornos mark de sinal LONG/SHORT. O gate PRE20 nunca é contornado. Estado insuficiente, variância nula, breach ou liquidação desconhecida impede elegibilidade retrospectiva. Nenhum endpoint, armazenamento, comando ou mudança de execução é introduzido; ver docs/J3_PRE28_CAUSAL_CORRELATION_GATE.md.
+
+
+## J1/TOP50 D249 — coleta publica basica completa em lotes privados
+
+`scripts.audit_bybit_marketwide_closed24h` isola recenseamento dos contratos Bybit `Trading/LinearPerpetual/USDT` em um novo SQLite owner-only (nunca o SQLite histórico), usando `BoundedBybitPublicClient` com GET fixo 2s e 24 velas UTC fechadas. A janela, membros e digest são imutáveis entre lotes, writer `flock` e cada ativo transacionado atomicamente. Replay de cada ativo antes de novas requisições e ranking Decimal somente após cobertura completa da lista basica. Não cria serviço ou altera OrderExecutionEngine. Ver D249, issue #502 e docs/J1_TOP50_CLOSED24H_MARKET_CENSUS.md.
