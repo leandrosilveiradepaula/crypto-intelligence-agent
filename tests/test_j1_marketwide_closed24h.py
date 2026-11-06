@@ -267,6 +267,117 @@ class MarketwideClosed24hTests(unittest.TestCase):
         self.assertNotIn("COIN000", json.dumps(result))
         self.assertEqual(result["completed_contracts"], 0)
 
+    def test_incomplete_24h_is_persisted_not_ranked_and_not_refetched(self):
+        class ShortOne(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if (urlsplit(url).path.endswith("/kline")
+                        and parse_qs(urlsplit(url).query)["symbol"][0] == SYMS[2]):
+                    payload["result"]["list"] = payload["result"]["list"][:10]
+                return raw, payload
+
+        a = self.run_batch(client=ShortOne(), size=6)
+        self.assertEqual(a["status"], "basic_market_24h_survey_partial_unverified")
+        self.assertEqual(a["completed_contracts"], 5)
+        self.assertEqual(a["incomplete_24h_contracts"], 1)
+        self.assertEqual(a["incomplete_24h_rows"], 10)
+        self.assertEqual(a["inspected_contracts"], 6)
+        self.assertEqual(a["remaining_contracts"], 54)
+        self.assertFalse(a["full_basic_contract_24h_ranking_complete"])
+        self.assertFalse(a["marketwide_top50_verified"])
+        self.assertEqual(a["requests_attempted"], 7)
+
+        b = self.run_batch(client=ShortOne(), size=60)
+        self.assertEqual(b["completed_contracts"], 59)
+        self.assertEqual(b["incomplete_24h_contracts"], 1)
+        self.assertEqual(b["inspected_contracts"], 60)
+        self.assertEqual(b["remaining_contracts"], 0)
+        self.assertEqual(b["requests_attempted"], 55)
+        self.assertEqual(b["status"], "basic_market_24h_survey_complete_with_incomplete_unverified")
+        self.assertFalse(b["full_basic_contract_24h_ranking_complete"])
+        self.assertEqual(b["top50_basic_count"], 0)
+        self.assertEqual(b["top50_complete_subset_count"], 50)
+        self.assertEqual(len(b["top50_complete_subset_digest_sha256"]), 64)
+
+        c = self.run_batch(client=ShortOne(), size=60)
+        self.assertEqual(c["requests_attempted"], 1)
+        self.assertEqual(c["incomplete_24h_contracts"], 1)
+        self.assertEqual(c["status"], b["status"])
+
+    def test_short_history_integrity_gap_is_fail_closed(self):
+        class ShortGap(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("/kline"):
+                    rows = payload["result"]["list"][:10]
+                    rows[8][0] = str(END - 14*HOUR_MS)
+                    payload["result"]["list"] = rows
+                return raw, payload
+
+        result = self.run_batch(client=ShortGap(), size=5)
+        self.assertEqual(result["status"], "abstain")
+        self.assertEqual(result["failure_code"], "kline_missing_open_or_future_hour")
+        self.assertEqual(result["incomplete_24h_contracts"], 0)
+        self.assertEqual(result["completed_contracts"], 0)
+        self.assertEqual(result["requests_attempted"], 2)
+
+    def test_incomplete_saved_json_corruption_rejected_before_kline_get(self):
+        class ShortOne(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("/kline"):
+                    payload["result"]["list"] = payload["result"]["list"][:8]
+                return raw, payload
+
+        a = self.run_batch(client=ShortOne(), size=1)
+        self.assertEqual(a["incomplete_24h_contracts"], 1)
+        db_path = self.directory / "j1-marketwide-closed24h.sqlite"
+        with closing(sqlite3.connect(db_path)) as db, db:
+            db.execute("UPDATE incomplete SET candles_json='[]' WHERE symbol=?", (SYMS[0],))
+        b = self.run_batch(size=1)
+        self.assertEqual(b["status"], "abstain")
+        self.assertEqual(b["failure_stage"], "replay")
+        self.assertEqual(b["failure_code"], "short_history_replay_invalid")
+        self.assertEqual(b["requests_attempted"], 1)
+
+    def test_incomplete_observation_launch_hint_drift_rejected(self):
+        class HintShort(FakeClient):
+            def __init__(self, hint):
+                super().__init__()
+                self.hint = hint
+
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("instruments-info"):
+                    payload["result"]["list"][0]["launchTime"] = str(self.hint)
+                else:
+                    payload["result"]["list"] = payload["result"]["list"][:8]
+                return raw, payload
+
+        first = self.run_batch(client=HintShort(END - 12*HOUR_MS), size=1)
+        self.assertEqual(first["incomplete_24h_contracts"], 1)
+        later = self.run_batch(client=HintShort(END - 13*HOUR_MS), size=1)
+        self.assertEqual(later["status"], "abstain")
+        self.assertEqual(later["failure_stage"], "replay")
+        self.assertEqual(later["failure_code"], "short_history_catalog_hint_changed")
+        self.assertEqual(later["requests_attempted"], 1)
+
+    def test_zero_candle_observation_is_explicitly_not_zero_turnover(self):
+        class EmptyHistory(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("/kline"):
+                    payload["result"]["list"] = []
+                return raw, payload
+
+        a = self.run_batch(client=EmptyHistory(), size=1)
+        self.assertEqual(a["completed_contracts"], 0)
+        self.assertEqual(a["incomplete_24h_contracts"], 1)
+        self.assertEqual(a["incomplete_24h_rows"], 0)
+        self.assertEqual(a["top50_basic_count"], 0)
+        self.assertFalse(a["marketwide_top50_verified"])
+        self.assertEqual(a["requests_attempted"], 2)
+
     def test_no_gate_no_network_no_files(self):
         denied = self.run_batch(allow_public_network=False)
         self.assertEqual(denied["status"], "owner_gate_required")
