@@ -951,3 +951,8 @@ Testar `test_j1_local_health.py`, `test_backfill_storage.py`, `test_storage_inva
 ## J1/OPS1 D247 - auditor independente WS owner-only
 
 Suíte focal `test_j1_ws_owner_readonly.py` e regressões de `test_j1_bybit_closed_stream_cache.py`, `test_j1_ws_owner_pilot.py`, `test_j1_ws_multihour_soak.py`. Provar opt-in sem I/O default, checks POSIX, diretorio privado, PIT antes de close e expiry, journal invalidado, janela 24h de 52 candidatos fixture, amostra parcial sem rank, digest corrompido, sigilo e zero trades. CI PR Linux/docs, Windows/offline, Chrome/PAPER; o Windows deve skip apenas provas POSIX nonroot. Comparar SHA head e merge. Sem banco VPS nem chamadas externas.
+
+
+## J3/PRE28 #500 — matriz de risco causal por correlação
+
+Testes `test_synthetic_portfolio_correlation_gate.py` e regressões PRE19 `test_synthetic_portfolio_replay.py`, PRE20 `test_synthetic_portfolio_risk_limits.py`, mark `test_synthetic_mark_replay.py`. Cobrir LONG/LONG, LONG/SHORT, SHORT/SHORT, sem variância, min amostras, future tick alterado sem retroceder prefixo, saída condicional, liquidação desconhecida, limites PRE20, 1 leg, ordenação/digest, precisão Decimal/inputs inválidos, limite 256, ausência de network/trades. CI completa Linux/docs, Windows/offline e Chrome/PAPER e revisão SHA antes do merge. Todos os resultados permanecem sintéticos, sem rentabilidade ou trading homologado.
