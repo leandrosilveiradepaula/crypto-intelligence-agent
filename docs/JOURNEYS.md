@@ -421,3 +421,8 @@ J1/OPS37 #495: classificar falhas OPS35 com enums sanitizados para prova futura,
 ## J1/OPS1 D245 — primeira camada de observabilidade sem VPS
 
 Auditor offline SQLite de amostra PIT/24h + CLI nonroot read-only; #429 continua aberta, pois supervisor persistente, conectividade, recuperacao de falhas e homologacao real ainda nao foram entregues. Gate #319 separado. Testes/CI e evidencia na PR vinculada; sem deploy, ordem, coleta ou Top50 confirmado. Ver docs/J1_LOCAL_HEALTH_READONLY.md.
+
+
+## J1/OPS1 D246 — validação dos valores armazenados
+
+A PR de integridade SQLite adiciona inspeção de OHLCV Decimal e checkpoint duplicado ao observador read-only D245; NAO adiciona novo supervisor, pois `bybit_ws_supervisor`, `bybit_ws_owner_lock`, `j1_ws_service` e `j1_ws_multihour_soak` ja existem. Esperar CI e SHA antes de integrar. A issue #429 segue aberta pela homologação real do coletor continuo, e a #319 pela prova independente Top50.
