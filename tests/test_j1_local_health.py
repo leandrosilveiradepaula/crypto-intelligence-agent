@@ -27,7 +27,9 @@ class LocalHealthTests(unittest.TestCase):
             c.executescript("""
             CREATE TABLE candles (
                 exchange TEXT,market TEXT,symbol TEXT,interval TEXT,
-                open_time_ms INTEGER,close_time_ms INTEGER,quality TEXT,
+                open_time_ms INTEGER,close_time_ms INTEGER,
+                open TEXT, high TEXT, low TEXT, close TEXT,
+                base_volume TEXT, quote_volume TEXT, quality TEXT,
                 PRIMARY KEY(exchange,market,symbol,interval,open_time_ms));
             CREATE TABLE checkpoints (
                 data_type TEXT,exchange TEXT,symbol TEXT,interval TEXT,
@@ -42,8 +44,9 @@ class LocalHealthTests(unittest.TestCase):
             """)
             self.add_snapshot(c)
             for symbol in ("BTCUSDT", "ETHUSDT"):
-                c.executemany("INSERT INTO candles VALUES (?,?,?,?,?,?,?)",
-                    [("bybit","linear_perpetual",symbol,"1h",t,t+H-1,"source_closed")
+                c.executemany("INSERT INTO candles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    [("bybit","linear_perpetual",symbol,"1h",t,t+H-1,
+                      "100.10","103","99","101","8.0","840.0","source_closed")
                      for t in range(START,END,H)])
                 c.execute("INSERT INTO checkpoints VALUES (?,?,?,?,?,?,?)",
                     ("closed_candle","bybit",symbol,"1h",START,END-1,"complete"))
@@ -69,6 +72,8 @@ class LocalHealthTests(unittest.TestCase):
         r=self.audit()
         self.assertEqual(r["status"],"sample_window_complete_unverified")
         self.assertEqual((r["selected_members"],r["complete_24h_members"],r["observed_candles"]),(2,2,48))
+        self.assertEqual(r["ohlcv_rows_validated"],48)
+        self.assertEqual(r["schema_version"],"j1_local_health_v2")
         self.assertEqual(r["last_live_collection_age_ms"],20000)
         for k in ("sample_identity_authenticated","marketwide_top50_verified",
                   "canonical_ohlcv_approved","continuous_collector_verified",
@@ -111,8 +116,9 @@ class LocalHealthTests(unittest.TestCase):
         self.assertEqual(self.audit()["complete_24h_members"],1)
         with closing(sqlite3.connect(self.db)) as c, c:
             c.execute("DELETE FROM candles WHERE symbol='ETHUSDT' AND open_time_ms=?",(END-H,))
-            c.execute("INSERT INTO candles VALUES (?,?,?,?,?,?,?)",
-                      ("bybit","linear_perpetual","ETHUSDT","1h",END,END+H-1,"source_closed"))
+            c.execute("INSERT INTO candles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                      ("bybit","linear_perpetual","ETHUSDT","1h",END,END+H-1,
+                       "100.10","103","99","101","8.0","840.0","source_closed"))
         self.assertEqual(self.audit()["complete_24h_members"],0)
 
     def test_snapshot_bad_rank_duplicates_nan_float_and_json_duplicate(self):
@@ -130,6 +136,54 @@ class LocalHealthTests(unittest.TestCase):
                 with closing(sqlite3.connect(self.db)) as c, c:
                     c.execute("UPDATE universe_snapshots SET eligible_json=?",(raw,))
                 self.assertEqual(self.audit()["status"],"snapshot_invalid")
+
+    def test_adversarial_ohlcv_and_quality_rows_fail_closed(self):
+        cases = [
+            ("open", "0"), ("high", "99"), ("low", "102"),
+            ("close", "-1"), ("base_volume", "-0.1"),
+            ("quote_volume", "-1"), ("open", "NaN"),
+            ("high", "Infinity"), ("close", "1e99999"),
+            ("open", "10e1"), ("quote_volume", "0.00e0"),
+            ("base_volume", "8,1"), ("quality", "unverified"),
+            ("quote_volume", None), ("high", 100.5),
+        ]
+        for col, value in cases:
+            with self.subTest(column=col, replacement=value):
+                with closing(sqlite3.connect(self.db)) as conn, conn:
+                    original = conn.execute(
+                        f"SELECT {col} FROM candles WHERE symbol='BTCUSDT' AND open_time_ms=?",
+                        (START,)).fetchone()[0]
+                    conn.execute(
+                        f"UPDATE candles SET {col}=? WHERE symbol='BTCUSDT' AND open_time_ms=?",
+                        (value, START))
+                result = self.audit()
+                self.assertEqual(result["status"],"candle_window_invalid")
+                self.assertFalse(result["canonical_ohlcv_approved"])
+                with closing(sqlite3.connect(self.db)) as conn, conn:
+                    conn.execute(
+                        f"UPDATE candles SET {col}=? WHERE symbol='BTCUSDT' AND open_time_ms=?",
+                        (original, START))
+        self.assertEqual(self.audit()["status"],"sample_window_complete_unverified")
+
+    def test_missing_ohlcv_columns_not_accepted_as_healthy(self):
+        broken = self.db.parent / "truncated.sqlite"
+        with closing(sqlite3.connect(broken)) as conn, conn:
+            conn.executescript("""
+                CREATE TABLE candles(symbol TEXT,open_time_ms INTEGER,close_time_ms INTEGER,quality TEXT);
+                CREATE TABLE checkpoints(symbol TEXT);
+                CREATE TABLE universe_snapshots(observed_at_ms INTEGER,eligible_json TEXT);
+                CREATE TABLE collection_events(observed_end_ms INTEGER,status TEXT);
+            """)
+        self.assertEqual(self.audit(db_path=broken)["status"], "database_schema_incomplete")
+
+    def test_duplicate_or_missing_checkpoint_rows_fail_closed(self):
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("INSERT INTO checkpoints SELECT * FROM checkpoints WHERE symbol='BTCUSDT'")
+        self.assertEqual(self.audit()["status"],"checkpoint_rows_invalid")
+        with closing(sqlite3.connect(self.db)) as conn, conn:
+            conn.execute("DELETE FROM checkpoints WHERE symbol='BTCUSDT'")
+        self.assertEqual(self.audit()["status"],"sample_window_incomplete")
+        self.assertEqual(self.audit()["checkpoint_complete_members"],1)
 
     def test_invalid_scope_rejected_and_market_isolation(self):
         self.assertEqual(self.audit(exchange="binance")["complete_24h_members"],0)
