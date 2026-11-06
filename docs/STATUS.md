@@ -1158,3 +1158,8 @@ Inspecionada main `4023aae65f7eea4a291e2ad55878350870b91adf` (#497), issue #429 
 ## J1/OPS1 D247 - leitura isolada de WS owner research (06/11/2026)
 
 Main de base verificada `115cd8f38f6f135702d3dcf2a530d67b0ad021d2`; #429 aberta e nenhuma PR aberta no preflight. Branch `work/issue-429-j1-ws-owner-readonly-audit` prepara auditor offline do SQLite `ws-confirmed.sqlite`, que nao tem as mesmas tabelas do SQLite historico de D246. Reusa validadores reais do journal e PIT, nao cria segundo supervisor. Prova offline e CI no SHA da PR pendentes neste registro inicial; nenhum deploy, GET, VPS ou ordem. Top50 segue nao homologada.
+
+
+## J3/PRE28 #500 — risco causal de correlação (06/11/2026)
+
+Verificada main `22abacd43307346cba658f180f04d224c6a3dfae`, sem PR aberta, J1 #2/#319/#429 bloqueada por provas operacionais reais. Issue #500 criada; branch `work/issue-500-j3-pre28-causal-correlation-gate` desenvolve política opt-in de correlação por pares e check de risco PRE20 por prefixo de marcação (sem olhar futuro). Limites e limitações em D248 e docs/J3_PRE28_CAUSAL_CORRELATION_GATE.md. CI, SHA da PR e merge exigem comprovação independente; nada foi executado na VPS, exchange, testnet ou live.

@@ -431,3 +431,8 @@ A PR de integridade SQLite adiciona inspeção de OHLCV Decimal e checkpoint dup
 ## J1/OPS1 D247 - observador do segundo SQLite (WS)
 
 O monitor D246 do SQLite historico nao inspeciona o journal de fechamentos WebSocket. Um observador owner-only distinto usa `SQLiteOfflineClosedStreamJournal.audit` e leitura imutavel da cadeia PIT, sem novo coletor/servico. So resultados de amostra local, NAO aprova worker 24/7, feed, autenticacao, timestamp>end ou marketwide Top50. #429/#319/#2 abertas. Ver D247.
+
+
+## J3/PRE28 #500 — risco causal de co-perda sintética
+
+Bloco independente enquanto J1 depende de prova real da VPS: gate de correlação incremental de retornos mark assinados por direção, baseado nos validadores PRE19/PRE20, sem alterar contratos de execução ou estado real. Veto conservador para correlação alta, flat, histórico insuficiente ou liquidação. Evidência de código exige testes e CI da PR; J3 #4/J1 #2 permanecem abertas.
