@@ -1163,3 +1163,8 @@ Main de base verificada `115cd8f38f6f135702d3dcf2a530d67b0ad021d2`; #429 aberta 
 ## J3/PRE28 #500 — risco causal de correlação (06/11/2026)
 
 Verificada main `22abacd43307346cba658f180f04d224c6a3dfae`, sem PR aberta, J1 #2/#319/#429 bloqueada por provas operacionais reais. Issue #500 criada; branch `work/issue-500-j3-pre28-causal-correlation-gate` desenvolve política opt-in de correlação por pares e check de risco PRE20 por prefixo de marcação (sem olhar futuro). Limites e limitações em D248 e docs/J3_PRE28_CAUSAL_CORRELATION_GATE.md. CI, SHA da PR e merge exigem comprovação independente; nada foi executado na VPS, exchange, testnet ou live.
+
+
+## J1/TOP50 D249 — prova real e censo integral preparado (06/11/2026)
+
+Prova owner VPS `srv1319424`: re-auditoria SQLite exit0, 37470 candles reais em 51 series/50 selecionados, 2 PITs (0 consecutivos no final), último PIT 01/11 06:00 UTC; Bybit catálogo real 930, filtros basicos 822, ticker 822; 50 candidatos ticker consultados com 1200 klines fechadas UTC de 24h, 52 GET, 10/10 Top10 coincidente só na amostra, 0 writes/ordens. Falta cobertura dos outros 772 e identidade independente. Issue #502 e branch `work/issue-502-j1-basic-marketwide-24h-replay` preparam recenseamento offline TDD e replay de lote com DB separado, sem rede no CI; CI e prova real global ainda pendentes neste checkpoint. D249, docs/J1_TOP50_CLOSED24H_MARKET_CENSUS.md.
