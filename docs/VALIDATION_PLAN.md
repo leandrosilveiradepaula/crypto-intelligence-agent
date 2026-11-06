@@ -966,3 +966,8 @@ Validar `python -m unittest discover -s tests -p test_j1_marketwide_closed24h.py
 ## J1/TOP50 D250 — diagnóstico sanitizado de abstain, sem retry
 
 Regressões no `test_j1_marketwide_closed24h.py` devem provar códigos allowlisted para `kline_not_24_closed_hours`, OHLCV inválido, HTTP/transport e mensagens arbitrárias contendo identificadores; preservar contrato salvo e contadores em falha. Não imprimir símbolos, preço, URL, corpo ou exceção de provedor. CI Linux/docs, Windows/offline, Chrome/PAPER no head exato antes de merge. Prova VPS D249 4/822, 96 velas, sem partial e DB íntegro, NÃO diagnostica o quinto GET retrospectivamente. A próxima execução de mercado depende de análise de segurança, capacidade e janela fixa, e não reconsulta automaticamente.
+
+
+## J1/TOP50 D251 — Decimal científico estritamente limitado
+
+Testar `_dec` com `1.2E-8`, `0e-8`, `3e+2`, extremos e expiração; rejeitar `NaN`, `Infinity`, `-1e-8`, `1e49`, `1e-49`, string longa, não ASCII, float, expoente malformado. Simular 24 barras com preço/base volume/cotação científicos; preservar TEXT exatamente no SQLite e validar replay sem novo GET de contrato já concluído. Em falha de valor, mostrar apenas nome do campo allowlisted e categoria, nunca texto recebido. CI Linux/docs, Windows/offline e PAPER no SHA, sem requisições reais nos testes. Até nova evidência do servidor não atribuir `invalid_candle_decimal` antigo a notação científica.
