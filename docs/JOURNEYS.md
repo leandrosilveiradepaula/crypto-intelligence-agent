@@ -414,3 +414,5 @@ Pesquisa Binance recebe modo de censo estritamente observacional, sem registro P
 ## J1/OPS36 — integração offline das provas OPS32 e OPS34
 
 A OPS36 #493 reúne em 24 epochs sintéticos o contrato causal x=true/ACK Binance e metadados de instrumentos + revisão PIT; agrega turnover `k.q` e distingue estritamente amostra revisada de Top50 global. Não implanta coletor, não transforma 2 fechamentos reais da OPS33 em histórico e não aprova 24h reais, mercado, execução ou rentabilidade. VPS permanece pendente por indisponibilidade do titular; CI GitHub é independente. Ver D243 e `docs/J1_OPS36_BINANCE_WS_24H_OFFLINE.md`.
+
+J1/OPS37 #495: classificar falhas OPS35 com enums sanitizados para prova futura, nao repetir one-shot original, nao autorizar Top50/USD-M, persistencia ou ordens com base em classificacao. D244.

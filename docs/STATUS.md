@@ -1141,3 +1141,5 @@ Branch `work/issue-490-ops35-catalog-only-observation` preparada a partir de `ma
 ## J1/OPS36 #493 — replay Binance WS 24h offline (05/11/2026)
 
 O titular não tem acesso à VPS; OPS35 #490 execução real fica pendente. Na main `ad0022e3cd94c8672013183eb7e5079a40f5a8c5` foi iniciado módulo offline `j1_binance_ws_24h_replay.py` + testes adversariais e guia D243, sem rede, SQLite, timer ou trading. Contratos OPS32/34 reutilizados para 24 fechamentos de cada ativo de amostra revisada, quote turnover determinístico. É pesquisa sintética não homologada e não prova Top50. PR/CI/merge devem ser comprovadas antes de declarar prontidão. J1 #2, OPS1 #429, Top50 #319 e OPS35 #490 abertas.
+
+J1/OPS37 #495: VPS OPS35 #490 atualizou main ad7b8f03e8ae1ccbec2d43b25513b5d4ff5e7de5, passou 52 testes, criou claim unico, teve requests_attempted=1/responses_validated=0/status=metadata_transport_or_validation_abstain, 0 writes/ordens. A causa nao foi observada. OPS37 prepara status de estagio e categorias fixas, testes e D244, sem repetir a captura; CI/merge exigem comprovacao. J1 #2, Top50 #319, OPS1 #429, OPS35 #490 abertas.

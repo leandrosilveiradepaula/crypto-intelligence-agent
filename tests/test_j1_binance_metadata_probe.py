@@ -287,5 +287,95 @@ class CatalogOnlyUnverifiedModeTests(unittest.TestCase):
         self.assertTrue(kwargs["catalog_only_unverified"])
         self.assertFalse(json.loads(out.getvalue())["marketwide_top50_verified"])
 
+
+class SanitizedFailureStageTests(unittest.TestCase):
+    """OPS37: diagnostic enums add observability, not admissibility."""
+
+    def _check(self, report, stage, category, *, calls=None):
+        sanitized = report.sanitized_report()
+        self.assertEqual((sanitized["failure_stage"],
+                          sanitized["failure_category"]), (stage, category))
+        self.assertFalse(sanitized["canonical_ohlcv_approved"])
+        self.assertFalse(sanitized["usdm_contract_verified"])
+        self.assertFalse(sanitized["marketwide_top50_verified"])
+        self.assertEqual(sanitized["storage_writes"], 0)
+        self.assertFalse(sanitized["orders_sent"])
+        if calls is not None:
+            self.assertEqual(report.requested, calls)
+
+    def test_catalog_root_invalid_no_payload_or_symbol_leak(self):
+        bad = payload()
+        del bad["timezone"]
+        report, calls = case(responses=[json.dumps(bad).encode()] * 2)
+        self._check(report, "catalog", "catalog_root_schema", calls=1)
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn("BTCUSDT", json.dumps(report.sanitized_report()))
+
+    def test_missing_required_row_field_classified_without_field_name(self):
+        bad = payload()
+        del bad["symbols"][0]["underlyingType"]
+        report, calls = case(responses=[json.dumps(bad).encode()] * 2)
+        self._check(report, "catalog", "catalog_row_missing_required", calls=1)
+        self.assertEqual(len(calls), 1)
+        self.assertNotIn("underlyingType", json.dumps(report.sanitized_report()))
+
+    def test_duplicate_or_invalid_row_classification_is_conservative(self):
+        bad = payload([instrument("BTC"), instrument("BTC")])
+        report, calls = case(responses=[json.dumps(bad).encode()] * 2)
+        self._check(report, "catalog", "catalog_row_invalid_or_duplicate", calls=1)
+        self.assertEqual(len(calls), 1)
+        bad = payload([instrument("BTC"), instrument("ETH")])
+        bad["symbols"][0]["onboardDate"] = "not-an-integer"
+        report, _ = case(responses=[json.dumps(bad).encode()] * 2)
+        self._check(report, "catalog", "catalog_row_invalid_or_duplicate", calls=1)
+
+    def test_response_clock_and_json_duplicate_distinguished(self):
+        report, calls = case(times=[AT, AT + 40_000])
+        self._check(report, "response_clock", "receipt_clock", calls=1)
+        self.assertEqual(len(calls), 1)
+        report, calls = case(responses=[b'{"symbols":[],"symbols":[]}'] * 2)
+        self._check(report, "json", "json_duplicate_key", calls=1)
+        self.assertEqual(len(calls), 1)
+
+    def test_catalog_pair_drift_distinguished(self):
+        first = payload()
+        second = payload([instrument("BTC"), instrument("NEW")])
+        report, calls = case(responses=[
+            json.dumps(first).encode(), json.dumps(second).encode()])
+        self._check(report, "compare", "catalog_pair_drift_or_order", calls=2)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(report.received, 2)
+
+    def test_http_and_unknown_fetch_errors_never_echo_exception(self):
+        from crypto_intelligence_agent.j1_binance_metadata_probe import (
+            capture_binance_metadata_once,
+        )
+        registry = registry_for(("BTC",), observed=AT - 10000)
+        for message, category in (
+            ("binance_http_access_or_provider_denied_no_retry",
+             "http_access_or_provider_denied"),
+            ("secret_body_ABC_XYZ", "fetch_unclassified"),
+        ):
+            def fail(_url, _cap):
+                raise ValueError(message)
+            report = capture_binance_metadata_once(
+                registry=registry,
+                allow_public_network=True,
+                confirm_region_and_personal_research=True,
+                owner_check=lambda: True,
+                fetch=fail, utc_ms=lambda: AT,
+            )
+            self._check(report, "fetch", category, calls=1)
+            self.assertNotIn("ABC_XYZ", json.dumps(report.sanitized_report()))
+            self.assertNotIn("https://", json.dumps(report.sanitized_report()))
+
+    def test_valid_catalog_never_has_failure_stage_or_category(self):
+        report, calls = case()
+        self.assertEqual(len(calls), 2)
+        self._check(report, "none", "none", calls=2)
+        self.assertEqual(report.status,
+                         "metadata_catalog_pair_research_unverified")
+
+
 if __name__ == "__main__":
     unittest.main()
