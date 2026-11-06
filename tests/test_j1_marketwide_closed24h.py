@@ -134,6 +134,19 @@ class MarketwideClosed24hTests(unittest.TestCase):
         self.assertEqual(a["failure_stage"], "replay")
         self.assertEqual(a["requests_attempted"], 1)
 
+    def test_sqlite_blob_does_not_pass_decimal_text_replay(self):
+        self.run_batch(size=1)
+        db = self.directory / "j1-marketwide-closed24h.sqlite"
+        with closing(sqlite3.connect(db)) as conn, conn:
+            conn.execute(
+                "UPDATE candles SET quote_turnover=? WHERE symbol=?",
+                (sqlite3.Binary(b"100"), SYMS[0]),
+            )
+        a = self.run_batch(size=5)
+        self.assertEqual(a["status"], "abstain")
+        self.assertEqual(a["failure_stage"], "replay")
+        self.assertEqual(a["requests_attempted"], 1)
+
     def test_no_gate_no_network_no_files(self):
         denied = self.run_batch(allow_public_network=False)
         self.assertEqual(denied["status"], "owner_gate_required")
