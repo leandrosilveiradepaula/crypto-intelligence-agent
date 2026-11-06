@@ -63,7 +63,7 @@ class ReadonlyCensusProofTests(unittest.TestCase):
         )
 
     def audit(self, **kw):
-        return audit_private_checkpoint(self.directory, owner_ok=True, **kw)
+        return audit_private_checkpoint(self.directory, **dict({"owner_ok": True}, **kw))
 
     def test_replay_read_only_no_network_matches_partial_state(self):
         collected = self.collect(size=5)
