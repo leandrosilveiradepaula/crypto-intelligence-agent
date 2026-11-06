@@ -1183,3 +1183,8 @@ VPS realizou re-prova D250 (1 catálogo + 1 kline): 822 contratos técnicos, 4 c
 ## J1/TOP50 D252 — 20 contratos reais, incompatibilidade de símbolo (06/11/2026)
 
 VPS executou lote sequencial no SHA `8fa321ef04a8cabeaead88b2c4ba61e4f94caa47`, encerrou `abstain` em `kline/invalid_kline_window` depois de 16 GETs, com 20/822 contratos completos, 480 candles e 802 pendentes, sem writes ao histórico legado nem ordens. Comparação do código revelou `_catalog` aceitando até 32 caracteres e transporte limitando `[A-Z0-9]{2,24}USDT`; rejeição local anterior ao GET é compatível com divergência, mas símbolo exato não foi registrado. Branch `work/issue-502-j1-symbol-shape-contract` alinha forma técnica base 1..28 + USDT e testes de fronteiras. Integração e nova prova VPS ainda requerem CI e SHA. Preserve janela original 2026-11-06 13:00Z, sem reset, retry ou skip silencioso.
+
+
+## J1/TOP50 D253 — 247 completos, curto histórico observado (06/11/2026)
+
+VPS owner com SHA `a82bd25b48951984d18e6d55ae7c326305513025`: 5 testes de forma + 16 de censo OK, lotes: 21/504 (2 GET), 141/3384 (121 GET), 247/5928 (108 GET) e `abstain/kline_not_24_closed_hours` em 822 candidatos técnicos, 575 pendentes. Nenhuma ordem, histórico original intacto. Causa curta ainda SEM prova de listagem recente. Branch `work/issue-502-j1-incomplete-24h-survey` D253 implementa observações incompletas persistentes 0..23 com replay/hash e survey completo com abstenções, preservando janela UTC e posição no catálogo. Ranking marketwide segue não verificado se um membro for curto; CI/PR/merge/prova VPS necessários separadamente.
