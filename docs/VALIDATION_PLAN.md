@@ -956,3 +956,8 @@ Suíte focal `test_j1_ws_owner_readonly.py` e regressões de `test_j1_bybit_clos
 ## J3/PRE28 #500 — matriz de risco causal por correlação
 
 Testes `test_synthetic_portfolio_correlation_gate.py` e regressões PRE19 `test_synthetic_portfolio_replay.py`, PRE20 `test_synthetic_portfolio_risk_limits.py`, mark `test_synthetic_mark_replay.py`. Cobrir LONG/LONG, LONG/SHORT, SHORT/SHORT, sem variância, min amostras, future tick alterado sem retroceder prefixo, saída condicional, liquidação desconhecida, limites PRE20, 1 leg, ordenação/digest, precisão Decimal/inputs inválidos, limite 256, ausência de network/trades. CI completa Linux/docs, Windows/offline e Chrome/PAPER e revisão SHA antes do merge. Todos os resultados permanecem sintéticos, sem rentabilidade ou trading homologado.
+
+
+## J1/TOP50 D249 — auditoria plena de contrato basico por 24h UTC fechadas
+
+Validar `python -m unittest discover -s tests -p test_j1_marketwide_closed24h.py -q` sem rede e regressões de transporte/Bybit PIT, compileall/docs e CI Linux, Windows/offline e Chrome/PAPER. Casos fixture: 822×24h em sete lotes limitados (max 121 GET por run), dados alterados, relógio UTC, contratos malformados/duplicados, OHLCV e timestamps, drift de catálogo, reentrada idempotente, atomicidade apos falha, SQLite adulterado, owner gates e symlink. Teste real só por cia-probe na VPS sem retries, após CI head/merge. Flag Top50 verdadeira permanece proibida até prova independente crypto-only, mercado elegível, ranking completo e PIT contínuo.
