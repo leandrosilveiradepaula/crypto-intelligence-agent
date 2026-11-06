@@ -971,3 +971,8 @@ Regressões no `test_j1_marketwide_closed24h.py` devem provar códigos allowlist
 ## J1/TOP50 D251 — Decimal científico estritamente limitado
 
 Testar `_dec` com `1.2E-8`, `0e-8`, `3e+2`, extremos e expiração; rejeitar `NaN`, `Infinity`, `-1e-8`, `1e49`, `1e-49`, string longa, não ASCII, float, expoente malformado. Simular 24 barras com preço/base volume/cotação científicos; preservar TEXT exatamente no SQLite e validar replay sem novo GET de contrato já concluído. Em falha de valor, mostrar apenas nome do campo allowlisted e categoria, nunca texto recebido. CI Linux/docs, Windows/offline e PAPER no SHA, sem requisições reais nos testes. Até nova evidência do servidor não atribuir `invalid_candle_decimal` antigo a notação científica.
+
+
+## J1/TOP50 D252 — contrato sintático único catálogo/GET
+
+Provar offline que `_catalog` permite bases de 1 e 28 caracteres e `kline_url` + `instruments_url` + `BoundedBybitPublicClient.get` aceitam as mesmas formas; rejeitar base vazia, 29 caracteres, caracteres não ASCII, barras, espaços, sufixo USDC, minúscula e duração da janela inválida. Teste independente de sistema operacional `tests/test_j1_bybit_symbol_shape_contract.py`, regressões do transporte e da captura `test_j1_marketwide_closed24h.py`. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA exato. A falha real foi `invalid_kline_window` com 20 contratos preservados, o comprimento do nome reprovado não foi publicado. Gate J1 ainda exige elegibilidade cripto independente/continuidade.
