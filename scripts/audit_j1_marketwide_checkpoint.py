@@ -211,7 +211,7 @@ def audit_private_checkpoint(
         report["failure_stage"] = stage
         report["failure_code"] = "owner_gate_required"
         return report
-    if (type(directory) is not Path or not directory.is_absolute()
+    if (not isinstance(directory, Path) or not directory.is_absolute()
             or (previous_inspected is None) != (last_run_requests is None)
             or (previous_inspected is not None
                 and (type(previous_inspected) is not int
