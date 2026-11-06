@@ -1173,3 +1173,8 @@ Prova owner VPS `srv1319424`: re-auditoria SQLite exit0, 37470 candles reais em 
 ## J1/TOP50 D250 — falha real e correção de diagnóstico (06/11/2026)
 
 Titular VPS executou D249 #503 com SHA `ec8a7d15e30252fea2e585945dd8ceaf0462e136` e recebeu `status=abstain`, `failure_stage=kline`, `requests_attempted=6`, `completed_contracts=4`, `validated_closed_1h_rows=96`, `remaining_contracts=818`; `provider_ret_code=null`. Nova leitura **sem rede** confirmou 822 escopo, 4 concluídos, 96 velas, 0 parciais, SQLite íntegro, UTC window 06/11 13:00. Resposta do quinto GET não está em cache, causa exata não é recuperável. Branch `work/j1-502-abstain-classification` desenvolve status/failure_code allowlisted e regressão, sem novos GET/ordens/deploy. #502/#319/J1 abertas; somente CI e nova prova real poderão promover o estado.
+
+
+## J1/TOP50 D251 — correção de parser após prova real (06/11/2026)
+
+VPS realizou re-prova D250 (1 catálogo + 1 kline): 822 contratos técnicos, 4 concluídos, 96 velas, 818 pendentes, janela 06/11/2026 13:00 UTC, `status=abstain`, `failure_code=invalid_candle_decimal`, `failure_category=candle_integrity_or_time`. Sem comprovante do campo e lexical do valor; somente rejeição decimal foi demonstrada. Branch `work/issue-502-j1-census-bounded-decimal-lexemes` passa a aceitar notação científica Decimal finita/limitada e disponibiliza campo inválido como enum seguro; sem trocar janela, pular ativo, remover contrato, rede ou ordens. Evidência de CI/merge e nova observação VPS continuam gates separados.
