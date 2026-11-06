@@ -147,6 +147,64 @@ class MarketwideClosed24hTests(unittest.TestCase):
         self.assertEqual(a["failure_stage"], "replay")
         self.assertEqual(a["requests_attempted"], 1)
 
+    def test_allowlisted_diagnostic_for_incomplete_live_candle_history(self):
+        class ShortHistory(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("/kline"):
+                    payload["result"]["list"] = payload["result"]["list"][:10]
+                return raw, payload
+
+        report = self.run_batch(client=ShortHistory(), size=5)
+        self.assertEqual(report["status"], "abstain")
+        self.assertEqual(report["failure_stage"], "kline")
+        self.assertEqual(report["failure_category"], "closed_history_incomplete")
+        self.assertEqual(report["failure_code"], "kline_not_24_closed_hours")
+        self.assertEqual(report["completed_contracts"], 0)
+        self.assertEqual(report["requests_attempted"], 2)
+        self.assertNotIn("COIN000", json.dumps(report))
+
+    def test_allowlisted_diagnostic_for_transport_and_unknown_errors(self):
+        from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
+
+        class TransportDenied(FakeClient):
+            def get(self, url):
+                if self.requests_attempted == 1:
+                    self.requests_attempted += 1
+                    raise J1BybitCaptureError("network_error_no_retry")
+                return super().get(url)
+
+        bad = self.run_batch(client=TransportDenied(), size=5)
+        self.assertEqual(bad["failure_category"], "transport_or_http")
+        self.assertEqual(bad["failure_code"], "network_error_no_retry")
+        self.assertEqual(bad["completed_contracts"], 0)
+        self.assertEqual(bad["requests_attempted"], 2)
+
+        class UnexpectedTransport(FakeClient):
+            def get(self, url):
+                if self.requests_attempted == 1:
+                    self.requests_attempted += 1
+                    raise J1BybitCaptureError("PRIVATE_SYMBOL_OR_URL_SECRET")
+                return super().get(url)
+
+        unknown = self.run_batch(client=UnexpectedTransport(), size=5)
+        self.assertEqual(unknown["failure_code"], "unclassified_transport")
+        self.assertNotIn("PRIVATE_SYMBOL", json.dumps(unknown))
+        self.assertEqual(unknown["requests_attempted"], 2)
+
+    def test_diagnostic_integrity_is_distinct_from_insufficient_history(self):
+        class BadOHLC(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("/kline"):
+                    payload["result"]["list"][0][2] = "50"
+                return raw, payload
+
+        result = self.run_batch(client=BadOHLC(), size=3)
+        self.assertEqual(result["failure_category"], "candle_integrity_or_time")
+        self.assertEqual(result["failure_code"], "kline_ohlcv_integrity_abstain")
+        self.assertEqual(result["requests_attempted"], 2)
+
     def test_no_gate_no_network_no_files(self):
         denied = self.run_batch(allow_public_network=False)
         self.assertEqual(denied["status"], "owner_gate_required")
