@@ -535,3 +535,8 @@ J1/OPS37 #495: MetadataProbeReport agora distingue failure_stage e failure_categ
 ## J1/OPS1 D245 — observador local SQLite read-only
 
 `j1_local_health.audit_local_sqlite_health` observa banco SQLite ja existente por URI `mode=ro`, `PRAGMA query_only` e transacao somente leitura, sem invocar inicializacao ou transacoes `BEGIN IMMEDIATE` de `SQLiteMarketDataStore`. Confere snapshot PIT da amostra, recencia, 24 candles 1h fechados por contrato e checkpoints. CLI nonroot devolve contagens/status allowlist; nenhuma mutacao, network, ordem ou servico. A integridade da amostra nao prova mercado Top50, identidade, autenticidade do feed ou worker em execucao. D245 e docs/J1_LOCAL_HEALTH_READONLY.md.
+
+
+## J1/OPS1 D246 — integridade OHLCV do observador read-only
+
+A camada `j1_local_health` v2 valida `PRAGMA table_info` dos quatro objetos existentes e examina valores `open/high/low/close/base_volume/quote_volume` exatamente como TEXT Decimal em cada uma das ultimas 24 velas 1h de cada membro PIT (ate 50), além de horários e checkpoints. Campos ausentes, qualidade inadequada, NaN, infinito, valores nao canônicos, OHLC invertido, volume negativo e checkpoint repetido provocam abstenção. `ohlcv_rows_validated` indica contagem de linhas estruturalmente aceitas, sem autenticar fonte ou promover `canonical_ohlcv_approved`. Supervisor e lock seguem nas implementações existentes, sem implementação paralela. Ver D246.
