@@ -36,6 +36,8 @@ class MetadataProbeReport:
     excluded_non_perp_or_non_usdt: int = 0
     catalog_digest_sha256: str | None = None
     identity_registry_applied: bool = False
+    failure_stage: str = "none"
+    failure_category: str = "none"
 
     def sanitized_report(self) -> dict:
         return {
@@ -47,6 +49,8 @@ class MetadataProbeReport:
             "excluded_non_perp_or_non_usdt": self.excluded_non_perp_or_non_usdt,
             "catalog_membership_sha256": self.catalog_digest_sha256,
             "identity_registry_applied": self.identity_registry_applied,
+            "failure_stage": self.failure_stage,
+            "failure_category": self.failure_category,
             "catalog_completeness_authenticated": False,
             "usdm_contract_verified": False,
             "crypto_identity_independently_authenticated": False,
@@ -92,6 +96,55 @@ def _error_class(exc: Exception) -> str:
     return "metadata_transport_or_validation_abstain"
 
 
+
+# Closed-vocabulary diagnostics. Never pass raw provider exceptions, payloads,
+# symbols, URLs, clock values, HTTP bodies, or missing field names to reports.
+_FAILURE_STAGES = frozenset({
+    "none", "preflight", "fetch", "response_clock", "json",
+    "catalog", "compare",
+})
+_CATALOG_VETO_CATEGORIES = {
+    "OPS34 catalog endpoint or capture incomplete": "catalog_capture_sidecar",
+    "OPS34 catalog integrity mismatch": "catalog_digest",
+    "OPS34 catalog schema/clock rejected": "catalog_root_schema",
+    "OPS34 catalog row incomplete": "catalog_row_missing_required",
+    "OPS34 catalog row corrupt or duplicate": "catalog_row_invalid_or_duplicate",
+    "OPS34 noncanonical JSON": "catalog_noncanonical",
+    "OPS34 oversized capture": "catalog_size",
+}
+
+
+def _diagnostic_category(exc: Exception, *, stage: str) -> str:
+    """Only fixed labels: diagnostic metadata must not authenticate a catalog."""
+    if stage not in _FAILURE_STAGES:
+        return "unclassified"
+    if stage == "fetch":
+        if str(exc) == "binance_http_access_or_provider_denied_no_retry":
+            return "http_access_or_provider_denied"
+        if str(exc) == "binance_http_transport_no_retry":
+            return "http_transport"
+        if str(exc) == "metadata_size_abstain":
+            return "http_body_size"
+        return "fetch_unclassified"
+    if stage == "response_clock":
+        return "receipt_clock"
+    if stage == "json":
+        if str(exc) == "metadata_duplicate_keys_abstain":
+            return "json_duplicate_key"
+        if str(exc) == "metadata_size_abstain":
+            return "json_size"
+        if str(exc) == "metadata_schema_abstain":
+            return "json_root_type"
+        return "json_invalid"
+    if stage == "catalog":
+        return _CATALOG_VETO_CATEGORIES.get(str(exc), "catalog_unclassified")
+    if stage == "compare":
+        return "catalog_pair_drift_or_order"
+    if stage == "preflight":
+        return "preflight_invalid"
+    return "none"
+
+
 def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot | None = None,
     catalog_only_unverified: bool = False,
     allow_public_network: bool = False,
@@ -120,6 +173,7 @@ def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot | None = N
         return MetadataProbeReport("metadata_transport_not_configured")
     completed = []
     attempted = 0
+    stage = "preflight"
     try:
         if type(catalog_only_unverified) is not bool:
             raise DataValidationError("metadata_mode_invalid")
@@ -151,19 +205,25 @@ def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot | None = N
                 # In particular, never make a second GET after expiry.
                 history.as_of(requested, max_age_ms=MAX_REGISTRY_AGE_MS)
             attempted += 1
+            stage = "fetch"
             raw = fetch(URL, MAX_BODY_BYTES)
+            stage = "response_clock"
             received = utc_ms()
             if (type(received) is not int or received < requested
                     or received - requested > MAX_CLOCK_SKEW_MS):
                 raise DataValidationError("metadata_clock_abstain")
             if history is not None:
                 history.as_of(received, max_age_ms=MAX_REGISTRY_AGE_MS)
+            stage = "json"
             payload = _parse_json(raw)
+            stage = "catalog"
             capture = BinanceCatalogCapture(payload, requested, received,
                                              content_sha256(payload),
                                              caller_declares_full_response=True)
             rows, digest = _catalog(capture)
             completed.append((capture, rows, digest))
+            stage = "preflight"
+        stage = "compare"
         pre, post = completed
         if pre[2] != post[2] or pre[1] != post[1] or pre[0].received_at_ms >= post[0].requested_at_ms:
             raise DataValidationError("metadata_catalog_changed_abstain")
@@ -178,4 +238,8 @@ def capture_binance_metadata_once(*, registry: CryptoRegistrySnapshot | None = N
         )
     except (DataValidationError, ValueError, TypeError, KeyError, RuntimeError,
             OSError, TimeoutError, OverflowError, AttributeError) as exc:
-        return MetadataProbeReport(_error_class(exc), attempted, len(completed))
+        return MetadataProbeReport(
+            _error_class(exc), attempted, len(completed),
+            failure_stage=stage,
+            failure_category=_diagnostic_category(exc, stage=stage),
+        )

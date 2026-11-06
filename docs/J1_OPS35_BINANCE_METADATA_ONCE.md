@@ -43,3 +43,5 @@ integração do código são etapas separadas de qualquer execução real na VPS
 **não autoriza disparar consulta, instalar serviço nem ativar coleta contínua**.
 A aprovação de um relatório de metadados não equivale à homologação de sinais,
 identidade de contratos, Top50 marketwide, fonte canônica ou negociação.
+
+POS-PROVA OPS37 (06/11/2026): primeira VPS one-shot OPS35 retornou metadata_transport_or_validation_abstain, 1 GET iniciado e 0 respostas validadas, claim consumido. Causa especifica desconhecida. Nao repetir nem apagar claim. D244 adiciona failure_stage/failure_category com rotulos constantes exclusivamente para possiveis provas distintas e autorizadas; nao muda _catalog OPS34 ou regras PIT. Ver docs/J1_OPS37_METADATA_FAILURE_DIAGNOSTICS.md.
