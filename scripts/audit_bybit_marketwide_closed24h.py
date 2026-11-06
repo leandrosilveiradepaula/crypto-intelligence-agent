@@ -65,6 +65,7 @@ _CENSUS_CODES = frozenset({
     "window_age_expired", "saved_rows_exceeded",
     "saved_symbol_out_of_scope", "partial_asset_transaction_found",
     "stored_financial_storage_type_invalid",
+    "short_history_replay_invalid", "short_history_catalog_hint_changed",
 })
 _TRANSPORT_CODES = frozenset({
     "origin_or_media_type_rejected", "response_size_rejected",
@@ -205,7 +206,7 @@ def _catalog(payload: dict, now_ms: int) -> tuple[tuple[str, ...], str, int]:
     return tuple(sorted(members)), _digest([members[x] for x in sorted(members)]), len(rows)
 
 
-def _closed_candles(payload: dict, symbol: str, end_ms: int) -> tuple[tuple[str, ...], ...]:
+def _closed_candles(payload: dict, symbol: str, end_ms: int, *, allow_short: bool = False) -> tuple[tuple[str, ...], ...]:
     if type(payload) is not dict or type(payload.get("retCode")) is not int or payload["retCode"] != 0:
         raise CensusAbstain("kline_provider_response_invalid")
     result = payload.get("result")
@@ -213,7 +214,8 @@ def _closed_candles(payload: dict, symbol: str, end_ms: int) -> tuple[tuple[str,
             or result.get("symbol") != symbol):
         raise CensusAbstain("kline_symbol_or_market_mismatch")
     rows = result.get("list")
-    if type(rows) is not list or len(rows) != 24:
+    if (type(rows) is not list or len(rows) > 24 or
+            (not allow_short and len(rows) != 24)):
         raise CensusAbstain("kline_not_24_closed_hours")
     accepted: list[tuple[str, ...]] = []
     for index, row in enumerate(rows):
@@ -233,6 +235,30 @@ def _closed_candles(payload: dict, symbol: str, end_ms: int) -> tuple[tuple[str,
             raise CensusAbstain("kline_ohlcv_integrity_abstain")
         accepted.append(tuple([opened] + list(row[1:])))
     return tuple(accepted)
+
+
+def _catalog_launch_hints(payload: dict, members: tuple[str, ...],
+                          now_ms: int) -> dict[str, int | None]:
+    """Unverified catalog launch metadata; never eligibility proof."""
+    allowed = set(members)
+    result: dict[str, int | None] = {}
+    for row in payload["result"]["list"]:
+        symbol = row["symbol"]
+        if symbol not in allowed:
+            continue
+        value = row.get("launchTime")
+        hint = int(value) if (type(value) is str and len(value) == 13
+                              and value.isascii() and value.isdecimal()) else None
+        result[symbol] = hint if (hint is not None
+                                  and 1_600_000_000_000 <= hint <= now_ms) else None
+    if set(result) != allowed:
+        raise CensusAbstain("catalog_identity_or_duplicate_invalid")
+    return result
+
+
+def _short_digest(symbol: str, end_ms: int, launch_ms: int | None,
+                  bars: tuple[tuple[str, ...], ...]) -> str:
+    return _digest([symbol, end_ms, launch_ms, bars])
 
 
 def _strict_owner(path: Path, *, directory: bool) -> None:
@@ -256,7 +282,11 @@ def _report(status: str) -> dict[str, Any]:
         "requests_attempted": 0, "capture_window_end_ms": None,
         "catalog_rows": 0, "basic_eligible_contracts": 0,
         "completed_contracts": 0, "validated_closed_1h_rows": 0,
-        "remaining_contracts": 0, "top50_basic_count": 0,
+        "incomplete_24h_contracts": 0, "incomplete_24h_rows": 0,
+        "inspected_contracts": 0, "remaining_contracts": 0,
+        "top50_complete_subset_count": 0,
+        "top50_complete_subset_digest_sha256": None,
+        "top50_basic_count": 0,
         "top50_basic_digest_sha256": None,
         "full_basic_contract_24h_ranking_complete": False,
         "crypto_identity_independently_verified": False,
@@ -312,6 +342,7 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
             from crypto_intelligence_agent.bybit_public_j1_transport import instruments_url
             _, payload = client.get(instruments_url())
             members, scope_hash, total_catalog = _catalog(payload, now_ms())
+            hints = _catalog_launch_hints(payload, members, now_ms())
             report["catalog_rows"] = total_catalog
             report["basic_eligible_contracts"] = len(members)
             db_path = directory / _DB_NAME
@@ -340,6 +371,11 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                       close TEXT NOT NULL, base_volume TEXT NOT NULL,
                       quote_turnover TEXT NOT NULL,
                       PRIMARY KEY(symbol,open_ms)
+                    );
+                    CREATE TABLE IF NOT EXISTS incomplete (
+                      symbol TEXT PRIMARY KEY, launch_hint_ms INTEGER,
+                      observed_count INTEGER NOT NULL,
+                      candles_json TEXT NOT NULL, digest_sha256 TEXT NOT NULL
                     );
                 """)
                 saved = db.execute(
@@ -388,34 +424,85 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                             symbol, end_ms)
                         totals[symbol] = sum(
                             (_dec(x[-1]) for x in public_rows), Decimal(0))
-                report.update({
-                    "completed_contracts": len(totals),
-                    "validated_closed_1h_rows": len(totals)*24,
-                    "remaining_contracts": len(members)-len(totals),
-                })
+                short_rows = db.execute(
+                    "SELECT symbol,launch_hint_ms,observed_count,candles_json,"
+                    "digest_sha256 FROM incomplete ORDER BY symbol"
+                ).fetchall()
+                shorts: dict[str, tuple[tuple[str, ...], ...]] = {}
+                for symbol, launch_ms, observed, data_text, expected_hash in short_rows:
+                    if (type(symbol) is not str or symbol not in members
+                            or symbol in totals or symbol in shorts
+                            or type(observed) is not int or not 0 <= observed < 24
+                            or type(data_text) is not str
+                            or type(expected_hash) is not str):
+                        raise CensusAbstain("short_history_replay_invalid")
+                    if hints[symbol] != launch_ms:
+                        raise CensusAbstain("short_history_catalog_hint_changed")
+                    try:
+                        parsed = json.loads(data_text)
+                    except (ValueError, TypeError, RecursionError):
+                        raise CensusAbstain("short_history_replay_invalid") from None
+                    if type(parsed) is not list or len(parsed) != observed:
+                        raise CensusAbstain("short_history_replay_invalid")
+                    public_rows = _closed_candles(
+                        {"retCode": 0, "result": {
+                            "category": "linear", "symbol": symbol, "list": parsed}},
+                        symbol, end_ms, allow_short=True)
+                    if (len(public_rows) != observed
+                            or _short_digest(symbol, end_ms, launch_ms,
+                                             public_rows) != expected_hash):
+                        raise CensusAbstain("short_history_replay_invalid")
+                    shorts[symbol] = public_rows
+
+                def refresh_counts() -> None:
+                    report.update({
+                        "completed_contracts": len(totals),
+                        "validated_closed_1h_rows": len(totals)*24,
+                        "incomplete_24h_contracts": len(shorts),
+                        "incomplete_24h_rows": sum(len(v) for v in shorts.values()),
+                        "inspected_contracts": len(totals)+len(shorts),
+                        "remaining_contracts": len(members)-len(totals)-len(shorts),
+                    })
+
+                refresh_counts()
                 stage = "kline"
                 from crypto_intelligence_agent.bybit_public_j1_transport import kline_url
                 count_new = 0
                 for symbol in members:
-                    if symbol in totals:
+                    if symbol in totals or symbol in shorts:
                         continue
                     if count_new >= max_contracts:
                         break
                     if now_ms() - end_ms > MAX_WINDOW_AGE_MS:
                         raise CensusAbstain("window_age_expired")
                     _, result = client.get(kline_url(symbol, end_ms-24*HOUR_MS, end_ms))
-                    bars = _closed_candles(result, symbol, end_ms)
-                    with localcontext(_MATH):
-                        total = sum((_dec(bar[-1]) for bar in bars), Decimal(0))
-                    with db:
-                        db.executemany(
-                            "INSERT INTO candles VALUES (?,?,?,?,?,?,?,?)",
-                            [(symbol, int(bar[0]), *bar[1:]) for bar in bars])
-                    totals[symbol] = total
+                    bars = _closed_candles(result, symbol, end_ms, allow_short=True)
+                    if len(bars) == 24:
+                        with localcontext(_MATH):
+                            total = sum((_dec(bar[-1]) for bar in bars), Decimal(0))
+                        with db:
+                            db.executemany(
+                                "INSERT INTO candles VALUES (?,?,?,?,?,?,?,?)",
+                                [(symbol, int(bar[0]), *bar[1:]) for bar in bars])
+                        totals[symbol] = total
+                    else:
+                        # A short page, even with a launch hint, is NOT a
+                        # verified 24h observation or eligible ranking member.
+                        # Store the exact 0..23 validated rows for replay.
+                        launch_ms = hints[symbol]
+                        with db:
+                            db.execute(
+                                "INSERT INTO incomplete VALUES (?,?,?,?,?)",
+                                (symbol, launch_ms, len(bars), _stable_json(bars),
+                                 _short_digest(symbol, end_ms, launch_ms, bars)))
+                        shorts[symbol] = bars
                     count_new += 1
-                    report["completed_contracts"] = len(totals)
-                    report["validated_closed_1h_rows"] = len(totals)*24
-                    report["remaining_contracts"] = len(members)-len(totals)
+                    refresh_counts()
+                if len(totals) >= 50:
+                    complete_rank = sorted(totals, key=lambda s: (-totals[s], s))
+                    report["top50_complete_subset_count"] = 50
+                    report["top50_complete_subset_digest_sha256"] = _digest([
+                        [s, str(totals[s])] for s in complete_rank[:50]])
                 if len(totals) == len(members):
                     ranked = sorted(members, key=lambda s: (-totals[s], s))
                     report["top50_basic_count"] = len(ranked[:50])
@@ -423,6 +510,10 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                         [s, str(totals[s])] for s in ranked[:50]])
                     report["full_basic_contract_24h_ranking_complete"] = True
                     report["status"] = "basic_market_24h_closed_rank_complete_unverified"
+                elif report["remaining_contracts"] == 0:
+                    report["status"] = "basic_market_24h_survey_complete_with_incomplete_unverified"
+                elif shorts:
+                    report["status"] = "basic_market_24h_survey_partial_unverified"
                 else:
                     report["status"] = "basic_market_24h_batch_partial_unverified"
         finally:
@@ -461,7 +552,10 @@ def main(argv: list[str] | None = None) -> int:
         confirm_region_and_personal_research=args.confirm_region_and_personal_research,
     )
     print(_stable_json(result))
-    return 0 if result["status"] == "basic_market_24h_closed_rank_complete_unverified" else 2
+    return 0 if result["status"] in (
+        "basic_market_24h_closed_rank_complete_unverified",
+        "basic_market_24h_survey_complete_with_incomplete_unverified",
+    ) else 2
 
 
 if __name__ == "__main__":
