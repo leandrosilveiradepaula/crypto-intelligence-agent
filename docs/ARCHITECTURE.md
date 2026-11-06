@@ -540,3 +540,8 @@ J1/OPS37 #495: MetadataProbeReport agora distingue failure_stage e failure_categ
 ## J1/OPS1 D246 — integridade OHLCV do observador read-only
 
 A camada `j1_local_health` v2 valida `PRAGMA table_info` dos quatro objetos existentes e examina valores `open/high/low/close/base_volume/quote_volume` exatamente como TEXT Decimal em cada uma das ultimas 24 velas 1h de cada membro PIT (ate 50), além de horários e checkpoints. Campos ausentes, qualidade inadequada, NaN, infinito, valores nao canônicos, OHLC invertido, volume negativo e checkpoint repetido provocam abstenção. `ohlcv_rows_validated` indica contagem de linhas estruturalmente aceitas, sem autenticar fonte ou promover `canonical_ohlcv_approved`. Supervisor e lock seguem nas implementações existentes, sem implementação paralela. Ver D246.
+
+
+## J1/OPS1 D247 - integracao de observabilidade no journal WS existente
+
+`j1_ws_owner_readonly.audit_owner_ws_journal` le exclusivamente `ws-confirmed.sqlite` + scope/epochs do piloto WS com os validadores PIT e integridade do proprio coletor `bybit_ws_owner_pilot`/`bybit_closed_stream_cache`. Nao confundir esse esquema com o SQLite historico do health D246. Gate POSIX nonroot/optin/owner-only, nao reativa `systemd`, nao instala outro runner e nunca usa o resultado para declarar fonte ou Top50 global. CLI `scripts/audit_j1_ws_owner_readonly.py` e docs D247.
