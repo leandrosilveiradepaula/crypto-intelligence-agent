@@ -1,7 +1,7 @@
 """J1 local health: SQLite fixture and fail-closed adversarial tests, no network."""
 from __future__ import annotations
 
-from contextlib import redirect_stdout
+from contextlib import closing, redirect_stdout
 from io import StringIO
 import json
 from pathlib import Path
@@ -23,7 +23,7 @@ class LocalHealthTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.db = Path(self.temp.name) / "market.sqlite"
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             c.executescript("""
             CREATE TABLE candles (
                 exchange TEXT,market TEXT,symbol TEXT,interval TEXT,
@@ -85,31 +85,31 @@ class LocalHealthTests(unittest.TestCase):
         self.assertEqual(self.db.read_bytes(),before)
 
     def test_stale_or_ambiguous_pit(self):
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             self.add_snapshot(c,source="second")
         self.assertEqual(self.audit()["status"],"snapshot_ambiguous")
         self.assertEqual(self.audit(snapshot_source="fixture")["complete_24h_members"],2)
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             c.execute("DELETE FROM universe_snapshots WHERE source='second'")
             c.execute("UPDATE universe_snapshots SET observed_at_ms=?",(DECISION-3*H,))
         self.assertEqual(self.audit()["status"],"snapshot_stale")
 
     def test_missing_and_bad_candle(self):
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             c.execute("DELETE FROM candles WHERE symbol='BTCUSDT' AND open_time_ms=?",(START+H,))
         r=self.audit()
         self.assertEqual(r["status"],"sample_window_incomplete")
         self.assertEqual(r["complete_24h_members"],1)
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             c.execute("UPDATE candles SET close_time_ms=? WHERE symbol='ETHUSDT' AND open_time_ms=?",
                       (START,START))
         self.assertEqual(self.audit()["status"],"candle_window_invalid")
 
     def test_checkpoint_boundaries_and_current_open_hour(self):
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             c.execute("UPDATE checkpoints SET confirmed_end_ms=? WHERE symbol='BTCUSDT'",(END-1-H,))
         self.assertEqual(self.audit()["complete_24h_members"],1)
-        with sqlite3.connect(self.db) as c:
+        with closing(sqlite3.connect(self.db)) as c, c:
             c.execute("DELETE FROM candles WHERE symbol='ETHUSDT' AND open_time_ms=?",(END-H,))
             c.execute("INSERT INTO candles VALUES (?,?,?,?,?,?,?)",
                       ("bybit","linear_perpetual","ETHUSDT","1h",END,END+H-1,"source_closed"))
@@ -127,7 +127,7 @@ class LocalHealthTests(unittest.TestCase):
         ]
         for raw in bad:
             with self.subTest(raw=raw):
-                with sqlite3.connect(self.db) as c:
+                with closing(sqlite3.connect(self.db)) as c, c:
                     c.execute("UPDATE universe_snapshots SET eligible_json=?",(raw,))
                 self.assertEqual(self.audit()["status"],"snapshot_invalid")
 
