@@ -961,3 +961,8 @@ Testes `test_synthetic_portfolio_correlation_gate.py` e regressões PRE19 `test_
 ## J1/TOP50 D249 — auditoria plena de contrato basico por 24h UTC fechadas
 
 Validar `python -m unittest discover -s tests -p test_j1_marketwide_closed24h.py -q` sem rede e regressões de transporte/Bybit PIT, compileall/docs e CI Linux, Windows/offline e Chrome/PAPER. Casos fixture: 822×24h em sete lotes limitados (max 121 GET por run), dados alterados, relógio UTC, contratos malformados/duplicados, OHLCV e timestamps, drift de catálogo, reentrada idempotente, atomicidade apos falha, SQLite adulterado, owner gates e symlink. Teste real só por cia-probe na VPS sem retries, após CI head/merge. Flag Top50 verdadeira permanece proibida até prova independente crypto-only, mercado elegível, ranking completo e PIT contínuo.
+
+
+## J1/TOP50 D250 — diagnóstico sanitizado de abstain, sem retry
+
+Regressões no `test_j1_marketwide_closed24h.py` devem provar códigos allowlisted para `kline_not_24_closed_hours`, OHLCV inválido, HTTP/transport e mensagens arbitrárias contendo identificadores; preservar contrato salvo e contadores em falha. Não imprimir símbolos, preço, URL, corpo ou exceção de provedor. CI Linux/docs, Windows/offline, Chrome/PAPER no head exato antes de merge. Prova VPS D249 4/822, 96 velas, sem partial e DB íntegro, NÃO diagnostica o quinto GET retrospectivamente. A próxima execução de mercado depende de análise de segurança, capacidade e janela fixa, e não reconsulta automaticamente.
