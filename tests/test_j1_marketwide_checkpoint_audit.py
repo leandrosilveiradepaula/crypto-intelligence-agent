@@ -11,7 +11,38 @@ import unittest
 
 from scripts.audit_j1_marketwide_checkpoint import audit_private_checkpoint
 from scripts.audit_bybit_marketwide_closed24h import HOUR_MS, run_census
-from tests.test_j1_marketwide_closed24h import FakeClient, NOW, SYMS
+from urllib.parse import parse_qs, urlsplit
+
+NOW = 1793971800000
+END = NOW // HOUR_MS * HOUR_MS
+SYMS = tuple(f"COIN{x:03d}USDT" for x in range(60))
+
+
+class FakeClient:
+    def __init__(self):
+        self.requests_attempted = 0
+
+    def get(self, url):
+        self.requests_attempted += 1
+        parsed = urlsplit(url)
+        if parsed.path.endswith("/instruments-info"):
+            payload = {"retCode": 0, "time": NOW-1000, "result": {
+                "category": "linear", "nextPageCursor": "",
+                "list": [
+                    {"symbol": s, "baseCoin": s[:-4],
+                     "contractType": "LinearPerpetual", "status": "Trading",
+                     "quoteCoin": "USDT", "settleCoin": "USDT"}
+                    for s in SYMS
+                ],
+            }}
+        else:
+            symbol = parse_qs(parsed.query)["symbol"][0]
+            payload = {"retCode": 0, "result": {
+                "category": "linear", "symbol": symbol,
+                "list": [[str(END-(i+1)*HOUR_MS), "100.1", "102", "99",
+                          "100.2", "2.0", str(100+i)] for i in range(24)],
+            }}
+        return json.dumps(payload).encode("ascii"), payload
 
 
 class ReadonlyCensusProofTests(unittest.TestCase):
