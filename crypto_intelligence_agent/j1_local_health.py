@@ -237,8 +237,7 @@ def audit_local_sqlite_health(*, db_path: str | Path, decision_at_ms: int,
                 "exchange=? AND interval='1h' "
                 f"AND symbol IN ({placeholders})", [exchange, *symbols],
             ).fetchall()
-            if (len(checkpoints) != len(symbols) or
-                    len({row[0] for row in checkpoints}) != len(symbols)):
+            if len({row[0] for row in checkpoints}) != len(checkpoints):
                 report["status"] = "checkpoint_rows_invalid"
                 return report
             covering = {symbol for symbol, a, b, integrity in checkpoints
