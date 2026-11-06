@@ -147,7 +147,7 @@ class MarketwideClosed24hTests(unittest.TestCase):
         self.assertEqual(a["failure_stage"], "replay")
         self.assertEqual(a["requests_attempted"], 1)
 
-    def test_allowlisted_diagnostic_for_incomplete_live_candle_history(self):
+    def test_short_live_candle_history_is_explicitly_incomplete_not_ranked(self):
         class ShortHistory(FakeClient):
             def get(self, url):
                 raw, payload = super().get(url)
@@ -156,12 +156,16 @@ class MarketwideClosed24hTests(unittest.TestCase):
                 return raw, payload
 
         report = self.run_batch(client=ShortHistory(), size=5)
-        self.assertEqual(report["status"], "abstain")
-        self.assertEqual(report["failure_stage"], "kline")
-        self.assertEqual(report["failure_category"], "closed_history_incomplete")
-        self.assertEqual(report["failure_code"], "kline_not_24_closed_hours")
+        self.assertEqual(report["status"], "basic_market_24h_survey_partial_unverified")
         self.assertEqual(report["completed_contracts"], 0)
-        self.assertEqual(report["requests_attempted"], 2)
+        self.assertEqual(report["incomplete_24h_contracts"], 5)
+        self.assertEqual(report["incomplete_24h_rows"], 50)
+        self.assertEqual(report["inspected_contracts"], 5)
+        self.assertEqual(report["remaining_contracts"], 55)
+        self.assertEqual(report["requests_attempted"], 6)
+        self.assertEqual(report["top50_basic_count"], 0)
+        self.assertFalse(report["full_basic_contract_24h_ranking_complete"])
+        self.assertFalse(report["marketwide_top50_verified"])
         self.assertNotIn("COIN000", json.dumps(report))
 
     def test_allowlisted_diagnostic_for_transport_and_unknown_errors(self):
