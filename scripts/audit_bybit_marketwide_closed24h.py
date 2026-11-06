@@ -39,6 +39,94 @@ class CensusAbstain(ValueError):
     """Sanitized errors only; private payloads never appear in output."""
 
 
+# Never interpolate an exception, symbol, URL, JSON payload or account value in
+# the printed result. These exact string codes are authored in this module
+# and the bounded public transport, NOT read from third-party responses.
+_CENSUS_CODES = frozenset({
+    "invalid_candle_decimal", "catalog_provider_response_invalid",
+    "catalog_clock_invalid", "catalog_chain_incomplete",
+    "catalog_count_invalid", "catalog_row_invalid",
+    "catalog_identity_or_duplicate_invalid", "catalog_eligible_symbol_invalid",
+    "catalog_not_enough_basic_contracts", "kline_provider_response_invalid",
+    "kline_symbol_or_market_mismatch", "kline_not_24_closed_hours",
+    "kline_row_invalid", "kline_missing_open_or_future_hour",
+    "kline_ohlcv_integrity_abstain", "owner_private_path_rejected",
+    "invalid_utc_clock", "closed_hour_safety_margin_required",
+    "private_db_size_limit", "sqlite_integrity_rejected",
+    "window_age_invalid", "catalog_scope_changed_recovery_abstain",
+    "window_age_expired", "saved_rows_exceeded",
+    "saved_symbol_out_of_scope", "partial_asset_transaction_found",
+    "stored_financial_storage_type_invalid",
+})
+_TRANSPORT_CODES = frozenset({
+    "origin_or_media_type_rejected", "response_size_rejected",
+    "access_region_or_rate_limit_no_retry", "provider_http_error_no_retry",
+    "network_error_no_retry", "invalid_instrument_symbol",
+    "unsafe_instrument_cursor", "invalid_kline_window",
+    "origin_or_get_budget_rejected", "unexpected_market_data_query_rejected",
+    "response_body_type_or_size_rejected", "invalid_provider_json",
+    "provider_region_restriction", "provider_rate_limit_no_retry",
+    "provider_request_parameters_rejected_no_retry",
+    "provider_server_unavailable_no_retry",
+    "provider_route_or_symbol_unavailable_no_retry",
+    "provider_access_or_permission_denied_no_retry",
+    "provider_request_identity_rejected_no_retry",
+    "provider_unclassified_ret_code_no_retry",
+    "provider_retcode_invalid_no_retry",
+})
+_INSUFFICIENT = frozenset({"kline_not_24_closed_hours"})
+_CANDLE_INTEGRITY = frozenset({
+    "invalid_candle_decimal", "kline_row_invalid",
+    "kline_ohlcv_integrity_abstain",
+    "kline_missing_open_or_future_hour",
+    "kline_symbol_or_market_mismatch",
+})
+_NETWORK_CODES = frozenset({
+    "network_error_no_retry", "origin_or_media_type_rejected",
+    "response_size_rejected", "provider_http_error_no_retry",
+    "access_region_or_rate_limit_no_retry",
+})
+_RATE_CODES = frozenset({
+    "provider_rate_limit_no_retry", "provider_server_unavailable_no_retry",
+})
+_OWNER_CODES = frozenset({
+    "owner_private_path_rejected", "invalid_utc_clock",
+    "closed_hour_safety_margin_required", "window_age_invalid",
+    "window_age_expired", "private_db_size_limit",
+    "catalog_scope_changed_recovery_abstain",
+})
+
+
+def _failure_details(error: BaseException) -> tuple[str, str]:
+    """Return a category and allowlisted code; unknown errors are opaque."""
+    from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
+    if type(error) is CensusAbstain:
+        code = str(error)
+        if code not in _CENSUS_CODES:
+            return "unclassified", "unclassified_abstain"
+        if code in _INSUFFICIENT:
+            return "closed_history_incomplete", code
+        if code in _CANDLE_INTEGRITY:
+            return "candle_integrity_or_time", code
+        if code in _OWNER_CODES:
+            return "environment_or_scope", code
+        return "catalog_or_storage_validation", code
+    if type(error) is J1BybitCaptureError:
+        code = str(error)
+        if code not in _TRANSPORT_CODES:
+            return "unclassified", "unclassified_transport"
+        if code in _NETWORK_CODES:
+            return "transport_or_http", code
+        if code in _RATE_CODES:
+            return "provider_capacity_or_rate", code
+        return "provider_or_request_validation", code
+    if isinstance(error, sqlite3.Error):
+        return "database", "sqlite_error"
+    if isinstance(error, OSError):
+        return "filesystem", "os_error"
+    return "unclassified", "unexpected_error"
+
+
 def _dec(value: Any) -> Decimal:
     if type(value) is not str or _DECIMAL.fullmatch(value) is None:
         raise CensusAbstain("invalid_candle_decimal")
@@ -320,9 +408,10 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
             os.close(fd)
-    except (CensusAbstain, OSError, sqlite3.Error, ValueError, TypeError, OverflowError):
+    except (CensusAbstain, OSError, sqlite3.Error, ValueError, TypeError, OverflowError) as error:
         report["status"] = "abstain"
         report["failure_stage"] = stage
+        report["failure_category"], report["failure_code"] = _failure_details(error)
         report["last_request_stage"] = (
             getattr(client, "last_request_stage", None) or "before_first_get")
         report["provider_ret_code"] = getattr(client, "last_provider_retcode", None)
