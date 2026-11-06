@@ -270,6 +270,10 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                     for symbol, entries in groups.items():
                         if len(entries) != 24:
                             raise CensusAbstain("partial_asset_transaction_found")
+                        if any(type(entry[1]) is not int or
+                               any(type(value) is not str for value in entry[2:])
+                               for entry in entries):
+                            raise CensusAbstain("stored_financial_storage_type_invalid")
                         public_rows = [[str(v) for v in entry[1:]] for entry in entries]
                         _closed_candles({"retCode": 0, "result": {
                             "category": "linear", "symbol": symbol, "list": public_rows}},
@@ -319,6 +323,9 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
     except (CensusAbstain, OSError, sqlite3.Error, ValueError, TypeError, OverflowError):
         report["status"] = "abstain"
         report["failure_stage"] = stage
+        report["last_request_stage"] = (
+            getattr(client, "last_request_stage", None) or "before_first_get")
+        report["provider_ret_code"] = getattr(client, "last_provider_retcode", None)
     report["requests_attempted"] = client.requests_attempted
     return report
 
