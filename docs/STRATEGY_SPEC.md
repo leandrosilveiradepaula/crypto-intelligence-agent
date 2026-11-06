@@ -282,3 +282,8 @@ Um ACK único para 52 tópicos não prova que todos os tópicos enviaram frames 
 ## J1/OPS9 — teto de frames não é hora fechada
 
 Fim de sessão por esgotamento de mensagens não pode ser classificado como feed íntegro, mesmo após ACK de 52 tópicos. Estratégias se abstêm até a janela fechada 24h ser auditada, com gaps e PIT válidos. Ampliar orçamento do serviço não autoriza inferência sobre Top50, trades, preenchimento sintético, liquidez ou risco.
+
+
+## J3/PRE28 — correlação sintética ajustada à direção (D248)
+
+O bloqueio opcional por correlação em carteira não é alfa, probabilidade, hedge certificado nem substituto de gestão por nocional/exposição. Par OPEN no mesmo UTC é observado por retornos mark assinados LONG/SHORT, com amostra mínima e limite Decimal explícitos. Sem dados suficientes, não liberar nova hipótese; com limite excedido, manter veto conservador ao longo do replay. LONG e SHORT da mesma série não devem ser confundidos com duas apostas no mesmo lado. Ver PRE20 e docs/J3_PRE28_CAUSAL_CORRELATION_GATE.md.
