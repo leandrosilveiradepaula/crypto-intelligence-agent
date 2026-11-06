@@ -1270,3 +1270,8 @@ O conector GitHub voltou. `main=b3c4473cd7d961642a6ccd9813aada1c5db36e9e` verifi
 ## OPS35 D242 — gate Windows CI corrigido (05/11/2026)
 
 PR #492 head inicial `e3584ab1759086391765cbe5bb6d7e8728b83fd4` passou Linux/docs e Chrome/PAPER; Windows/offline run `42036496534`, job `127275907002` falhou em **uma falha de fixture**, não em código do observador: teste `test_cli_catalog_mode_does_not_load_any_registry_or_open_network` tentava `patch.object(cli.os, "geteuid")` no Windows, onde a função não existe. A correção usa `SimpleNamespace(name="posix", geteuid=lambda:1000)` injetado apenas em `cli.os`, sem alterar `os` global e sem mudar produção. Regressões focais locais 26 OPS35 + 26 OPS34 PASS após a mudança. **CI final/merge/pós-merge ainda exigem novo SHA e comprovação**, sem deploy nem GET real.
+
+
+## J1/OPS36 #493 — checkpoint de trabalho sem VPS (05/11/2026)
+
+Titular declarou ausência de acesso à VPS. GitHub main SHA `ad0022e3cd94c8672013183eb7e5079a40f5a8c5` e zero PRs abertas no início. Issue #493 criada para auditoria offline de 24h Binance WS. Arquivos: `crypto_intelligence_agent/j1_binance_ws_24h_replay.py`, `tests/test_j1_binance_ws_24h_replay.py`, `docs/J1_OPS36_BINANCE_WS_24H_OFFLINE.md`; D243, arquitetura, validação, status e jornadas devem ser atualizados na mesma PR. Proveniência de testes locais NÃO afirmada (ambiente do container pode reinicializar); exigir CI Linux/docs + Windows/offline + Chrome/PAPER no head SHA exato e pós-merge antes de aceite. A OPS35 #490, Top50 #319, OPS1 #429 e J1 #2 continuam abertas; OPS33 claims/timer no último estado relatado pelo titular preservados/desabilitado. Nenhum deploy, GET/WS real, migração, segredo ou ordem.

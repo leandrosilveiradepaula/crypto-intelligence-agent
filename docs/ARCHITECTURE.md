@@ -523,3 +523,8 @@ Observador `j1_binance_ws_shadow_observer.py` com uma sessão WS pública **inje
 ## J1/OPS35 D242 — dois modos causalmente separados
 
 `capture_binance_metadata_once` mantém o modo padrão que exige registro PIT validado no primeiro request, em cada response e antes do próximo request; ao expirar, encerra sem promover o snapshot. O modo explícito `catalog_only_unverified=true` **proíbe** fornecer registro, retorna apenas censo de formato não revisado e hash agregado; não faz classificação de identidade nem alimenta `rank_bybit_reviewed_closed_24h_pit` ou o rank Binance. CLI opt-in `--catalog-only-unverified` continua com nonroot, HTTPS fixa, 2 GETs, timeout/limite e sem escrita. Todas as flags de autorização permanecem falsas. D242.
+
+
+## J1/OPS36 — replay causal Binance WS com 24 epochs sintéticos
+
+`j1_binance_ws_24h_replay.py` implementa auditor read-only sem cliente de rede ou storage: exatamente 24 UTC closes com catálogo declarado pré-close, `SourceEvidence` x=true pós-ACK por cada membro, gate temporal OPS32 e vínculo PIT OPS34 a cada hora, rejeição atômica e rank por `k.q` de 24 horas, no máximo 50 entradas de amostra; `k.v` nunca é turno quote. Relatório sanitizado não inclui preços, símbolos ou tempos salvo opt-in de símbolos públicos; flags de autorização/instrumento/marketwide false. Sem coletor paralelo ou autenticação por fixtures. D243.
