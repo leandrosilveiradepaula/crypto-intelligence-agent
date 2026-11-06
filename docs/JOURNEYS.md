@@ -426,3 +426,8 @@ Auditor offline SQLite de amostra PIT/24h + CLI nonroot read-only; #429 continua
 ## J1/OPS1 D246 — validação dos valores armazenados
 
 A PR de integridade SQLite adiciona inspeção de OHLCV Decimal e checkpoint duplicado ao observador read-only D245; NAO adiciona novo supervisor, pois `bybit_ws_supervisor`, `bybit_ws_owner_lock`, `j1_ws_service` e `j1_ws_multihour_soak` ja existem. Esperar CI e SHA antes de integrar. A issue #429 segue aberta pela homologação real do coletor continuo, e a #319 pela prova independente Top50.
+
+
+## J1/OPS1 D247 - observador do segundo SQLite (WS)
+
+O monitor D246 do SQLite historico nao inspeciona o journal de fechamentos WebSocket. Um observador owner-only distinto usa `SQLiteOfflineClosedStreamJournal.audit` e leitura imutavel da cadeia PIT, sem novo coletor/servico. So resultados de amostra local, NAO aprova worker 24/7, feed, autenticacao, timestamp>end ou marketwide Top50. #429/#319/#2 abertas. Ver D247.
