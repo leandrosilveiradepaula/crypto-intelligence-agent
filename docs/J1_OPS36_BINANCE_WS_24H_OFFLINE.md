@@ -1,0 +1,16 @@
+# J1/OPS36 — 24 horas fechadas Binance WebSocket, replay causal exclusivamente offline
+
+## Origem e escopo
+OPS31 observou dois fechamentos Bybit em quarentena (`timestamp>end`); OPS33 observou dois fechamentos Binance `x=true` na VPS, mas reteve **somente contadores**, não candles. OPS34 fornece vínculos PIT de contratos e ranking por 24 barras REST em fixtures. OPS36 é uma **prova sintética de integração** dos contratos OPS32/OPS34 com uma sequência de 24 fechamentos **WS simulados**; não representa 24h de funcionamento real, não recupera OHLCV da OPS33 e não escolhe corretora.
+
+## Contrato
+`j1_binance_ws_24h_replay.audit_binance_ws_closed_24h_offline` recebe exatamente 24 `BinanceWSClosedEpoch` consecutivos por amostra explícita de 1 a 52 símbolos. Cada epoch contém um `BinanceCatalogCapture` previamente obtido até 60s **antes** do fechamento de hora UTC e exatamente uma `SourceEvidence` WS por ativo, recebida até 30s depois. O catálogo precisa anteceder a evidência. Reutiliza a validação tipada `_catalog` / `_registry_known` / `_eligible_shape` / `bind_binance_ws_close_to_catalog_offline` de OPS34, revalidando a revisão de identidade a cada epoch, e `decide_causal_source` da OPS32 (ACK, `k.x=true`, clocks e OHLCV). Uma troca de metadados do contrato selecionado, lag, evento faltante/duplicado, dia incompleto ou dado vindo de outro venue causa **falha da janela inteira**. Uma alteração em candidato não selecionado não transforma a amostra em cobertura de mercado.
+
+O ranking soma `k.q` (turnover quote USDT) em `Decimal` de todas as 24 horas, não `k.v` (volume base), e ordena por volume decrescente, com desempate por símbolo. No máximo os primeiros 50 aparecem no ranking, mas os 52 contratos selecionados, quando houver, precisam passar pelo mesmo gate de 24 horas. Dois digests compromissam replay e ranking. O relatório padrão contém **somente contagens e digests**; símbolos públicos exigem `include_public_symbols=True`.
+
+## Limites de segurança e aceite
+Sem HTTP, WS, SQLite, timers, ordens, credenciais, gastos, migrações ou VPS. Cada snapshot de catálogo e afirmação de ACK é fornecido pelo caller e **não autentica** uma fonte Binance nem origem USD-M. `source_authenticated=false`, `usdm_contract_verified=false`, `crypto_identity_verified_live=false`, `marketwide_top50_verified=false`, `canonical_ohlcv_approved=false`, `continuous_collector_authorized=false`, `financial_backtest_approved=false`, `live_trading_authorized=false`, `orders_sent=false`, `network_requests=0`, `storage_writes=0`.
+
+Validar `tests/test_j1_binance_ws_24h_replay.py` e suites anteriores OPS32/33/34, compileall/docs, CI GitHub Linux/docs + Windows/offline + Chrome/PAPER no SHA head e pós-merge. Adversariais: 24x2, 52 sintéticos, hora perdida/duplicada, catalog clock, histórico/listing, metadados alterados, preACK, `x=false`, quote/base errados, preço inválido, conflito de fonte, digest reproduzível, saída sanitizada. Critério de aceite **somente** replay offline, jamais certificação de 24h reais, rentabilidade ou release.
+
+Dependências externas permanecem nas issues #490 (metadados owner-only), #319 (Top50 marketwide), #429 (continuidade real), #2 (J1). Trabalhos em J2–J6 podem prosseguir independentemente por fixtures, sem produção.

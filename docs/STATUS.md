@@ -1136,3 +1136,8 @@ OPS34 #488/PR #489 integrada em main `1dffc83277aacd73c29207fc942674a9ce2ec253`,
 ## OPS35 D242 — separação de censo e identidade (05/11/2026)
 
 Branch `work/issue-490-ops35-catalog-only-observation` preparada a partir de `main=b3c4473cd7d961642a6ccd9813aada1c5db36e9e`; implementa modo catalog-only explícito para metadata Binance sem registro PIT, flags sempre false, e reforça expiração do modo de identidade durante a janela de dois GETs. 26 testes locais do probe + 26 do ranking OPS34 em ambiente de shims PASS; integração GitHub/CI/merge requer comprovação independente neste checkpoint. Nenhum acesso real de mercado, deploy ou alteração SQLite/ordens. #490 permanece aberta até prova owner-only de metadados. J1 #2, #319 e #429 abertas.
+
+
+## J1/OPS36 #493 — replay Binance WS 24h offline (05/11/2026)
+
+O titular não tem acesso à VPS; OPS35 #490 execução real fica pendente. Na main `ad0022e3cd94c8672013183eb7e5079a40f5a8c5` foi iniciado módulo offline `j1_binance_ws_24h_replay.py` + testes adversariais e guia D243, sem rede, SQLite, timer ou trading. Contratos OPS32/34 reutilizados para 24 fechamentos de cada ativo de amostra revisada, quote turnover determinístico. É pesquisa sintética não homologada e não prova Top50. PR/CI/merge devem ser comprovadas antes de declarar prontidão. J1 #2, OPS1 #429, Top50 #319 e OPS35 #490 abertas.

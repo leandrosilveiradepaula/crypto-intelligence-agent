@@ -929,3 +929,8 @@ Foco `python -m unittest discover -s tests -p test_j1_binance_metadata_probe.py 
 ## J1/OPS35 D242 — censo sem registro PIT e regressões
 
 Suíte focal ampliada de 16 para 26 testes em `test_j1_binance_metadata_probe.py`: registry ausente no modo catalog-only, rejeição de registro mesmo fresco, flags fail-closed, sem símbolos/segredos, opt-in nonroot, clock, delta entre snapshots, duplicate JSON, expiração da identidade no primeiro GET ou antes do segundo, e CLI sem leitura do registry em modo de censo. Regressão `test_j1_binance_top50_pit.py` 26 testes. Testes locais em ambiente shim 52/52 PASS, compileall PASS; CI GitHub Linux/docs, Windows/offline e Chrome/PAPER no SHA de head e pós-merge obrigatória. Nunca afirmar que o censo validou Top50/contrato USD-M.
+
+
+## J1/OPS36 #493 — 24h de candles fechados Binance em fake transport
+
+Executar `python -m unittest discover -s tests -p test_j1_binance_ws_24h_replay.py -q`, regressões OPS32 `test_j1_causal_source_decision.py`, OPS33 `test_j1_binance_shadow.py`, OPS34 `test_j1_binance_top50_pit.py`, compileall/docs e CI Linux/docs, Windows/offline, Chrome/PAPER em SHA head e após merge. Casos: dois símbolos ×24h, 52 sintéticos não marketwide, digests determinísticos, quote x base, gap/duplicata/UTC fora de ordem, pré-ACK/open/futuro, catálogo pré-close/recebimento WS pós-close, registro PIT stale/futuro, novos contratos e deriva da identidade de contrato selecionado. A validação é de lógica offline, NÃO comprovação de coletor ativo, dados de mercado, Top50 nem profit. Não executar nada na VPS ou negociar.
