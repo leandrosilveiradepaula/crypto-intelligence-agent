@@ -436,3 +436,8 @@ O monitor D246 do SQLite historico nao inspeciona o journal de fechamentos WebSo
 ## J3/PRE28 #500 — risco causal de co-perda sintética
 
 Bloco independente enquanto J1 depende de prova real da VPS: gate de correlação incremental de retornos mark assinados por direção, baseado nos validadores PRE19/PRE20, sem alterar contratos de execução ou estado real. Veto conservador para correlação alta, flat, histórico insuficiente ou liquidação. Evidência de código exige testes e CI da PR; J3 #4/J1 #2 permanecem abertas.
+
+
+## J1/TOP50 #502 — ranking UTC fechado de universo basico
+
+Depois da prova real de 50 candidatos/1200 candles, desenvolver captura de todos os 822 perpétuos USDT tecnicamente elegíveis em lotes privados retomáveis, sem rebaixar universo revisado anterior. A conta de 822 não é prova de 822 criptomoedas; ranking de 24h UTC fechado da lista basica também não é por si só homologação J1. Gates #319/#429/#2 seguem abertos até evidências em VPS, revisão independente crypto-only e continuidade. D249.
