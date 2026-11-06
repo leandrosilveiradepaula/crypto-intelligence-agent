@@ -25,3 +25,8 @@ Execute uma invocação de cada vez. O código **não** instala systemd/timer e 
 
 ## Testes, aceite e limitações
 Suíte `tests/test_j1_marketwide_closed24h.py`: 822 contratos ×24 candles em sete lotes, 829 GETs sintéticos (822 candles +7 catálogos), recuperação após falha, replay idempotente, corrupção persistida, drift, validade UTC, orçamento/owner/symlink, Decimal/ohlc e dados futuros. A CI Linux/docs, Windows/offline e Chrome/PAPER deve validar o SHA exato. O resultado live da VPS, se houver, deve ser reportado à issue #319/#502 sem prints de dados privados. **Não fechar #319 nem J1 #2** pela classificação de contratos básicos: ainda será necessária identidade crypto-only validada independentemente, ranking de todos os elegíveis e continuidade PIT/WS real.
+
+
+## Evidência real D250 e causa ausente
+
+Na execução real owner de 06/11/2026 a varredura parou após 6 GETs, quatro contratos completos e 96 velas persistidas; o quinto GET falhou no estágio kline com `provider_ret_code=null`. Uma auditoria read-only subsequente confirmou 4 contratos íntegros, nenhum parcial, escopo de 822 e SQLite íntegro. O código antigo suprimia a categoria detalhada da exceção, portanto **não existe prova se houve falta de 24 candles, falha de transporte, HTTP, schema ou OHLCV**. D250 acrescenta `failure_category` e `failure_code` com códigos estritamente allowlisted no JSON para a próxima ocorrência; jamais logar mensagem arbitrária, símbolo ou payload. Não repetir automaticamente GET em erro nem zerar histórico. Uma ausência real de 24h implica abstenção e decisão explícita de critério de elegibilidade, não exclusão silenciosa de membro.

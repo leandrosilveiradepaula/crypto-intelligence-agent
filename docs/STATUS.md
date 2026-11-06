@@ -1168,3 +1168,8 @@ Verificada main `22abacd43307346cba658f180f04d224c6a3dfae`, sem PR aberta, J1 #2
 ## J1/TOP50 D249 — prova real e censo integral preparado (06/11/2026)
 
 Prova owner VPS `srv1319424`: re-auditoria SQLite exit0, 37470 candles reais em 51 series/50 selecionados, 2 PITs (0 consecutivos no final), último PIT 01/11 06:00 UTC; Bybit catálogo real 930, filtros basicos 822, ticker 822; 50 candidatos ticker consultados com 1200 klines fechadas UTC de 24h, 52 GET, 10/10 Top10 coincidente só na amostra, 0 writes/ordens. Falta cobertura dos outros 772 e identidade independente. Issue #502 e branch `work/issue-502-j1-basic-marketwide-24h-replay` preparam recenseamento offline TDD e replay de lote com DB separado, sem rede no CI; CI e prova real global ainda pendentes neste checkpoint. D249, docs/J1_TOP50_CLOSED24H_MARKET_CENSUS.md.
+
+
+## J1/TOP50 D250 — falha real e correção de diagnóstico (06/11/2026)
+
+Titular VPS executou D249 #503 com SHA `ec8a7d15e30252fea2e585945dd8ceaf0462e136` e recebeu `status=abstain`, `failure_stage=kline`, `requests_attempted=6`, `completed_contracts=4`, `validated_closed_1h_rows=96`, `remaining_contracts=818`; `provider_ret_code=null`. Nova leitura **sem rede** confirmou 822 escopo, 4 concluídos, 96 velas, 0 parciais, SQLite íntegro, UTC window 06/11 13:00. Resposta do quinto GET não está em cache, causa exata não é recuperável. Branch `work/j1-502-abstain-classification` desenvolve status/failure_code allowlisted e regressão, sem novos GET/ordens/deploy. #502/#319/J1 abertas; somente CI e nova prova real poderão promover o estado.
