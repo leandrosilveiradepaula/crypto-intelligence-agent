@@ -424,11 +424,47 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                             symbol, end_ms)
                         totals[symbol] = sum(
                             (_dec(x[-1]) for x in public_rows), Decimal(0))
-                report.update({
-                    "completed_contracts": len(totals),
-                    "validated_closed_1h_rows": len(totals)*24,
-                    "remaining_contracts": len(members)-len(totals),
-                })
+                short_rows = db.execute(
+                    "SELECT symbol,launch_hint_ms,observed_count,candles_json,"
+                    "digest_sha256 FROM incomplete ORDER BY symbol"
+                ).fetchall()
+                shorts: dict[str, tuple[tuple[str, ...], ...]] = {}
+                for symbol, launch_ms, observed, data_text, expected_hash in short_rows:
+                    if (type(symbol) is not str or symbol not in members
+                            or symbol in totals or symbol in shorts
+                            or type(observed) is not int or not 0 <= observed < 24
+                            or type(data_text) is not str
+                            or type(expected_hash) is not str):
+                        raise CensusAbstain("short_history_replay_invalid")
+                    if hints[symbol] != launch_ms:
+                        raise CensusAbstain("short_history_catalog_hint_changed")
+                    try:
+                        parsed = json.loads(data_text)
+                    except (ValueError, TypeError, RecursionError):
+                        raise CensusAbstain("short_history_replay_invalid") from None
+                    if type(parsed) is not list or len(parsed) != observed:
+                        raise CensusAbstain("short_history_replay_invalid")
+                    public_rows = _closed_candles(
+                        {"retCode": 0, "result": {
+                            "category": "linear", "symbol": symbol, "list": parsed}},
+                        symbol, end_ms, allow_short=True)
+                    if (len(public_rows) != observed
+                            or _short_digest(symbol, end_ms, launch_ms,
+                                             public_rows) != expected_hash):
+                        raise CensusAbstain("short_history_replay_invalid")
+                    shorts[symbol] = public_rows
+
+                def refresh_counts() -> None:
+                    report.update({
+                        "completed_contracts": len(totals),
+                        "validated_closed_1h_rows": len(totals)*24,
+                        "incomplete_24h_contracts": len(shorts),
+                        "incomplete_24h_rows": sum(len(v) for v in shorts.values()),
+                        "inspected_contracts": len(totals)+len(shorts),
+                        "remaining_contracts": len(members)-len(totals)-len(shorts),
+                    })
+
+                refresh_counts()
                 stage = "kline"
                 from crypto_intelligence_agent.bybit_public_j1_transport import kline_url
                 count_new = 0
