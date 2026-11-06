@@ -530,3 +530,8 @@ Observador `j1_binance_ws_shadow_observer.py` com uma sessão WS pública **inje
 `j1_binance_ws_24h_replay.py` implementa auditor read-only sem cliente de rede ou storage: exatamente 24 UTC closes com catálogo declarado pré-close, `SourceEvidence` x=true pós-ACK por cada membro, gate temporal OPS32 e vínculo PIT OPS34 a cada hora, rejeição atômica e rank por `k.q` de 24 horas, no máximo 50 entradas de amostra; `k.v` nunca é turno quote. Relatório sanitizado não inclui preços, símbolos ou tempos salvo opt-in de símbolos públicos; flags de autorização/instrumento/marketwide false. Sem coletor paralelo ou autenticação por fixtures. D243.
 
 J1/OPS37 #495: MetadataProbeReport agora distingue failure_stage e failure_category de vocabulario fechado, gerados no fluxo OPS35 sem substituir parser _catalog OPS34. JSON de relatorio nao expoe payload, nomes de ativos, URI nem mensagem de erro. Estagios e categorias podem indicar area a investigar mas nao autenticam provedor ou contrato e nunca autorizam ingestao. D244.
+
+
+## J1/OPS1 D245 — observador local SQLite read-only
+
+`j1_local_health.audit_local_sqlite_health` observa banco SQLite ja existente por URI `mode=ro`, `PRAGMA query_only` e transacao somente leitura, sem invocar inicializacao ou transacoes `BEGIN IMMEDIATE` de `SQLiteMarketDataStore`. Confere snapshot PIT da amostra, recencia, 24 candles 1h fechados por contrato e checkpoints. CLI nonroot devolve contagens/status allowlist; nenhuma mutacao, network, ordem ou servico. A integridade da amostra nao prova mercado Top50, identidade, autenticidade do feed ou worker em execucao. D245 e docs/J1_LOCAL_HEALTH_READONLY.md.
