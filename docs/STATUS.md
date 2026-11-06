@@ -1148,3 +1148,8 @@ J1/OPS37 #495: VPS OPS35 #490 atualizou main ad7b8f03e8ae1ccbec2d43b25513b5d4ff5
 ## J1/OPS1 D245 — observador de saude local (06/11/2026)
 
 Primeiro bloco seguro sem VPS da #429: auditor `j1_local_health.py` sobre SQLite existente em modo somente leitura, 24 candles 1h fechados, checkpoint e PIT de amostra. CLI isolada sem rede, writes, ordens ou agendamento. Testes locais em fixture: 15 PASS no desenvolvimento focal; CI integrada na PR e pos-merge sao evidencias separadas. Nunca classificar amostra 50 como Top50 marketwide; #319/#429/#2 continuam abertas. Ver docs/J1_LOCAL_HEALTH_READONLY.md.
+
+
+## J1/OPS1 D246 — observador SQLite v2 (06/11/2026)
+
+Inspecionada main `4023aae65f7eea4a291e2ad55878350870b91adf` (#497), issue #429 e supervisor WS preexistente. Escolhido corrigir falsa sensação de saúde do observador D245: a v1 lia apenas timestamps/quality e nao verificava os preços/volumes, permitindo linha malformada em amostra estruturalmente completa. Branch `work/issue-429-j1-ohlcv-health-integrity` adiciona verificação integral dos OHLCV Decimal, schema e unicidade dos checkpoints + testes adversariais. Resultado local e CI ainda precisam ser comprovados; zero acesso VPS, rede, SQLite real ou trades. Top50 e J1 permanecem abertas.

@@ -26,7 +26,7 @@ _REQUIRED_TABLES = frozenset({"candles", "checkpoints", "universe_snapshots", "c
 
 def _empty_report(decision_at_ms: int, window_end_ms: int, status: str) -> dict[str, Any]:
     return {
-        "schema_version": "j1_local_health_v1",
+        "schema_version": "j1_local_health_v2",
         "status": status,
         "decision_at_ms": decision_at_ms,
         "window_start_ms": window_end_ms - 24 * HOUR_MS,
@@ -38,6 +38,7 @@ def _empty_report(decision_at_ms: int, window_end_ms: int, status: str) -> dict[
         "checkpoint_complete_members": 0,
         "expected_candles": 0,
         "observed_candles": 0,
+        "ohlcv_rows_validated": 0,
         "missing_or_invalid_candles": 0,
         "last_live_collection_event": "unknown",
         "last_live_collection_age_ms": None,
@@ -86,6 +87,19 @@ def _members(raw: str) -> tuple[str, ...]:
     return tuple(symbols)
 
 
+def _stored_decimal(value: Any) -> Decimal:
+    """Require canonical, finite SQLite TEXT, never SQLite REAL / float."""
+    if type(value) is not str or not 1 <= len(value) <= 96 or not value.isascii():
+        raise ValueError("stored financial value must be bounded Decimal TEXT")
+    try:
+        parsed = Decimal(value)
+    except InvalidOperation as exc:
+        raise ValueError("stored financial value invalid") from exc
+    if not parsed.is_finite() or str(parsed) != value:
+        raise ValueError("stored financial value noncanonical or nonfinite")
+    return parsed
+
+
 def audit_local_sqlite_health(*, db_path: str | Path, decision_at_ms: int,
     exchange: str, market: str = "linear_perpetual",
     snapshot_source: str | None = None,
@@ -127,6 +141,26 @@ def audit_local_sqlite_health(*, db_path: str | Path, decision_at_ms: int,
             if not _REQUIRED_TABLES <= tables:
                 report["status"] = "database_schema_incomplete"
                 return report
+            # A fixture with just timestamps/quality is NOT the canonical J1
+            # candle table: inspect the actual stored OHLC and both volumes.
+            required_columns = {
+                "candles": {"exchange", "market", "symbol", "interval",
+                            "open_time_ms", "close_time_ms", "open", "high",
+                            "low", "close", "base_volume", "quote_volume", "quality"},
+                "checkpoints": {"data_type", "exchange", "symbol", "interval",
+                                "confirmed_start_ms", "confirmed_end_ms", "integrity"},
+                "universe_snapshots": {"observed_at_ms", "eligible_json",
+                                       "selection_rule_version", "source"},
+                "collection_events": {"event_id", "observed_end_ms", "status",
+                                      "mode", "exchange"},
+            }
+            for table, required in required_columns.items():
+                # Table names above are fixed internal literals, not user input.
+                available = {column[1] for column in
+                             conn.execute(f"PRAGMA table_info({table})")}
+                if not required <= available:
+                    report["status"] = "database_schema_incomplete"
+                    return report
             sql = ("SELECT observed_at_ms, eligible_json FROM universe_snapshots "
                    "WHERE observed_at_ms <= ?")
             params: list[Any] = [decision_at_ms]
@@ -163,7 +197,7 @@ def audit_local_sqlite_health(*, db_path: str | Path, decision_at_ms: int,
 
             placeholders = ",".join("?" for _ in symbols)
             rows = conn.execute(
-                "SELECT symbol,open_time_ms,close_time_ms,quality FROM candles "
+                "SELECT symbol,open_time_ms,close_time_ms,quality,open,high,low,close,base_volume,quote_volume FROM candles "
                 "WHERE exchange=? AND market=? AND interval='1h' "
                 "AND open_time_ms>=? AND open_time_ms<? "
                 f"AND symbol IN ({placeholders}) ORDER BY symbol,open_time_ms",
@@ -174,14 +208,27 @@ def audit_local_sqlite_health(*, db_path: str | Path, decision_at_ms: int,
                 return report
             report["observed_candles"] = len(rows)
             seen: dict[str, set[int]] = {s: set() for s in symbols}
-            for symbol, opened, closed, quality in rows:
+            for row in rows:
+                (symbol, opened, closed, quality, open_text, high_text,
+                 low_text, close_text, base_text, quote_text) = row
                 if (symbol not in seen or type(opened) is not int or
                         opened % HOUR_MS or opened in seen[symbol] or
                         type(closed) is not int or closed != opened + HOUR_MS - 1 or
-                        type(quality) is not str or not 0 < len(quality) <= 64):
+                        quality != "source_closed"):
+                    report["status"] = "candle_window_invalid"
+                    return report
+                try:
+                    op, hi, lo, cl, base, quote = map(_stored_decimal,
+                        (open_text, high_text, low_text, close_text, base_text, quote_text))
+                except ValueError:
+                    report["status"] = "candle_window_invalid"
+                    return report
+                if (min(op, hi, lo, cl) <= 0 or hi < max(op, cl) or
+                        lo > min(op, cl) or lo > hi or base < 0 or quote < 0):
                     report["status"] = "candle_window_invalid"
                     return report
                 seen[symbol].add(opened)
+            report["ohlcv_rows_validated"] = len(rows)
             full = {s for s, times in seen.items() if len(times) == 24}
             report["missing_or_invalid_candles"] = len(symbols) * 24 - len(rows)
             checkpoints = conn.execute(
@@ -190,6 +237,9 @@ def audit_local_sqlite_health(*, db_path: str | Path, decision_at_ms: int,
                 "exchange=? AND interval='1h' "
                 f"AND symbol IN ({placeholders})", [exchange, *symbols],
             ).fetchall()
+            if len({row[0] for row in checkpoints}) != len(checkpoints):
+                report["status"] = "checkpoint_rows_invalid"
+                return report
             covering = {symbol for symbol, a, b, integrity in checkpoints
                         if (symbol in seen and type(a) is int and type(b) is int
                             and a <= start_ms and end_ms - 1 <= b < decision_at_ms

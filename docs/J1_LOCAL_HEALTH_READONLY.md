@@ -19,3 +19,8 @@ Ajustar o `exchange` à grafia realmente gravada. Não usar este comando como pr
 
 ## Aceite e limites
 Testes offline `python -m unittest discover -s tests -p test_j1_local_health.py -q`; regressões de armazenamento; compileall; CI Linux/docs, Windows/offline e Chrome/PAPER no SHA exato. Nenhuma dependência de VPS para validação de código. A prova operacional da #429 continua aberta e a #319 continua exigindo cobertura real e identidade independente. D245 registra a separação entre **saúde da amostra** e **homologação da J1**.
+
+
+## Integridade D246 — esquema real e valores OHLCV (v2)
+
+A v1 de D245 verificava apenas a cronologia de candles e a cobertura de checkpoints: uma linha com OHLCV corrompido poderia continuar contada como presente. A v2 exige as 13 colunas do schema real `candles` de `storage.py` e inspeciona todos os valores monetários `open/high/low/close/base_volume/quote_volume` preservados como strings canônicas Decimal, finitas, sem coercao de SQLite REAL/float. Testa abertura/fechamento/alta/baixa estritamente positivos e consistentes; volumes não negativos; `quality=source_closed`. Também rejeita checkpoints duplicados para o mesmo símbolo. O novo `ohlcv_rows_validated` conta exclusivamente as linhas que passaram nas verificações da janela. O relatório `j1_local_health_v2` continua sem afirmar validade de origem, direito de uso, Top50 global, continuidade da VPS ou negociação. A CI valida apenas o código, nunca o conteúdo histórico do banco real.

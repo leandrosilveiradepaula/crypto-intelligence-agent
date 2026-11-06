@@ -941,3 +941,8 @@ J1/OPS37 #495: regressao test_j1_binance_metadata_probe.py com 7 casos novos cob
 ## J1/OPS1 D245 — health observacional do banco local (issue #429)
 
 Focal `python -m unittest discover -s tests -p test_j1_local_health.py -q`; regressao `test_backfill_storage.py` e `test_storage_invariants.py`, compileall e CI Linux/docs, Windows/offline, Chrome/PAPER. Exigir testes sobre janela 24h fechada, ausencia de candle, candle adulterado, checkpoint parcial/retroativo/futuro, snapshot PIT ausente/expirado/ambiguo, JSON duplicado/rank falso, escopo exchange/market, nonroot CLI, banco ausente nao criado e bytes do SQLite inalterados. O exit code 0 e apenas integridade local, jamais `marketwide_top50_verified=true`, nem indicacao de systemd ativo. Sem VPS, coleta/ordens ou migracao. Gate J1 #2 permanece aberto.
+
+
+## J1/OPS1 D246 — regressões de integridade dos valores persistidos
+
+Testar `test_j1_local_health.py`, `test_backfill_storage.py`, `test_storage_invariants.py`; CI Linux/docs, Windows/offline, Chrome/PAPER no SHA de PR e validação pos merge. Injetar fixture SQLite com schema real de 13 colunas, 24h por símbolo, strings Decimal; alterar individualmente preços zero/negativo, high/low incoerentes, volume negativo, NaN/Inf/expoente extremo, numérico REAL/float, qualidade nao confirmada, coluna OHLC ausente, checkpoint duplicado/ausente. No Windows, abrir/concluir conexão com `closing(...), conn` antes da limpeza de arquivos temporários. `marketwide_top50_verified`, `canonical_ohlcv_approved`, serviço 24/7 e ordens permanecem false mesmo com teste verde.
