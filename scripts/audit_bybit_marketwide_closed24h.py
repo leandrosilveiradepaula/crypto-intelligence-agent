@@ -144,7 +144,7 @@ def _dec(value: Any, *, field: str | None = None) -> Decimal:
     if (type(value) is not str or len(value) > 96
             or _DECIMAL.fullmatch(value) is None):
         raise CensusAbstain("invalid_candle_decimal", field=field)
-    match = re.search(r"[eE]([+-]?[0-9]{1,3})\\Z", value)
+    match = re.search(r"[eE]([+-]?[0-9]{1,3})\Z", value)
     if match is not None and abs(int(match.group(1))) > _MAX_SCIENTIFIC_EXPONENT:
         raise CensusAbstain("invalid_candle_decimal", field=field)
     try:
