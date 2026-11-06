@@ -1153,3 +1153,8 @@ Primeiro bloco seguro sem VPS da #429: auditor `j1_local_health.py` sobre SQLite
 ## J1/OPS1 D246 — observador SQLite v2 (06/11/2026)
 
 Inspecionada main `4023aae65f7eea4a291e2ad55878350870b91adf` (#497), issue #429 e supervisor WS preexistente. Escolhido corrigir falsa sensação de saúde do observador D245: a v1 lia apenas timestamps/quality e nao verificava os preços/volumes, permitindo linha malformada em amostra estruturalmente completa. Branch `work/issue-429-j1-ohlcv-health-integrity` adiciona verificação integral dos OHLCV Decimal, schema e unicidade dos checkpoints + testes adversariais. Resultado local e CI ainda precisam ser comprovados; zero acesso VPS, rede, SQLite real ou trades. Top50 e J1 permanecem abertas.
+
+
+## J1/OPS1 D247 - leitura isolada de WS owner research (06/11/2026)
+
+Main de base verificada `115cd8f38f6f135702d3dcf2a530d67b0ad021d2`; #429 aberta e nenhuma PR aberta no preflight. Branch `work/issue-429-j1-ws-owner-readonly-audit` prepara auditor offline do SQLite `ws-confirmed.sqlite`, que nao tem as mesmas tabelas do SQLite historico de D246. Reusa validadores reais do journal e PIT, nao cria segundo supervisor. Prova offline e CI no SHA da PR pendentes neste registro inicial; nenhum deploy, GET, VPS ou ordem. Top50 segue nao homologada.
