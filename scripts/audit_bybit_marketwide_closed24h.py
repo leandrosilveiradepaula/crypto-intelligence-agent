@@ -9,7 +9,10 @@ from __future__ import annotations
 import argparse
 from contextlib import closing
 from decimal import Context, Decimal, InvalidOperation, localcontext
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows import inert; network owner gate remains closed.
+    fcntl = None
 from hashlib import sha256
 import json
 import os
@@ -163,7 +166,7 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                owner_ok: bool | None = None) -> dict[str, Any]:
     """One finite resumable batch with a single writer and no GET retries."""
     report = _report("owner_gate_required")
-    allowed = (os.name == "posix" and os.getuid() == os.geteuid()
+    allowed = (os.name == "posix" and fcntl is not None and os.getuid() == os.geteuid()
                and os.geteuid() != 0) if owner_ok is None else owner_ok
     if not (allowed and allow_public_network is True
             and allow_private_storage is True
