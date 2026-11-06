@@ -26,7 +26,12 @@ TIMEOUT_SECONDS = 8
 # Never treat a known public budget as a guarantee of available capacity.
 MIN_PUBLIC_GET_INTERVAL_SECONDS = 2.0
 HOUR_MS = 3_600_000
-_SYMBOL = re.compile(r"^[A-Z0-9]{2,24}USDT$")
+# Public GET identity is deliberately only a syntactic shape check. The
+# basic-contract census accepts a nonempty 1..28-char base + USDT (max 32
+# total); a narrower 2..24-char transport gate made a real valid census
+# member fail *before* the next network request. Crypto identity still
+# requires separate independent PIT review.
+_SYMBOL = re.compile(r"^[A-Z0-9]{1,28}USDT$")
 # Explicitly documented provider codes only. Do not print provider bodies or
 # retMsg (which might contain a symbol or untrusted arbitrary text).
 _KNOWN_PROVIDER_CODES = frozenset({
