@@ -545,3 +545,8 @@ A camada `j1_local_health` v2 valida `PRAGMA table_info` dos quatro objetos exis
 ## J1/OPS1 D247 - integracao de observabilidade no journal WS existente
 
 `j1_ws_owner_readonly.audit_owner_ws_journal` le exclusivamente `ws-confirmed.sqlite` + scope/epochs do piloto WS com os validadores PIT e integridade do proprio coletor `bybit_ws_owner_pilot`/`bybit_closed_stream_cache`. Nao confundir esse esquema com o SQLite historico do health D246. Gate POSIX nonroot/optin/owner-only, nao reativa `systemd`, nao instala outro runner e nunca usa o resultado para declarar fonte ou Top50 global. CLI `scripts/audit_j1_ws_owner_readonly.py` e docs D247.
+
+
+## J3/PRE28 — risco de correlação causal por carteira (D248)
+
+`synthetic_portfolio_correlation_gate.audit_synthetic_causal_correlation` integra, de forma opt-in, PRE19+PRE20: repete os replays tipados para observar somente pernas OPEN a cada tick, mantém estatísticas incrementais por par e utiliza retornos mark de sinal LONG/SHORT. O gate PRE20 nunca é contornado. Estado insuficiente, variância nula, breach ou liquidação desconhecida impede elegibilidade retrospectiva. Nenhum endpoint, armazenamento, comando ou mudança de execução é introduzido; ver docs/J3_PRE28_CAUSAL_CORRELATION_GATE.md.
