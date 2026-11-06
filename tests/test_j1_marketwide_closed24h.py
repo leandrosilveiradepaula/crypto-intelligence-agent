@@ -205,6 +205,68 @@ class MarketwideClosed24hTests(unittest.TestCase):
         self.assertEqual(result["failure_code"], "kline_ohlcv_integrity_abstain")
         self.assertEqual(result["requests_attempted"], 2)
 
+    def test_scientific_decimal_is_exact_finite_and_bounded(self):
+        from decimal import Decimal
+        self.assertEqual(_dec("1.2E-8"), Decimal("1.2E-8"))
+        self.assertEqual(_dec("0e-8"), Decimal("0E-8"))
+        self.assertEqual(_dec("3e+2"), Decimal("300"))
+        self.assertEqual(_dec("1e-48"), Decimal("1E-48"))
+        self.assertEqual(_dec("1e+48"), Decimal("1E+48"))
+        for invalid in (
+            "NaN", "Infinity", "1e9999", "1e49", "1e-49", "1e-999",
+            "-1e-8", "+1", "1e1e2", "1 E-2", "1e", "1e+", "1e--1",
+            "1e0001", "01e-1", "0x1", "", "1" * 97, 1e-8,
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(CensusAbstain):
+                _dec(invalid)
+
+    def test_scientific_ohlcv_can_resume_and_preserve_exact_text(self):
+        class Scientific(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("/kline"):
+                    payload["result"]["list"][0][1] = "1.2E-8"
+                    payload["result"]["list"][0][2] = "1.3E-8"
+                    payload["result"]["list"][0][3] = "1.1E-8"
+                    payload["result"]["list"][0][4] = "1.2E-8"
+                    payload["result"]["list"][0][5] = "1.23e-5"
+                    payload["result"]["list"][0][6] = "0E-8"
+                return raw, payload
+
+        first = self.run_batch(client=Scientific(), size=1)
+        self.assertEqual(first["status"], "basic_market_24h_batch_partial_unverified")
+        self.assertEqual(first["completed_contracts"], 1)
+        self.assertEqual(first["requests_attempted"], 2)
+        with closing(sqlite3.connect(
+            self.directory / "j1-marketwide-closed24h.sqlite")) as conn:
+            values = conn.execute(
+                "SELECT open, base_volume, quote_turnover FROM candles "
+                "WHERE symbol=? ORDER BY open_ms DESC LIMIT 1", (SYMS[0],)
+            ).fetchone()
+        self.assertEqual(values, ("1.2E-8", "1.23e-5", "0E-8"))
+        repeated = self.run_batch(size=1)
+        self.assertEqual(repeated["status"], "basic_market_24h_batch_partial_unverified")
+        self.assertEqual(repeated["completed_contracts"], 2)
+        self.assertEqual(repeated["requests_attempted"], 2)
+
+    def test_decimal_field_identified_without_echoing_raw_values(self):
+        class BadVolume(FakeClient):
+            def get(self, url):
+                raw, payload = super().get(url)
+                if urlsplit(url).path.endswith("/kline"):
+                    payload["result"]["list"][0][6] = "SECRET_BAD_VOLUME"
+                return raw, payload
+
+        result = self.run_batch(client=BadVolume(), size=1)
+        self.assertEqual(result["status"], "abstain")
+        self.assertEqual(result["failure_code"], "invalid_candle_decimal")
+        self.assertEqual(result["invalid_decimal_field"], "quote_turnover")
+        self.assertEqual(result["failure_category"], "candle_integrity_or_time")
+        self.assertEqual(result["requests_attempted"], 2)
+        self.assertNotIn("SECRET_BAD_VOLUME", json.dumps(result))
+        self.assertNotIn("COIN000", json.dumps(result))
+        self.assertEqual(result["completed_contracts"], 0)
+
     def test_no_gate_no_network_no_files(self):
         denied = self.run_batch(allow_public_network=False)
         self.assertEqual(denied["status"], "owner_gate_required")
