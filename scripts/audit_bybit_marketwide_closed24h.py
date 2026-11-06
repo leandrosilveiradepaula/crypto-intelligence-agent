@@ -469,25 +469,40 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                 from crypto_intelligence_agent.bybit_public_j1_transport import kline_url
                 count_new = 0
                 for symbol in members:
-                    if symbol in totals:
+                    if symbol in totals or symbol in shorts:
                         continue
                     if count_new >= max_contracts:
                         break
                     if now_ms() - end_ms > MAX_WINDOW_AGE_MS:
                         raise CensusAbstain("window_age_expired")
                     _, result = client.get(kline_url(symbol, end_ms-24*HOUR_MS, end_ms))
-                    bars = _closed_candles(result, symbol, end_ms)
-                    with localcontext(_MATH):
-                        total = sum((_dec(bar[-1]) for bar in bars), Decimal(0))
-                    with db:
-                        db.executemany(
-                            "INSERT INTO candles VALUES (?,?,?,?,?,?,?,?)",
-                            [(symbol, int(bar[0]), *bar[1:]) for bar in bars])
-                    totals[symbol] = total
+                    bars = _closed_candles(result, symbol, end_ms, allow_short=True)
+                    if len(bars) == 24:
+                        with localcontext(_MATH):
+                            total = sum((_dec(bar[-1]) for bar in bars), Decimal(0))
+                        with db:
+                            db.executemany(
+                                "INSERT INTO candles VALUES (?,?,?,?,?,?,?,?)",
+                                [(symbol, int(bar[0]), *bar[1:]) for bar in bars])
+                        totals[symbol] = total
+                    else:
+                        # A short page, even with a launch hint, is NOT a
+                        # verified 24h observation or eligible ranking member.
+                        # Store the exact 0..23 validated rows for replay.
+                        launch_ms = hints[symbol]
+                        with db:
+                            db.execute(
+                                "INSERT INTO incomplete VALUES (?,?,?,?,?)",
+                                (symbol, launch_ms, len(bars), _stable_json(bars),
+                                 _short_digest(symbol, end_ms, launch_ms, bars)))
+                        shorts[symbol] = bars
                     count_new += 1
-                    report["completed_contracts"] = len(totals)
-                    report["validated_closed_1h_rows"] = len(totals)*24
-                    report["remaining_contracts"] = len(members)-len(totals)
+                    refresh_counts()
+                if len(totals) >= 50:
+                    complete_rank = sorted(totals, key=lambda s: (-totals[s], s))
+                    report["top50_complete_subset_count"] = 50
+                    report["top50_complete_subset_digest_sha256"] = _digest([
+                        [s, str(totals[s])] for s in complete_rank[:50]])
                 if len(totals) == len(members):
                     ranked = sorted(members, key=lambda s: (-totals[s], s))
                     report["top50_basic_count"] = len(ranked[:50])
@@ -495,6 +510,10 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
                         [s, str(totals[s])] for s in ranked[:50]])
                     report["full_basic_contract_24h_ranking_complete"] = True
                     report["status"] = "basic_market_24h_closed_rank_complete_unverified"
+                elif report["remaining_contracts"] == 0:
+                    report["status"] = "basic_market_24h_survey_complete_with_incomplete_unverified"
+                elif shorts:
+                    report["status"] = "basic_market_24h_survey_partial_unverified"
                 else:
                     report["status"] = "basic_market_24h_batch_partial_unverified"
         finally:
@@ -533,7 +552,10 @@ def main(argv: list[str] | None = None) -> int:
         confirm_region_and_personal_research=args.confirm_region_and_personal_research,
     )
     print(_stable_json(result))
-    return 0 if result["status"] == "basic_market_24h_closed_rank_complete_unverified" else 2
+    return 0 if result["status"] in (
+        "basic_market_24h_closed_rank_complete_unverified",
+        "basic_market_24h_survey_complete_with_incomplete_unverified",
+    ) else 2
 
 
 if __name__ == "__main__":
