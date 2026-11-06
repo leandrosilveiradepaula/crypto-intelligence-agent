@@ -555,3 +555,8 @@ A camada `j1_local_health` v2 valida `PRAGMA table_info` dos quatro objetos exis
 ## J1/TOP50 D249 — coleta publica basica completa em lotes privados
 
 `scripts.audit_bybit_marketwide_closed24h` isola recenseamento dos contratos Bybit `Trading/LinearPerpetual/USDT` em um novo SQLite owner-only (nunca o SQLite histórico), usando `BoundedBybitPublicClient` com GET fixo 2s e 24 velas UTC fechadas. A janela, membros e digest são imutáveis entre lotes, writer `flock` e cada ativo transacionado atomicamente. Replay de cada ativo antes de novas requisições e ranking Decimal somente após cobertura completa da lista basica. Não cria serviço ou altera OrderExecutionEngine. Ver D249, issue #502 e docs/J1_TOP50_CLOSED24H_MARKET_CENSUS.md.
+
+
+## D253 — Survey 24h com observações incompletas
+
+O recenseamento owner-only mantém `candles` (somente 24 UTC 1h fechadas) e adiciona `incomplete` (0..23 rows contíguas de mesmo período, `launch_hint_ms` opcional, JSON TEXT de candles e SHA256 de símbolo+fim+hint+rows). Replay em cada invocação ocorre antes de novas requisições sob a mesma trava `flock`. A contagem `inspected` = completos + curtos; faltantes não são excluídos do denominador 822. Score Top50 do subconjunto completo jamais autoriza uso de Top50 elegível; full rank apenas se 822 completos. Sem novo daemon, serviço ou migração no banco histórico.
