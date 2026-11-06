@@ -946,3 +946,8 @@ Focal `python -m unittest discover -s tests -p test_j1_local_health.py -q`; regr
 ## J1/OPS1 D246 — regressões de integridade dos valores persistidos
 
 Testar `test_j1_local_health.py`, `test_backfill_storage.py`, `test_storage_invariants.py`; CI Linux/docs, Windows/offline, Chrome/PAPER no SHA de PR e validação pos merge. Injetar fixture SQLite com schema real de 13 colunas, 24h por símbolo, strings Decimal; alterar individualmente preços zero/negativo, high/low incoerentes, volume negativo, NaN/Inf/expoente extremo, numérico REAL/float, qualidade nao confirmada, coluna OHLC ausente, checkpoint duplicado/ausente. No Windows, abrir/concluir conexão com `closing(...), conn` antes da limpeza de arquivos temporários. `marketwide_top50_verified`, `canonical_ohlcv_approved`, serviço 24/7 e ordens permanecem false mesmo com teste verde.
+
+
+## J1/OPS1 D247 - auditor independente WS owner-only
+
+Suíte focal `test_j1_ws_owner_readonly.py` e regressões de `test_j1_bybit_closed_stream_cache.py`, `test_j1_ws_owner_pilot.py`, `test_j1_ws_multihour_soak.py`. Provar opt-in sem I/O default, checks POSIX, diretorio privado, PIT antes de close e expiry, journal invalidado, janela 24h de 52 candidatos fixture, amostra parcial sem rank, digest corrompido, sigilo e zero trades. CI PR Linux/docs, Windows/offline, Chrome/PAPER; o Windows deve skip apenas provas POSIX nonroot. Comparar SHA head e merge. Sem banco VPS nem chamadas externas.
