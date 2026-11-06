@@ -31,12 +31,20 @@ MAX_DB_BYTES = 32 * 1024 * 1024
 _DB_NAME = "j1-marketwide-closed24h.sqlite"
 _LOCK_NAME = ".j1-marketwide-closed24h.lock"
 _SYMBOL = re.compile(r"[A-Z0-9]{2,32}\Z")
-_DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?\Z")
+_DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?(?:[eE][+-]?[0-9]{1,3})?\Z")
+_MAX_SCIENTIFIC_EXPONENT = 48
+_FINANCIAL_FIELDS = frozenset({
+    "open", "high", "low", "close", "base_volume", "quote_turnover",
+})
 _MATH = Context(prec=128)
 
 
 class CensusAbstain(ValueError):
-    """Sanitized errors only; private payloads never appear in output."""
+    """Only a fixed error code and optional fixed field enum are observable."""
+
+    def __init__(self, code: str, *, field: str | None = None):
+        super().__init__(code)
+        self.field = field if field in _FINANCIAL_FIELDS else None
 
 
 # Never interpolate an exception, symbol, URL, JSON payload or account value in
@@ -127,15 +135,24 @@ def _failure_details(error: BaseException) -> tuple[str, str]:
     return "unclassified", "unexpected_error"
 
 
-def _dec(value: Any) -> Decimal:
-    if type(value) is not str or _DECIMAL.fullmatch(value) is None:
-        raise CensusAbstain("invalid_candle_decimal")
+def _dec(value: Any, *, field: str | None = None) -> Decimal:
+    """Finite nonnegative bounded ASCII decimal, optionally scientific.
+
+    Do not round or normalize the provider's TEXT; exact Decimal is used for
+    aggregation and replay. Bound the exponent before creating a Decimal.
+    """
+    if (type(value) is not str or len(value) > 96
+            or _DECIMAL.fullmatch(value) is None):
+        raise CensusAbstain("invalid_candle_decimal", field=field)
+    match = re.search(r"[eE]([+-]?[0-9]{1,3})\\Z", value)
+    if match is not None and abs(int(match.group(1))) > _MAX_SCIENTIFIC_EXPONENT:
+        raise CensusAbstain("invalid_candle_decimal", field=field)
     try:
         parsed = Decimal(value)
     except InvalidOperation:
-        raise CensusAbstain("invalid_candle_decimal") from None
+        raise CensusAbstain("invalid_candle_decimal", field=field) from None
     if not parsed.is_finite() or parsed < 0:
-        raise CensusAbstain("invalid_candle_decimal")
+        raise CensusAbstain("invalid_candle_decimal", field=field)
     return parsed
 
 
@@ -206,7 +223,10 @@ def _closed_candles(payload: dict, symbol: str, end_ms: int) -> tuple[tuple[str,
         if (type(opened) is not str or not opened.isascii() or not opened.isdecimal()
                 or str(int(opened)) != opened or int(opened) != end_ms-(index+1)*HOUR_MS):
             raise CensusAbstain("kline_missing_open_or_future_hour")
-        op, high, low, close, base_vol, quote_vol = tuple(map(_dec, row[1:]))
+        fields = ("open", "high", "low", "close", "base_volume", "quote_turnover")
+        op, high, low, close, base_vol, quote_vol = tuple(
+            _dec(value, field=field) for field, value in zip(fields, row[1:])
+        )
         if (min(op, high, low, close) <= 0 or high < max(op, close)
                 or low > min(op, close) or low > high
                 or base_vol < 0 or quote_vol < 0):
@@ -412,6 +432,10 @@ def run_census(*, directory: Path, now_ms: Callable[[], int],
         report["status"] = "abstain"
         report["failure_stage"] = stage
         report["failure_category"], report["failure_code"] = _failure_details(error)
+        if (type(error) is CensusAbstain
+                and report["failure_code"] == "invalid_candle_decimal"
+                and error.field is not None):
+            report["invalid_decimal_field"] = error.field
         report["last_request_stage"] = (
             getattr(client, "last_request_stage", None) or "before_first_get")
         report["provider_ret_code"] = getattr(client, "last_provider_retcode", None)
