@@ -976,3 +976,8 @@ Testar `_dec` com `1.2E-8`, `0e-8`, `3e+2`, extremos e expiração; rejeitar `Na
 ## J1/TOP50 D252 — contrato sintático único catálogo/GET
 
 Provar offline que `_catalog` permite bases de 1 e 28 caracteres e `kline_url` + `instruments_url` + `BoundedBybitPublicClient.get` aceitam as mesmas formas; rejeitar base vazia, 29 caracteres, caracteres não ASCII, barras, espaços, sufixo USDC, minúscula e duração da janela inválida. Teste independente de sistema operacional `tests/test_j1_bybit_symbol_shape_contract.py`, regressões do transporte e da captura `test_j1_marketwide_closed24h.py`. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA exato. A falha real foi `invalid_kline_window` com 20 contratos preservados, o comprimento do nome reprovado não foi publicado. Gate J1 ainda exige elegibilidade cripto independente/continuidade.
+
+
+## J1/TOP50 D253 — survey incompleto sem falsificar ranking
+
+Testes de 0, 8, 10 e 23 velas com horários contíguos, preço/volume/turnover válidos, contagem explícita de observações incompletas e marcações `top50_basic_count=0` e `marketwide_top50_verified=false`. Simular survey com 60 membros, 1 curto, verificar 59 completos, 1 incompleto, 0 remanescentes, 24*59 velas completas, digest do Top50 SOMENTE do subconjunto não representativo; replay não repete GET. Corromper JSON/digest do curto ou metadata launchTime e provar FAIL-STOP antes de novo GET kline. Falhas com gaps, valor inválido, futuro ou schema seguem abort. Validar CI Linux/docs, Windows/offline e PAPER no head exato, depois execução owner `--max-contracts 1` sem novo ciclo até classificação do caso real. Não afirmar causa de listagem recente sem evidência do launchTime.
