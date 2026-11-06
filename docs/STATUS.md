@@ -1178,3 +1178,8 @@ Titular VPS executou D249 #503 com SHA `ec8a7d15e30252fea2e585945dd8ceaf0462e136
 ## J1/TOP50 D251 — correção de parser após prova real (06/11/2026)
 
 VPS realizou re-prova D250 (1 catálogo + 1 kline): 822 contratos técnicos, 4 concluídos, 96 velas, 818 pendentes, janela 06/11/2026 13:00 UTC, `status=abstain`, `failure_code=invalid_candle_decimal`, `failure_category=candle_integrity_or_time`. Sem comprovante do campo e lexical do valor; somente rejeição decimal foi demonstrada. Branch `work/issue-502-j1-census-bounded-decimal-lexemes` passa a aceitar notação científica Decimal finita/limitada e disponibiliza campo inválido como enum seguro; sem trocar janela, pular ativo, remover contrato, rede ou ordens. Evidência de CI/merge e nova observação VPS continuam gates separados.
+
+
+## J1/TOP50 D252 — 20 contratos reais, incompatibilidade de símbolo (06/11/2026)
+
+VPS executou lote sequencial no SHA `8fa321ef04a8cabeaead88b2c4ba61e4f94caa47`, encerrou `abstain` em `kline/invalid_kline_window` depois de 16 GETs, com 20/822 contratos completos, 480 candles e 802 pendentes, sem writes ao histórico legado nem ordens. Comparação do código revelou `_catalog` aceitando até 32 caracteres e transporte limitando `[A-Z0-9]{2,24}USDT`; rejeição local anterior ao GET é compatível com divergência, mas símbolo exato não foi registrado. Branch `work/issue-502-j1-symbol-shape-contract` alinha forma técnica base 1..28 + USDT e testes de fronteiras. Integração e nova prova VPS ainda requerem CI e SHA. Preserve janela original 2026-11-06 13:00Z, sem reset, retry ou skip silencioso.
