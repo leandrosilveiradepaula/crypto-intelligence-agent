@@ -115,6 +115,74 @@ class J1D257IdentityTriageTests(unittest.TestCase):
         self.assertEqual(self.dbpath.read_bytes(), before)
         self.assertNotIn("BTCUSDT", json.dumps(result))
 
+    def test_negative_tradfi_partition_is_retrospective_only(self):
+        from crypto_intelligence_agent.bybit_tradfi_negative_evidence import (
+            NEGATIVE_EVIDENCE, classify_retrospective, catalog_digest,
+        )
+        self.assertEqual(len(NEGATIVE_EVIDENCE), 24)
+        self.assertEqual(len(catalog_digest()), 64)
+        self.assertEqual(
+            classify_retrospective("SOXLUSDT", False),
+            "bybit_tradfi_documented_retrospective",
+        )
+        self.assertEqual(
+            classify_retrospective("XAUUSDT", False),
+            "bybit_tradfi_documented_retrospective",
+        )
+        self.assertEqual(
+            classify_retrospective("DUOLUSDT", False),
+            "bybit_tradfi_documented_retrospective",
+        )
+        self.assertEqual(
+            classify_retrospective("BTCUSDT", True),
+            "archived_crypto_reference_only",
+        )
+        self.assertEqual(
+            classify_retrospective("1000PEPEUSDT", False),
+            "identity_unresolved",
+        )
+
+    def test_negative_evidence_does_not_approve_fixture_marketwide(self):
+        self.collect()
+        hidden = self.triage()
+        visible = self.triage(include_public_symbols=True)
+        for result in (hidden, visible):
+            self.assertEqual(result["raw_top50_bybit_tradfi_documented_count"], 0)
+            self.assertEqual(result["raw_top50_archived_crypto_reference_only_count"], 2)
+            self.assertEqual(result["raw_top50_identity_unresolved_count"], 48)
+            self.assertFalse(result["negative_evidence_pit_authenticated"])
+            self.assertFalse(result["negative_catalog_complete_for_market"])
+            self.assertFalse(result["marketwide_top50_verified"])
+            self.assertEqual(result["current_eligible_contracts_verified"], 0)
+        self.assertNotIn("public_top50_complete_subset_review_only", hidden)
+        self.assertEqual(
+            visible["public_top50_complete_subset_review_only"][0][
+                "retrospective_identity_category"
+            ], "archived_crypto_reference_only"
+        )
+        self.assertEqual(
+            visible["public_top50_complete_subset_review_only"][2][
+                "retrospective_identity_category"
+            ], "identity_unresolved"
+        )
+
+    def test_provider_negative_proof_does_not_become_crypto_whitelist(self):
+        self.collect()
+        with closing(sqlite3.connect(self.dbpath)) as db:
+            from scripts.triage_j1_marketwide_identity import _rank_with_registry
+            original = json.loads(REGISTRY_FILE.read_text())
+            before = _rank_with_registry(
+                db, json.dumps(original).encode(), include_public_symbols=True
+            )
+        self.assertFalse(before["marketwide_top50_verified"])
+        self.assertFalse(before["negative_evidence_pit_authenticated"])
+        self.assertEqual(
+            before["raw_top50_bybit_tradfi_documented_count"] +
+            before["raw_top50_archived_crypto_reference_only_count"] +
+            before["raw_top50_identity_unresolved_count"],
+            50,
+        )
+
     def test_opt_in_public_contract_identifiers_without_financial_values(self):
         self.collect()
         default = self.triage()
