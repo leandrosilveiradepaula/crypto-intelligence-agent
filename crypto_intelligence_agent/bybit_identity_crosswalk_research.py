@@ -100,8 +100,7 @@ def _row(symbol: str, kind: str, relation: str,
 _ROWS = (
     _row("1000PEPEUSDT", "crypto_token_candidate_unverified",
          "unit_1000_requires_venue_proof", ("coingecko:pepe",),
-         ("https://www.coingecko.com/en/coins/pepe",
-          "https://bitcoinleverage.com/pepe")),
+         ("https://www.coingecko.com/en/coins/pepe",)),
     _row("TRUMPUSDT", "crypto_token_candidate_unverified",
          "direct_ticker_hypothesis", ("coingecko:official-trump",),
          ("https://www.coingecko.com/en/coins/official-trump",)),
@@ -136,8 +135,7 @@ _ROWS = (
          ("https://www.coingecko.com/en/coins/unifai-network",)),
     _row("PUMPFUNUSDT", "crypto_token_candidate_unverified",
          "venue_alias_requires_proof", ("coingecko:pump-fun",),
-         ("https://www.coingecko.com/en/coins/pump-fun",
-          "https://www.tradingview.com/symbols/PUMPUSD/markets/")),
+         ("https://www.coingecko.com/en/coins/pump-fun",)),
 )
 
 if len({item.venue_symbol for item in _ROWS}) != len(_ROWS):
