@@ -1203,3 +1203,8 @@ Ponto de partida real D256 na VPS: 10 testes PASS; 822/822 contratos técnicos i
 ## J1 D258 — identificadores de prioridade somente com opt-in local (07/11/2026)
 
 VPS D257 owner: 8 testes PASS; 822 técnicos inspecionados, 819 completos, 3 curtos, 52 bases com referência histórica dentre completos, 19/50 no Top50 completo-subset e 31/50 sem referência; 767 completos ausentes do registro. Manifesto histórico com idade `682341000ms` (>7d), portanto **não elegível temporalmente**. D258 adiciona opção local `--include-public-symbols` ao CLI de triagem, desativada por padrão, para mostrar identificadores públicos e sinal de referência histórica das 50 linhas prioritárias e dos short separados, sem divulgar valores financeiros nem liberar negociação. PR/CI/merge e prova real D258 devem ser registrados separadamente. #319/#502/#429/#2 abertas.
+
+
+## J1 D259 — TradFi misturado no Top50 bruto identificado (07/11/2026)
+
+D258 owner VPS confirmou 819 completos/3 curtos, 11 testes PASS, top50 19 referências de registro vencido e 31 sem referência. Evidência oficial Bybit data de 26/08 e 19/10 permite identificar 21 dos 50 como contratos TradFi; os 3 short `DUOLUSDT/FISVUSDT/FNUSDT` foram listados em 06/11 às 11h UTC como TradFi, duas horas antes do corte 13h. D259 registra evidências negativas versionadas, marca 21 como `bybit_tradfi_documented_retrospective`, mantém 19 como `archived_crypto_reference_only` e 10 como `identity_unresolved` na amostra REAL, mas estas contagens ainda dependem de execução de código D259 na VPS. Todos estão bloqueados para operações. Não presumir que 21 sejam a totalidade TradFi entre 822, nem que 19 sejam crypto-only no PIT atual. Próximos gates: CI/PR/merge sem deploy, depois prova VPS read-only. #319/#502/#429/#2 abertas.

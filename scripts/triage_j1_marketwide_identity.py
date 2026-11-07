@@ -25,6 +25,10 @@ from crypto_intelligence_agent.crypto_asset_registry import (
     CryptoRegistryHistory, load_registry_json,
 )
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.bybit_tradfi_negative_evidence import (
+    VERSION as NEGATIVE_EVIDENCE_VERSION, NEGATIVE_EVIDENCE,
+    catalog_digest, classify_retrospective, evidence_for,
+)
 from scripts.audit_bybit_marketwide_closed24h import (
     _MATH, _dec, _digest, _strict_owner, _stable_json, MAX_DB_BYTES,
 )
@@ -111,8 +115,30 @@ def _rank_with_registry(
     shorts = [
         s for (s,) in db.execute("SELECT symbol FROM incomplete ORDER BY symbol")
     ]
+    raw_top50 = ordered[:50]
+    # Negative provider evidence is retrospective only, never a whitelist.
+    negative_top50 = [sym for sym in raw_top50 if sym in NEGATIVE_EVIDENCE]
+    archived_top50 = [
+        sym for sym in raw_top50
+        if sym not in NEGATIVE_EVIDENCE and referenced(sym)
+    ]
+    unresolved_top50 = [
+        sym for sym in raw_top50
+        if sym not in NEGATIVE_EVIDENCE and not referenced(sym)
+    ]
     report = _empty()
     report.update({
+        "negative_tradfi_catalog_version": NEGATIVE_EVIDENCE_VERSION,
+        "negative_tradfi_catalog_sha256": catalog_digest(),
+        "raw_top50_bybit_tradfi_documented_count": len(negative_top50),
+        "raw_top50_archived_crypto_reference_only_count": len(archived_top50),
+        "raw_top50_identity_unresolved_count": len(unresolved_top50),
+        "short_history_bybit_tradfi_documented_count": sum(
+            sym in NEGATIVE_EVIDENCE for sym in shorts
+        ),
+        "negative_evidence_retrospective_only": True,
+        "negative_evidence_pit_authenticated": False,
+        "negative_catalog_complete_for_market": False,
         "status": (
             "identity_review_queue_stale_registry_no_go" if not temporally_usable
             else "identity_review_queue_registry_pit_recheck_required"
@@ -149,10 +175,22 @@ def _rank_with_registry(
     if include_public_symbols:
         report["public_top50_complete_subset_review_only"] = [
             {"rank": index, "symbol": symbol,
-             "archived_base_reference_present": referenced(symbol)}
+             "archived_base_reference_present": referenced(symbol),
+             "retrospective_identity_category": classify_retrospective(
+                 symbol, referenced(symbol)
+             ),
+             "bybit_negative_evidence": evidence_for(symbol)}
             for index, symbol in enumerate(ordered[:50], 1)
         ]
         report["public_short_history_contracts_review_only"] = shorts
+        report["public_short_history_research_category_only"] = [
+            {"symbol": sym,
+             "retrospective_identity_category": classify_retrospective(
+                 sym, referenced(sym)
+             ),
+             "bybit_negative_evidence": evidence_for(sym)}
+            for sym in shorts
+        ]
     return report
 
 

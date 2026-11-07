@@ -996,3 +996,8 @@ Comparador de prioridade offline deve revalidar inteiramente o SQLite pelo repla
 ## J1 D258 — opt-in de símbolos públicos sem vazamento padrão
 
 Fixtures offline D257 devem testar ausência de símbolos na saída padrão, rejeição de flag não booleana, 50 linhas ranqueadas com `rank` e referência **histórica** apenas, nenhum preço, turnover, vela, conta ou credencial, três short separados e jamais ranqueados, bytes do SQLite inalterados, `requests_attempted=0`. CI Linux/docs, Windows/offline e PAPER no SHA exato. A opção `--include-public-symbols` deve ser usada apenas no terminal owner para diligência das 31 bases sem referência no Top50 do subconjunto; não anexar saída a GitHub público, não atribuir identidade atual/Top50 global.
+
+
+## J1 D259 — negativas documentais vs identidade positiva
+
+Testes offline validam 21 IDs exatos TradFi no Top50 bruto da prova D258, 3 contratos short TradFi, data e URL oficial de cada evidência, regressão anti-bypass: negativa nunca promove allowlist cripto, base referenciada no registro antigo continua só histórica, símbolo não listado continua `identity_unresolved`, contas de categorias somam 50, digest do Top50 fechado não muda, stdout padrão não imprime contratos/preços e opt-in é explícito. A fonte documental pode ser examinada retroativamente, mas seu tempo de publicação não foi autenticado por checkpoint PIT original; `negative_evidence_pit_authenticated=false` sempre. Não deduzir disponibilidade histórica de candles a partir da data de anúncio. Gates CI Linux/docs, Windows/offline e PAPER no head exato; VPS read-only separada.
