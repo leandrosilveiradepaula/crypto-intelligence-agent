@@ -21,7 +21,9 @@ VERSION = "bybit-identity-candidate-d261-v1"
 RESEARCH_ASSEMBLED_ON_UTC_DATE = "2026-11-07"
 MAX_FRONTIER = 50
 MAX_CENSUS_MEMBERS = 5000
-_SYMBOL = re.compile(r"[A-Z0-9]{2,32}USDT\Z")
+# Same symbol domain as D256 scope: total length 5..32, USDT suffix.
+# A one-character base is valid; two-character minimum silently regressed.
+_SYMBOL = re.compile(r"[A-Z0-9]{1,28}USDT\Z")
 _CANDIDATE = re.compile(r"[a-z0-9]+:[a-z0-9][a-z0-9-]*\Z")
 _CLASSES = frozenset({
     "crypto_token_candidate_unverified",
