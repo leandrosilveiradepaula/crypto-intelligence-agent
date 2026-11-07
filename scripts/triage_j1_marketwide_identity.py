@@ -56,7 +56,12 @@ def _empty() -> dict[str, Any]:
     }
 
 
-def _rank_with_registry(db: sqlite3.Connection, registry_bytes: bytes) -> dict[str, Any]:
+def _rank_with_registry(
+    db: sqlite3.Connection, registry_bytes: bytes, *,
+    include_public_symbols: bool = False,
+) -> dict[str, Any]:
+    if type(include_public_symbols) is not bool:
+        raise AuditRejected("symbol_visibility_invalid")
     # Reuse D256's full SQLite replay before accessing turnover aggregates.
     proof = _replay(db)
     if proof["remaining_contracts"] != 0:
@@ -141,12 +146,20 @@ def _rank_with_registry(db: sqlite3.Connection, registry_bytes: bytes) -> dict[s
         "full_basic_contract_24h_ranking_complete": False
             if shorts else proof["full_basic_contract_24h_ranking_complete"],
     })
+    if include_public_symbols:
+        report["public_top50_complete_subset_review_only"] = [
+            {"rank": index, "symbol": symbol,
+             "archived_base_reference_present": referenced(symbol)}
+            for index, symbol in enumerate(ordered[:50], 1)
+        ]
+        report["public_short_history_contracts_review_only"] = shorts
     return report
 
 
 def triage_checkpoint(
     directory: Path, *, owner_ok: bool | None = None,
     registry_path: Path = REGISTRY_FILE,
+    include_public_symbols: bool = False,
 ) -> dict[str, Any]:
     report = _empty()
     stage = "owner_gate"
@@ -157,7 +170,8 @@ def triage_checkpoint(
     if not allowed:
         report.update(failure_stage=stage, failure_code="owner_gate_required")
         return report
-    if not isinstance(directory, Path) or not directory.is_absolute():
+    if (not isinstance(directory, Path) or not directory.is_absolute()
+            or type(include_public_symbols) is not bool):
         report.update(failure_stage=stage, failure_code="audit_configuration_invalid")
         return report
     try:
@@ -188,7 +202,10 @@ def triage_checkpoint(
                 db.execute("PRAGMA query_only=ON")
                 if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                     raise AuditRejected("sqlite_integrity_invalid")
-                report = _rank_with_registry(db, registry_bytes)
+                report = _rank_with_registry(
+                    db, registry_bytes,
+                    include_public_symbols=include_public_symbols,
+                )
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
             os.close(fd)
@@ -206,8 +223,14 @@ def triage_checkpoint(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory", type=Path, required=True)
+    parser.add_argument(
+        "--include-public-symbols", action="store_true",
+        help="Explicitly show public contract IDs for private local review only",
+    )
     args = parser.parse_args(argv)
-    report = triage_checkpoint(args.directory)
+    report = triage_checkpoint(
+        args.directory, include_public_symbols=args.include_public_symbols
+    )
     print(_stable_json(report))
     return 2 if report["status"] == "abstain" else 0
 

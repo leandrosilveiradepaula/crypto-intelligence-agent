@@ -27,3 +27,8 @@ Saída limitada a contagens, flags e hashes; acesso apenas ao mesmo SQLite priva
 4. Validar testes adversariais offline e CI Linux/docs, Windows/offline e Chrome/PAPER sobre SHA final; PR e merge sem deploy sob gates.
 
 J1 #319, #502, #429 e #2 permanecem abertas.
+
+
+## D258 — apresentação opcional de IDs públicos no terminal privado
+
+Para uma revisão orientada a fontes independentes sem voltar à Bybit, o comando pode receber `--include-public-symbols`. O default continua sem qualquer símbolo; com opt-in explícito, a saída JSON acrescenta `public_top50_complete_subset_review_only` (rank, símbolo público e presença/ausência de **referência no registro histórico**, jamais aprovação) e `public_short_history_contracts_review_only` (IDs de históricos incompletos, fora do Top50). Não contém preços, turnovers ou detalhes dos candles. A lista só deve circular no terminal privado do owner para pesquisa, não ser copiada automaticamente para issues, CI ou arquivos públicos. O Top50 é de **819 completos**, não o mercado crypto-only integral. O manifesto 52 está expirado no PIT: qualquer informação sobre status atual depende de prova externa nova, sem retrodatar identidade.

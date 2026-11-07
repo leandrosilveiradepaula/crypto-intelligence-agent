@@ -1198,3 +1198,8 @@ Prova D255 owner no SHA `cdc2a125bb224b143010044675facdbe4f8be89e`: 822/822 cont
 ## J1 D257 — fila de identidade com censo já auditado, sem GET (06/11/2026)
 
 Ponto de partida real D256 na VPS: 10 testes PASS; 822/822 contratos técnicos inspecionados, 819 históricos 24h completos, 3 short (6 velas), 19.656 candles validados, zero GET/write/ordens, hash do Top50 subset `b4e4884d28e4a4b385c94ea521201006242d449828d575a56f01cb2b70b8faaa`. A próxima revisão não consulta Bybit novamente. Nova `scripts/triage_j1_marketwide_identity.py`, teste adversarial e documento D257 com reuso de D256 e `CryptoRegistryHistory`, auditam sobreposição e fila de revisão com registro de 52 bases vencido para 06/11. Ainda não é elegibilidade contemporânea. CI/merge/prova de VPS específicas D257 são gates separados, não foram comprovados nesta nota inicial. J1 #319/#502/#429/#2 abertas.
+
+
+## J1 D258 — identificadores de prioridade somente com opt-in local (07/11/2026)
+
+VPS D257 owner: 8 testes PASS; 822 técnicos inspecionados, 819 completos, 3 curtos, 52 bases com referência histórica dentre completos, 19/50 no Top50 completo-subset e 31/50 sem referência; 767 completos ausentes do registro. Manifesto histórico com idade `682341000ms` (>7d), portanto **não elegível temporalmente**. D258 adiciona opção local `--include-public-symbols` ao CLI de triagem, desativada por padrão, para mostrar identificadores públicos e sinal de referência histórica das 50 linhas prioritárias e dos short separados, sem divulgar valores financeiros nem liberar negociação. PR/CI/merge e prova real D258 devem ser registrados separadamente. #319/#502/#429/#2 abertas.
