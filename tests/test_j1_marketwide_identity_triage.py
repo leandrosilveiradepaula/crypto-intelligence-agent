@@ -115,6 +115,57 @@ class J1D257IdentityTriageTests(unittest.TestCase):
         self.assertEqual(self.dbpath.read_bytes(), before)
         self.assertNotIn("BTCUSDT", json.dumps(result))
 
+    def test_d261_frontier_is_research_only_and_sanitized(self):
+        self.collect()
+        before = self.dbpath.read_bytes()
+        default = self.triage()
+        self.assertEqual(default["closed_research_frontier_count"], 50)
+        self.assertEqual(
+            default["closed_research_frontier_archived_reference_count"], 2
+        )
+        self.assertEqual(
+            default["closed_research_frontier_candidate_hint_count"], 0
+        )
+        self.assertEqual(
+            default["closed_research_frontier_identity_unresolved_count"], 48
+        )
+        self.assertFalse(default["candidate_research_pit_authenticated"])
+        self.assertFalse(default["candidate_venue_crosswalk_verified"])
+        self.assertFalse(default["marketwide_top50_verified"])
+        self.assertTrue(default["closed_research_frontier_not_eligible_top50"])
+        self.assertNotIn("public_research_frontier_review_only", default)
+        self.assertNotIn("BTCUSDT", json.dumps(default))
+        visible = self.triage(include_public_symbols=True)
+        rows = visible["public_research_frontier_review_only"]
+        self.assertEqual(len(rows), 50)
+        self.assertEqual([r["research_order"] for r in rows], list(range(1, 51)))
+        self.assertEqual(rows[0]["symbol"], "BTCUSDT")
+        self.assertEqual(rows[0]["identity_research_category"],
+                         "archived_crypto_reference_only")
+        self.assertIsNone(rows[0]["research_candidate_details"])
+        self.assertFalse(visible["marketwide_top50_verified"])
+        self.assertEqual(visible["requests_attempted"], 0)
+        self.assertFalse(visible["database_modified"])
+        self.assertEqual(self.dbpath.read_bytes(), before)
+
+    def test_d261_research_frontier_excludes_provider_negative_without_rank_approval(self):
+        self.collect()
+        with closing(sqlite3.connect(self.dbpath)) as db, db:
+            # Reuse the real owned synthetic database, and change only a test
+            # row's symbol by replacing unused COIN059 with a known TradFi
+            # entry; do not claim this produces a real venue capture.
+            for table in ("candles",):
+                db.execute(
+                    f"UPDATE {table} SET symbol='SOXLUSDT' WHERE symbol=?",
+                    ("COIN002USDT",)
+                )
+        # Replay rejects mismatched scope; demonstrates no silent promotion
+        # or reshuffling of foreign instruments.
+        result = self.triage(include_public_symbols=True)
+        self.assertEqual(result["status"], "abstain")
+        self.assertFalse(result["marketwide_top50_verified"])
+        self.assertNotIn("public_research_frontier_review_only", result)
+
     def test_negative_tradfi_partition_is_retrospective_only(self):
         from crypto_intelligence_agent.bybit_tradfi_negative_evidence import (
             NEGATIVE_EVIDENCE, classify_retrospective, catalog_digest,
