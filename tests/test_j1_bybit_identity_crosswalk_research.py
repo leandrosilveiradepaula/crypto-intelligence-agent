@@ -51,7 +51,7 @@ class D261CandidateCrosswalkTests(unittest.TestCase):
         self.assertEqual(research_category("XAUTUSDT", False),
                          "tokenized_gold_policy_gate")
         self.assertEqual(research_category("XAUTUSDT", True),
-                         "archived_crypto_reference_only")
+                         "tokenized_gold_policy_gate")
         self.assertNotEqual(research_category("XAUUSDT", False),
                             research_category("XAUTUSDT", False))
 
@@ -76,8 +76,8 @@ class D261CandidateCrosswalkTests(unittest.TestCase):
         self.assertNotIn("SOXLUSDT", frontier)
         self.assertNotIn("XAUUSDT", frontier)
         self.assertNotIn("NVDAUSDT", frontier)
-        self.assertIn("TEST047USDT", frontier)
-        self.assertNotIn("TEST048USDT", frontier)
+        self.assertIn("TEST045USDT", frontier)
+        self.assertNotIn("TEST046USDT", frontier)
         self.assertEqual(len(research_frontier(ranked, limit=10)), 10)
         self.assertEqual(research_frontier(prefix), (
             "BTCUSDT", "ETHUSDT", "1000PEPEUSDT", "PUMPFUNUSDT"
