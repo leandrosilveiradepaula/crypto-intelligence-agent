@@ -1213,3 +1213,8 @@ D258 owner VPS confirmou 819 completos/3 curtos, 11 testes PASS, top50 19 refer�
 ## J1 D261 — fronteira offline de revisão de identidade (07/11/2026)
 
 Prova VPS real D259: 14 testes OK, 822 inspecionados, 819 séries 24h, 3 short, Top50 bruto 21 TradFi/19 registros antigos/10 não resolvidos, zero GET/ordem/escrita e digest `b4e4884d28e4a4b385c94ea521201006242d449828d575a56f01cb2b70b8faaa`. D261 cria catálogo hipotético de identidade (10 símbolos) com colisões, aliases, metais tokenizados e URLs de pesquisa, sem afirmar verificação. Triagem D257 reusa o SQLite existente para preparar uma **fronteira pesquisável, não negociável**, de até 50 séries completas fora do conjunto de negativos documentados, que não é exaustivo. Contagem e digest sanitizados; rank e nomes só sob opt-in. Nenhum reset de censo ou mudanças de sistema. Head/CI/PR/merge D261 exigem prova específica, não inferir de commits antes da verificação. J1 #319/#502/#429/#2 continuam abertas.
+
+
+## J1 D262 — regressão de contrato de símbolo diagnosticada (07/11/2026)
+
+Prova D261 na VPS: 6 testes de crosswalk e 16 de triagem PASS, mas CLI real `abstain/sqlite_replay/registry_or_storage_validation_invalid` com 0 GET, 0 DB write e 0 ordens. O problema provável é divergência entre contrato de base unitária D256 e regex D261, não corrupção comprovada dos dados. D262 corrige regra da fronteira (base 1..28, sufixo USDT) e adiciona testes SQLite completos para `XUSDT` fora do Top50, limites 32 total e sanitização de falha. **Nenhuma evidência nova da VPS ainda**: manter D261 sem aceite operacional até rerun. PR/CI/merge sujeitos a gates; #319/#502/#429/#2 permanecem abertas.
