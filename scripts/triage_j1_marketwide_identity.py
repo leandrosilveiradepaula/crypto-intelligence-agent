@@ -25,6 +25,9 @@ from crypto_intelligence_agent.crypto_asset_registry import (
     CryptoRegistryHistory, load_registry_json,
 )
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.bybit_identity_crosswalk_research import (
+    research_category, research_details, research_frontier, research_provenance,
+)
 from crypto_intelligence_agent.bybit_tradfi_negative_evidence import (
     VERSION as NEGATIVE_EVIDENCE_VERSION, NEGATIVE_EVIDENCE,
     catalog_digest, classify_retrospective, evidence_for,
@@ -126,8 +129,29 @@ def _rank_with_registry(
         sym for sym in raw_top50
         if sym not in NEGATIVE_EVIDENCE and not referenced(sym)
     ]
+    # A research frontier of 50 after known negatives is NOT an eligible rank.
+    # It remains subject to missing/unknown market-wide negatives and IDs.
+    frontier = research_frontier(tuple(ordered))
+    frontier_archived = sum(referenced(s) for s in frontier)
+    frontier_hypotheses = sum(
+        research_category(s, referenced(s)) in (
+            "crypto_token_candidate_unverified", "ticker_collision_unresolved",
+            "tokenized_gold_policy_gate"
+        ) for s in frontier
+    )
     report = _empty()
+    report.update(research_provenance())
     report.update({
+        "closed_research_frontier_count": len(frontier),
+        "closed_research_frontier_archived_reference_count": frontier_archived,
+        "closed_research_frontier_candidate_hint_count": frontier_hypotheses,
+        "closed_research_frontier_identity_unresolved_count": (
+            len(frontier) - frontier_archived - frontier_hypotheses
+        ),
+        "closed_research_frontier_not_eligible_top50": True,
+        "closed_research_frontier_digest_sha256": _digest([
+            [sym, str(totals[sym])] for sym in frontier
+        ]),
         "negative_tradfi_catalog_version": NEGATIVE_EVIDENCE_VERSION,
         "negative_tradfi_catalog_sha256": catalog_digest(),
         "raw_top50_bybit_tradfi_documented_count": len(negative_top50),
@@ -181,6 +205,14 @@ def _rank_with_registry(
              ),
              "bybit_negative_evidence": evidence_for(symbol)}
             for index, symbol in enumerate(ordered[:50], 1)
+        ]
+        report["public_research_frontier_review_only"] = [
+            {"research_order": idx, "symbol": sym,
+             "identity_research_category": research_category(
+                 sym, referenced(sym)
+             ),
+             "research_candidate_details": research_details(sym)}
+            for idx, sym in enumerate(frontier, 1)
         ]
         report["public_short_history_contracts_review_only"] = shorts
         report["public_short_history_research_category_only"] = [
