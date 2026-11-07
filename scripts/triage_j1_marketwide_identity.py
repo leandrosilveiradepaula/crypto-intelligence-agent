@@ -132,13 +132,16 @@ def _rank_with_registry(
     # A research frontier of 50 after known negatives is NOT an eligible rank.
     # It remains subject to missing/unknown market-wide negatives and IDs.
     frontier = research_frontier(tuple(ordered))
-    frontier_archived = sum(referenced(s) for s in frontier)
-    frontier_hypotheses = sum(
-        research_category(s, referenced(s)) in (
-            "crypto_token_candidate_unverified", "ticker_collision_unresolved",
-            "tokenized_gold_policy_gate"
-        ) for s in frontier
+    frontier_categories = [
+        research_category(s, referenced(s)) for s in frontier
+    ]
+    frontier_archived = frontier_categories.count(
+        "archived_crypto_reference_only"
     )
+    frontier_hypotheses = sum(category in (
+        "crypto_token_candidate_unverified", "ticker_collision_unresolved",
+        "tokenized_gold_policy_gate"
+    ) for category in frontier_categories)
     report = _empty()
     report.update(research_provenance())
     report.update({
