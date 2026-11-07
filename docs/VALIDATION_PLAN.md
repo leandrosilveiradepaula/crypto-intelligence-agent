@@ -991,3 +991,8 @@ Testar prova read-only sobre SQLite real de fixtures: scope serializado e finger
 ## D257 — regressão de sobreposição histórica sem identidade cripto fabricada
 
 Comparador de prioridade offline deve revalidar inteiramente o SQLite pelo replay D256, ordenar 24 candles fechados por turnover USDT Decimal sem ticker móvel, excluir da fila ranqueada os três short sem imputar volume e comparar bases com o manifesto versionado `expanded-52` de 29/10. O limite PIT de sete dias bloqueia promoção em 06/11; manifestos futuros não valem retroativamente. Fixtures sintéticas de 60 contratos e 2 bases referenciadas testam determinismo de ranking/digest, corruptelas, estado incompleto, registros expirados/futuros, gate de owner e arquivos sem escrita. Mesmo fixture de registro fresco não pode habilitar `marketwide_top50_verified`, identidade atual ou ordem. Exigir CI Linux/docs, Windows/offline e Chrome/PAPER SHA exato. Prova owner-only VPS read-only é gate separado.
+
+
+## J1 D258 — opt-in de símbolos públicos sem vazamento padrão
+
+Fixtures offline D257 devem testar ausência de símbolos na saída padrão, rejeição de flag não booleana, 50 linhas ranqueadas com `rank` e referência **histórica** apenas, nenhum preço, turnover, vela, conta ou credencial, três short separados e jamais ranqueados, bytes do SQLite inalterados, `requests_attempted=0`. CI Linux/docs, Windows/offline e PAPER no SHA exato. A opção `--include-public-symbols` deve ser usada apenas no terminal owner para diligência das 31 bases sem referência no Top50 do subconjunto; não anexar saída a GitHub público, não atribuir identidade atual/Top50 global.
