@@ -184,9 +184,14 @@ def research_category(symbol: str, archived_base_present: bool) -> str:
         raise ValueError("research identity category input invalid")
     if symbol in NEGATIVE_EVIDENCE:
         return "bybit_tradfi_documented_retrospective"
+    record = CANDIDATE_CROSSWALK.get(symbol)
+    # Product class and ticker collision veto precede stale base labels.
+    if record is not None and record.research_class in (
+        "tokenized_gold_policy_gate", "ticker_collision_unresolved"
+    ):
+        return record.research_class
     if archived_base_present:
         return "archived_crypto_reference_only"
-    record = CANDIDATE_CROSSWALK.get(symbol)
     return record.research_class if record else "identity_unresolved"
 
 
