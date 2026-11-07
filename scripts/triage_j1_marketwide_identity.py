@@ -131,10 +131,15 @@ def _rank_with_registry(
     ]
     # A research frontier of 50 after known negatives is NOT an eligible rank.
     # It remains subject to missing/unknown market-wide negatives and IDs.
-    frontier = research_frontier(tuple(ordered))
-    frontier_categories = [
-        research_category(s, referenced(s)) for s in frontier
-    ]
+    try:
+        frontier = research_frontier(tuple(ordered))
+        frontier_categories = [
+            research_category(s, referenced(s)) for s in frontier
+        ]
+    except ValueError:
+        # Do not mislabel a later selector-contract regression as bad SQLite.
+        # Never expose the offending provider symbol in the report.
+        raise AuditRejected("frontier_symbol_contract_invalid") from None
     frontier_archived = frontier_categories.count(
         "archived_crypto_reference_only"
     )
