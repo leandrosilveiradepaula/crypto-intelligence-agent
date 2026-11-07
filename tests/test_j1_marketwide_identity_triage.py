@@ -115,6 +115,49 @@ class J1D257IdentityTriageTests(unittest.TestCase):
         self.assertEqual(self.dbpath.read_bytes(), before)
         self.assertNotIn("BTCUSDT", json.dumps(result))
 
+    def test_opt_in_public_contract_identifiers_without_financial_values(self):
+        self.collect()
+        default = self.triage()
+        self.assertNotIn("public_top50_complete_subset_review_only", default)
+        self.assertNotIn("public_short_history_contracts_review_only", default)
+
+        before = self.dbpath.read_bytes()
+        visible = self.triage(include_public_symbols=True)
+        ranked = visible["public_top50_complete_subset_review_only"]
+        self.assertEqual(len(ranked), 50)
+        self.assertEqual([row["rank"] for row in ranked], list(range(1, 51)))
+        self.assertEqual(
+            sum(row["archived_base_reference_present"] for row in ranked), 2
+        )
+        self.assertEqual(
+            sum(not row["archived_base_reference_present"] for row in ranked), 48
+        )
+        self.assertEqual(visible["public_short_history_contracts_review_only"], [])
+        self.assertEqual(visible["requests_attempted"], 0)
+        self.assertFalse(visible["network_accessed"])
+        self.assertFalse(visible["database_modified"])
+        self.assertFalse(visible["marketwide_top50_verified"])
+        self.assertNotIn("quote_turnover", json.dumps(visible))
+        self.assertEqual(self.dbpath.read_bytes(), before)
+
+    def test_public_contract_ids_require_explicit_boolean(self):
+        self.collect(size=1)
+        denied = self.triage(include_public_symbols="yes")
+        self.assertEqual(denied["status"], "abstain")
+        self.assertEqual(denied["failure_code"], "audit_configuration_invalid")
+        self.assertNotIn("public_top50_complete_subset_review_only", denied)
+
+    def test_opt_in_short_history_ids_not_treated_as_ranked(self):
+        self.collect(short=3)
+        visible = self.triage(include_public_symbols=True)
+        ranked = visible["public_top50_complete_subset_review_only"]
+        short = visible["public_short_history_contracts_review_only"]
+        self.assertEqual(len(ranked), 50)
+        self.assertEqual(len(short), 3)
+        self.assertFalse(set(short) & {r["symbol"] for r in ranked})
+        self.assertEqual(visible["incomplete_24h_contracts"], 3)
+        self.assertFalse(visible["full_basic_contract_24h_ranking_complete"])
+
     def test_short_three_are_preserved_and_not_ranked(self):
         collected = self.collect(short=3)
         report = self.triage()
