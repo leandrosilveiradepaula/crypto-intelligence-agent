@@ -83,6 +83,27 @@ class D261CandidateCrosswalkTests(unittest.TestCase):
             "BTCUSDT", "ETHUSDT", "1000PEPEUSDT", "PUMPFUNUSDT"
         ))
 
+    def test_one_character_base_matches_d256_scope_and_does_not_approve_it(self):
+        # D256 accepts 5..32 total characters; D261 previously required
+        # >= 2 base chars and crashed on this valid shape at rank 51+.
+        self.assertEqual(research_frontier(("XUSDT",)), ("XUSDT",))
+        self.assertEqual(research_frontier(("1USDT",)), ("1USDT",))
+        self.assertEqual(research_category("XUSDT", False),
+                         "identity_unresolved")
+        self.assertIsNone(research_details("XUSDT"))
+        self.assertEqual(len(research_frontier(
+            tuple(f"A{i:03d}USDT" for i in range(60)) + ("XUSDT",)
+        )), 50)
+        self.assertEqual(research_frontier(("A"*28 + "USDT",)),
+                         ("A"*28 + "USDT",))
+        for symbol in ("USDT", "A"*29 + "USDT", "A-USDT",
+                       "aUSDT", "XUSDC"):
+            with self.assertRaises(ValueError):
+                research_frontier((symbol,))
+        self.assertFalse(research_provenance()[
+            "candidate_venue_crosswalk_verified"
+        ])
+
     def test_fail_closed_malformed_inputs_or_duplicated_candidates(self):
         for ranked in (
             (), ("BTCUSDT", "BTCUSDT"), ("BTCUSDT", "bad"),
