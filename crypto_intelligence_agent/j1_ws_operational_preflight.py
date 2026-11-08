@@ -79,6 +79,11 @@ def _parse_systemd(raw: str) -> dict[str, str]:
     if set(fields) != set(PROPERTIES) or fields["Id"] != UNIT:
         raise ValueError("systemd_unit_mismatch")
     for key, options in _ALLOWED_STATES.items():
+        # systemctl legitimately returns an empty UnitFileState for a unit
+        # that has never been installed; do not misclassify it as malformed.
+        if (key == "UnitFileState" and fields[key] == ""
+                and fields["LoadState"] == "not-found"):
+            continue
         if fields[key] not in options:
             raise ValueError("systemd_state_invalid")
     if fields["User"] not in ("", USER):
