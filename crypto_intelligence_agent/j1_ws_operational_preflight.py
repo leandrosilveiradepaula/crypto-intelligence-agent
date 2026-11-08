@@ -175,7 +175,7 @@ def observe_ws_operational_preflight(
     owner = (os.name == "posix" and hasattr(os, "getuid")
              and os.getuid() == os.geteuid() and os.geteuid() != 0) if owner_ok is None else owner_ok
     if (allow_private_readonly_preflight is not True or owner is not True
-            or type(directory) is not Path or not directory.is_absolute()
+            or not isinstance(directory, Path) or not directory.is_absolute()
             or type(owner_ok) not in (bool, type(None))):
         return result
     if now_ms is None:
