@@ -193,11 +193,15 @@ def research_category(symbol: str, archived_base_present: bool) -> str:
         "tokenized_gold_policy_gate", "ticker_collision_unresolved"
     ):
         return record.research_class
+    lead = RESEARCH_LEADS.get(symbol)
+    # The stale base registry cannot resolve a newly discovered ticker
+    # collision. Negative/class vetoes always precede archived references.
+    if lead is not None and lead.category == "ticker_collision_unresolved":
+        return lead.category
     if archived_base_present:
         return "archived_crypto_reference_only"
     if record:
         return record.research_class
-    lead = RESEARCH_LEADS.get(symbol)
     return lead.category if lead else "identity_unresolved"
 
 
