@@ -66,6 +66,8 @@ class FakeClient:
 
 class D263MetadataNegativeTests(unittest.TestCase):
     def setUp(self):
+        if os.name != "posix":
+            self.skipTest("private SQLite and flock require POSIX owner")
         self.temp = TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name) / "research"
@@ -180,6 +182,38 @@ class D263MetadataNegativeTests(unittest.TestCase):
         self.assertEqual(report["failure_stage"], "network")
         self.assertNotIn("PRIVATE_SYMBOL", json.dumps(report))
         self.assertFalse(report["marketwide_top50_verified"])
+
+
+class D263MetadataParsePortableTests(unittest.TestCase):
+    """No owner paths, SQLite, fcntl or HTTP: portable negative classifier."""
+
+    def test_negative_only_and_no_crypto_approval_cross_platform(self):
+        payload = provider_catalog()
+        report = _classify(
+            payload, frozen_members=frozenset(MEMBERS),
+            captured_at_ms=NOW - 2000, received_at_ms=NOW,
+        )
+        self.assertEqual(report["current_provider_tradfi_indicator_count"], 2)
+        self.assertEqual(report["frozen_overlap_documented_tradfi_negative_count"], 2)
+        self.assertFalse(report["provider_negative_is_crypto_allowlist"])
+        self.assertFalse(report["metadata_pit_valid_for_frozen_window"])
+        self.assertFalse(report["marketwide_top50_verified"])
+
+    def test_duplicate_cursor_and_invalid_provider_metadata_cross_platform(self):
+        for mutation in (
+            lambda p: p["result"].update(nextPageCursor="next"),
+            lambda p: p["result"]["list"].append(p["result"]["list"][0]),
+            lambda p: p["result"]["list"][0].update(marketRegion="BAD"),
+            lambda p: p["result"]["list"][0].update(underlyingTicker=123),
+            lambda p: p.update(retCode=False),
+        ):
+            payload = deepcopy(provider_catalog())
+            mutation(payload)
+            with self.assertRaises(ValueError):
+                _classify(
+                    payload, frozen_members=frozenset(MEMBERS),
+                    captured_at_ms=NOW - 2000, received_at_ms=NOW,
+                )
 
 
 if __name__ == "__main__":
