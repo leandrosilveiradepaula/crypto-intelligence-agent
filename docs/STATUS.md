@@ -1233,3 +1233,8 @@ D263 owner PASS (8/8): 297/822 com indicadores atuais TradFi, 525 sem indicaçã
 ## J1/D265 — descoberta de Brent Oil e revisão de dez nomes (08/11/2026 UTC)
 
 Owner D264 repetiu replay offline exibindo 10 símbolos públicos, não valores de candles: BZ, WLFI, CAP, CYBER, CLANKER, XPL, FARTCOIN, DGAI, PONS, ASTER. D265 encontrou anúncio oficial da Bybit `BZUSDT` como Brent Oil, mesmo sem sinal `marketRegion`/`underlyingTicker` na captura D264. Filtro negativo documental cresce para 25; sete pistas de token, um caso CLANKER colidido e DGAI sem ID. A classificação segue `research-only`, não Top50 elegível; #517/#319/#429/#2 continuam abertas. O código/CI/merge e replay privado D265 exigem provas distintas.
+
+
+## J1/D266 — validador offline de evidências sem promoção (08/11/2026 UTC)
+
+D265 VPS operacional: 30 testes PASS; 297 vetos TradFi atuais + BZ Brent Oil documental = 298 dos 819 completos excluídos somente da pesquisa; fronteira 50 = 30 referências antigas, 18 hipóteses, 2 desconhecidas, raw digest e snapshot D264 inalterados. D266 fornece verificador offline de dossiês de contratos, com checks causais de URLs independentes, segurança, SHA256 e vetos; `identity_approved=false`, `eligible_top50=false` invariantes. Testes, docs e PR têm gates próprios; sem evidências reais adicionais de token/mint, nenhum dos 50 foi certificado, nem coleta 24/7 homologada.
