@@ -139,7 +139,8 @@ def _classify(payload: dict, *,
 def audit_current_metadata(*, directory: Path, client: Any,
                            now_ms: Any, allow_public_network: bool = False,
                            confirm_region_and_personal_research: bool = False,
-                           owner_ok: bool | None = None) -> dict[str, Any]:
+                           owner_ok: bool | None = None,
+                           save_private_snapshot: bool = False) -> dict[str, Any]:
     report = _default()
     stage = "owner_gate"
     allowed = (os.name == "posix" and fcntl is not None
@@ -150,7 +151,8 @@ def audit_current_metadata(*, directory: Path, client: Any,
         report["failure_code"] = "owner_opt_in_required"
         return report
     if (not isinstance(directory, Path) or not directory.is_absolute()
-            or not callable(now_ms) or client is None):
+            or not callable(now_ms) or client is None
+            or type(save_private_snapshot) is not bool):
         report["failure_code"] = "configuration_invalid"
         return report
     try:
@@ -162,6 +164,11 @@ def audit_current_metadata(*, directory: Path, client: Any,
         _strict_owner(lock, directory=False)
         if not 0 < database.stat().st_size <= MAX_DB_BYTES:
             raise AuditRejected("database_size_invalid")
+        if save_private_snapshot:
+            from scripts.j1_d264_private_metadata_snapshot import private_path
+            target = private_path(directory)
+            if target.exists() or target.is_symlink():
+                raise AuditRejected("d264_snapshot_already_exists")
         lock_fd = os.open(lock, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         try:
             try:
@@ -190,6 +197,19 @@ def audit_current_metadata(*, directory: Path, client: Any,
             stage = "metadata_validation"
             counts = _classify(payload, frozen_members=members,
                                captured_at_ms=start, received_at_ms=end)
+            if save_private_snapshot:
+                from scripts.j1_d264_private_metadata_snapshot import (
+                    build_snapshot, save_new_snapshot,
+                )
+                snapshot = build_snapshot(
+                    payload, frozen_members=members,
+                    frozen_end_ms=proof["capture_window_end_ms"],
+                    captured_at_ms=start, received_at_ms=end,
+                )
+                stage = "snapshot_write"
+                save_new_snapshot(directory, snapshot)
+                report["private_snapshot_created"] = True
+                report["private_snapshot_sha256"] = snapshot["sha256"]
             report.update(counts)
             report["status"] = "current_provider_negative_survey_only"
             report["frozen_capture_window_end_ms"] = proof["capture_window_end_ms"]
@@ -216,6 +236,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-public-network", action="store_true")
     parser.add_argument("--confirm-region-and-personal-research",
                         action="store_true")
+    parser.add_argument("--save-private-snapshot", action="store_true")
     args = parser.parse_args(argv)
     report = audit_current_metadata(
         directory=args.directory, client=BoundedBybitPublicClient(),
@@ -224,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         confirm_region_and_personal_research=(
             args.confirm_region_and_personal_research
         ),
+        save_private_snapshot=args.save_private_snapshot,
     )
     print(_stable_json(report))
     return 0 if report["status"] == "current_provider_negative_survey_only" else 2

@@ -1223,3 +1223,8 @@ Prova D261 na VPS: 6 testes de crosswalk e 16 de triagem PASS, mas CLI real `abs
 ## D263 — triagem negativa de metadados atuais, com J1 ainda aberta (08/11/2026 UTC)
 
 #502 encerrada como **survey básico + auditoria** com provas owner de 822/822 inspecionados, 819 completos e 3 short documentados, 19.656 velas completas e 25 testes D262 PASS na VPS; não homologou Top50. Issues #319/#429/#2 continuam abertas. Nova auditoria D263 read-only compara catálogo contemporâneo Bybit de instrumentos lineares com membros do SQLite congelado, classifica apenas indícios TradFi atuais de `marketRegion`/`underlyingTicker`, 1 GET owner opt-in sem rebaixar freios de rede, logs só contagens e timestamps. Qualquer falta de campos, paginação ou temporalidade não autentica identidade cripto; CI e prova owner D263 são gates separados, ainda não comprovados no momento deste registro.
+
+
+## D264 — sidecar de indicadores contemporâneos sem rebaixar gates (08/11/2026 UTC)
+
+D263 owner PASS (8/8): 297/822 com indicadores atuais TradFi, 525 sem indicação e **não cripto aprovados**, 24 negativos D259 documentados (3 sem indicação). D264 acrescenta opção privada explícita para persistir apenas a lista atual dos indicadores em artefato imutável, novo GET owner-only se autorizado, com replay offline read-only do censo 819 completos e pesquisa de 50 após overlays contemporâneos. A execução real D264 e classificação independente PIT não estão provadas nesta nota; CI/PR/merge separados. #502 CLOSED somente censo técnico; #319/#429/#2 OPEN. Detalhes em `docs/J1_D264_PRIVATE_CURRENT_NEGATIVE_SNAPSHOT.md`.
