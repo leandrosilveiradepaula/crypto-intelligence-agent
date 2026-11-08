@@ -327,3 +327,20 @@ def replay_private_snapshot(directory: Path, *,
     except (OSError, sqlite3.Error, ValueError, TypeError, OverflowError):
         out["failure_code"] = "d264_storage_or_validation_invalid"
     return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--directory", type=Path, required=True)
+    parser.add_argument("--include-private-symbols", action="store_true")
+    args = parser.parse_args(argv)
+    result = replay_private_snapshot(
+        args.directory, include_private_symbols=args.include_private_symbols,
+    )
+    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    return 0 if result["status"] == "retrospective_negative_overlay_research_only" else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
