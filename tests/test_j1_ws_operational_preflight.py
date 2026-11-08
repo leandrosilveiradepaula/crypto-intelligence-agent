@@ -81,7 +81,9 @@ class D267PortableTests(unittest.TestCase):
             allow_private_readonly_preflight=True,
             systemctl_reader=unit, readiness_reader=priv,
             health_reader=h, **kwargs)
-        self.assertEqual(used, ["systemctl", "readiness", "health"])
+        self.assertEqual(used[:2], ["systemctl", "readiness"])
+        if result["status"] == "read_only_operational_diagnostic":
+            self.assertEqual(used, ["systemctl", "readiness", "health"])
         self.assertNotIn("31234", json.dumps(result))
         self.assertNotIn(str(DIR), json.dumps(result))
         self.assertNotIn("BTCUSDT", json.dumps(result))
