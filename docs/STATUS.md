@@ -1238,3 +1238,8 @@ Owner D264 repetiu replay offline exibindo 10 símbolos públicos, não valores 
 ## J1/D266 — validador offline de evidências sem promoção (08/11/2026 UTC)
 
 D265 VPS operacional: 30 testes PASS; 297 vetos TradFi atuais + BZ Brent Oil documental = 298 dos 819 completos excluídos somente da pesquisa; fronteira 50 = 30 referências antigas, 18 hipóteses, 2 desconhecidas, raw digest e snapshot D264 inalterados. D266 fornece verificador offline de dossiês de contratos, com checks causais de URLs independentes, segurança, SHA256 e vetos; `identity_approved=false`, `eligible_top50=false` invariantes. Testes, docs e PR têm gates próprios; sem evidências reais adicionais de token/mint, nenhum dos 50 foi certificado, nem coleta 24/7 homologada.
+
+
+## J1 OPS/D267 — pré-voo read-only do serviço WS (#521)
+
+D265 owner aprovado com 30 testes, 819 históricos, 298 vetos de pesquisa, 50 fronteira (30 referências antigas + 18 hipóteses + 2 desconhecidos). D266 PR #520 já merged/CI completa no SHA `203758c563ac59b51ad484b5e6533daae6ee8491`, entrega validador offline de dossiês. D267 #521 é bloco paralelo em #429: diagnóstico único do status systemd, janela privada WS e último health, sem ativação ou GET. Main preflight SHA `203758c563ac59b51ad484b5e6533daae6ee8491`; validar PR/CI/merge e VPS antes de afirmar qualquer continuidade. #319/#429/#2 abertas. Nenhum sistema contínuo ativado por esta mudança.
