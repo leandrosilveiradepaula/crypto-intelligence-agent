@@ -1218,3 +1218,8 @@ Prova VPS real D259: 14 testes OK, 822 inspecionados, 819 séries 24h, 3 short, 
 ## J1 D262 — regressão de contrato de símbolo diagnosticada (07/11/2026)
 
 Prova D261 na VPS: 6 testes de crosswalk e 16 de triagem PASS, mas CLI real `abstain/sqlite_replay/registry_or_storage_validation_invalid` com 0 GET, 0 DB write e 0 ordens. O problema provável é divergência entre contrato de base unitária D256 e regex D261, não corrupção comprovada dos dados. D262 corrige regra da fronteira (base 1..28, sufixo USDT) e adiciona testes SQLite completos para `XUSDT` fora do Top50, limites 32 total e sanitização de falha. **Nenhuma evidência nova da VPS ainda**: manter D261 sem aceite operacional até rerun. PR/CI/merge sujeitos a gates; #319/#502/#429/#2 permanecem abertas.
+
+
+## D263 — triagem negativa de metadados atuais, com J1 ainda aberta (08/11/2026 UTC)
+
+#502 encerrada como **survey básico + auditoria** com provas owner de 822/822 inspecionados, 819 completos e 3 short documentados, 19.656 velas completas e 25 testes D262 PASS na VPS; não homologou Top50. Issues #319/#429/#2 continuam abertas. Nova auditoria D263 read-only compara catálogo contemporâneo Bybit de instrumentos lineares com membros do SQLite congelado, classifica apenas indícios TradFi atuais de `marketRegion`/`underlyingTicker`, 1 GET owner opt-in sem rebaixar freios de rede, logs só contagens e timestamps. Qualquer falta de campos, paginação ou temporalidade não autentica identidade cripto; CI e prova owner D263 são gates separados, ainda não comprovados no momento deste registro.
