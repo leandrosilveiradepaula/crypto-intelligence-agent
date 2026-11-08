@@ -1026,3 +1026,8 @@ Validar no POSIX: replay D256 antes de nova chamada, owner 0700/0600, escrita no
 ## J1/D265 — BZ Brent Oil escapa a indicador, mas não à negativa documental
 
 Validar regressão de `BZUSDT` no catálogo D259 (anúncio oficial de 13/05/2026, classe `commodity_brent_oil_bybit_documented`), prevalência sobre base de arquivo antigo, ausência de BZ em fronteira de pesquisa D261 e overlay D264, sem modificar D256 ou hash do ranking bruto. Testar nove símbolos públicos owner com IDs externos hipotéticos, `CLANKERUSDT` colidido por dois tokens Base vs Solana, `DGAIUSDT` explicitamente sem prova, pistas positivas sem `identity_approval` e sem autenticação PIT/contrato. Testar inputs malformados e links inseguro. CI Linux/docs Windows/offline PAPER no SHA exato e prova VPS posterior *apenas replay sem rede*. Nenhuma identidade atual certificada, não promover Top50 ou habilitar ordens.
+
+
+## J1/D266 — validadores de dossiê não substituem autenticação PIT
+
+Validar schema/bytes/sha256, URLs HTTPS sem credencial/porta/query, duas origens únicas por publisher e domínio raiz, observação/revisão anteriores a `decision_at_ms`, valid_from/valid_to e classe do ativo; rejeitar BZ documental, sinal atual TradFi, CLANKER/LIT/ARIA/BIRB colididos, XAUT RWA, fontes duplicadas, datas pós-corte, arquivo adulterado e entrada malformada. Testes de aliases 1000PEPE/PUMPFUN garantem ausência de aprovação automática. O máximo resultado `research_candidate_only` permite revisão manual, não identidade autenticada, nem 50 cripto elegíveis, nem ordens. CI 3 gates exatos, sem rede/custos/alteração de banco e sidecar, antes de merge; #517/#319/#429 ficam abertas.
