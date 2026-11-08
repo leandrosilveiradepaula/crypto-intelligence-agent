@@ -115,6 +115,67 @@ class J1D257IdentityTriageTests(unittest.TestCase):
         self.assertEqual(self.dbpath.read_bytes(), before)
         self.assertNotIn("BTCUSDT", json.dumps(result))
 
+    def test_d262_owner_sqlite_replay_accepts_one_char_base_beyond_raw_top50(self):
+        # The D256 collector/scope accepts one-character bases; simulate
+        # their legitimate presence outside Top50 without changing the
+        # original real owner's private DB, provider API or ranking.
+        class OneCharClient(FakeClient):
+            def get(self, url):
+                parsed = urlsplit(url)
+                if parsed.path.endswith("instruments-info"):
+                    raw, payload = super().get(url)
+                    last = next(
+                        row for row in payload["result"]["list"]
+                        if row["symbol"] == "COIN057USDT"
+                    )
+                    last["symbol"] = "XUSDT"
+                    last["baseCoin"] = "X"
+                    return json.dumps(payload).encode("ascii"), payload
+                if parse_qs(parsed.query).get("symbol") == ["XUSDT"]:
+                    raw, payload = super().get(
+                        url.replace("XUSDT", "COIN057USDT")
+                    )
+                    payload["result"]["symbol"] = "XUSDT"
+                    return json.dumps(payload).encode("ascii"), payload
+                return super().get(url)
+
+        collected = run_census(
+            directory=self.path, client=OneCharClient(),
+            now_ms=lambda: NOW, max_contracts=60, owner_ok=True,
+            allow_public_network=True, allow_private_storage=True,
+            confirm_region_and_personal_research=True,
+        )
+        before = self.dbpath.read_bytes()
+        self.assertEqual(collected["inspected_contracts"], 60)
+        report = self.triage()
+        self.assertEqual(report["status"],
+                         "identity_review_queue_stale_registry_no_go")
+        self.assertEqual(report["inspected_contracts"], 60)
+        self.assertEqual(report["closed_research_frontier_count"], 50)
+        self.assertEqual(report["closed_research_frontier_identity_unresolved_count"],
+                         48)
+        self.assertEqual(
+            report["closed_top50_subset_digest_sha256"],
+            collected["top50_complete_subset_digest_sha256"],
+        )
+        self.assertNotIn("XUSDT", json.dumps(report))
+        self.assertFalse(report["marketwide_top50_verified"])
+        self.assertFalse(report["database_modified"])
+        self.assertEqual(self.dbpath.read_bytes(), before)
+
+    def test_d262_frontier_contract_errors_are_sanitized(self):
+        from unittest.mock import patch
+        self.collect()
+        with patch("scripts.triage_j1_marketwide_identity.research_frontier",
+                   side_effect=ValueError("private_symbol_leak")):
+            report = self.triage()
+        self.assertEqual(report["status"], "abstain")
+        self.assertEqual(report["failure_stage"], "sqlite_replay")
+        self.assertEqual(report["failure_code"], "frontier_symbol_contract_invalid")
+        self.assertNotIn("private_symbol_leak", json.dumps(report))
+        self.assertFalse(report["marketwide_top50_verified"])
+        self.assertEqual(report["requests_attempted"], 0)
+
     def test_d261_frontier_is_research_only_and_sanitized(self):
         self.collect()
         before = self.dbpath.read_bytes()
