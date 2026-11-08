@@ -17,7 +17,7 @@ from crypto_intelligence_agent.j1_ws_operational_preflight import (
 from scripts.read_j1_ws_operational_preflight import main
 
 NOW = 1794103607305
-DIR = Path("/tmp/j1-private-owner")
+DIR = Path(os.path.abspath("j1-private-owner-fixture"))
 BASE = {
     "Id": UNIT,
     "LoadState": "loaded",
