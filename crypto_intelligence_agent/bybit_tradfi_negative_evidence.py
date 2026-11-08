@@ -33,6 +33,11 @@ FN = (
     "https://announcements.bybit.com/en/article/"
     "new-listing-listing-of-fnusdt-on-bybit-tradfi-perpetual-on-nov-6-2026-11-00am-utc--artff454659fb47/"
 )
+BRENT_BZ = (
+    "https://announcements.bybit.com/en/article/"
+    "new-listing-bzusdt-perpetual-contract-with-up-to-10x-leverage-blt847e7209dd33a69a/"
+)
+
 
 # All symbols literally listed by Bybit as TradFi in the cited document.
 # These are examples from the user's 50-member raw subset, not a complete
@@ -75,6 +80,12 @@ def _build() -> dict[str, NegativeInstrumentEvidence]:
             items[symbol] = NegativeInstrumentEvidence(
                 symbol, "tradfi_contract_bybit_documented", published, link,
             )
+    # D265: literal Bybit listing identifies BZUSDT as *Brent Oil*,
+    # not a BitZ/BZ crypto token or a Kanzhun/BZ equity.
+    items["BZUSDT"] = NegativeInstrumentEvidence(
+        "BZUSDT", "commodity_brent_oil_bybit_documented",
+        "2026-05-13", BRENT_BZ,
+    )
     for symbol, link in _SHORT.items():
         if symbol in items:
             raise ValueError("duplicate negative evidence")

@@ -231,7 +231,7 @@ class J1D257IdentityTriageTests(unittest.TestCase):
         from crypto_intelligence_agent.bybit_tradfi_negative_evidence import (
             NEGATIVE_EVIDENCE, classify_retrospective, catalog_digest,
         )
-        self.assertEqual(len(NEGATIVE_EVIDENCE), 24)
+        self.assertEqual(len(NEGATIVE_EVIDENCE), 25)
         self.assertEqual(len(catalog_digest()), 64)
         self.assertEqual(
             classify_retrospective("SOXLUSDT", False),

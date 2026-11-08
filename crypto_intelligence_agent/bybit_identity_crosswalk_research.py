@@ -16,6 +16,7 @@ from typing import Mapping
 from urllib.parse import urlsplit
 
 from .bybit_tradfi_negative_evidence import NEGATIVE_EVIDENCE
+from .bybit_identity_research_leads_d265 import RESEARCH_LEADS, lead_details
 
 VERSION = "bybit-identity-candidate-d261-v1"
 RESEARCH_ASSEMBLED_ON_UTC_DATE = "2026-11-07"
@@ -192,9 +193,16 @@ def research_category(symbol: str, archived_base_present: bool) -> str:
         "tokenized_gold_policy_gate", "ticker_collision_unresolved"
     ):
         return record.research_class
+    lead = RESEARCH_LEADS.get(symbol)
+    # The stale base registry cannot resolve a newly discovered ticker
+    # collision. Negative/class vetoes always precede archived references.
+    if lead is not None and lead.category == "ticker_collision_unresolved":
+        return lead.category
     if archived_base_present:
         return "archived_crypto_reference_only"
-    return record.research_class if record else "identity_unresolved"
+    if record:
+        return record.research_class
+    return lead.category if lead else "identity_unresolved"
 
 
 def research_details(symbol: str) -> dict | None:
@@ -203,7 +211,7 @@ def research_details(symbol: str) -> dict | None:
         raise ValueError("research details require a public Bybit symbol")
     item = CANDIDATE_CROSSWALK.get(symbol)
     if item is None:
-        return None
+        return lead_details(symbol)
     return {
         "relation_hypothesis_only": item.symbol_relation,
         "proposed_asset_refs_unverified": list(item.proposed_asset_refs),

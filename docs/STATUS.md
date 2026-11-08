@@ -1228,3 +1228,8 @@ Prova D261 na VPS: 6 testes de crosswalk e 16 de triagem PASS, mas CLI real `abs
 ## D264 — sidecar de indicadores contemporâneos sem rebaixar gates (08/11/2026 UTC)
 
 D263 owner PASS (8/8): 297/822 com indicadores atuais TradFi, 525 sem indicação e **não cripto aprovados**, 24 negativos D259 documentados (3 sem indicação). D264 acrescenta opção privada explícita para persistir apenas a lista atual dos indicadores em artefato imutável, novo GET owner-only se autorizado, com replay offline read-only do censo 819 completos e pesquisa de 50 após overlays contemporâneos. A execução real D264 e classificação independente PIT não estão provadas nesta nota; CI/PR/merge separados. #502 CLOSED somente censo técnico; #319/#429/#2 OPEN. Detalhes em `docs/J1_D264_PRIVATE_CURRENT_NEGATIVE_SNAPSHOT.md`.
+
+
+## J1/D265 — descoberta de Brent Oil e revisão de dez nomes (08/11/2026 UTC)
+
+Owner D264 repetiu replay offline exibindo 10 símbolos públicos, não valores de candles: BZ, WLFI, CAP, CYBER, CLANKER, XPL, FARTCOIN, DGAI, PONS, ASTER. D265 encontrou anúncio oficial da Bybit `BZUSDT` como Brent Oil, mesmo sem sinal `marketRegion`/`underlyingTicker` na captura D264. Filtro negativo documental cresce para 25; sete pistas de token, um caso CLANKER colidido e DGAI sem ID. A classificação segue `research-only`, não Top50 elegível; #517/#319/#429/#2 continuam abertas. O código/CI/merge e replay privado D265 exigem provas distintas.
