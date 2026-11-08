@@ -56,7 +56,7 @@ def _classify(payload: dict, *,
               captured_at_ms: int,
               received_at_ms: int) -> dict[str, Any]:
     """One entire, non-paginated response, with no symbol disclosure."""
-    if (type(payload) is not dict or payload.get("retCode") != 0
+    if (type(payload) is not dict or type(payload.get("retCode")) is not int or payload["retCode"] != 0
             or type(payload.get("result")) is not dict
             or payload["result"].get("category") != "linear"):
         raise AuditRejected("metadata_root_invalid")
