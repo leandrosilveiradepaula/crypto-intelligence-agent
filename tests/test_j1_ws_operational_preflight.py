@@ -110,7 +110,7 @@ class D267PortableTests(unittest.TestCase):
     def test_absent_unit_distinct_from_inactive(self):
         absent = self.observe(raw=systemd(
             LoadState="not-found", ActiveState="inactive", SubState="dead",
-            MainPID="0", User="", UnitFileState="disabled"))
+            MainPID="0", User="", UnitFileState=""))
         self.assertEqual(absent["operational_blocker"], "service_uninstalled")
         stopped = self.observe(raw=systemd(
             ActiveState="inactive", SubState="dead", MainPID="0"))
