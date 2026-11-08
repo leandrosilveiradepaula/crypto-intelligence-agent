@@ -14,6 +14,7 @@ from typing import Any
 from .bybit_tradfi_negative_evidence import NEGATIVE_EVIDENCE
 from .bybit_identity_crosswalk_research import research_category
 from .crypto_asset_registry import _approved_https_uri
+from .market_data import DataValidationError
 
 SCHEMA = "j1-bybit-identity-dossier-d266-v1"
 MAX_BYTES = 12_000
@@ -98,7 +99,7 @@ def _validate(d: Any) -> tuple[str, bool]:
             raise DossierRejected("dossier_evidence_invalid")
         try:
             _url, root = _approved_https_uri(row["url"])
-        except ValueError:
+        except (ValueError, DataValidationError):
             raise DossierRejected("dossier_evidence_url_invalid") from None
         if pub in publishers or root in roots:
             raise DossierRejected("dossier_source_not_independent")
