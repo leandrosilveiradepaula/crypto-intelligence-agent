@@ -1263,3 +1263,8 @@ Preflight `main=68d9d72677fd6dc11a8848d7f2b0b7c0c6cbba0e`, zero PRs abertas. Ap�
 ## J1/M2 — hardening do writer REST (09/11/2026)
 
 Issue #528; branch `work/issue-528-j1-m2-hourly-rest-safety`. Inspeção do M1 integrado detectou que o check da janela UTC no começo aceitava resposta lenta após HH:15 dentro da mesma hora. M2 adiciona guard após GET e antes de publicação, e latch de quota/integridade sob flock do escritor, com regressões de tempo fake. Este registro documenta somente código proposto; CI, revisão, merge e provas da VPS precisam ser confirmados separadamente. #429/#319/#2 abertas; não há autorização de serviço/ordens/marketwide.
+
+
+## J1/M3 — canário REST de duas horas preparado (09/11/2026)
+
+Preflight main `01bffb798737d7da8eeef1659f18f6ddc3bb8b30`, PRs abertas=0. Issue #530: orquestrador novo `scripts/run_j1_rest_twohour_canary.py`, testes fake-clock `tests/test_j1_rest_twohour_canary.py` e runbook `docs/J1_M3_REST_TWOHOUR_CANARY.md`. Duas horas UTC consecutivas N=2, base D264 somente leitura, saída separada e auditoria SQLite independente (50 velas, 2 publicações, digests e cursores); sem timer, sem GET no CI. Evidências CI, revisão e merge exigem verificação; VPS não acessada/acionada. #429/#319/#2 abertas.
