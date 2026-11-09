@@ -1243,3 +1243,8 @@ D265 VPS operacional: 30 testes PASS; 297 vetos TradFi atuais + BZ Brent Oil doc
 ## J1 OPS/D267 — pré-voo read-only do serviço WS (#521)
 
 D265 owner aprovado com 30 testes, 819 históricos, 298 vetos de pesquisa, 50 fronteira (30 referências antigas + 18 hipóteses + 2 desconhecidos). D266 PR #520 já merged/CI completa no SHA `203758c563ac59b51ad484b5e6533daae6ee8491`, entrega validador offline de dossiês. D267 #521 é bloco paralelo em #429: diagnóstico único do status systemd, janela privada WS e último health, sem ativação ou GET. Main preflight SHA `203758c563ac59b51ad484b5e6533daae6ee8491`; validar PR/CI/merge e VPS antes de afirmar qualquer continuidade. #319/#429/#2 abertas. Nenhum sistema contínuo ativado por esta mudança.
+
+
+## D268 — pré-voo de instalação WS sem deploy (09/11/2026)
+
+Prova D267 VPS: 9 PASS, unidade `cia-j1-ws-owner.service` not-found/inactive, nenhum `ws-confirmed.sqlite` na árvore pesquisada, 0 requests/ordens/DB modified; #521 CLOSED, #429 OPEN. D268 cria ferramenta de validação POSIX owner-only do template/off-by-default e da pasta privada planejada, sem instalar unidade, criar banco/diretório ou emitir WS/GET. Faltam gate de implantação, refresh causal de escopo <=48h, identidade crypto-only #319 e prova de 24h contínuas. CI/PR/merge e avaliação VPS D268 exigem evidência própria.
