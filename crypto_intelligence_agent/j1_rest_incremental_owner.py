@@ -256,7 +256,13 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
             return _result("invalid_clock")
         decision = now // HOUR_MS * HOUR_MS
         result["decision_end_ms"] = decision
-        if not 60_000 <= now-decision <= 900_000:
+
+        def within_safe_window() -> bool:
+            current = read_clock()
+            return (type(current) is int
+                    and decision + 60_000 <= current <= decision + 900_000)
+
+        if not within_safe_window():
             result["status"] = "outside_safe_utc_close_window"
             return result
         _strict_owner(output_directory, directory=True)
@@ -291,17 +297,19 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                         raise ValueError("catchup_exceeds_48h_owner_review")
                     while start < decision:
                         end = min(start+PAGE_HOURS*HOUR_MS, decision)
-                        if read_clock()//HOUR_MS*HOUR_MS != decision:
+                        if not within_safe_window():
                             raise ValueError("utc_close_window_elapsed_before_commit")
                         if fetch is None:
                             fetch = BoundedBybitPublicClient()
                         _, payload = fetch.get(kline_url(symbol, start, end))
+                        if not within_safe_window():
+                            raise ValueError("utc_close_window_elapsed_before_commit")
                         rows = _closed_candles(payload, symbol, end, allow_short=True)
                         if len(rows) != (end-start)//HOUR_MS:
                             raise CensusAbstain("kline_not_24_closed_hours")
                         receipt = read_clock()
                         if (type(receipt) is not int or receipt < now
-                                or receipt//HOUR_MS*HOUR_MS != decision):
+                                or not decision + 60_000 <= receipt <= decision + 900_000):
                             raise ValueError("utc_close_window_elapsed_before_commit")
                         with db:
                             for row in reversed(rows):
@@ -321,6 +329,8 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                            for symbol in selected)
                 result["contracts_at_decision"] = full
                 if full == len(selected):
+                    if not within_safe_window():
+                        raise ValueError("utc_close_window_elapsed_before_commit")
                     # A stored observation is NOT a historical PIT for any
                     # missed hour or proof of identity/global Top50.
                     with db:
