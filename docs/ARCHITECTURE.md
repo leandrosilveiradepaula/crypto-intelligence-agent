@@ -560,3 +560,8 @@ A camada `j1_local_health` v2 valida `PRAGMA table_info` dos quatro objetos exis
 ## D253 — Survey 24h com observações incompletas
 
 O recenseamento owner-only mantém `candles` (somente 24 UTC 1h fechadas) e adiciona `incomplete` (0..23 rows contíguas de mesmo período, `launch_hint_ms` opcional, JSON TEXT de candles e SHA256 de símbolo+fim+hint+rows). Replay em cada invocação ocorre antes de novas requisições sob a mesma trava `flock`. A contagem `inspected` = completos + curtos; faltantes não são excluídos do denominador 822. Score Top50 do subconjunto completo jamais autoriza uso de Top50 elegível; full rank apenas se 822 completos. Sem novo daemon, serviço ou migração no banco histórico.
+
+
+## J1/M1 — writer incremental REST em trilha isolada
+
+O censo D256/D264 permanece congelado e somente leitura. `crypto_intelligence_agent.j1_rest_incremental_owner.run_hourly_once` usa replay D264 owner-only para selecionar N hipóteses, valida horária UTC fechada com o parser `_closed_candles`, coleta sufixo de até 24h por símbolo via `BoundedBybitPublicClient` (um writer, orçamento fixo, sem retry quota), persiste `j1-rest-hourly-research.sqlite` independente, cursor individual e `published_hour` apenas com cobertura integral. O timer HH:02 e serviço oneshot versionados ficam OFF até gate de implantação. Nenhum feed, símbolo ou ranking vira elegível automaticamente; WS de captura fica independente. Ver `docs/J1_M1_INCREMENTAL_REST_HOURLY.md`.
