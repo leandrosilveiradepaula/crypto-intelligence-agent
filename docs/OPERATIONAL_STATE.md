@@ -1397,3 +1397,8 @@ Preflight GitHub main `68d9d72677fd6dc11a8848d7f2b0b7c0c6cbba0e`, PRs abertas=0.
 ## J1/M2 — continuidade de segurança REST (09/11/2026)
 
 Main verificada no preflight `3fdecd5aba869201ecdaa127e3459f937faf3f30`, PRs abertas=0; issue #528 e branch `work/issue-528-j1-m2-hourly-rest-safety` criadas. Causa de risco estático: M1 verificava pós-GET somente mesma hora UTC, permitindo commit em HH:16 embora contrato prescrevesse até HH:15. Implementação no branch: verificar <=HH:15 após resposta e antes de publicar; persistir fail-stop do provedor/candle dentro do lock de escrita. Testes de transporte fake com travessia temporal. Ainda sem prova de CI, revisão, merge ou execução VPS nesta anotação; não criar alegação de canário real. Próxima ação: CI Linux/docs Windows/offline Chrome/PAPER, review SHA final, merge seguro sem deploy, depois gate operacional de canário owner N=2. #429/#319/#2 abertas.
+
+
+## J1/M3 — próximo gate de prova real sem timer (09/11/2026)
+
+Preflight GitHub main `01bffb798737d7da8eeef1659f18f6ddc3bb8b30`, 0 PRs abertas. Issue #530, branch `work/issue-530-j1-m3-twohour-rest-canary`. Implementado um executor CLI que, somente sob opt-in owner, aguarda duas horas UTC fechadas consecutivas, invoca M2 N=2 em cada horário, aborta na primeira falha, audita banco isolado com 50 candles, dois checkpoints e digests. Testes simulados e docs. Faltam CI SHA final, revisão, merge e início do canário owner na VPS (gate externo); não assumir que execução real ocorreu. Sem timer, WS, migração, ordens ou gasto. Próximo passo elegível: PR + CI 3/3 + revisão SHA e merge sem produção. Depois canário em unidade transitória sob gate operacional; #429/#319/#2 abertas.
