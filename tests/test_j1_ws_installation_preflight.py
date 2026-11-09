@@ -5,7 +5,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
@@ -16,6 +16,7 @@ from scripts.preflight_j1_ws_installation import (
 from scripts.render_j1_ws_service import render_j1_ws_unit
 
 SHA = "f1d8d8ad2a093b1c7f5d65d0f67073811cd9c2e6"
+UNIT_PRIVATE = PurePosixPath("/home/cia-probe/agent/ws-owner-private")
 PRIVATE = Path("/home/cia-probe/agent/ws-owner-private")
 
 
@@ -38,12 +39,12 @@ class PortableTemplateTests(unittest.TestCase):
         rendered = render_j1_ws_unit(
             username="cia-probe", repo_root="/home/cia-probe/agent/repo",
             python_bin="/home/cia-probe/agent/ws-venv/bin/python",
-            private_dir=str(PRIVATE),
+            private_dir=str(UNIT_PRIVATE),
         )
         _validate_unit(rendered,
-                       repo=Path("/home/cia-probe/agent/repo"),
-                       python=Path("/home/cia-probe/agent/ws-venv/bin/python"),
-                       private_dir=PRIVATE)
+                       repo=PurePosixPath("/home/cia-probe/agent/repo"),
+                       python=PurePosixPath("/home/cia-probe/agent/ws-venv/bin/python"),
+                       private_dir=UNIT_PRIVATE)
         self.assertIn("RestartPreventExitStatus=64 65 66 77 130", rendered)
         self.assertIn("ProtectSystem=strict", rendered)
         self.assertIn("ReadWritePaths=/home/cia-probe/agent/ws-owner-private",
@@ -53,7 +54,7 @@ class PortableTemplateTests(unittest.TestCase):
         unit = render_j1_ws_unit(
             username="cia-probe", repo_root="/home/cia-probe/agent/repo",
             python_bin="/home/cia-probe/agent/ws-venv/bin/python",
-            private_dir=str(PRIVATE))
+            private_dir=str(UNIT_PRIVATE))
         cases = (
             unit.replace("NoNewPrivileges=true", "NoNewPrivileges=false"),
             unit.replace("RestartPreventExitStatus=64 65 66 77 130",
@@ -66,9 +67,9 @@ class PortableTemplateTests(unittest.TestCase):
             with self.subTest(modified=modified[-45:]):
                 with self.assertRaises(ValueError):
                     _validate_unit(
-                        modified, repo=Path("/home/cia-probe/agent/repo"),
-                        python=Path("/home/cia-probe/agent/ws-venv/bin/python"),
-                        private_dir=PRIVATE)
+                        modified, repo=PurePosixPath("/home/cia-probe/agent/repo"),
+                        python=PurePosixPath("/home/cia-probe/agent/ws-venv/bin/python"),
+                        private_dir=UNIT_PRIVATE)
 
     def test_default_is_never_deploy(self):
         report = _default()
