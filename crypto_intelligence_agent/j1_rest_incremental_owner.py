@@ -344,7 +344,23 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
             _persist_halt(output_directory / _DB_NAME, "provider_denied_owner_review")
     except (CensusAbstain, ValueError, OSError, sqlite3.Error, TypeError) as exc:
         result["status"] = "research_integrity_or_environment_abstain"
-        result["failure_category"] = "integrity_or_environment"
+        safe = frozenset({
+            "research_cursor_missing", "research_cursor_invalid",
+            "research_candle_gap_or_cursor_conflict", "research_saved_row_invalid",
+            "research_saved_row_digest_conflict",
+            "frozen_scope_changed_requires_new_journal",
+            "untrusted_research_frontier", "untrusted_research_frontier_members",
+            "untrusted_frozen_digests", "untrusted_scope_clock",
+            "research_scope_metadata_invalid", "utc_close_window_elapsed_before_commit",
+            "catchup_exceeds_48h_owner_review",
+        })
+        result["failure_category"] = (
+            str(exc) if type(exc) is ValueError and str(exc) in safe
+            else str(exc) if type(exc) is CensusAbstain and str(exc) in (
+                "kline_not_24_closed_hours", "kline_missing_open_or_future_hour",
+                "kline_ohlcv_integrity_abstain", "kline_row_invalid",
+            ) else "sqlite_or_environment_or_integrity"
+        )
         if type(exc) is CensusAbstain:
             _persist_halt(output_directory / _DB_NAME, "candle_or_storage_integrity")
     finally:
