@@ -1418,3 +1418,8 @@ Depois de D267 service WS uninstalled e D268 pasta WS não provisionada, desmemb
 ## D270 — limite temporal de coleta incremental e fail-stop sob exclusão mútua (09/11/2026)
 
 Decisão: a coleta REST de pesquisa M1 não pode aceitar um GET cuja resposta chegue depois de HH:15:00 UTC, mesmo que esteja dentro da hora de relógio; deve revalidar janela antes de persistência e publicação. Latches de negação permanente do provedor e candles inválidos devem ser escritos sob o mesmo `flock` que protege o jornal. Sem retry automático, persistência silenciosamente ignorada ou promoção crypto-only/Top50; serviço permanece OFF. Motivo: eliminar publicação tardia e corrida entre desbloqueio do escritor e sinalização de quota. Implementação condicionada a testes e CI da #528.
+
+
+## D271 — prova vertical REST de duas horas sem serviço permanente (09/11/2026)
+
+A J1 precisa de evidência empírica incremental, não de novos preflights WS. Antes da ativação 24/7, executar processo finito de pesquisa com N=2 em duas horas consecutivas, persistência privada e auditoria do estado real, sem timer permanente, ordens, feed de trading nem promoção do Top50. Até a prova VPS, `continuous_collector_verified=false`. Execução de rede e unidade transitória exigem disparo owner separado, sem modificar o censo D264. Issue #530 e contrato em `docs/J1_M3_REST_TWOHOUR_CANARY.md`.
