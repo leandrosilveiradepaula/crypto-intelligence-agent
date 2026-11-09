@@ -301,10 +301,19 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                             raise ValueError("utc_close_window_elapsed_before_commit")
                         if fetch is None:
                             fetch = BoundedBybitPublicClient()
-                        _, payload = fetch.get(kline_url(symbol, start, end))
-                        if not within_safe_window():
-                            raise ValueError("utc_close_window_elapsed_before_commit")
-                        rows = _closed_candles(payload, symbol, end, allow_short=True)
+                        try:
+                            _, payload = fetch.get(kline_url(symbol, start, end))
+                            if not within_safe_window():
+                                raise ValueError("utc_close_window_elapsed_before_commit")
+                            rows = _closed_candles(
+                                payload, symbol, end, allow_short=True)
+                        except J1BybitCaptureError as exc:
+                            if str(exc) in _PERMANENT_TRANSPORT:
+                                _latch_halt(db, "provider_denied_owner_review")
+                            raise
+                        except CensusAbstain:
+                            _latch_halt(db, "candle_or_storage_integrity")
+                            raise
                         if len(rows) != (end-start)//HOUR_MS:
                             raise CensusAbstain("kline_not_24_closed_hours")
                         receipt = read_clock()
@@ -350,8 +359,6 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
         result["status"] = "research_provider_fail_stop"
         result["failure_category"] = (
             category if category in _ALLOWED_FAILURES else "provider_unclassified")
-        if category in _PERMANENT_TRANSPORT:
-            _persist_halt(output_directory / _DB_NAME, "provider_denied_owner_review")
     except (CensusAbstain, ValueError, OSError, sqlite3.Error, TypeError) as exc:
         result["status"] = "research_integrity_or_environment_abstain"
         safe = frozenset({
@@ -371,21 +378,22 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                 "kline_ohlcv_integrity_abstain", "kline_row_invalid",
             ) else "sqlite_or_environment_or_integrity"
         )
-        if type(exc) is CensusAbstain:
-            _persist_halt(output_directory / _DB_NAME, "candle_or_storage_integrity")
     finally:
         if fetch is not None:
             result["requests_attempted"] = fetch.requests_attempted
     return result
 
 
-def _persist_halt(path: Path, why: str) -> None:
-    """A provider denial cannot be retried automatically at the next hour."""
-    try:
-        _strict_owner(path, directory=False)
-        with closing(sqlite3.connect(path, timeout=0.1)) as db, db:
-            db.execute("UPDATE scope SET halted_reason=? WHERE id=1", (why,))
-    except (OSError, sqlite3.Error, CensusAbstain):
-        # Even if the latching write fails, never retry within this run.
-        # A new run must first pass the immutable scope and integrity gates.
-        pass
+
+def _latch_halt(db: sqlite3.Connection, why: str) -> None:
+    """Persist the fail-stop under the active single-writer flock.
+
+    The next hourly invocation must observe the latch before issuing a GET.
+    If the write fails, do not swallow the storage error.
+    """
+    with db:
+        cursor = db.execute(
+            "UPDATE scope SET halted_reason=? WHERE id=1 AND halted_reason IS NULL",
+            (why,))
+        if cursor.rowcount != 1:
+            raise ValueError("research_halt_latch_failed")
