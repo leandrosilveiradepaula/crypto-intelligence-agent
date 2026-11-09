@@ -1,0 +1,13 @@
+# J1/M1: OFF BY DEFAULT; only after explicit production install gate.
+[Unit]
+Description=CIA J1 closed hourly REST research timer (OFF BY DEFAULT)
+
+[Timer]
+OnCalendar=*-*-* *:02:00 UTC
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=cia-j1-rest-hourly.service
+
+[Install]
+WantedBy=timers.target
