@@ -97,7 +97,7 @@ class M1OwnerTests(unittest.TestCase):
 
     def test_first_24h_then_one_hour_then_idempotent(self):
         a = self.run_once()
-        self.assertEqual(a["status"], "research_sample_closed_hour_persisted")
+        self.assertEqual(a["status"], "research_sample_closed_hour_persisted", a)
         self.assertEqual((a["new_closed_candles"],a["requests_attempted"]), (48,2))
         b = self.run_once(delta=HOUR_MS)
         self.assertEqual((b["new_closed_candles"],b["requests_attempted"]), (2,2))
@@ -123,7 +123,7 @@ class M1OwnerTests(unittest.TestCase):
         with closing(sqlite3.connect(self.out/_DB_NAME)) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM published_hour").fetchone()[0],0)
         later=self.run_once()
-        self.assertEqual(later["new_closed_candles"],24)
+        self.assertEqual(later["new_closed_candles"],24,later)
         self.assertEqual(later["requests_attempted"],1)
         self.assertEqual(later["contracts_at_decision"],2)
         self.assert_safe(later)
@@ -145,7 +145,7 @@ class M1OwnerTests(unittest.TestCase):
         with closing(sqlite3.connect(self.out/_DB_NAME)) as db,db:
             db.execute("UPDATE candles SET close='9' WHERE symbol='BTCUSDT'")
         broken = self.run_once(delta=HOUR_MS)
-        self.assertEqual(broken["status"], "research_integrity_or_environment_abstain")
+        self.assertEqual(broken["status"], "research_integrity_or_environment_abstain",broken)
         self.assertEqual(broken["requests_attempted"],0)
         self.assert_safe(broken)
 
