@@ -1248,3 +1248,8 @@ D265 owner aprovado com 30 testes, 819 históricos, 298 vetos de pesquisa, 50 fr
 ## D268 — pré-voo de instalação WS sem deploy (09/11/2026)
 
 Prova D267 VPS: 9 PASS, unidade `cia-j1-ws-owner.service` not-found/inactive, nenhum `ws-confirmed.sqlite` na árvore pesquisada, 0 requests/ordens/DB modified; #521 CLOSED, #429 OPEN. D268 cria ferramenta de validação POSIX owner-only do template/off-by-default e da pasta privada planejada, sem instalar unidade, criar banco/diretório ou emitir WS/GET. Faltam gate de implantação, refresh causal de escopo <=48h, identidade crypto-only #319 e prova de 24h contínuas. CI/PR/merge e avaliação VPS D268 exigem evidência própria.
+
+
+## D269 — replay multi-epoch do escopo WS existente (09/11/2026)
+
+D268 owner VPS **10 testes PASS** em `be6af1747436a990e7a1720adfe93896e24aa591`: `private_directory_requires_owner_provisioning`, template válido, serviço ausente, checkout limpo, 0 rede/writes/ordens. Issue #523 CLOSED apenas para pré-voo. Revisão de #525 identificou renovação de 48h existente e testes de expiração/quota/churn. D269 adiciona testes de 98h/3 épocas e rejeição tardia sem perda silenciosa; CI/PR/merge ainda exigem prova separada. #429 ainda serviço WS não instalado, #319 identidade crypto-only e #2 J1 abertas.

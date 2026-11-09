@@ -230,6 +230,91 @@ class OwnerPilotTests(unittest.TestCase):
         self.assertFalse(again.scope_renewed)
         self.assertFalse(again.sanitized_report()['marketwide_top50_verified'])
 
+    def test_98_hour_three_epoch_replay_and_72_hour_stable_lease(self):
+        """Multi-day fake-clock: no stale GET, no grafted PIT or fake continuity."""
+        first = self.call(client=self.client())
+        self.assertEqual(first.catalog_gets, 2)
+        base_path = self.directory / 'ws-reviewed-scope.json'
+        original = base_path.read_bytes()
+        journal_path = self.directory / 'ws-confirmed.sqlite'
+        journal_bytes_before = journal_path.read_bytes()
+
+        renewed_49 = self.call(
+            client=self.client(at_ms=T + 49 * HOUR),
+            clock_ms=lambda: T + 49 * HOUR,
+        )
+        self.assertEqual((renewed_49.catalog_gets,
+                          renewed_49.scope_epochs, renewed_49.scope_renewed),
+                         (2, 2, True))
+        epoch_dir = self.directory / 'ws-reviewed-epochs'
+        first_epoch = next(epoch_dir.iterdir())
+        epoch_49 = first_epoch.read_bytes()
+        self.assertEqual(first_epoch.stat().st_mode & 0o777, 0o600)
+
+        # At 72h old initial scope is expired, but the new one is only 23h
+        # old. No repeated catalog GET is permitted.
+        blocked_72 = self.client(blocked=True)
+        checked_72 = self.call(
+            client=blocked_72, clock_ms=lambda: T + 72 * HOUR)
+        self.assertEqual((blocked_72.requests_attempted,
+                          checked_72.catalog_gets,
+                          checked_72.scope_epochs,
+                          checked_72.scope_renewed), (0, 0, 2, False))
+        self.assertFalse(checked_72.local_two_hour_continuity)
+
+        renewed_98 = self.call(
+            client=self.client(at_ms=T + 98 * HOUR),
+            clock_ms=lambda: T + 98 * HOUR,
+        )
+        self.assertEqual((renewed_98.catalog_gets,
+                          renewed_98.scope_epochs,
+                          renewed_98.scope_renewed), (2, 3, True))
+        self.assertEqual(base_path.read_bytes(), original)
+        self.assertEqual(first_epoch.read_bytes(), epoch_49)
+        self.assertEqual(len(list(epoch_dir.iterdir())), 2)
+        self.assertEqual(journal_path.read_bytes(), journal_bytes_before)
+        epochs = _read_epoch_chain(self.directory, now_ms=T + 98 * HOUR)
+        self.assertEqual(len(epochs), 3)
+        journal = SQLiteOfflineClosedStreamJournal(journal_path)
+
+        # PIT visibility must be based on the last *closed hour*, not just
+        # the current clock or latest scope timestamp.
+        for hours, expected_count in ((48, 1), (49, 1), (50, 2),
+                                      (97, 2), (98, 2), (99, 3)):
+            instant = T + hours * HOUR
+            audited = _audit_epoch_chain(
+                journal=journal, epochs=epochs,
+                decision=(instant // HOUR) * HOUR, now=instant,
+            )
+            self.assertEqual(audited.pit_scope_count, expected_count)
+            self.assertEqual(audited.persisted_rows, 0)
+            self.assertIsNone(audited.rank_digest_sha256)
+
+        self.assertFalse(renewed_98.sanitized_report()['marketwide_top50_verified'])
+        self.assertFalse(renewed_98.sanitized_report()['local_two_hour_continuity'])
+
+    def test_renewal_denied_after_72_hour_stale_epoch_preserves_journal(self):
+        self.call(client=self.client())
+        self.call(client=self.client(at_ms=T + 49 * HOUR),
+                  clock_ms=lambda: T + 49 * HOUR)
+        base = (self.directory / 'ws-reviewed-scope.json').read_bytes()
+        journal_path = self.directory / 'ws-confirmed.sqlite'
+        journal = journal_path.read_bytes()
+        epochs = self.directory / 'ws-reviewed-epochs'
+        children = sorted(epochs.iterdir())
+        snapshots = [p.read_bytes() for p in children]
+        denied = self.client(blocked=True)
+        report = self.call(client=denied, clock_ms=lambda: T + 98 * HOUR)
+        self.assertEqual(report.status, 'ws_pilot_catalog_denied_no_retry')
+        self.assertEqual(denied.requests_attempted, 1)
+        self.assertEqual(report.catalog_gets, 1)
+        self.assertEqual((self.directory / 'ws-reviewed-scope.json').read_bytes(), base)
+        self.assertEqual(journal_path.read_bytes(), journal)
+        self.assertEqual(sorted(epochs.iterdir()), children)
+        self.assertEqual([p.read_bytes() for p in children], snapshots)
+        self.assertEqual(len(self.sessions), 2)
+        self.assertFalse(report.sanitized_report()['marketwide_top50_verified'])
+
     def test_expired_catalog_10006_stops_without_changing_old_scope(self):
         self.call(client=self.client())
         original = (self.directory/'ws-reviewed-scope.json').read_bytes()
