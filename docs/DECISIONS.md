@@ -1403,3 +1403,8 @@ O motor J1 já tem WS, SQLite separado, lock owner e template systemd off-by-def
 ## D268 — não confundir pré-instalação WS com serviço 24/7 (09/11/2026)
 
 D267 owner VPS passou 9 testes e constatou `service_uninstalled` + `WS_JOURNAL_NOT_FOUND`; não há journal WS comprovado na árvore pesquisada. Decidido D268: preparar apenas verificação read-only de caminho privado seguro/0700, `main` limpa em SHA fixo, template unit `systemd` hardening e estado da unidade via `systemctl show`, sem escrever nem provisionar. Aprovação de produção/ativação permanece separada. Escopo do coletor atual é revista histórica limitada a 52 ativos e expira após 48h, não prova Top50 crypto-only ou renovação causal contínua; `Restart=always` não resolve sozinho. `deployment_authorized=false` e `continuous_collector_verified=false` invariantes. Runbook `docs/J1_D268_WS_INSTALLATION_PREFLIGHT.md`.
+
+
+## D269 — renovação WS de 48h já existe; simulação 98h sem duplicar coletor (09/11/2026)
+
+A revisão real de `bybit_ws_owner_pilot.py` confirmou que o piloto **já renova escopo inalterado após 48h** com catálogo paginado bounded, epoch PIT imutável e `_audit_epoch_chain` causal; `10006` e churn disparam fail-stop. A issue #525 foi refinada: o trabalho restante é tratar churn legítimo em journal novo e prova de continuidade real, não recriar renovação. D269 amplia testes offline para T0/T+49h/T+72h/T+98h (3 épocas, sem GET aos 72h, nenhuma reescrita histórica, PIT causal) e 10006 após 98h (um GET sintético, arquivos preservados). Não autoriza Top50 crypto-only, ativação de serviço ou ordens. Ver `docs/J1_D269_WS_MULTI_EPOCH_OFFLINE_PROOF.md`.
