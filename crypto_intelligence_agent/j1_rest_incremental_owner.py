@@ -192,12 +192,28 @@ def _validate_cursor(db: sqlite3.Connection, symbol: str,
     start = initial-24*HOUR_MS
     if (next_open % HOUR_MS or not start <= next_open <= decision):
         raise ValueError("research_cursor_invalid")
-    count, low, high = db.execute(
-        "SELECT COUNT(*),MIN(open_ms),MAX(open_ms) FROM candles WHERE symbol=?",
-        (symbol,)).fetchone()
+    rows = db.execute(
+        "SELECT open_ms,open,high,low,close,base_volume,quote_turnover,"
+        "received_at_ms,digest_sha256 FROM candles WHERE symbol=? "
+        "ORDER BY open_ms", (symbol,)).fetchall()
     expected = (next_open-start)//HOUR_MS
-    if (count != expected or (count and (low != start or high != next_open-HOUR_MS))):
+    if len(rows) != expected:
         raise ValueError("research_candle_gap_or_cursor_conflict")
+    for i, row in enumerate(rows):
+        opened, *data = row
+        expected_open = start+i*HOUR_MS
+        if (type(opened) is not int or opened != expected_open
+                or any(type(x) is not str for x in data[:6])
+                or type(data[6]) is not int or data[6] < opened+HOUR_MS
+                or type(data[7]) is not str or
+                not _SHA.fullmatch(data[7])):
+            raise ValueError("research_saved_row_invalid")
+        _closed_candles(
+            {"retCode":0,"result":{"category":"linear","symbol":symbol,
+                                   "list":[[str(opened),*data[:6]]]}},
+            symbol, opened+HOUR_MS)
+        if data[7] != _digest([symbol, (str(opened),*data[:6])]):
+            raise ValueError("research_saved_row_digest_conflict")
     return next_open
 
 
