@@ -1041,3 +1041,8 @@ Fixture Windows e Linux: systemctl show mockado e output fixo, unidade não inst
 ## D268 — readiness de instalação systemd é distinto de ativação
 
 Suíte offline verifica renderer WS sandbox `UMask=0077`, `NoNewPrivileges=true`, `ProtectSystem=strict`, `ReadWritePaths` isolado, restart limitado e fail-stop em 64/65/66/77/130; diretório existente owner 0700 ou absent sem criação, repo SHA fixo e limpo, unit fixed not-found/loaded, diretório dentro repo/venv proibido, root/no-optin/Windows não executa subprocesso. `deployment_authorized=false`, `service_activated=false`, `network_requests=0`, `orders_sent=false`, `continuous_collector_verified=false` sempre. Conferir CI Linux/docs, Windows/offline e Chrome/PAPER head final e merge sem deploy. Comando futuro proprietário D268 realiza só inspeção local; gate de provisionamento/ativação real separado, especialmente com escopo WS expirando em 48h.
+
+
+## D269 — prova offline de três épocas WS em 98h e fail-stop
+
+Executar `tests/test_j1_ws_owner_pilot.py` em POSIX: T0/T+49/T+72/T+98h geram 3 épocas (2 renovações), 0 GET na janela intermediária (last scope 23h), preservação byte-a-byte das épocas anteriores e SQLite sem candles sintéticos, validação da época efetiva em cada hora UTC e nenhuma continuidade/Top50 promovida. Em T+98h, quota 10006 retorna stop, sem WS novo, sem mutação de snapshot ou journal. Regressões existentes de churn/delist, escopo vencido, out-of-order e PIT futuras mantidas. CI Linux/docs, Windows/offline (POSIX skips esperados), Chrome/PAPER no SHA final e merge sem deploy. A aprovação de produção e observação real 24h em #429 são outros gates.
