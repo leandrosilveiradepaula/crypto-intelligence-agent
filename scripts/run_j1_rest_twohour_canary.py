@@ -13,7 +13,7 @@ from typing import Callable
 from crypto_intelligence_agent.j1_rest_incremental_owner import (
     HOUR_MS, _DB_NAME, _validate_cursor, run_hourly_once,
 )
-from scripts.audit_bybit_marketwide_closed24h import _strict_owner
+from scripts.audit_bybit_marketwide_closed24h import CensusAbstain, _strict_owner
 
 HOUR = HOUR_MS // 1000
 START_OFFSET = 120
@@ -134,7 +134,7 @@ def run_canary(*, frozen: Path, output: Path,
         try:
             hours, candles = audit(output / _DB_NAME, next_end * 1000,
                                    (next_end + HOUR) * 1000)
-        except (OSError, sqlite3.Error, ValueError, TypeError):
+        except (OSError, sqlite3.Error, ValueError, TypeError, CensusAbstain):
             result["status"] = "abstain"
             result["failure_category"] = "sqlite_or_replay_invalid"
             return result
@@ -143,7 +143,7 @@ def run_canary(*, frozen: Path, output: Path,
         result["status"] = "two_hour_research_canary_verified"
         result["two_hour_canary_verified"] = True
         return result
-    except (OSError, ValueError, TypeError, sqlite3.Error):
+    except (OSError, ValueError, TypeError, sqlite3.Error, CensusAbstain):
         result["status"] = "abstain"
         result["failure_category"] = "unexpected_failure"
         return result
