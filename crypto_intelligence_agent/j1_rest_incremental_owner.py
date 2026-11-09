@@ -290,7 +290,11 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                     result["failure_category"] = halted
                     return result
                 for symbol in selected:
-                    start = _validate_cursor(db, symbol, initial, decision)
+                    try:
+                        start = _validate_cursor(db, symbol, initial, decision)
+                    except CensusAbstain:
+                        _latch_halt(db, "candle_or_storage_integrity")
+                        raise
                     if start == decision:
                         continue
                     if decision-start > MAX_CATCHUP_HOURS*HOUR_MS:
@@ -307,6 +311,8 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                                 raise ValueError("utc_close_window_elapsed_before_commit")
                             rows = _closed_candles(
                                 payload, symbol, end, allow_short=True)
+                            if len(rows) != (end-start)//HOUR_MS:
+                                raise CensusAbstain("kline_not_24_closed_hours")
                         except J1BybitCaptureError as exc:
                             if str(exc) in _PERMANENT_TRANSPORT:
                                 _latch_halt(db, "provider_denied_owner_review")
@@ -314,8 +320,6 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                         except CensusAbstain:
                             _latch_halt(db, "candle_or_storage_integrity")
                             raise
-                        if len(rows) != (end-start)//HOUR_MS:
-                            raise CensusAbstain("kline_not_24_closed_hours")
                         receipt = read_clock()
                         if (type(receipt) is not int or receipt < now
                                 or not decision + 60_000 <= receipt <= decision + 900_000):
@@ -334,8 +338,12 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
                                 raise ValueError("concurrent_research_cursor_change")
                         result["new_closed_candles"] += len(rows)
                         start = end
-                full = sum(_validate_cursor(db, symbol, initial, decision) == decision
-                           for symbol in selected)
+                try:
+                    full = sum(_validate_cursor(db, symbol, initial, decision) == decision
+                               for symbol in selected)
+                except CensusAbstain:
+                    _latch_halt(db, "candle_or_storage_integrity")
+                    raise
                 result["contracts_at_decision"] = full
                 if full == len(selected):
                     if not within_safe_window():
