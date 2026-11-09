@@ -128,6 +128,61 @@ class M1OwnerTests(unittest.TestCase):
         self.assertEqual(later["contracts_at_decision"],2)
         self.assert_safe(later)
 
+    def test_slow_provider_crosses_safe_window_without_candle_commit(self):
+        clock = {"ms": BASE + 120_000}
+        calls = []
+
+        def slow(url, limit):
+            calls.append(url)
+            clock["ms"] = BASE + 901_000
+            return body(url, limit)
+
+        first = run_hourly_once(
+            frozen_directory=self.frozen, output_directory=self.out,
+            max_assets=2, owner_ok=True,
+            allow_public_network=True, allow_private_storage=True,
+            confirm_region_and_personal_research=True,
+            clock_ms=lambda: clock["ms"],
+            client=BoundedBybitPublicClient(transport=slow),
+            frontier_reader=fake_frontier,
+        )
+        self.assertEqual(first["status"], "research_integrity_or_environment_abstain")
+        self.assertEqual(first["failure_category"],
+                         "utc_close_window_elapsed_before_commit")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(first["new_closed_candles"], 0)
+        with closing(sqlite3.connect(self.out/_DB_NAME)) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM candles").fetchone()[0], 0)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM published_hour").fetchone()[0], 0)
+        self.assert_safe(first)
+
+    def test_expiry_after_first_member_never_publishes_partial_hour(self):
+        clock = {"ms": BASE + 120_000}
+        calls = []
+
+        def gradually_slow(url, limit):
+            calls.append(url)
+            if len(calls) == 2:
+                clock["ms"] = BASE + 901_000
+            return body(url, limit)
+
+        out = run_hourly_once(
+            frozen_directory=self.frozen, output_directory=self.out,
+            max_assets=2, owner_ok=True,
+            allow_public_network=True, allow_private_storage=True,
+            confirm_region_and_personal_research=True,
+            clock_ms=lambda: clock["ms"],
+            client=BoundedBybitPublicClient(transport=gradually_slow),
+            frontier_reader=fake_frontier,
+        )
+        self.assertEqual(out["status"], "research_integrity_or_environment_abstain")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(out["new_closed_candles"], 24)
+        with closing(sqlite3.connect(self.out/_DB_NAME)) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM candles").fetchone()[0], 24)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM published_hour").fetchone()[0], 0)
+        self.assert_safe(out)
+
     def test_quota_denial_latches_stop_before_next_get(self):
         from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
         def quota(url, limit):
