@@ -1253,3 +1253,8 @@ Prova D267 VPS: 9 PASS, unidade `cia-j1-ws-owner.service` not-found/inactive, ne
 ## D269 — replay multi-epoch do escopo WS existente (09/11/2026)
 
 D268 owner VPS **10 testes PASS** em `be6af1747436a990e7a1720adfe93896e24aa591`: `private_directory_requires_owner_provisioning`, template válido, serviço ausente, checkout limpo, 0 rede/writes/ordens. Issue #523 CLOSED apenas para pré-voo. Revisão de #525 identificou renovação de 48h existente e testes de expiração/quota/churn. D269 adiciona testes de 98h/3 épocas e rejeição tardia sem perda silenciosa; CI/PR/merge ainda exigem prova separada. #429 ainda serviço WS não instalado, #319 identidade crypto-only e #2 J1 abertas.
+
+
+## J1/M1 — primeiro writer REST incremental hourly, sem instalação (09/11/2026)
+
+Preflight `main=68d9d72677fd6dc11a8848d7f2b0b7c0c6cbba0e`, zero PRs abertas. Após uma sequência de auditores offline sem serviço instalado, M1 implementa `j1_rest_incremental_owner.py` (janela fechada UTC, novo SQLite, cursor+digest por contrato, no overlap com censo D264, fail-stop provider), CLI, modelos systemd oneshot+timer OFF e testes de persistência/retomada. Não afirmar CI, merge ou prova VPS antes de conferi-los. #429/#319/#517/#2 permanecem abertas; nenhum deploy, envio de ordens ou acesso financeiro.

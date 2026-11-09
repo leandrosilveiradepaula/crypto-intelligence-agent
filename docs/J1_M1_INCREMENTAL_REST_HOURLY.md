@@ -1,0 +1,22 @@
+# J1/M1 — worker incremental de candles REST fechados (pesquisa privada)
+
+## Decisão e entrega
+
+Esta PR resolve o primeiro componente que faltava à J1: **uma execução capaz de buscar e persistir candles NOVOS**, não apenas auditar um censo congelado ou modelar um serviço inativo. Fonte principal por enquanto: Bybit V5 REST `/v5/market/kline`, hourly, somente GET público, sem API keys, sem POST, ordens ou WS. `scripts.audit_bybit_marketwide_closed24h` é um censo CONGELADO até 48h; não tentar continuar escrevendo nele. `scripts.resume_private_bybit_j1` é teste FINITO de dois PITs, não daemon. Ambos mantidos intactos.
+
+**Amostra inicial pesquisa-only:** por segurança, `run_j1_rest_hourly_once` toma as primeiras N (default 2; até 50) identidades do *frontier privado D264*, obtido pelo replay read-only do censo, com SHA/digest imutável. São **hipóteses**, não contratos elegíveis para sinais. Não alegar Top50 global, PIT autenticado, proveniência canônica, fonte live habilitada ou continuidade operacional. Proibido usar o banco D264 congelado como output; cria journal isolado `j1-rest-hourly-research.sqlite` em pasta privada pré-provisionada, owner 0700, arquivos 0600. Não instala nem habilita timer.
+
+**Algoritmo:** janela UTC somente após +60s e até +15 min do fechamento, `clock_ms` explícito, GET de 1..24h por símbolo (uma página sintética/real), `_closed_candles` comum valida Decimal OHLCV e quote turnover, sem vela aberta, inferência de relógio ou alteração de valores. Inicialmente captura 24h até o primeiro fechamento da rodada; depois usa `cursor` por símbolo para capturar apenas 1 hora nova. No máximo 48h de catch-up, sem reconstruir horas arbitrárias. Chave única `(symbol, open_ms)`, transação por página, replay de contiguidade e digest, com um único escritor `flock`. A rodada só é publicada em `published_hour` se todos os N membros alcançaram o fechamento solicitado. Falha parcial deixa cursores diferenciados, sem marcar rodada como completa; repetição busca só o restante e não duplica linhas. `published_hour` nunca equivale a PIT histórico para momentos perdidos, nem a Top50, live ou ordens.
+
+**Provedor:** reusa `BoundedBybitPublicClient` (até 500 GET por instância, no mínimo 2s por GET em rede real, timeout 8s, body bounded, redirect e proxy vetados; 403/418/429/451/10006 sem retry). Erros de limite/permissão persistem `halted_reason=provider_denied_owner_review`, de modo que próxima execução automática recusa novos GETs. Erro de candle corrompido causa abstenção com `halted_reason=candle_or_storage_integrity`. Uma indisponibilidade transitória retorna erro sem inferir sucesso e poderá ser reavaliada na próxima janela, sem retry dentro da rodada. Sem capturar stdout de símbolos, URLs, erros não allowlisted, preços ou payload.
+
+## Operação e gates
+
+- Código e testes são executados por CI offline. Default do CLI: `--allow-public-network` ausente ⇒ nenhuma rede, nenhum DB. `scripts.render_j1_rest_hourly_timer` só imprime modelos; timer `OnCalendar=*-*-* *:02:00 UTC`, `Persistent=false`, serviço `oneshot`, `TimeoutStartSec=900`, `Restart=no`, `ProtectSystem=strict`, `ReadWritePaths` somente no output e owner não root. **OFF até gate de instalação**.
+- Futura instalação exige operador confirmar VPS, checkout SHA, usuário `cia-probe`, backup/imutabilidade da captura congelada, pasta de output **nova e isolada**, N de pesquisa, permissão regional, destino do journal, monitoramento do timer e plano de reversão. Não confundir com `ws-owner-private`; a falta de diretório WS não impede o REST pesquisável.
+- Para prova de funcionamento, executar um canário opt-in explicitamente autorizado em N=2 em hora recém-fechada e comparar duas horas reais consecutivas, SQLite `PRAGMA integrity_check`, contagem exata, status de provider, gaps/custos e replays sem retries. Depois ampliar N dentro dos budgets e apenas com guarda de identidade/mercado. Não chamar instrumento unverified de entrada aprovada. Não ativar negociação real.
+- CI Linux/docs, Windows/offline, Chrome/PAPER no SHA, revisão de persistência e segurança, merge seguro sem deploy. **CI verde não prova 24h na VPS**.
+
+## Bloqueios remanescentes
+
+#429 serviço real não ativado; #319/#517 crosswalk crypto-only/Top50 global incompleto. WS Bybit registrou `timestamp>end` em duas velas e fica complementar. #525 renovação WS idêntica a cada 48h já existe, churn legítimo requer novos epochs/journals. O M1 reduz o gargalo entregando um fluxo incremental independente da homologação Top50, sem alterar a política financeira.

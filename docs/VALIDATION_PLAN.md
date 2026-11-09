@@ -1046,3 +1046,8 @@ Suíte offline verifica renderer WS sandbox `UMask=0077`, `NoNewPrivileges=true`
 ## D269 — prova offline de três épocas WS em 98h e fail-stop
 
 Executar `tests/test_j1_ws_owner_pilot.py` em POSIX: T0/T+49/T+72/T+98h geram 3 épocas (2 renovações), 0 GET na janela intermediária (last scope 23h), preservação byte-a-byte das épocas anteriores e SQLite sem candles sintéticos, validação da época efetiva em cada hora UTC e nenhuma continuidade/Top50 promovida. Em T+98h, quota 10006 retorna stop, sem WS novo, sem mutação de snapshot ou journal. Regressões existentes de churn/delist, escopo vencido, out-of-order e PIT futuras mantidas. CI Linux/docs, Windows/offline (POSIX skips esperados), Chrome/PAPER no SHA final e merge sem deploy. A aprovação de produção e observação real 24h em #429 são outros gates.
+
+
+## J1/M1 — testes writer REST fechado antes do deploy
+
+Testar opt-in falso=0 IO, D264 digest/hash/idade/50 membros, singleton owner POSIX, 24 horas iniciais para 2 hipóteses de pesquisa, próxima hora 1 candle/símbolo, replay idempotente com 0 GET, falha no segundo membro e posterior retomada de 1 GET, 10006/429 com latch antes do GET seguinte, corrupção de candle gravado/digest, gaps no meio e alteração de escopo exigindo journal separado. Garantir `published_hour` somente com N completos, sem PIT inventado, `marketwide_top50_verified=false`, sem símbolos/preços na saída. Timer `oneshot` HH:02 OFF, `Restart=no`, não habilitado por CI. Regressões existentes e CI Linux/docs Windows/offline Chrome/PAPER no head SHA. Próxima prova real owner/canário N=2 em VPS somente após gate operacional explícito.

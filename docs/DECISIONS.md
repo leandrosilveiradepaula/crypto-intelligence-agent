@@ -1408,3 +1408,8 @@ D267 owner VPS passou 9 testes e constatou `service_uninstalled` + `WS_JOURNAL_N
 ## D269 — renovação WS de 48h já existe; simulação 98h sem duplicar coletor (09/11/2026)
 
 A revisão real de `bybit_ws_owner_pilot.py` confirmou que o piloto **já renova escopo inalterado após 48h** com catálogo paginado bounded, epoch PIT imutável e `_audit_epoch_chain` causal; `10006` e churn disparam fail-stop. A issue #525 foi refinada: o trabalho restante é tratar churn legítimo em journal novo e prova de continuidade real, não recriar renovação. D269 amplia testes offline para T0/T+49h/T+72h/T+98h (3 épocas, sem GET aos 72h, nenhuma reescrita histórica, PIT causal) e 10006 após 98h (um GET sintético, arquivos preservados). Não autoriza Top50 crypto-only, ativação de serviço ou ordens. Ver `docs/J1_D269_WS_MULTI_EPOCH_OFFLINE_PROOF.md`.
+
+
+## J1/M1 — REST horário finito prioritário à ativação WS (09/11/2026 UTC)
+
+Depois de D267 service WS uninstalled e D268 pasta WS não provisionada, desmembrar a entrega: M1 é writer **REST** 1h de pesquisa em SQLite isolado, sem depender de identidade Top50 global, M2 é gate de instalação/24h real, M3 é Top50 PIT crypto-only, M4 WS opcional. `scripts.audit_bybit_marketwide_closed24h` é censo congelado, **não** base incremental mutável; `scripts.resume_private_bybit_j1` não é daemon. M1 reusa frontend D264 **somente pesquisa** (50 candidatos; default 2), valida `_closed_candles` do censo, transport quotas/fail-stop, SQLite com cursor, digest e `flock`, timer oneshot HH:02 **OFF**. Sem sinal, ordens, autenticação de fonte, marketwide ou ativação. Doc `docs/J1_M1_INCREMENTAL_REST_HOURLY.md`.
