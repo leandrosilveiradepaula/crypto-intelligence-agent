@@ -1413,3 +1413,8 @@ A revisão real de `bybit_ws_owner_pilot.py` confirmou que o piloto **já renova
 ## J1/M1 — REST horário finito prioritário à ativação WS (09/11/2026 UTC)
 
 Depois de D267 service WS uninstalled e D268 pasta WS não provisionada, desmembrar a entrega: M1 é writer **REST** 1h de pesquisa em SQLite isolado, sem depender de identidade Top50 global, M2 é gate de instalação/24h real, M3 é Top50 PIT crypto-only, M4 WS opcional. `scripts.audit_bybit_marketwide_closed24h` é censo congelado, **não** base incremental mutável; `scripts.resume_private_bybit_j1` não é daemon. M1 reusa frontend D264 **somente pesquisa** (50 candidatos; default 2), valida `_closed_candles` do censo, transport quotas/fail-stop, SQLite com cursor, digest e `flock`, timer oneshot HH:02 **OFF**. Sem sinal, ordens, autenticação de fonte, marketwide ou ativação. Doc `docs/J1_M1_INCREMENTAL_REST_HOURLY.md`.
+
+
+## D270 — limite temporal de coleta incremental e fail-stop sob exclusão mútua (09/11/2026)
+
+Decisão: a coleta REST de pesquisa M1 não pode aceitar um GET cuja resposta chegue depois de HH:15:00 UTC, mesmo que esteja dentro da hora de relógio; deve revalidar janela antes de persistência e publicação. Latches de negação permanente do provedor e candles inválidos devem ser escritos sob o mesmo `flock` que protege o jornal. Sem retry automático, persistência silenciosamente ignorada ou promoção crypto-only/Top50; serviço permanece OFF. Motivo: eliminar publicação tardia e corrida entre desbloqueio do escritor e sinalização de quota. Implementação condicionada a testes e CI da #528.

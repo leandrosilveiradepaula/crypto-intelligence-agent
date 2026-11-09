@@ -20,3 +20,7 @@ Esta PR resolve o primeiro componente que faltava à J1: **uma execução capaz 
 ## Bloqueios remanescentes
 
 #429 serviço real não ativado; #319/#517 crosswalk crypto-only/Top50 global incompleto. WS Bybit registrou `timestamp>end` em duas velas e fica complementar. #525 renovação WS idêntica a cada 48h já existe, churn legítimo requer novos epochs/journals. O M1 reduz o gargalo entregando um fluxo incremental independente da homologação Top50, sem alterar a política financeira.
+
+## M2 — hardening da janela e latch (issue #528)
+
+O tempo de início não basta como prova de janela segura. O runner agora verifica o mesmo intervalo UTC fechado [HH:01:00, HH:15:00] antes de cada GET, depois de cada GET e antes da publicação final; se o transporte ultrapassar esse limite, rejeita o resultado sem gravar a página atrasada, mantendo páginas anteriores válidas e sem inventar publicação completa. Falhas permanentes do provedor (incluindo quota/region deny) e rejeições estruturais do candle são registradas em `scope.halted_reason` antes de liberar o `flock` do writer. O registro de bloqueio falho não é engolido silenciosamente. Testes com relógio controlado simulam conclusão tardia da primeira página e da segunda série, sem rede. Nenhum serviço ou timer foi ativado.

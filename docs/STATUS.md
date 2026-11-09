@@ -1258,3 +1258,8 @@ D268 owner VPS **10 testes PASS** em `be6af1747436a990e7a1720adfe93896e24aa591`:
 ## J1/M1 — primeiro writer REST incremental hourly, sem instalação (09/11/2026)
 
 Preflight `main=68d9d72677fd6dc11a8848d7f2b0b7c0c6cbba0e`, zero PRs abertas. Após uma sequência de auditores offline sem serviço instalado, M1 implementa `j1_rest_incremental_owner.py` (janela fechada UTC, novo SQLite, cursor+digest por contrato, no overlap com censo D264, fail-stop provider), CLI, modelos systemd oneshot+timer OFF e testes de persistência/retomada. Não afirmar CI, merge ou prova VPS antes de conferi-los. #429/#319/#517/#2 permanecem abertas; nenhum deploy, envio de ordens ou acesso financeiro.
+
+
+## J1/M2 — hardening do writer REST (09/11/2026)
+
+Issue #528; branch `work/issue-528-j1-m2-hourly-rest-safety`. Inspeção do M1 integrado detectou que o check da janela UTC no começo aceitava resposta lenta após HH:15 dentro da mesma hora. M2 adiciona guard após GET e antes de publicação, e latch de quota/integridade sob flock do escritor, com regressões de tempo fake. Este registro documenta somente código proposto; CI, revisão, merge e provas da VPS precisam ser confirmados separadamente. #429/#319/#2 abertas; não há autorização de serviço/ordens/marketwide.
