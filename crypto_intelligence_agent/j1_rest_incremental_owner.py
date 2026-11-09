@@ -211,7 +211,7 @@ def _validate_cursor(db: sqlite3.Connection, symbol: str,
         _closed_candles(
             {"retCode":0,"result":{"category":"linear","symbol":symbol,
                                    "list":[[str(opened),*data[:6]]]}},
-            symbol, opened+HOUR_MS)
+            symbol, opened+HOUR_MS, allow_short=True)
         if data[7] != _digest([symbol, (str(opened),*data[:6])]):
             raise ValueError("research_saved_row_digest_conflict")
     return next_open
