@@ -117,6 +117,8 @@ def installation_preflight(*, private_directory: Path,
                 ".." in private_directory.parts
                 or private_directory == repo
                 or repo in private_directory.parents
+                or _REPO in private_directory.parents
+                or _PYTHON.parent.parent in private_directory.parents
                 or private_directory in repo.parents
                 or private_directory == python
                 or python in private_directory.parents
