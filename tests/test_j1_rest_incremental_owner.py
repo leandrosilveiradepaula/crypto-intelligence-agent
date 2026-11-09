@@ -195,6 +195,23 @@ class M1OwnerTests(unittest.TestCase):
         self.assertEqual(blocked["requests_attempted"],0)
         self.assert_safe(blocked)
 
+    def test_short_provider_page_latches_integrity_before_next_get(self):
+        def short_page(url, limit):
+            parsed = json.loads(body(url, limit))
+            parsed["result"]["list"].pop()
+            return json.dumps(parsed).encode("ascii")
+
+        from crypto_intelligence_agent.bybit_public_j1_transport import (
+            BoundedBybitPublicClient,
+        )
+        first = self.run_once(client=BoundedBybitPublicClient(transport=short_page))
+        self.assertEqual(first["status"], "research_integrity_or_environment_abstain")
+        self.assertEqual(first["failure_category"], "kline_not_24_closed_hours")
+        second = self.run_once()
+        self.assertEqual(second["status"], "halted_owner_review_required")
+        self.assertEqual(second["requests_attempted"], 0)
+        self.assert_safe(second)
+
     def test_corrupted_old_candle_is_not_silently_accepted(self):
         self.run_once()
         with closing(sqlite3.connect(self.out/_DB_NAME)) as db,db:
