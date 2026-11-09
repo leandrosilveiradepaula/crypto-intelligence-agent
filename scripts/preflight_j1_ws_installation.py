@@ -129,14 +129,13 @@ def installation_preflight(*, private_directory: Path,
             raise ValueError("owner_uid_invalid")
         # An absent target is expected and must NOT be created here.
         # Every existing ancestor from agent/ downward must be a real directory.
-        anchor = _ROOT_PATH
-        for ancestor in (anchor, *reversed(private_directory.relative_to(anchor).parents)):
-            if ancestor == Path("."):
-                continue
-            if ancestor != anchor and not ancestor.is_absolute():
-                continue
-            if ancestor.exists() and ancestor.is_symlink():
+        ancestor = _ROOT_PATH
+        for part in private_directory.relative_to(_ROOT_PATH).parts:
+            if ancestor.is_symlink():
                 raise ValueError("symlink_ancestor")
+            ancestor = ancestor / part
+        if ancestor.is_symlink():
+            raise ValueError("symlink_ancestor")
         dir_state = _safe_dir(private_directory, owner_uid=uid)
         if dir_state == "unsafe":
             raise ValueError("unsafe_private_directory")
