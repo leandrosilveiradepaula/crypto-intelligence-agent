@@ -132,8 +132,16 @@ def audit_existing_rest_resume(
                 (MAX_PUBLISHED + 1,)).fetchall()
             if not 1 <= len(published) <= MAX_PUBLISHED:
                 return out
+            # A pre-provisioned trial may contain the 24h initial scope
+            # before its first published hourly checkpoint. Never infer the
+            # missing publication: accept first at initial or initial+1h,
+            # then require exact hourly continuity of all published rows.
+            first_end = published[0][0]
+            if (type(first_end) is not int or first_end not in
+                    (initial, initial + HOUR_MS)):
+                return out
             for i, (end, observed, digest, count) in enumerate(published):
-                expected_end = initial + i * HOUR_MS
+                expected_end = first_end + i * HOUR_MS
                 if (type(end) is not int or end != expected_end
                         or type(observed) is not int
                         or not end + SETTLE_MS <= observed <= end + LATEST_START_MS
@@ -147,7 +155,7 @@ def audit_existing_rest_resume(
                        for symbol in members]
             if any(cursor != last for cursor in cursors):
                 return out
-            expected_candles = EXPECTED_MEMBERS * (24 + len(published) - 1)
+            expected_candles = EXPECTED_MEMBERS * (24 + (last - initial)//HOUR_MS)
             stored = db.execute("SELECT COUNT(*) FROM candles").fetchone()[0]
             if type(stored) is not int or stored != expected_candles:
                 return out
