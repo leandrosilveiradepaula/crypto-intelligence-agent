@@ -13,8 +13,8 @@ Os estados são `no_gap` (delta entre 0 e 1h), `catchup_with_unobserved_hours_re
 A execução opcional requer checkout SHA conferido, usuário não root `cia-probe`, diretório existente 0700 e arquivo 0600. Não está exposta pela API MCP financeira, que permanece limitada às três auditorias fixas das 24 rodadas. Não há reinício, timer enable, novos GETs, escrita ou troca de SQLite.
 
 ```bash
-cd /home/cia-probe/agent/repo
-/home/cia-probe/agent/ws-venv/bin/python -m scripts.audit_j1_rest_resume_readiness --output-directory /PRIVATE_EXISTENTE/OUTPUT_REST --allow-private-readonly-audit
+cd /REPOSITORIO_APROVADO_EXISTENTE
+/PYTHON_VENV_EXISTENTE -m scripts.audit_j1_rest_resume_readiness --output-directory /PRIVATE_EXISTENTE/OUTPUT_REST --allow-private-readonly-audit
 ```
 
 **Bloqueios remanescentes:** a coleta permanente #429 necessita política para gaps, renovação causal e serviço supervisionado; o universo de 50 elegíveis e identidade cripto #319 ainda não foi comprovado. Não ampliar o limite de 48h, reinstalar timer, recriar banco ou liberar operação real. Este bloco é diagnóstico offline com testes, não implantação.
