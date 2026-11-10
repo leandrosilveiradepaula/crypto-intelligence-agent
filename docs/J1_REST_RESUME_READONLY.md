@@ -22,3 +22,6 @@ cd /home/cia-probe/agent/repo
 ## Validação
 
 Fixtures com 100 candles e 26 checkpoints para dois contratos, alternativa de 98 candles, delta 1/6/48/49h, fronteiras UTC HH:01/HH:15, dados alterados, halt, symlinks, owner e nenhuma rede. CI Linux/docs, Windows/offline e Chrome/PAPER em SHA revisado.
+
+## Correção de causalidade: publicação ausente no catch-up inicial
+A prova real J1 #429 registra primeiro timer em 19:02 UTC com quatro candles novos após o canário: o worker cobriu as horas 18:00 e 19:00 para cada um dos dois contratos, mas publicou somente o checkpoint da rodada 19:00. O journal possui 100 candles íntegros e 26 publicações, entre as quais existe uma hora intermediária sem `published_hour`. **Isso não é gap em candles e não pode ser corrigido inventando uma publicação retroativa.** A auditoria aceita sequência monotônica de checkpoints efetivos, conta separadamente `historical_unpublished_hours` e marca `historical_checkpoint_gaps_present=true`. Se o histórico é íntegro e não existe atraso atual, devolve `historical_checkpoint_gaps_require_review`, nunca `no_gap`. Mesmo com candles completos, uma ausência de PIT histórico exige revisão de operações e impede qualquer ativação automática.
