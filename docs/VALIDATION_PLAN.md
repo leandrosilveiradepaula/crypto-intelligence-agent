@@ -1051,3 +1051,8 @@ Executar `tests/test_j1_ws_owner_pilot.py` em POSIX: T0/T+49/T+72/T+98h geram 3 
 ## J1/M1 — testes writer REST fechado antes do deploy
 
 Testar opt-in falso=0 IO, D264 digest/hash/idade/50 membros, singleton owner POSIX, 24 horas iniciais para 2 hipóteses de pesquisa, próxima hora 1 candle/símbolo, replay idempotente com 0 GET, falha no segundo membro e posterior retomada de 1 GET, 10006/429 com latch antes do GET seguinte, corrupção de candle gravado/digest, gaps no meio e alteração de escopo exigindo journal separado. Garantir `published_hour` somente com N completos, sem PIT inventado, `marketwide_top50_verified=false`, sem símbolos/preços na saída. Timer `oneshot` HH:02 OFF, `Restart=no`, não habilitado por CI. Regressões existentes e CI Linux/docs Windows/offline Chrome/PAPER no head SHA. Próxima prova real owner/canário N=2 em VPS somente após gate operacional explícito.
+
+
+## J2/PRE3 — contrato de causalidade BTC/força relativa sem J1 live (#533)
+
+Cobrir referência independente numérica de retorno BTC/ativo em mesmo fechamento UTC, regime de alta/baixa/lateral, estresse ATR prioritário, aquecimento insuficiente, ativo listado depois do início do histórico BTC, defasagem de BTC sem forward-fill, gaps/duplicatas, venue/market/symbol/quality incompatíveis, NaN/Infinity/float/bool, limite temporal exato de vela fechada, invariância de prefixo e contexto Decimal, e ausência de rede e ordens. Configurar horizontes e limiares explicitamente, sem valores presumidos como edge. Rodar CI Linux/docs, Windows/offline, Chrome/PAPER no SHA revisado antes de merge seguro. A aprovação desta unidade offline NÃO representa identidade real Top50, feed de BTC confirmado, sinais autorizados ou J2/J3/J6 homologadas.

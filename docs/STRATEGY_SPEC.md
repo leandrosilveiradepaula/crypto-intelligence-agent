@@ -287,3 +287,10 @@ Fim de sessão por esgotamento de mensagens não pode ser classificado como feed
 ## J3/PRE28 — correlação sintética ajustada à direção (D248)
 
 O bloqueio opcional por correlação em carteira não é alfa, probabilidade, hedge certificado nem substituto de gestão por nocional/exposição. Par OPEN no mesmo UTC é observado por retornos mark assinados LONG/SHORT, com amostra mínima e limite Decimal explícitos. Sem dados suficientes, não liberar nova hipótese; com limite excedido, manter veto conservador ao longo do replay. LONG e SHORT da mesma série não devem ser confundidos com duas apostas no mesmo lado. Ver PRE20 e docs/J3_PRE28_CAUSAL_CORRELATION_GATE.md.
+
+
+## J2/PRE3 — Contexto BTC e força relativa causal, somente sintético (#533)
+
+A análise pura `synthetic_btc_relative_regime.py` reutiliza os `ClosedCandle` e o validador/ATR da J2/PRE1. Recebe duas séries `quality=synthetic_fixture`, uma `BTCUSDT` explícita e outra de um ativo diferente, na **mesma venue, mercado linear perpetual e intervalo UTC**. Exige a mesma última vela completamente fechada, segurança temporal e contiguidade; não faz forward-fill de BTC nem usa dados futuros. O histórico mais antigo do BTC pode começar antes do ativo: só as horas de fechamento comuns entram na comparação. As séries nunca são tratadas como identidade externa/mercado autenticado.
+
+Por hipótese configurável, `momentum_N = close_t/close_(t-N)-1` e `relative_strength_N = momentum_ativo - momentum_BTC` usam o mesmo par de endpoints UTC. O regime hipotético do Bitcoin é `insufficient_history` quando não há aquecimento/horizonte suficiente, senão `volatility_stress` prioritário se `ATR_Wilder(BTC)/close_BTC >= stress_ratio`; na ausência de estresse, `uptrend` se retorno BTC `>= trend_threshold`, `downtrend` se `<= -trend_threshold`, ou `sideways`. A escolha de limites de pesquisa não é uma otimização nem recomendação de trading; nenhum score probabilístico, ordem, edge ou retorno é produzido. O estudo de força relativa e do regime BTC só será acoplado a sinais depois de provar J1/J3 e risco, sem look-ahead.

@@ -1402,3 +1402,8 @@ Main verificada no preflight `3fdecd5aba869201ecdaa127e3459f937faf3f30`, PRs abe
 ## J1/M3 — próximo gate de prova real sem timer (09/11/2026)
 
 Preflight GitHub main `01bffb798737d7da8eeef1659f18f6ddc3bb8b30`, 0 PRs abertas. Issue #530, branch `work/issue-530-j1-m3-twohour-rest-canary`. Implementado um executor CLI que, somente sob opt-in owner, aguarda duas horas UTC fechadas consecutivas, invoca M2 N=2 em cada horário, aborta na primeira falha, audita banco isolado com 50 candles, dois checkpoints e digests. Testes simulados e docs. Faltam CI SHA final, revisão, merge e início do canário owner na VPS (gate externo); não assumir que execução real ocorreu. Sem timer, WS, migração, ordens ou gasto. Próximo passo elegível: PR + CI 3/3 + revisão SHA e merge sem produção. Depois canário em unidade transitória sob gate operacional; #429/#319/#2 abertas.
+
+
+## J2/PRE3 #533 — contexto BTC e força relativa sintéticos independentes da VPS (10/11/2026)
+
+Preflight GitHub main `56e8e941226575536cb123f5c0d7caa927844a13`, PRs abertas=0, #532 integração MCP com merge no outro repositório mas sem instalação VPS. Issue #533 criada; branch `work/issue-533-j2-pre3-btc-relative-regime` implementa análise causal de momentum BTC versus ativo e regime BTC com ATR em dados sintéticos e sem rede/ordens, reutilizando PRE1, testes adversariais e documentação. **Este registro de branch não é prova de CI, revisão ou merge**; conferir SHA final, Linux/docs, Windows/offline e Chrome/PAPER, corrigir eventuais falhas e somente mesclar sem produção se todos verdes. Próxima dependência externa do produto segue auditoria real J1 24/24 e validação crypto-only #319, não converter pesquisa sintética em decisão real.
