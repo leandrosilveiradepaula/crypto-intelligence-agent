@@ -161,6 +161,7 @@ class RestResumeReadinessTests(unittest.TestCase):
             "UPDATE cursor SET next_open_ms=next_open_ms-3600000",
             "UPDATE scope SET members_json='[\"BTCUSDT\",\"BTCUSDT\"]'",
             "UPDATE scope SET scope_digest='not-a-sha'",
+            "UPDATE scope SET id=2",
         ):
             with self.subTest(sql=sql):
                 self.path.unlink()
