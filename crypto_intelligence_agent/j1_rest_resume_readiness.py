@@ -108,11 +108,11 @@ def audit_existing_rest_resume(
             if not {"scope", "cursor", "candles", "published_hour"} <= schema:
                 return out
             scopes = db.execute(
-                "SELECT scope_digest,members_json,initial_end_ms,halted_reason "
+                "SELECT id,scope_digest,members_json,initial_end_ms,halted_reason "
                 "FROM scope ORDER BY id LIMIT 2").fetchall()
-            if len(scopes) != 1:
+            if len(scopes) != 1 or type(scopes[0][0]) is not int or scopes[0][0] != 1:
                 return out
-            scope_digest, raw_members, initial, halted = scopes[0]
+            _, scope_digest, raw_members, initial, halted = scopes[0]
             if (type(scope_digest) is not str or _SHA.fullmatch(scope_digest) is None
                     or type(raw_members) is not str or len(raw_members) > 300
                     or type(initial) is not int or initial % HOUR_MS
