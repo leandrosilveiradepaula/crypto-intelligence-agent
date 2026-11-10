@@ -119,8 +119,10 @@ class SyntheticBtcContextTests(unittest.TestCase):
     def test_reject_stale_btc_and_nonmatching_utc_close(self):
         btc = candles("BTCUSDT", (100, 101, 102))
         asset = candles("ETHUSDT", (50, 51, 52, 53))
+        # Both histories must already be closed at this decision time;
+        # otherwise PRE1 correctly rejects future data before the sync gate.
         with self.assertRaisesRegex(DataValidationError, "same.*UTC"):
-            research(btc, asset)
+            research(btc, asset, decision=asset[-1].close_time_ms + 1000)
 
     def test_strict_history_and_mixed_markets(self):
         b = candles("BTCUSDT", (100, 101, 102, 103))
