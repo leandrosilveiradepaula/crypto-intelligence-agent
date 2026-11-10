@@ -32,6 +32,8 @@ def _base(status: str) -> dict[str, Any]:
         "last_published_end_ms": None,
         "next_eligible_end_ms": None,
         "published_hours": 0,
+        "historical_unpublished_hours": None,
+        "historical_checkpoint_gaps_present": False,
         "stored_candles": 0,
         "reviewed_research_contracts": 0,
         "hours_since_last_publication": None,
@@ -132,22 +134,29 @@ def audit_existing_rest_resume(
                 (MAX_PUBLISHED + 1,)).fetchall()
             if not 1 <= len(published) <= MAX_PUBLISHED:
                 return out
-            # A pre-provisioned trial may contain the 24h initial scope
-            # before its first published hourly checkpoint. Never infer the
-            # missing publication: accept first at initial or initial+1h,
-            # then require exact hourly continuity of all published rows.
+            # The real 24-run trial had a 2-hour catch-up: 18:00 candles
+            # were stored but no retroactive 18:00 published_hour was forged.
+            # Verify all *existing* publication timestamps, preserve explicit
+            # skipped-checkpoint counts; never treat them as market PIT proofs.
             first_end = published[0][0]
             if (type(first_end) is not int or first_end not in
                     (initial, initial + HOUR_MS)):
                 return out
-            for i, (end, observed, digest, count) in enumerate(published):
-                expected_end = first_end + i * HOUR_MS
-                if (type(end) is not int or end != expected_end
+            historical_missing = (first_end - initial) // HOUR_MS
+            prior_end = None
+            for end, observed, digest, count in published:
+                if (type(end) is not int or end % HOUR_MS != 0
                         or type(observed) is not int
                         or not end + SETTLE_MS <= observed <= end + LATEST_START_MS
                         or digest != scope_digest or type(count) is not int
                         or count != len(members)):
                     return out
+                if prior_end is not None:
+                    delta = (end - prior_end) // HOUR_MS
+                    if not 1 <= delta <= MAX_CATCHUP_HOURS:
+                        return out
+                    historical_missing += delta - 1
+                prior_end = end
             last = published[-1][0]
             if last > now_ms:
                 return out
@@ -167,6 +176,8 @@ def audit_existing_rest_resume(
             out.update({
                 "last_published_end_ms": last,
                 "published_hours": len(published),
+                "historical_unpublished_hours": historical_missing,
+                "historical_checkpoint_gaps_present": historical_missing > 0,
                 "stored_candles": stored,
                 "reviewed_research_contracts": len(members),
                 "journal_integrity_verified": True,
@@ -187,6 +198,8 @@ def audit_existing_rest_resume(
                 out["status"] = "catchup_exceeds_48h_blocked"
             elif delta >= 2:
                 out["status"] = "catchup_with_unobserved_hours_requires_review"
+            elif historical_missing:
+                out["status"] = "historical_checkpoint_gaps_require_review"
             else:
                 out["status"] = "no_gap"
             return out
