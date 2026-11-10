@@ -121,7 +121,7 @@ class SyntheticBtcContextTests(unittest.TestCase):
         asset = candles("ETHUSDT", (50, 51, 52, 53))
         # Both histories must already be closed at this decision time;
         # otherwise PRE1 correctly rejects future data before the sync gate.
-        with self.assertRaisesRegex(DataValidationError, "same.*UTC"):
+        with self.assertRaisesRegex(DataValidationError, "last closed UTC candle"):
             research(btc, asset, decision=asset[-1].close_time_ms + 1000)
 
     def test_strict_history_and_mixed_markets(self):
