@@ -23,13 +23,18 @@ DATA = ("1", "2", "1", "2", "20", "40")
 
 
 def make_journal(path: Path, *, publications: int = 26,
-                 initial_publication_offset: int = 1, halted=None) -> int:
-    """A 24-hour initial scope plus 26 closed hours = 100 candles across N=2.
+                 initial_publication_offset: int = 0,
+                 skip_hour: int | None = 2, halted=None) -> int:
+    """Represent the actual trial: a missing 18:00 publication, not candles.
 
-    First publication may be delayed by a single hour, but publication rows
-    are never invented for the earlier initial checkpoint.
+    Scope at 16:00 and one catch-up across 18:00 gives 100 candles for two
+    symbols but only 26 actual publications, with an explicit PIT gap.
     """
-    last = INITIAL + (initial_publication_offset + publications - 1) * HOUR_MS
+    offsets = [initial_publication_offset + i
+               for i in range(publications + (1 if skip_hour is not None else 0))
+               if initial_publication_offset + i != skip_hour]
+    assert len(offsets) == publications
+    last = INITIAL + offsets[-1] * HOUR_MS
     with closing(sqlite3.connect(path)) as db, db:
         db.executescript("""
             CREATE TABLE scope (id INTEGER PRIMARY KEY,
@@ -57,8 +62,8 @@ def make_journal(path: Path, *, publications: int = 26,
                 db.execute("INSERT INTO candles VALUES (?,?,?,?,?,?,?,?,?,?)",
                            (symbol, opened, *DATA, last + 60_000,
                             _digest([symbol, row])))
-        for i in range(publications):
-            end = INITIAL + (initial_publication_offset+i)*HOUR_MS
+        for offset in offsets:
+            end = INITIAL + offset * HOUR_MS
             db.execute("INSERT INTO published_hour VALUES (?,?,?,?)",
                        (end, end+120_000, D, len(SYMBOLS)))
     path.chmod(0o600)
@@ -84,7 +89,9 @@ class RestResumeReadinessTests(unittest.TestCase):
 
     def test_actual_trial_shape_100_candles_26_publications_without_forgery(self):
         r=self.check(HOUR_MS+120_000)
-        self.assertEqual(r["status"],"no_gap")
+        self.assertEqual(r["status"],"historical_checkpoint_gaps_require_review")
+        self.assertEqual(r["historical_unpublished_hours"], 1)
+        self.assertTrue(r["historical_checkpoint_gaps_present"])
         self.assertTrue(r["journal_integrity_verified"])
         self.assertEqual(r["last_published_end_ms"],self.last)
         self.assertEqual(r["published_hours"],26)
@@ -103,7 +110,8 @@ class RestResumeReadinessTests(unittest.TestCase):
 
     def test_initial_publication_at_scope_initial_is_also_supported(self):
         self.path.unlink()
-        self.last=make_journal(self.path,initial_publication_offset=0)
+        self.last=make_journal(self.path,initial_publication_offset=0,
+                               skip_hour=None)
         r=self.check(HOUR_MS+120_000)
         self.assertEqual(r["status"],"no_gap")
         self.assertEqual(r["stored_candles"],98)
@@ -111,7 +119,8 @@ class RestResumeReadinessTests(unittest.TestCase):
 
     def test_catchup_same_hour_6_hours_exact_48_and_49(self):
         self.assertEqual(self.check(120_000)["catchup_hours"],0)
-        self.assertEqual(self.check(HOUR_MS+120_000)["status"],"no_gap")
+        self.assertEqual(self.check(HOUR_MS+120_000)["status"],
+                         "historical_checkpoint_gaps_require_review")
         r=self.check(6*HOUR_MS+120_000)
         self.assertEqual(r["status"],"catchup_with_unobserved_hours_requires_review")
         self.assertEqual(r["catchup_hours"],6)
@@ -146,12 +155,12 @@ class RestResumeReadinessTests(unittest.TestCase):
         with patch("urllib.request.urlopen",side_effect=AssertionError("network")):
             with patch("socket.create_connection",side_effect=AssertionError("network")):
                 r=self.check(HOUR_MS+120_000)
-        self.assertEqual(r["status"],"no_gap")
+        self.assertEqual(r["status"],"historical_checkpoint_gaps_require_review")
         self.assertEqual(self.path.read_bytes(),before)
 
     def test_reject_missing_ambiguous_and_noncontiguous_publications(self):
         for sql in (
-            "DELETE FROM published_hour WHERE end_ms=(SELECT MIN(end_ms)+3600000 FROM published_hour)",
+            "DELETE FROM published_hour WHERE end_ms=(SELECT MAX(end_ms) FROM published_hour)",
             "UPDATE published_hour SET observed_contracts=1 WHERE end_ms=(SELECT MAX(end_ms) FROM published_hour)",
             "UPDATE published_hour SET scope_digest='wrong' WHERE end_ms=(SELECT MAX(end_ms) FROM published_hour)",
             "UPDATE published_hour SET observed_at_ms=end_ms WHERE end_ms=(SELECT MAX(end_ms) FROM published_hour)",
