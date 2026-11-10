@@ -1069,3 +1069,5 @@ Validar **fixture de 2 horas fechadas consecutivas** com ETH presente no primeir
 
 ## J1/OPS2 #540 — retomada REST read-only pós-24 janelas (10/11/2026)
 Validar parser SQLite `mode=ro`, janela UTC safe HH:01..HH:15, primeiro checkpoint no escopo inicial ou uma hora depois, observações de publicação efetivas e não inventadas, 100 candles/26 publicações N=2, 98/26 alternativa, cursor/digests do coletor, integridade, owner/symlink, latch, e delta 0/1/6/48/49 horas. Garantir falha segura para gaps e dados adulterados, sem rede, SQL mutável, timer, Top50, trading ou ordens. 48h é limite do worker, não liberação operacional. Testes Linux POSIX, Windows portátil e QA mobile; CI dos três gates no SHA final, revisão e merge sem deploy; mesmo CI verde não homologa #429/#319.
+
+Complemento OPS2: usar obrigatoriamente o formato do ensaio real, com checkpoint 18:00 UTC não publicado durante catch-up 19:02, mas candles de 18:00 presentes e íntegros. A auditoria deve contar um gap histórico de publicações sem criar PIT fictício, recusar publicação terminal removida (cursor não coincide), rejeitar divergência do timestamp/scope e manter `activation_authorized=false`.
