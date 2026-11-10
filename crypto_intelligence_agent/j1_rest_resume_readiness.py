@@ -79,7 +79,7 @@ def audit_existing_rest_resume(
     if allow_private_readonly_audit is not True:
         return out
     if (type(now_ms) is not int or not 1_600_000_000_000 <= now_ms < 4_102_444_800_000
-            or type(output_directory) is not Path
+            or not isinstance(output_directory, Path)
             or not output_directory.is_absolute()
             or type(owner_ok) not in (bool, type(None))):
         return _base("invalid_configuration")
