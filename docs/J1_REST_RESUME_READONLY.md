@@ -14,7 +14,7 @@ A execução opcional requer checkout SHA conferido, usuário não root `cia-pro
 
 ```bash
 cd /home/cia-probe/agent/repo
-/home/cia-probe/agent/ws-venv/bin/python -m scripts.audit_j1_rest_resume_readiness --output-directory /home/cia-probe/agent/j1-rest-m3-20261109/canary --allow-private-readonly-audit
+/home/cia-probe/agent/ws-venv/bin/python -m scripts.audit_j1_rest_resume_readiness --output-directory /PRIVATE_EXISTENTE/OUTPUT_REST --allow-private-readonly-audit
 ```
 
 **Bloqueios remanescentes:** a coleta permanente #429 necessita política para gaps, renovação causal e serviço supervisionado; o universo de 50 elegíveis e identidade cripto #319 ainda não foi comprovado. Não ampliar o limite de 48h, reinstalar timer, recriar banco ou liberar operação real. Este bloco é diagnóstico offline com testes, não implantação.
