@@ -1308,3 +1308,8 @@ Branch `work/issue-517-d278-batch-cutoff-primary-crosswalk`: matriz de 9 símbol
 ## J1 — seleção automática de candidatos USDT perpétuos (11/11/2026)
 
 Nova branch `work/issue-319-j1-auto-usdt-perp-research-filter` separa pesquisa automática de contratos USDT lineares perpétuos de autorização de negociação. Filtro puro, sem registro positivo individual para **pesquisa**, exclui TradFi documentado e marcadores de metadados, reconhece desconhecidos e ranqueia somente 24 candles 1h fechados com turnover USDT positivo. Não substitui registro de identidade para trading, não promove Top50 marketwide e não realiza GET, VPS, ordens ou alteração do banco. Este checkpoint não prova CI, PR ou merge; verificar SHA/gates 3/3. Detalhes em `docs/J1_AUTOMATIC_CRYPTO_USDT_RESEARCH.md`.
+
+
+## J1/D280 — observação atual do universo com seletor automático (11/11/2026)
+
+PR #551/D279 integrada SHA `ca174b8dc4b98b95bce7fa967ba3ab3668bb34bf`, Linux 2374, Windows e PAPER sucesso. Novo `scripts.scan_j1_auto_usdt_perps_once` na branch `work/issue-319-j1-auto-usdt-catalog-readonly-cli` permite uma consulta pública GET-only por páginas, explicitamente opt-in e sem armazenamento para aplicar o filtro automático, sem revisar moeda por moeda. Pesquisa não equivale a universo Top50 comprovado, nem operação real; nenhuma VPS acessada para a nova rotina. Evidências CI/merge D280 ainda pendentes neste checkpoint.
