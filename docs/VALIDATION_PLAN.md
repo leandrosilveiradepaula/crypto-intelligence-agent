@@ -1101,3 +1101,8 @@ Executar `tests/test_j1_top50_cutoff_sensitivity.py`: 50+10 contratos, cenário 
 ## J1/D277 — replay owner dos 3 contratos TradFi de série curta (11/11/2026)
 
 Testar `tests/test_j1_d277_short_tradfi_primary.py`: 3 documentos oficiais, mesmo anúncio 06/11 11h, nomes, indicadores negativos posteriores, abstinência PIT, fonte não conhecida, duplicata, 24 candles inválidos, hint futuro, URL falsa/credenciais, padrão sem nomes e nenhuma rede/ordem. Integrar `tests/test_j1_d264_private_metadata_snapshot.py`: replay SQLite existente sem shorts e saída D277 vazia, gate owner/privacidade. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final. Revalidar na VPS em leitura após merge. Ver `docs/J1_D277_SHORT_TRADFI_EVIDENCE.md`.
+
+
+## J1/D278 — dossiês primários por tipo de instrumento (11/11/2026)
+
+`tests/test_j1_d278_cutoff_primary_batch.py`: nove símbolos, 3 fontes duplas de perpétuo nominal, ICNT só Binance, AERO spot-migração, DOT/ARIA/BIRB sem prova, CLANKER preservado. Rejeitar URL maliciosa, data inválida, prova de outro domínio, fontes duplicadas, inferência do ticker, escopo duplicado/fora da fronteira; nenhum HTTP/SQLite interno. `tests/test_j1_d264_private_metadata_snapshot.py`: integração ao replay owner read-only, resumo sem símbolos por padrão e gate opt-in. CI 3/3 no SHA final e replay real apenas owner após merge. Ver `docs/J1_D278_CUTOFF_PRIMARY_BATCH.md`.
