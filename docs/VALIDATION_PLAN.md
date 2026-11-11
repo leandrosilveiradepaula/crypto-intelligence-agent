@@ -1096,3 +1096,8 @@ Testar `test_j1_d273_primary_identity_research.py` para D273+D274: URLs Bybit Le
 ## J1/D276 — sensibilidade do corte com substitutos de volume (11/11/2026)
 
 Executar `tests/test_j1_top50_cutoff_sensitivity.py`: 50+10 contratos, cenário base, exclusão XAUT deslocando 1, XAUT+4 colisões deslocando 5, ordem estável, digests, privacidade por padrão, shorts não pontuados, entrada duplicada/malformada, 50 insuficientes, zero HTTP/SQLite e flags false. Integrar `tests/test_j1_d264_private_metadata_snapshot.py` para replay owner existente. Exigir Linux/docs + Windows/offline + Chrome/PAPER no HEAD final, revisão e merge sem produção. Ver `docs/J1_D276_TOP50_CUTOFF_SENSITIVITY.md`.
+
+
+## J1/D277 — replay owner dos 3 contratos TradFi de série curta (11/11/2026)
+
+Testar `tests/test_j1_d277_short_tradfi_primary.py`: 3 documentos oficiais, mesmo anúncio 06/11 11h, nomes, indicadores negativos posteriores, abstinência PIT, fonte não conhecida, duplicata, 24 candles inválidos, hint futuro, URL falsa/credenciais, padrão sem nomes e nenhuma rede/ordem. Integrar `tests/test_j1_d264_private_metadata_snapshot.py`: replay SQLite existente sem shorts e saída D277 vazia, gate owner/privacidade. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final. Revalidar na VPS em leitura após merge. Ver `docs/J1_D277_SHORT_TRADFI_EVIDENCE.md`.

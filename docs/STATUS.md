@@ -1293,3 +1293,8 @@ Branch `work/issue-319-d275-frontier-review-batch`: módulo puro para anexar ao 
 ## J1/D276 — cenários do corte Top50 no banco real (11/11/2026)
 
 Replay real owner somente leitura em 819 séries completas e 3 incompletas revelou substitutos LYN (sem XAUT) e LYN/DOT/ICNT/ELSA/AERO (sem XAUT + 4 colisões). Nenhum desses cenários aprova ativos ou resolve retrospectivamente PIT. Branch `work/issue-319-d276-top50-cutoff-sensitivity` integra relatório determinístico ao D264 e testes. **CI/merge não confirmados neste checkpoint**, verificar head final. Ver `docs/J1_D276_TOP50_CUTOFF_SENSITIVITY.md`.
+
+
+## J1/D277 — shorts incompletos com fontes primárias (11/11/2026)
+
+Prova owner real 822 catalogados = 819 completos + DUOLUSDT/FISVUSDT/FNUSDT com 2 candles cada, e os três com indicadores negativos TradFi D264. Bybit publica anúncios oficiais de perpétuos TradFi de Duolingo, Fiserv, Fabrinet às 11h UTC 06/11. Branch `work/issue-319-d277-short-tradfi-primary-proof` implementa anotação read-only no replay D264 e testes; CI/merge ainda não estão comprovados neste checkpoint. Ver `docs/J1_D277_SHORT_TRADFI_EVIDENCE.md`.

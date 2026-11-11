@@ -27,6 +27,7 @@ from crypto_intelligence_agent.bybit_tradfi_negative_evidence import NEGATIVE_EV
 from crypto_intelligence_agent.bybit_identity_crosswalk_research import research_category
 from crypto_intelligence_agent.j1_top50_frontier_worklist import frontier_review_worklist
 from crypto_intelligence_agent.j1_top50_cutoff_sensitivity import cutoff_sensitivity
+from crypto_intelligence_agent.j1_short_tradfi_primary import audit_short_tradfi
 from crypto_intelligence_agent.crypto_asset_registry import load_registry_json
 from scripts.audit_bybit_marketwide_closed24h import (
     _MATH, _dec, _digest, _strict_owner, MAX_DB_BYTES,
@@ -318,6 +319,23 @@ def replay_private_snapshot(directory: Path, *,
                     "current_provider_negative_exclusions_not_pit": True,
                     "research_frontier_not_eligible_top50": True,
                 })
+                # D256 _replay already validated every incomplete candle row.
+                # Source documents were reviewed retrospectively, NOT at PIT.
+                short_rows = tuple(
+                    (symbol, count, hint) for symbol, hint, count
+                    in db.execute(
+                        "SELECT symbol,launch_hint_ms,observed_count "
+                        "FROM incomplete ORDER BY symbol"
+                    )
+                )
+                if len(short_rows) != proof["incomplete_24h_contracts"]:
+                    raise AuditRejected("d277_short_row_count_mismatch")
+                out["short_tradfi_documentary_research"] = audit_short_tradfi(
+                    shorts=short_rows,
+                    historical_window_end_ms=proof["capture_window_end_ms"],
+                    contemporary_negative_symbols=negatives_current,
+                    include_private_symbols=include_private_symbols,
+                )
                 out["conditional_cutoff_sensitivity"] = cutoff_sensitivity(
                     all_complete_ranked_symbols=tuple(ordered),
                     retrospectively_excluded_symbols=frozenset(exclusions),

@@ -1451,3 +1451,8 @@ Reutilizar replay owner D264 existente e compor, sem GET novo, fila de revisão 
 ## J1/D276 — a elegibilidade desloca o corte Top50 (11/11/2026)
 
 Replay owner real mostrou que remover XAUT (caso de política) desloca LYNUSDT para o 50º; remover adicionalmente as 4 colisões LIT/ARIA/BIRB/CLANKER traz LYN/DOT/ICNT/ELSA/AERO como substitutos de posições 46–50. Estes são **cenários hipotéticos de exclusão**, não mudança de política; XAUT e colisões seguem pendentes, 3 séries incompletas seguem rivais possíveis. D276 implementa análise determinística dentro do replay D264, saída privada sob opt-in e nenhuma promoção de identidade/PIT/trading. Ver `docs/J1_D276_TOP50_CUTOFF_SENSITIVITY.md`.
+
+
+## J1/D277 — três incompletos referenciam ações TradFi (11/11/2026)
+
+Replay owner D256 comprova 3 séries curtas, DUOLUSDT/FISVUSDT/FNUSDT, 2 candles cada; anúncios oficiais Bybit 06/11 identificam Duolingo/Fiserv/Fabrinet como subjacentes TradFi, e D264 registra indicadores posteriores. Registro D277 é veto **documental retrospectivo**, não prova de identidade PIT na hora congelada nem confirmação de Top50 crypto-only. Não completar candles artificialmente, não excluir por zero de volume, não re-coletar. Ver `docs/J1_D277_SHORT_TRADFI_EVIDENCE.md`.
