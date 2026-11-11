@@ -1348,3 +1348,8 @@ Branch `work/issue-429-j1-rest-fifty-cohort-readonly-audit`: auditor owner-only 
 ## J1/D286 — ranking corrente por 24 candles fechados da pool automática (11/11/2026)
 
 PR #559 em validação: scripts/run_j1_auto_closed24h_rank_once.py consulta todos os candidatos D279 atuais (VPS: 370), 24h fechadas por ativo com Bybit V5 público, scanner de catálogo ANTES e DEPOIS, janela HH:01..HH:15 e GET budget <=450 a 2s de intervalo, sem retries em 10006. Um GET separado mostrou que 44/50 ativos D264 históricos permanecem na pool atual; portanto não reutilizar o frontier antigo para N50. Ranking determinístico Decimal de turnover USDT 24h, somente contagens/digest (nomes públicos sob opt-in) e flags de pesquisa, sem storage/ordens. CI e execução real ainda dependem de gates. Coleta REST N2 em produção permanece intocada; projeto ainda não alega Top50 atual marketwide ou identidade cripto certificada.
+
+
+## J1/D287 — handoff entre ranking D286 atual e persistência M1 por epoch (11/11/2026)
+
+Branch `work/issue-429-j1-auto-current-ranked-epoch-journal`: fluxo de manifest research-only privado (N50 atual D286, SHA binding de lista ordenada e horários, 48h expiração, sem overwrite), novo runner explícito que injeta seleção ao writer M1 EXISTENTE sem alterar worker, timer e journal N2, e testes de 50×24=1.200 candles +50 incrementais, rotação rejeitada no mesmo DB e zero GET sem opt-in. Relatório D286 para manifesto exige opt-in de símbolos públicos e armazenamento 0600, distinto do job de captura 16:01 UTC agendado sem saída de símbolos. Nenhum deploy ou N50 real confirmado nessa branch; CI/PR/merge ainda sujeitos a evidência. Sem ordens ou Top50 certificado.
