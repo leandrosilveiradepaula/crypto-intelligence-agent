@@ -15,7 +15,7 @@ from crypto_intelligence_agent.bybit_public_j1_transport import (
     BoundedBybitPublicClient, J1BybitCaptureError, instruments_url,
 )
 from crypto_intelligence_agent.bybit_paginated_universe_research import (
-    MAX_PAGES, _cursor,
+    MAX_PAGES, _cursor, _response,
 )
 from crypto_intelligence_agent.j1_auto_usdt_perp import (
     screen_bybit_usdt_perps_offline,
@@ -75,8 +75,11 @@ def observe_current_usdt_perpetuals(
             if (type(received) is not int or received < started
                     or received - started > MAX_OBSERVATION_MS):
                 raise DataValidationError("market catalog receipt clock invalid")
-            if type(payload) is not dict or type(payload.get("result")) is not dict:
-                raise DataValidationError("invalid provider catalog payload")
+            # Validate provider status/category/time BEFORE another cursor GET.
+            _response(
+                payload, label="Bybit automatic catalog",
+                at_ms=received, age_ms=120_000,
+            )
             pages.append(payload)
             cursors.append(requested)
             receipts.append(received)
