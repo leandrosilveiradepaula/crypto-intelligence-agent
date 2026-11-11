@@ -1446,3 +1446,8 @@ Fontes primárias Bybit Learn (29/04/2025) e Binance Futures (12/11/2025) associ
 ## J1/D275 — diligência da fronteira completa em lote (11/11/2026)
 
 Reutilizar replay owner D264 existente e compor, sem GET novo, fila de revisão dos 50 candidatos da fronteira retrospectiva. Preservar referência arquivada quando houver, categoria de colisão/prelisting/commodity, duas fontes primárias D273/D274 posteriores e identidade desconhecida. Nenhum candidato é automaticamente aprovado; D264 não é evidência PIT de 06/11. Fila privada visível apenas em opt-in owner, contagens e digest por padrão. Ver `docs/J1_D275_FRONTIER_BATCH_REVIEW.md`, #319/#517.
+
+
+## J1/D276 — a elegibilidade desloca o corte Top50 (11/11/2026)
+
+Replay owner real mostrou que remover XAUT (caso de política) desloca LYNUSDT para o 50º; remover adicionalmente as 4 colisões LIT/ARIA/BIRB/CLANKER traz LYN/DOT/ICNT/ELSA/AERO como substitutos de posições 46–50. Estes são **cenários hipotéticos de exclusão**, não mudança de política; XAUT e colisões seguem pendentes, 3 séries incompletas seguem rivais possíveis. D276 implementa análise determinística dentro do replay D264, saída privada sob opt-in e nenhuma promoção de identidade/PIT/trading. Ver `docs/J1_D276_TOP50_CUTOFF_SENSITIVITY.md`.

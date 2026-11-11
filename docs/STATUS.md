@@ -1288,3 +1288,8 @@ CLANKERUSDT: fonte Bybit Learn sobre tokenbot (CLANKER) e listagem perpétua; fo
 ## J1/D275 — frente de identidade Top50 em lote (11/11/2026)
 
 Branch `work/issue-319-d275-frontier-review-batch`: módulo puro para anexar ao replay D264 existente a fila de pesquisa de todos os 50, combinando referências arquivadas e evidências primárias D273/D274 sem promover aprovação. Saída padrão somente contagem/digest, opt-in owner para nomes; testes unitários e SQLite. **Este checkpoint de branch não é CI/merge nem prova owner real.** O conector VPS não consegue executar como `cia-probe` por permissão; não relaxar isolamento. Ver `docs/J1_D275_FRONTIER_BATCH_REVIEW.md`.
+
+
+## J1/D276 — cenários do corte Top50 no banco real (11/11/2026)
+
+Replay real owner somente leitura em 819 séries completas e 3 incompletas revelou substitutos LYN (sem XAUT) e LYN/DOT/ICNT/ELSA/AERO (sem XAUT + 4 colisões). Nenhum desses cenários aprova ativos ou resolve retrospectivamente PIT. Branch `work/issue-319-d276-top50-cutoff-sensitivity` integra relatório determinístico ao D264 e testes. **CI/merge não confirmados neste checkpoint**, verificar head final. Ver `docs/J1_D276_TOP50_CUTOFF_SENSITIVITY.md`.

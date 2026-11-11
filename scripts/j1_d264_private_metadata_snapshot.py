@@ -26,6 +26,7 @@ except ImportError:
 from crypto_intelligence_agent.bybit_tradfi_negative_evidence import NEGATIVE_EVIDENCE
 from crypto_intelligence_agent.bybit_identity_crosswalk_research import research_category
 from crypto_intelligence_agent.j1_top50_frontier_worklist import frontier_review_worklist
+from crypto_intelligence_agent.j1_top50_cutoff_sensitivity import cutoff_sensitivity
 from crypto_intelligence_agent.crypto_asset_registry import load_registry_json
 from scripts.audit_bybit_marketwide_closed24h import (
     _MATH, _dec, _digest, _strict_owner, MAX_DB_BYTES,
@@ -317,6 +318,12 @@ def replay_private_snapshot(directory: Path, *,
                     "current_provider_negative_exclusions_not_pit": True,
                     "research_frontier_not_eligible_top50": True,
                 })
+                out["conditional_cutoff_sensitivity"] = cutoff_sensitivity(
+                    all_complete_ranked_symbols=tuple(ordered),
+                    retrospectively_excluded_symbols=frozenset(exclusions),
+                    incomplete_candle_contracts=proof["incomplete_24h_contracts"],
+                    include_private_symbols=include_private_symbols,
+                )
                 out["frontier_identity_review_worklist"] = frontier_review_worklist(
                     frontier,
                     frozen_market_window_end_ms=proof["capture_window_end_ms"],

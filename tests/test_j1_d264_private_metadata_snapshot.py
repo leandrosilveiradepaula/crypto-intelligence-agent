@@ -166,6 +166,12 @@ class D264PrivateOwnerTests(unittest.TestCase):
         self.assertEqual(proof["frozen_complete_contracts"], 60)
         self.assertEqual(proof["current_provider_negative_count"], 2)
         self.assertEqual(proof["research_frontier_count"], 50)
+        sensitivity = proof["conditional_cutoff_sensitivity"]
+        self.assertEqual(sensitivity["complete_candle_contracts"], 60)
+        self.assertEqual(sensitivity["retrospectively_excluded_complete_contracts"], 2)
+        self.assertEqual(sensitivity["scenarios"][0]["replacements_in_top50_count"], 0)
+        self.assertNotIn("replacement_symbols_only", sensitivity["scenarios"][0])
+        self.assertFalse(sensitivity["marketwide_top50_verified"])
         self.assertTrue(proof["current_provider_negative_exclusions_not_pit"])
         batch = proof["frontier_identity_review_worklist"]
         self.assertEqual(batch["research_frontier_count"], 50)
@@ -219,6 +225,10 @@ class D264PrivateOwnerTests(unittest.TestCase):
         ids = [x["symbol"] for x in optin["private_research_symbols_only"]]
         self.assertNotIn("SOXLUSDT", ids)
         self.assertNotIn("XAUUSDT", ids)
+        scenarios = optin["conditional_cutoff_sensitivity"]["scenarios"]
+        self.assertEqual(len(scenarios), 3)
+        self.assertIn("replacement_symbols_only", scenarios[0])
+        self.assertFalse(optin["conditional_cutoff_sensitivity"]["marketwide_top50_verified"])
         worklist = optin["frontier_identity_review_worklist"]
         self.assertEqual(worklist["identity_review_pending_count"], 50)
         self.assertEqual(len(worklist["private_research_worklist_only"]), 50)
