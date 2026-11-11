@@ -25,6 +25,7 @@ except ImportError:
 
 from crypto_intelligence_agent.bybit_tradfi_negative_evidence import NEGATIVE_EVIDENCE
 from crypto_intelligence_agent.bybit_identity_crosswalk_research import research_category
+from crypto_intelligence_agent.j1_top50_frontier_worklist import frontier_review_worklist
 from crypto_intelligence_agent.crypto_asset_registry import load_registry_json
 from scripts.audit_bybit_marketwide_closed24h import (
     _MATH, _dec, _digest, _strict_owner, MAX_DB_BYTES,
@@ -316,6 +317,12 @@ def replay_private_snapshot(directory: Path, *,
                     "current_provider_negative_exclusions_not_pit": True,
                     "research_frontier_not_eligible_top50": True,
                 })
+                out["frontier_identity_review_worklist"] = frontier_review_worklist(
+                    frontier,
+                    frozen_market_window_end_ms=proof["capture_window_end_ms"],
+                    archived_crypto_bases=frozenset(refs),
+                    include_private_symbols=include_private_symbols,
+                )
                 if include_private_symbols:
                     out["private_research_symbols_only"] = [
                         {"position": i, "symbol": s,
