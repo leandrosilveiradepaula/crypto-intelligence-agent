@@ -1303,3 +1303,8 @@ Prova owner real 822 catalogados = 819 completos + DUOLUSDT/FISVUSDT/FNUSDT com 
 ## J1/D278 — nove rivais pesquisados em lote (11/11/2026)
 
 Branch `work/issue-517-d278-batch-cutoff-primary-crosswalk`: matriz de 9 símbolos da fronteira D276 (LYN, DOT, ICNT, ELSA, AERO, LIT, ARIA, BIRB, CLANKER), fontes oficiais por tipo venue perp/independente perp/migração spot, tests e integração no replay D264 sem rede. LYN/ELSA/LIT têm duas fontes nominais, ICNT só uma independente e AERO migração spot que não comprova perpétuo. Todas identidades ainda research-only, D261/PIT sem promoção. Este checkpoint de branch não prova CI/merge. Ver `docs/J1_D278_CUTOFF_PRIMARY_BATCH.md`.
+
+
+## J1 — seleção automática de candidatos USDT perpétuos (11/11/2026)
+
+Nova branch `work/issue-319-j1-auto-usdt-perp-research-filter` separa pesquisa automática de contratos USDT lineares perpétuos de autorização de negociação. Filtro puro, sem registro positivo individual para **pesquisa**, exclui TradFi documentado e marcadores de metadados, reconhece desconhecidos e ranqueia somente 24 candles 1h fechados com turnover USDT positivo. Não substitui registro de identidade para trading, não promove Top50 marketwide e não realiza GET, VPS, ordens ou alteração do banco. Este checkpoint não prova CI, PR ou merge; verificar SHA/gates 3/3. Detalhes em `docs/J1_AUTOMATIC_CRYPTO_USDT_RESEARCH.md`.
