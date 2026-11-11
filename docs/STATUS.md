@@ -1313,3 +1313,8 @@ Nova branch `work/issue-319-j1-auto-usdt-perp-research-filter` separa pesquisa a
 ## J1/D280 — observação atual do universo com seletor automático (11/11/2026)
 
 PR #551/D279 integrada SHA `ca174b8dc4b98b95bce7fa967ba3ab3668bb34bf`, Linux 2374, Windows e PAPER sucesso. Novo `scripts.scan_j1_auto_usdt_perps_once` na branch `work/issue-319-j1-auto-usdt-catalog-readonly-cli` permite uma consulta pública GET-only por páginas, explicitamente opt-in e sem armazenamento para aplicar o filtro automático, sem revisar moeda por moeda. Pesquisa não equivale a universo Top50 comprovado, nem operação real; nenhuma VPS acessada para a nova rotina. Evidências CI/merge D280 ainda pendentes neste checkpoint.
+
+
+## J1/D281 — prova real de filtro automático e união com histórico sem recaptura (11/11/2026)
+
+VPS owner `cia-probe` atualizada via fast-forward até `72f6ec7cfab1ad7f343ee37d850bb4fb7e1417e0`, 15 testes J1 auto aprovados; GET-only real Bybit D280 em 11/11 com 930 linhas/1 página e 370 candidatos provisórios (388 marcadores TradFi, 25 negativos documentados, 108 outros produtos, 39 ambíguos; 1 GET). Sem ordens, gravação ou serviço. D281 na branch `work/issue-319-j1-auto-vps-readonly-reconcile` conecta esses candidatos ao D256 histórico e snapshot D264 já existentes, reutilizando replay SQLite em read-only e explicitando que cruzamento posterior não é Top50 PIT/mercado homologado. Ver `docs/J1_AUTO_USDT_PRIVATE_RECONCILIATION.md`. Gates CI/merge D281 não alegados neste checkpoint.

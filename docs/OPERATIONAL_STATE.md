@@ -1476,3 +1476,10 @@ Decisão: não mais exigir 50 estudos manuais como pré-condição à **pesquisa
 ## J1/D280 — leitura GET-only do catálogo para classificador automático (11/11/2026)
 
 Depois da PR #551 integrada SHA `ca174b8dc4b98b95bce7fa967ba3ab3668bb34bf` (Linux/Windows/PAPER verdes), branch `work/issue-319-j1-auto-usdt-catalog-readonly-cli` liga classificador D279 ao cliente REST público já existente. CLI owner-only opt-in, full cursor 20 páginas máximo, 300s e sem escrita/ordens; contagens e hash por padrão. Testes de fake transport e docs D280. Branch não comprova CI/merge ou execução VPS; verificar head 3/3 antes da integração sem deploy. #319 permanece open, assim como #429 coleta permanente e #2.
+
+
+## J1/D281 — retomada operacional com prova VPS real (11/11/2026)
+
+- Repositório main até PR #552 squash SHA `72f6ec7cfab1ad7f343ee37d850bb4fb7e1417e0`; checkout privado owner `cia-probe` atualizado em fast-forward a esse SHA, limpo. `python -m unittest discover -s tests -p test_j1_auto_*.py -q`: 15 testes OK.
+- Execução real `scripts.scan_j1_auto_usdt_perps_once --allow-public-network --confirm-region-and-personal-research` no VPS: 1 GET, catálogo 930, candidatos provisórios 370, marker TradFi 388, documentados 25, outros 108, ambíguos 39; digest `115eb222184de24706f585143d343d9064d52f2d2e0e329de45730e37c231c96`. D256 e D264 presentes e privados owner (700/600), nenhum write ou ordem.
+- Branch atual de implementação `work/issue-319-j1-auto-vps-readonly-reconcile`: join estritamente read-only com `_replay` D256 + `_load_private` D264 e top50 retrospectivo sem recaptura; testes adversariais de SQLite real fake. **Aguardar CI/merge da D281 e só depois executar a prova real na VPS.** #319 aberta; #517 fechada como substituída; #429 não alterada; sem alegação de identidade crypto PIT, Top50 de mercado atual, ordens ou ativação de serviço.
