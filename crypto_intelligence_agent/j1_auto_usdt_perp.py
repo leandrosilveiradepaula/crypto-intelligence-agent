@@ -258,7 +258,10 @@ def rank_auto_candidates_closed24h_offline(
                 incomplete += 1
             total = Decimal(0)
             for i, bar in enumerate(bars):
-                expected = closed_hour_end_ms - (24 - i) * _HOUR
+                # A newly listed contract may have only the final 1..23
+                # closed hours; validate that suffix without fabricating
+                # earlier bars or treating its sum as a 24h market rank.
+                expected = closed_hour_end_ms - (len(bars) - i) * _HOUR
                 if (type(bar) is not tuple or len(bar) != 2
                         or type(bar[0]) is not int or bar[0] != expected
                         or type(bar[1]) is not Decimal
