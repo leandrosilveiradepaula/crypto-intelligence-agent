@@ -1298,3 +1298,8 @@ Replay real owner somente leitura em 819 séries completas e 3 incompletas revel
 ## J1/D277 — shorts incompletos com fontes primárias (11/11/2026)
 
 Prova owner real 822 catalogados = 819 completos + DUOLUSDT/FISVUSDT/FNUSDT com 2 candles cada, e os três com indicadores negativos TradFi D264. Bybit publica anúncios oficiais de perpétuos TradFi de Duolingo, Fiserv, Fabrinet às 11h UTC 06/11. Branch `work/issue-319-d277-short-tradfi-primary-proof` implementa anotação read-only no replay D264 e testes; CI/merge ainda não estão comprovados neste checkpoint. Ver `docs/J1_D277_SHORT_TRADFI_EVIDENCE.md`.
+
+
+## J1/D278 — nove rivais pesquisados em lote (11/11/2026)
+
+Branch `work/issue-517-d278-batch-cutoff-primary-crosswalk`: matriz de 9 símbolos da fronteira D276 (LYN, DOT, ICNT, ELSA, AERO, LIT, ARIA, BIRB, CLANKER), fontes oficiais por tipo venue perp/independente perp/migração spot, tests e integração no replay D264 sem rede. LYN/ELSA/LIT têm duas fontes nominais, ICNT só uma independente e AERO migração spot que não comprova perpétuo. Todas identidades ainda research-only, D261/PIT sem promoção. Este checkpoint de branch não prova CI/merge. Ver `docs/J1_D278_CUTOFF_PRIMARY_BATCH.md`.
