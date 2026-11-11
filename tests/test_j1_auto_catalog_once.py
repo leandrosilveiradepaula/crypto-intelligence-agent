@@ -79,6 +79,7 @@ class AutoCatalogOnceTests(unittest.TestCase):
         self.assertEqual(result["possible_crypto_perp_research_candidates"], 2)
         self.assertEqual(result["catalog_pages"], 2)
         self.assertEqual(result["requests_attempted"], 2)
+        self.assertEqual(result["network_requests"], 2)
         self.assertNotIn("NEWTOKENUSDT", json.dumps(result))
         self.assertFalse(result["marketwide_top50_verified"])
         self.assertFalse(result["orders_sent"])
