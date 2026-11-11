@@ -1471,3 +1471,8 @@ Preflight GitHub `main=eb93c78c210fc5f766f27f6b9c311c7e18bcd68f`, 0 PR aberta, #
 ## J1/#319 — mudança de direção: filtro automático USDT perp para pesquisa (11/11/2026)
 
 Decisão: não mais exigir 50 estudos manuais como pré-condição à **pesquisa** de mercados. Nova branch `work/issue-319-j1-auto-usdt-perp-research-filter` cria classificador offline de `LinearPerpetual/Trading/USDT`, exclusão de indicadores TradFi e ranking por 24 horas fechadas com Decimal; saída marcada apenas `research_only`, nunca trading allowlist. Preservar #319 aberto para elegibilidade operacional e PIT e #429 para supervisor contínuo. Banco D256/D264 e serviço REST permanecem intocados. Próximo: PR + CI 3/3 head/revisão/merge sem deploy; depois integração read-only com SQLite existente e prova owner controlada. Não inferir execução, CI ou merge desta anotação isolada.
+
+
+## J1/D280 — leitura GET-only do catálogo para classificador automático (11/11/2026)
+
+Depois da PR #551 integrada SHA `ca174b8dc4b98b95bce7fa967ba3ab3668bb34bf` (Linux/Windows/PAPER verdes), branch `work/issue-319-j1-auto-usdt-catalog-readonly-cli` liga classificador D279 ao cliente REST público já existente. CLI owner-only opt-in, full cursor 20 páginas máximo, 300s e sem escrita/ordens; contagens e hash por padrão. Testes de fake transport e docs D280. Branch não comprova CI/merge ou execução VPS; verificar head 3/3 antes da integração sem deploy. #319 permanece open, assim como #429 coleta permanente e #2.
