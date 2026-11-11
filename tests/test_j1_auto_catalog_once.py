@@ -112,7 +112,7 @@ class AutoCatalogOnceTests(unittest.TestCase):
     def test_future_provider_timestamp_is_never_accepted(self):
         result, c = self.call([page([row("BTCUSDT")], at=NOW + 5000)])
         self.assertEqual(result["status"], "abstain")
-        self.assertEqual(result["failure_code"], "auto_catalog_screen_rejected")
+        self.assertEqual(result["failure_code"], "auto_catalog_network_rejected")
         self.assertEqual(c.requests_attempted, 1)
 
     def test_denied_permission_does_no_request(self):
