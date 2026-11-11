@@ -19,12 +19,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-directory", required=True, type=Path)
     parser.add_argument("--allow-private-readonly-audit", action="store_true")
+    parser.add_argument("--expected-members", type=int, default=2,
+                        help="pinned research cohort 1..50; 2 is the original trial")
     parser.add_argument("--now-ms", type=int, default=None)
     args = parser.parse_args(argv)
     report = audit_existing_rest_resume(
         output_directory=args.output_directory,
         now_ms=(time.time_ns() // 1_000_000 if args.now_ms is None else args.now_ms),
         allow_private_readonly_audit=args.allow_private_readonly_audit,
+        expected_members=args.expected_members,
     )
     print(json.dumps(report, sort_keys=True, separators=(",", ":"), ensure_ascii=True))
     return 0 if report["journal_integrity_verified"] else 2
