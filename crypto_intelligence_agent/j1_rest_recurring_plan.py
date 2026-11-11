@@ -13,6 +13,7 @@ from hashlib import sha256
 from typing import Any, Mapping
 
 from .j1_rest_incremental_owner import HOUR_MS, MAX_CATCHUP_HOURS
+from .j1_rest_resume_readiness import _next_safe_target
 
 RECURRING_CALENDAR = "OnCalendar=*-*-* *:02:00 UTC"
 FINITE_HOURS = 24
@@ -157,6 +158,18 @@ def inspect_finite_to_recurring_rest_timer(
                 "catchup_exceeds_48h_blocked",
             )):
         return {**out, "failure_category": "private_journal_readiness_invalid"}
+    # Cross-check the audited timing fields against an independent
+    # calculation. The calendar at HH:02 must not silently skip a UTC close.
+    target = _next_safe_target(now_ms)
+    last = readiness["last_published_end_ms"]
+    computed = (target - last) // HOUR_MS
+    if (target <= 0 or target % HOUR_MS
+            or last % HOUR_MS or target < last
+            or (target - last) % HOUR_MS
+            or readiness.get("next_eligible_end_ms") != target
+            or computed != readiness["catchup_hours"]
+            or readiness["unobserved_closed_hours"] != max(0, computed-1)):
+        return {**out, "failure_category": "private_journal_clock_mismatch"}
     out["private_journal_integrity_verified"] = True
     out["hours_to_reconcile_at_next_close"] = readiness["catchup_hours"]
     out["unobserved_closed_hours"] = readiness["unobserved_closed_hours"]
