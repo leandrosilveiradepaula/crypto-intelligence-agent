@@ -18,3 +18,14 @@ A execução é estritamente offline: novos registros estáticos de fontes públ
 ## Próxima ação
 
 Utilizar a posição real do símbolo na fila de contratos com 24 horas fechadas da D256 e a lista D264 de indicadores TradFi **somente na VPS owner**. Se CLANKER competir pelo corte do 50º, abrir revisão independente temporal e de endereço, sem assumir que já era aprovado em 06/11. Não fazer nova coleta nem ativação de trading.
+
+## Integração ao ranking efetivo sem novo coletor
+
+O módulo puro `j1_top50_research_priorities.annotate_raw_rank_research` consome **somente o ranking que já foi conferido pelo replay D256**. O `j1_top50_private_pressure.audit_private_top50_pressure` agora acrescenta ao seu resultado `raw_rank_research_annotations` com contagens das categorias antigas e das pesquisas primárias D273/D274.
+
+- Conta, sem aprovar: `identity_unresolved`, `ticker_collision_unresolved`, candidatos hipotéticos, vetos TradFi documentados e interseções com as duas fichas de pesquisa primária.
+- `primary_crosswalk_not_pit_count` é explícito; a presença das fontes **não muda** `positively_reviewed_crypto` (continua vazio).
+- Por padrão **nenhum símbolo aparece** no relatório. A opção owner explícita `--include-public-symbols`, já existente, também exibe categoria de pesquisa dos primeiros 50 contratos do ranking bruto, somente no terminal privado. Nenhum valor de turnover sai.
+- O ranking bruto, que inclui ativos TradFi, **não** é o Top50 cripto elegível nem substitui a fronteira de pesquisa filtrada D264. Não usar contagens para inferir os 10 símbolos privados unresolved.
+
+Novos testes unitários cobrem casos mistos DGAI, CLANKER, FARTCOIN, LIT, BZ, desconhecidos e entradas inválidas; teste SQLite do bridge comprova que as categorias ficam disponíveis na leitura owner-only, sem rede ou atualização do banco.
