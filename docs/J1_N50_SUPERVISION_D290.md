@@ -22,3 +22,7 @@ A política requer `journal_scope_digest_sha256` **obtido de forma independente*
 3. Somente após CI e gate de instalação, propor serviço N50 próprio; **não substituir timer N2** existente. Medir continuidade real de 24h e drift da população, sem proclamar elegibilidade de trading.
 
 Esta PR é código e testes **offline**. Os dois jobs reais D289 já foram concluídos e não são reexecutados por este plano. J1 #429/#319 permanecem abertos; D290 não é operação contínua.
+
+## Consulta operacional somente leitura
+
+`python -m scripts.plan_j1_n50_supervision_once --manifest-directory /CAMINHO/PRIVADO/SCOPE --output-directory /CAMINHO/PRIVADO/JOURNAL --allow-private-manifest-read --allow-private-readonly-audit` faz apenas leitura sob owner não-root: reusa `load_private_ranked_scope` (0600) e `audit_existing_rest_resume` (SQLite read-only), valida binding do digest e mostra decisão sanitizada. Diretório ausente/corrompido é bloqueio, nunca bootstrap implícito. Resultado `needs_external_gate` é plano, **não comando de execução**. Nenhuma instalação/deploy faz parte do CLI.
