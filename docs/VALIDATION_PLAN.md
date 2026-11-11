@@ -1106,3 +1106,11 @@ Testar `tests/test_j1_d277_short_tradfi_primary.py`: 3 documentos oficiais, mesm
 ## J1/D278 — dossiês primários por tipo de instrumento (11/11/2026)
 
 `tests/test_j1_d278_cutoff_primary_batch.py`: nove símbolos, 3 fontes duplas de perpétuo nominal, ICNT só Binance, AERO spot-migração, DOT/ARIA/BIRB sem prova, CLANKER preservado. Rejeitar URL maliciosa, data inválida, prova de outro domínio, fontes duplicadas, inferência do ticker, escopo duplicado/fora da fronteira; nenhum HTTP/SQLite interno. `tests/test_j1_d264_private_metadata_snapshot.py`: integração ao replay owner read-only, resumo sem símbolos por padrão e gate opt-in. CI 3/3 no SHA final e replay real apenas owner após merge. Ver `docs/J1_D278_CUTOFF_PRIMARY_BATCH.md`.
+
+
+### J1 / D283 — conversão de timer REST finito para recorrente (11/11/2026)
+
+Validar em CI `tests/test_j1_rest_recurring_timer.py` para 24 agendas UTC fixas consecutivas, troca de **uma única diretiva lógica** para calendário recorrente do template M1, correspondência integral do serviço instalado, `Persistent=false`, clock monotônico, 21h/49h de catch-up, halo de 48h, gap histórico preservado, falha de integridade/halt e modo sem opt-in/sem IO. Regressão na suite J1 M1 `tests/test_j1_rest_incremental_owner.py` para captura 24h inicial, 1h incremental, duplicata e fail-stop quota/lag. Gates SHA head: docs Linux + Windows/offline + Chrome/PAPER. Prova owner VPS pós-merge com `scripts.audit_j1_rest_recurring_timer --allow-private-readonly-audit` e report `recurring_unit_verified_pending_operational_gate`; **isso não é implantação**. Para produção: revalidar relógio, stale gap <=48, service identity e SHA, aplicar apenas timer com rollback explícito e confirmar `SubState=waiting`/próxima execução e múltiplas publicações reais. Sem credenciais, ordens ou alteração de banco antes/durante a preflight.
+
+
+A D283 também exige `test_21h_catchup_recovers_candles_without_forging_checkpoints` e `test_49h_gap_fails_before_get_and_preserves_history` sobre o M1 original: comprovar idempotência, zero publicação retroativa de 20 horas perdidas, GET zero acima da janela de 48h e histórico preservado.

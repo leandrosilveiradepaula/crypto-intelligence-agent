@@ -109,6 +109,40 @@ class M1OwnerTests(unittest.TestCase):
         for out in (a,b,c):
             self.assert_safe(out)
 
+    def test_21h_catchup_recovers_candles_without_forging_checkpoints(self):
+        # Mirrors the real finite-timer expiry: 20 closed hours were
+        # unobserved, while the worker can recover within its 48h budget.
+        first = self.run_once()
+        self.assertEqual(first["status"], "research_sample_closed_hour_persisted")
+        resumed = self.run_once(delta=21 * HOUR_MS)
+        self.assertEqual(resumed["status"], "research_sample_closed_hour_persisted")
+        self.assertEqual(resumed["new_closed_candles"], 42)
+        self.assertEqual(resumed["requests_attempted"], 2)
+        self.assertEqual(resumed["contracts_at_decision"], 2)
+        self.assert_safe(resumed)
+        with closing(sqlite3.connect(self.out / _DB_NAME)) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM candles").fetchone()[0], 90)
+            self.assertEqual(db.execute(
+                "SELECT end_ms FROM published_hour ORDER BY end_ms"
+            ).fetchall(), [(BASE,), (BASE + 21 * HOUR_MS,)])
+        # Repeating the same closed hour cannot duplicate candles/checkpoints.
+        repeat = self.run_once(delta=21 * HOUR_MS)
+        self.assertEqual(repeat["requests_attempted"], 0)
+        self.assertEqual(repeat["new_closed_candles"], 0)
+        self.assert_safe(repeat)
+
+    def test_49h_gap_fails_before_get_and_preserves_history(self):
+        first = self.run_once()
+        self.assertEqual(first["status"], "research_sample_closed_hour_persisted")
+        blocked = self.run_once(delta=49 * HOUR_MS)
+        self.assertEqual(blocked["status"], "research_integrity_or_environment_abstain")
+        self.assertEqual(blocked["failure_category"], "catchup_exceeds_48h_owner_review")
+        self.assertEqual(blocked["requests_attempted"], 0)
+        with closing(sqlite3.connect(self.out / _DB_NAME)) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM candles").fetchone()[0], 48)
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM published_hour").fetchone()[0], 1)
+        self.assert_safe(blocked)
+
     def test_partial_failure_recovery_without_fake_hour_publication(self):
         hits = []
         def fail_second(url, limit):
