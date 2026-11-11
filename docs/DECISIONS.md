@@ -1441,3 +1441,8 @@ O contrato DGAIUSDT possui anúncio Bybit de 04/09/2026 ligando o símbolo a DGr
 ## J1/D274 — CLANKER pertence à hipótese tokenbot, sem aprovação automática (11/11/2026)
 
 Fontes primárias Bybit Learn (29/04/2025) e Binance Futures (12/11/2025) associam CLANKER ao protocolo tokenbot, e a Binance publica endereço Base. Manter `ticker_collision_unresolved` em pesquisa D261 para a janela congelada; não converter evidência revisada em 11/11 em aprovação PIT de 06/11 nem em allowlist. Endereço de anúncio Binance não prova identidade autenticada na Bybit. Ver `docs/J1_D274_CLANKER_PRIMARY_CROSSWALK.md`, #517/#319.
+
+
+## J1/D275 — diligência da fronteira completa em lote (11/11/2026)
+
+Reutilizar replay owner D264 existente e compor, sem GET novo, fila de revisão dos 50 candidatos da fronteira retrospectiva. Preservar referência arquivada quando houver, categoria de colisão/prelisting/commodity, duas fontes primárias D273/D274 posteriores e identidade desconhecida. Nenhum candidato é automaticamente aprovado; D264 não é evidência PIT de 06/11. Fila privada visível apenas em opt-in owner, contagens e digest por padrão. Ver `docs/J1_D275_FRONTIER_BATCH_REVIEW.md`, #319/#517.
