@@ -1436,3 +1436,8 @@ Não revisar todos os 819 instrumentos de uma vez nem promover referências anti
 ## J1/D273 — duas fontes primárias de DGAI sem retrodatação (11/11/2026)
 
 O contrato DGAIUSDT possui anúncio Bybit de 04/09/2026 ligando o símbolo a DGrid AI, e anúncio independente Gate de 23/08/2026 ligando DGrid AI/DGAI ao endereço de token BNB Chain. Registrar como **research lead primário**, não crypto aprovado: fontes publicadas antes do censo de 06/11 foram revisadas somente em 11/11, sem prova de observação PIT no censo. Não transformar o limite de 20x da Bybit em alavancagem global. Ver `docs/J1_D273_DGAI_PRIMARY_IDENTITY.md`, #517/#319.
+
+
+## J1/D274 — CLANKER pertence à hipótese tokenbot, sem aprovação automática (11/11/2026)
+
+Fontes primárias Bybit Learn (29/04/2025) e Binance Futures (12/11/2025) associam CLANKER ao protocolo tokenbot, e a Binance publica endereço Base. Manter `ticker_collision_unresolved` em pesquisa D261 para a janela congelada; não converter evidência revisada em 11/11 em aprovação PIT de 06/11 nem em allowlist. Endereço de anúncio Binance não prova identidade autenticada na Bybit. Ver `docs/J1_D274_CLANKER_PRIMARY_CROSSWALK.md`, #517/#319.
