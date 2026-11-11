@@ -155,11 +155,16 @@ class Closed24hCurrentAutoTests(unittest.TestCase):
         self.assertFalse(out["catalog_census_matches_before_after"])
 
     def test_provider_rate_limit_abstains_without_retry(self):
-        # Enumeration is lexicographic, not index order: TOK1 follows TOK0.
-        out, c = call(client=FakeClient(fail_symbol="TOK1USDT"))
+        # Enumeration is lexicographic; never assume a token index is a
+        # lexical position (TOK10 precedes TOK1 in bytewise ordering).
+        denied_symbol = "TOK1USDT"
+        out, c = call(client=FakeClient(fail_symbol=denied_symbol))
         self.assertEqual(out["status"], "abstain")
         self.assertEqual(out["failure_category"], "current_closed_kline_rejected")
-        self.assertEqual(c.requests_attempted, 3)
+        expected_klines = sorted(SYMS).index(denied_symbol) + 1
+        self.assertEqual(c.klines, expected_klines)
+        self.assertEqual(c.catalog_calls, 1)
+        self.assertEqual(c.requests_attempted, expected_klines + 1)
         self.assertFalse(out["database_modified"])
 
     def test_utc_deadline_and_bad_clock_abstain(self):
