@@ -256,12 +256,19 @@ def rank_auto_candidates_closed24h_offline(
                 raise DataValidationError("invalid closed-hour bar collection")
             if len(bars) != 24:
                 incomplete += 1
+            # Partial windows may start late (new listing) OR end early
+            # (missing latest candle). Audit any contiguous observed prefix
+            # inside the target 24h window, but never rank incomplete data.
+            first_open = (bars[0][0] if bars and type(bars[0]) is tuple
+                          and len(bars[0]) == 2
+                          and type(bars[0][0]) is int else None)
+            if bars and (first_open is None
+                         or first_open < closed_hour_end_ms - 24 * _HOUR
+                         or first_open + len(bars) * _HOUR > closed_hour_end_ms):
+                raise DataValidationError("partial closed-hour window outside 24h")
             total = Decimal(0)
             for i, bar in enumerate(bars):
-                # A newly listed contract may have only the final 1..23
-                # closed hours; validate that suffix without fabricating
-                # earlier bars or treating its sum as a 24h market rank.
-                expected = closed_hour_end_ms - (len(bars) - i) * _HOUR
+                expected = first_open + i * _HOUR
                 if (type(bar) is not tuple or len(bar) != 2
                         or type(bar[0]) is not int or bar[0] != expected
                         or type(bar[1]) is not Decimal
