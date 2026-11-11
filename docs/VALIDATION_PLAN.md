@@ -1114,3 +1114,8 @@ Validar em CI `tests/test_j1_rest_recurring_timer.py` para 24 agendas UTC fixas 
 
 
 A D283 também exige `test_21h_catchup_recovers_candles_without_forging_checkpoints` e `test_49h_gap_fails_before_get_and_preserves_history` sobre o M1 original: comprovar idempotência, zero publicação retroativa de 20 horas perdidas, GET zero acima da janela de 48h e histórico preservado.
+
+
+### D284 — critérios pós-ativação do timer periódico (execução 11/11/2026)
+
+A ativação D283 passou os testes Linux/Windows/PAPER (2.397 Linux), checkout VPS SHA e 31 testes locais. Primeiro disparo real às 15:02 UTC foi **aprovado** com 2 GET, 42 candles incrementais, 142 linhas SQLite íntegro, 27 publicações, próxima agenda 16:02 UTC. Para declarar continuidade 24/7, ainda exigimos **múltiplos fechamentos consecutivos reais** com `LastTrigger`, resultado `.service`, journal SQLite owner (digest/cursor), ausência de novas horas faltantes, número estável de membros N=2 e alarmes em falha. Não reescrever a única lacuna PIT histórica (21 checkpoints cumulativos depois de retomada); registrar contagem, e não tratar como corrupção de candles. Se houver provider quota/deny, latch impede próximo GET; se gap >48h, fail closed. Alavancar #319 com seleção e candles de 50 candidatos após pipeline separado, sem promover T50 ou ordens automaticamente.
