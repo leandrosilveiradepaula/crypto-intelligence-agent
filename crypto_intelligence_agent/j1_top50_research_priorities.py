@@ -38,7 +38,9 @@ def annotate_raw_rank_research(
             or len(set(raw_ranked_symbols)) != len(raw_ranked_symbols)
             or any(type(s) is not str or _SYMBOL.fullmatch(s) is None
                    for s in raw_ranked_symbols)
-            or type(include_symbols) is not bool):
+            or type(include_symbols) is not bool
+            or type(market_window_end_ms) is not int
+            or not 1_600_000_000_000 <= market_window_end_ms <= 4_102_444_800_000):
         raise ValueError("rank research input invalid")
     counts: Counter[str] = Counter()
     rows: list[dict[str, Any]] = []
