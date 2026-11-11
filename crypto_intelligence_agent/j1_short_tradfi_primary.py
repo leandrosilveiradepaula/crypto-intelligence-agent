@@ -47,7 +47,7 @@ class ShortTradfiPrimary:
         url = urlsplit(self.announcement_url)
         if (url.scheme != "https" or url.netloc != "announcements.bybit.com"
                 or not url.path.startswith("/en/article/")
-                or not _SHA.fullmatch(url.path.removeprefix("/en/article/"))
+                or not _SHA.fullmatch(url.path.removeprefix("/en/article/").removesuffix("/"))
                 or url.query or url.fragment or url.username or url.password):
             raise ValueError("short_tradfi_primary_url_invalid")
         try:
