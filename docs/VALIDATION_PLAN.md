@@ -1086,3 +1086,8 @@ Executar `tests/test_j1_d273_primary_identity_research.py`: DGAIUSDT Bybit+Gate,
 ## J1/D274 — auditoria de duas origens CLANKER (11/11/2026)
 
 Testar `test_j1_d273_primary_identity_research.py` para D273+D274: URLs Bybit Learn e Binance Support em hosts/caminhos específicos, rejeitar URL com query/credenciais/host inválido, token Base hexadecimal, cronologia estrita, veto de símbolo negativo BZ/XAU, invariante `ticker_collision_unresolved` da D261, não aprovação PIT histórica e nenhuma ordem. CI Linux/docs Windows/offline Chrome/PAPER no head final antes de merge. Ver `docs/J1_D274_CLANKER_PRIMARY_CROSSWALK.md`.
+
+
+## J1/D275 — 50 candidatos da fronteira D264 como lote (11/11/2026)
+
+`tests/test_j1_top50_frontier_worklist.py`: exatamente 50 membros, categorias arquivadas/hipóteses/colisões/commodity/desconhecidas, duas fontes primárias não PIT, negativo documentado fail-closed, entradas duplicadas/malformadas e nenhum HTTP/SQLite. `tests/test_j1_d264_private_metadata_snapshot.py`: integração com replay owner do censo em banco sintético, opção privada e contagens sem vazamento. Gate CI Linux/docs Windows/offline Chrome/PAPER no SHA final. Ver `docs/J1_D275_FRONTIER_BATCH_REVIEW.md`.
