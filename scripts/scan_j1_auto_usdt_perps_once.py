@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import time
+from pathlib import Path
 from typing import Any, Callable
 
 from crypto_intelligence_agent.bybit_public_j1_transport import (
@@ -30,6 +31,8 @@ def observe_current_usdt_perpetuals(
     allow_public_network: bool = False,
     confirm_region_and_personal_research: bool = False,
     include_public_symbols: bool = False,
+    private_directory: Path | None = None,
+    allow_private_readonly_audit: bool = False,
     owner_ok: bool | None = None,
 ) -> dict[str, Any]:
     """Consume a whole current Bybit V5 catalog once, bounded and sanitized.
@@ -55,7 +58,13 @@ def observe_current_usdt_perpetuals(
         report["failure_code"] = "owner_opt_in_required"
         return report
     if (client is None or not callable(now_ms)
-            or type(include_public_symbols) is not bool):
+            or type(include_public_symbols) is not bool
+            or (private_directory is not None and
+                (not isinstance(private_directory, Path)
+                 or not private_directory.is_absolute()
+                 or allow_private_readonly_audit is not True))
+            or (private_directory is None and
+                allow_private_readonly_audit is True)):
         report["failure_code"] = "configuration_invalid"
         return report
     pages = []
@@ -111,6 +120,20 @@ def observe_current_usdt_perpetuals(
         report["orders_sent"] = False
         report["marketwide_top50_verified"] = False
         report["crypto_identity_independently_verified"] = False
+        if private_directory is not None:
+            from crypto_intelligence_agent.j1_auto_private_reconcile import (
+                reconcile_auto_pool_with_private_census,
+            )
+            private_result = reconcile_auto_pool_with_private_census(
+                pool, private_directory,
+                allow_private_readonly_audit=True, owner_ok=owner,
+            )
+            report["retrospective_private_join"] = private_result
+            if private_result["status"] != (
+                "retrospective_auto_crypto_usdt_overlap_research_only"
+            ):
+                report["status"] = "abstain"
+                report["failure_code"] = "auto_catalog_private_join_rejected"
     except (DataValidationError, J1BybitCaptureError, ValueError, TypeError, OSError):
         # Never expose provider bodies, URLs, symbols or arbitrary exception.
         report["failure_code"] = "auto_catalog_" + stage + "_rejected"
@@ -129,6 +152,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--confirm-region-and-personal-research",
                         action="store_true")
     parser.add_argument("--include-public-symbols", action="store_true")
+    parser.add_argument("--private-directory", type=Path)
+    parser.add_argument("--allow-private-readonly-audit", action="store_true")
     args = parser.parse_args(argv)
     result = observe_current_usdt_perpetuals(
         client=BoundedBybitPublicClient(),
@@ -138,6 +163,8 @@ def main(argv: list[str] | None = None) -> int:
             args.confirm_region_and_personal_research
         ),
         include_public_symbols=args.include_public_symbols,
+        private_directory=args.private_directory,
+        allow_private_readonly_audit=args.allow_private_readonly_audit,
     )
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     return 0 if result["status"] == (
