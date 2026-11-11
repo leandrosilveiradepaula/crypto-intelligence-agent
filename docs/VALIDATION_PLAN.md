@@ -1139,3 +1139,7 @@ Validar `tests/test_j1_auto_research_epoch.py`: relatório D286 de dois catálog
 ### J3/D288 — hipóteses A/B pareadas em OOS sintético
 
 `tests/test_synthetic_ab_costed_oos.py`: a mesma sequência OOS madura PRE3/PRE4 para ambas as estratégias, candidato B só se fechamento causal, teste de prefixo isolado com alteração do futuro sem mudar a entrada, mesma referência de mark no horizonte, fees/slippage/funding exatos sintéticos (efeito em variação líquida ex post), abstenções verificáveis, plano adulterado/tempos rejeitados, sem float, rede, banco ou ordens. Gate CI docs/Linux+Windows/offline+Chrome/PAPER e code review SHA final. Nenhuma aprovação de trading, PnL verificado, trajetória intrabar ou lucro exigida/afirmada por este teste de hipótese.
+
+### J1/D290 — política inerte de supervisão N50 e binding do journal
+
+Testar `tests/test_j1_n50_supervision.py` com fake clock HH:00, HH:01..HH:15, fora da janela, bootstrap, reentrada idempotente, gaps passados/futuros, contagens 1.200/1.250, 36h de renovação, 48h de expiração, SHA de manifesto adulterado, scope de journal discordante, flags habilitadoras falsas, nenhum acesso a SQLite/network/systemd. Reexecutar `test_j1_rest_resume_readiness.py` com digest privado exposto somente após auditoria owner bem-sucedida, sem nomes, preços ou troca de schema. CI Linux/Windows/PAPER, revisão de SHA exato e merge sem deploy. Gate operacional externo continua obrigatório antes de criar qualquer serviço N50.

@@ -98,6 +98,7 @@ class RestResumeReadinessTests(unittest.TestCase):
         self.assertEqual(r["last_published_end_ms"],self.last)
         self.assertEqual(r["published_hours"],26)
         self.assertEqual(r["stored_candles"],100)
+        self.assertEqual(r["journal_scope_digest_sha256"],D)
         self.assertEqual(r["reviewed_research_contracts"],2)
         self.assertEqual(r["catchup_hours"],1)
         self.assertEqual(r["unobserved_closed_hours"],0)
@@ -108,6 +109,7 @@ class RestResumeReadinessTests(unittest.TestCase):
         self.assertEqual(r["network_requests"],0)
         self.assertEqual(r["database_mutation_statements"],0)
         self.assertFalse(r["orders_sent"])
+        self.assertNotIn("BTCUSDT", json.dumps(r))
         self.assertNotIn("BTCUSDT",json.dumps(r))
 
     def test_50_member_owner_cohort_closed24h_ranking_and_no_top50_claim(self):
@@ -118,6 +120,7 @@ class RestResumeReadinessTests(unittest.TestCase):
         self.assertTrue(r["journal_integrity_verified"])
         self.assertEqual(r["reviewed_research_contracts"], 50)
         self.assertEqual(r["stored_candles"], 2500)
+        self.assertEqual(r["journal_scope_digest_sha256"], D)
         self.assertEqual(r["published_hours"], 26)
         self.assertEqual(r["research_closed_24h_ranked_contracts"], 50)
         self.assertEqual(len(r["research_closed_24h_rank_digest_sha256"]), 64)
@@ -228,6 +231,7 @@ class RestResumeReadinessTests(unittest.TestCase):
             allow_private_readonly_audit=False,
             owner_ok=True)
         self.assertEqual(r["status"],"optin_required")
+        self.assertIsNone(r["journal_scope_digest_sha256"])
         with patch("sqlite3.connect",side_effect=AssertionError("DB should not open")):
             r=audit_existing_rest_resume(
                 output_directory=self.dir,now_ms=True,

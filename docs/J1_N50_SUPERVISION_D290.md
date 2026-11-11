@@ -17,7 +17,7 @@ A política requer `journal_scope_digest_sha256` **obtido de forma independente*
 
 ## Próxima etapa operacional, separada
 
-1. Adaptar o auditor owner-only para devolver apenas digest de escopo (sem símbolos), com proteção 0700/0600.
+1. O auditor owner-only D290 agora devolve apenas o digest do scope quando o replay SQLite íntegro passa (sem símbolos), com proteção 0700/0600. Validar primeiro o contrato na VPS via leitura independente antes de qualquer uso operacional.
 2. Implementar transição de epoch e lock global que impeçam colisão entre censo de 12 minutos e 50 GETs da coleta; executar teste fake clock cruzando 36/48h, restart, crash e rotações.
 3. Somente após CI e gate de instalação, propor serviço N50 próprio; **não substituir timer N2** existente. Medir continuidade real de 24h e drift da população, sem proclamar elegibilidade de trading.
 

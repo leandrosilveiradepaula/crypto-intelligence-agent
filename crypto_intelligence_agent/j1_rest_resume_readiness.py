@@ -38,6 +38,7 @@ def _base(status: str) -> dict[str, Any]:
         "historical_unpublished_hours": None,
         "historical_checkpoint_gaps_present": False,
         "stored_candles": 0,
+        "journal_scope_digest_sha256": None,
         "reviewed_research_contracts": 0,
         "research_closed_24h_ranked_contracts": 0,
         "research_closed_24h_rank_digest_sha256": None,
@@ -217,6 +218,7 @@ def audit_existing_rest_resume(
                 "historical_unpublished_hours": historical_missing,
                 "historical_checkpoint_gaps_present": historical_missing > 0,
                 "stored_candles": stored,
+                "journal_scope_digest_sha256": scope_digest,
                 "reviewed_research_contracts": len(members),
                 "research_closed_24h_ranked_contracts": len(ranking),
                 "research_closed_24h_rank_digest_sha256": sha256(

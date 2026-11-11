@@ -91,7 +91,7 @@ class N50SupervisionPolicyTests(unittest.TestCase):
         same = audit(last=T+HOUR_MS,published=2,now=now)
         self.assertEqual(plan_n50_supervision(
             now_ms=now,sealed_scope=scope(),audit=same).status,"no_op")
-        later = T + HOUR_MS + 20*60_000
+        later = T + HOUR_MS + 30_000
         self.assertEqual(plan_n50_supervision(
             now_ms=later,sealed_scope=scope(),audit=audit(now=later)).status,
             "deferred")
