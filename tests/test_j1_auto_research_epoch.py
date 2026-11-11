@@ -144,7 +144,7 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
             owner_ok=True, allow_private_manifest_write=True,
         )
 
-    def run(self, delta=0, source=None, *, optin=True, clock=None):
+    def run_epoch(self, delta=0, source=None, *, optin=True, clock=None):
         return run_current_ranked_epoch_once(
             manifest_directory=self.manifest if source is None else source,
             output_directory=self.output, allow_private_manifest_read=optin,
@@ -175,17 +175,17 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
 
     def test_first_50x24_then_next_hour_incremental_and_idempotent(self):
         self.assertEqual(self.seal()["manifest_written"], True)
-        first = self.run()
+        first = self.run_epoch()
         self.assertEqual(first["status"], "research_sample_closed_hour_persisted", first)
         self.assertEqual(first["selected_research_contracts"], 50)
         self.assertEqual((first["new_closed_candles"], first["requests_attempted"]),
                          (1200, 50))
-        next_hour = self.run(HOUR_MS)
+        next_hour = self.run_epoch(HOUR_MS)
         self.assertEqual(next_hour["status"], "research_sample_closed_hour_persisted",
                          next_hour)
         self.assertEqual((next_hour["new_closed_candles"],
                           next_hour["requests_attempted"]), (50,50))
-        repeated = self.run(HOUR_MS)
+        repeated = self.run_epoch(HOUR_MS)
         self.assertEqual(repeated["requests_attempted"], 0)
         self.assertEqual(repeated["new_closed_candles"], 0)
         with closing(sqlite3.connect(self.output / _DB_NAME)) as db:
@@ -201,14 +201,14 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
 
     def test_manifest_rotation_requires_new_epoch_not_overwrite(self):
         self.assertTrue(self.seal()["manifest_written"])
-        self.assertEqual(self.run()["status"], "research_sample_closed_hour_persisted")
+        self.assertEqual(self.run_epoch()["status"], "research_sample_closed_hour_persisted")
         scope = load_private_ranked_scope(self.manifest, now_ms=BASE+120_000)
         scope["closed24h_rank_digest_sha256"] = "c" * 64
         from crypto_intelligence_agent.j1_auto_research_epoch import _binding
         scope["scope_digest_sha256"] = _binding(scope)
         (self.manifest / FILE_NAME).write_text(json.dumps(scope), encoding="ascii")
         (self.manifest / FILE_NAME).chmod(0o600)
-        failed = self.run(HOUR_MS)
+        failed = self.run_epoch(HOUR_MS)
         self.assertEqual(failed["status"],
                          "research_integrity_or_environment_abstain", failed)
         self.assertEqual(failed["failure_category"],
@@ -217,7 +217,7 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
 
     def test_disabled_and_tampered_and_symlink_block_before_any_get(self):
         with patch("sqlite3.connect", side_effect=AssertionError("DB")):
-            off = self.run(optin=False)
+            off = self.run_epoch(optin=False)
         self.assertEqual(off["status"], "owner_optin_required")
         self.assertFalse(off["orders_sent"])
         self.assertEqual(off["network_requests"], 0)
@@ -227,7 +227,7 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
         data["ranked_research_symbols_only"][0] = "ZZZUSDT"
         path.write_text(json.dumps(data), encoding="ascii")
         path.chmod(0o600)
-        wrong = self.run()
+        wrong = self.run_epoch()
         self.assertEqual(wrong["status"], "research_integrity_or_environment_abstain")
         self.assertEqual(wrong["requests_attempted"], 0)
         path.unlink()
@@ -235,7 +235,7 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
         redirected.write_text("{}", encoding="ascii")
         redirected.chmod(0o600)
         path.symlink_to(redirected)
-        denied = self.run()
+        denied = self.run_epoch()
         self.assertEqual(denied["status"], "research_integrity_or_environment_abstain")
         self.assertEqual(denied["requests_attempted"], 0)
 
