@@ -1466,3 +1466,8 @@ Preflight `main=087ee38be781db23302bc64edee5b07a310cf550`, zero PR aberta, #319/
 ## J1/D278 — matriz única de nove identidades rivais ao corte (11/11/2026)
 
 Preflight GitHub `main=eb93c78c210fc5f766f27f6b9c311c7e18bcd68f`, 0 PR aberta, #319/#517 OPEN, 3/3 CI pós-merge D277 SUCCESS. Branch `work/issue-517-d278-batch-cutoff-primary-crosswalk`: pesquisa Bybit/Binance de LYN, DOT, ICNT, ELSA, AERO, LIT, ARIA, BIRB, CLANKER. Novo `j1_cutoff_primary_batch_d278.py` diferencia anúncio do perpétuo, anúncio externo de subjacente e migração spot; falha fechado sem prova, mantém colisões/política e PIT pendentes. `scripts/j1_d264_private_metadata_snapshot.py` incorpora contagens/digest em replay owner (nomes opt-in), testes e docs D278. **A branch não é PR/CI/merge.** Próximo: PR, 3/3 CI SHA final, merge sem deploy e replay real owner. Não recolher 819 séries, não alterar banco/prod/trading.
+
+
+## J1/#319 — mudança de direção: filtro automático USDT perp para pesquisa (11/11/2026)
+
+Decisão: não mais exigir 50 estudos manuais como pré-condição à **pesquisa** de mercados. Nova branch `work/issue-319-j1-auto-usdt-perp-research-filter` cria classificador offline de `LinearPerpetual/Trading/USDT`, exclusão de indicadores TradFi e ranking por 24 horas fechadas com Decimal; saída marcada apenas `research_only`, nunca trading allowlist. Preservar #319 aberto para elegibilidade operacional e PIT e #429 para supervisor contínuo. Banco D256/D264 e serviço REST permanecem intocados. Próximo: PR + CI 3/3 head/revisão/merge sem deploy; depois integração read-only com SQLite existente e prova owner controlada. Não inferir execução, CI ou merge desta anotação isolada.
