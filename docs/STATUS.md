@@ -1356,3 +1356,8 @@ Branch `work/issue-429-j1-auto-current-ranked-epoch-journal`: fluxo de manifest 
 
 
 D287 acrescenta ainda o subcomando `capture-seal`: captura o ranking corrente D286 e sela a coorte N50 numa única operação owner-only, sem nomes de símbolos no stdout, sem arquivo intermediário obrigatório e sem alterar o serviço REST N2. O job D286 anterior, agendado para 16:01 UTC, segue independente; nenhum manifesto ou journal N50 foi instalado nesta PR.
+
+
+## J2/J3 — D288 A/B custo-OOS sobre calendário igual (11/11/2026)
+
+Em branch `work/j3-synthetic-a-b-costed-oos-same-folds`, entregue módulo offline de comparação A (compressão/rompimento) versus B (EMA-pullback-retomada) nos **mesmos índices OOS purgados**, sinais sobre prefixos fechados, marks futuros somente depois da decisão e custos hipotéticos parametrizados (fee/slippage/funding) via motor J3 existente. Testes adversariais, explicação de limitações e documentação `docs/J3_AB_COSTED_OOS_D288.md`. **Não declarar CI ou merge até verificação**, nem rentabilidade/backtest real. Coleta N50 owner D287 segue independente na VPS e não é requisito de testes sintéticos; nenhuma ordem, rede ou SQLite novo na D288.
