@@ -1353,3 +1353,6 @@ PR #559 em validação: scripts/run_j1_auto_closed24h_rank_once.py consulta todo
 ## J1/D287 — handoff entre ranking D286 atual e persistência M1 por epoch (11/11/2026)
 
 Branch `work/issue-429-j1-auto-current-ranked-epoch-journal`: fluxo de manifest research-only privado (N50 atual D286, SHA binding de lista ordenada e horários, 48h expiração, sem overwrite), novo runner explícito que injeta seleção ao writer M1 EXISTENTE sem alterar worker, timer e journal N2, e testes de 50×24=1.200 candles +50 incrementais, rotação rejeitada no mesmo DB e zero GET sem opt-in. Relatório D286 para manifesto exige opt-in de símbolos públicos e armazenamento 0600, distinto do job de captura 16:01 UTC agendado sem saída de símbolos. Nenhum deploy ou N50 real confirmado nessa branch; CI/PR/merge ainda sujeitos a evidência. Sem ordens ou Top50 certificado.
+
+
+D287 acrescenta ainda o subcomando `capture-seal`: captura o ranking corrente D286 e sela a coorte N50 numa única operação owner-only, sem nomes de símbolos no stdout, sem arquivo intermediário obrigatório e sem alterar o serviço REST N2. O job D286 anterior, agendado para 16:01 UTC, segue independente; nenhum manifesto ou journal N50 foi instalado nesta PR.
