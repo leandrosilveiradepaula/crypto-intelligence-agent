@@ -1268,3 +1268,8 @@ Issue #528; branch `work/issue-528-j1-m2-hourly-rest-safety`. Inspeção do M1 i
 ## J1/M3 — canário REST de duas horas preparado (09/11/2026)
 
 Preflight main `01bffb798737d7da8eeef1659f18f6ddc3bb8b30`, PRs abertas=0. Issue #530: orquestrador novo `scripts/run_j1_rest_twohour_canary.py`, testes fake-clock `tests/test_j1_rest_twohour_canary.py` e runbook `docs/J1_M3_REST_TWOHOUR_CANARY.md`. Duas horas UTC consecutivas N=2, base D264 somente leitura, saída separada e auditoria SQLite independente (50 velas, 2 publicações, digests e cursores); sem timer, sem GET no CI. Evidências CI, revisão e merge exigem verificação; VPS não acessada/acionada. #429/#319/#2 abertas.
+
+
+## J1 — Top 50: fila de rivais por dominância matemática (11/11/2026)
+
+A questão prioritária é identidade de ativos cripto, não funcionamento do worker incremental. O censo histórico já fornece 819 séries completas de 24h, com negativas TradFi atuais/documentais que não constituem classificação cripto positiva nem são retrospectivamente PIT. O redutor puro da branch `work/issue-319-top50-proof-by-dominance` calcula a fila mínima de concorrentes desconhecidos acima do corte do 50º positivamente revisado; qualquer volume faltante bloqueia certificação. Estado inicial de implementação em branch, sem prova de CI/merge neste registro; `marketwide_top50_verified=false`. A coleta contínua #429 e ativação do timer recorrente são frente independente. Ver `docs/J1_TOP50_RANK_PRESSURE.md`.
