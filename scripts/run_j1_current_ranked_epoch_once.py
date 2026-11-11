@@ -18,6 +18,7 @@ from crypto_intelligence_agent.j1_auto_research_epoch import (
 )
 from crypto_intelligence_agent.j1_rest_incremental_owner import run_hourly_once
 from scripts.audit_bybit_marketwide_closed24h import CensusAbstain, _strict_owner
+from scripts.run_j1_auto_closed24h_rank_once import research_current_closed24h_once
 
 MAX_MANIFEST_BYTES = 20_000
 MAX_REPORT_BYTES = 40_000
@@ -60,6 +61,31 @@ def _decode_private_file(path: Path, *, max_bytes: int) -> dict:
     return result
 
 
+
+def _write_scope_file_once(scope_directory: Path, manifest: dict) -> None:
+    """One immutable owner-only report -> epoch file, never overwrite."""
+    _strict_owner(scope_directory, directory=True)
+    target = scope_directory / FILE_NAME
+    if target.exists() or target.is_symlink():
+        raise ValueError("research_scope_epoch_already_exists")
+    raw = json.dumps(manifest, ensure_ascii=True, sort_keys=True,
+                     separators=(",", ":")).encode("ascii") + b"\n"
+    if len(raw) > MAX_MANIFEST_BYTES:
+        raise ValueError("research_scope_manifest_too_large")
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                 | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    try:
+        with os.fdopen(fd, "wb", closefd=False) as dest:
+            dest.write(raw)
+            dest.flush()
+            os.fsync(fd)
+    except (OSError, ValueError):
+        target.unlink(missing_ok=True)
+        raise
+    finally:
+        os.close(fd)
+
+
 def seal_current_ranked_scope_once(
     *, report_path: Path, scope_directory: Path, now_ms: int,
     allow_private_manifest_write: bool = False,
@@ -87,25 +113,7 @@ def seal_current_ranked_scope_once(
         _strict_owner(scope_directory, directory=True)
         report = _decode_private_file(report_path, max_bytes=MAX_REPORT_BYTES)
         manifest = build_ranked_research_scope(report, now_ms=now_ms)
-        target = scope_directory / FILE_NAME
-        if target.exists() or target.is_symlink():
-            raise ValueError("research_scope_epoch_already_exists")
-        raw = json.dumps(manifest, ensure_ascii=True, sort_keys=True,
-                         separators=(",", ":")).encode("ascii") + b"\n"
-        if len(raw) > MAX_MANIFEST_BYTES:
-            raise ValueError("research_scope_manifest_too_large")
-        fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL
-                     | getattr(os, "O_NOFOLLOW", 0), 0o600)
-        try:
-            with os.fdopen(fd, "wb", closefd=False) as dest:
-                dest.write(raw)
-                dest.flush()
-                os.fsync(fd)
-        except (OSError, ValueError):
-            target.unlink(missing_ok=True)
-            raise
-        finally:
-            os.close(fd)
+        _write_scope_file_once(scope_directory, manifest)
         result.update({
             "status": "sealed_current_auto_rank_research_scope_only",
             "manifest_written": True,
