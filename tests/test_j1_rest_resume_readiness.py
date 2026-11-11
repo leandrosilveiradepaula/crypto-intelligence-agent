@@ -19,12 +19,14 @@ from scripts.audit_bybit_marketwide_closed24h import _digest
 D = "a" * 64
 INITIAL = (1_794_200_400_000 // HOUR_MS) * HOUR_MS
 SYMBOLS = ("BTCUSDT", "ETHUSDT")
+SYMBOLS_50 = SYMBOLS + tuple(f"TST{i}USDT" for i in range(48))
 DATA = ("1", "2", "1", "2", "20", "40")
 
 
 def make_journal(path: Path, *, publications: int = 26,
                  initial_publication_offset: int = 0,
-                 skip_hour: int | None = 2, halted=None) -> int:
+                 skip_hour: int | None = 2, halted=None,
+                 symbols: tuple[str, ...] = SYMBOLS) -> int:
     """Represent the actual trial: a missing 18:00 publication, not candles.
 
     Scope at 16:00 and one catch-up across 18:00 gives 100 candles for two
@@ -54,8 +56,8 @@ def make_journal(path: Path, *, publications: int = 26,
                scope_digest TEXT NOT NULL, observed_contracts INTEGER NOT NULL);
         """)
         db.execute("INSERT INTO scope VALUES(1,?,?,?,?)",
-                   (D, json.dumps(SYMBOLS), INITIAL, halted))
-        for symbol in SYMBOLS:
+                   (D, json.dumps(symbols), INITIAL, halted))
+        for symbol in symbols:
             db.execute("INSERT INTO cursor VALUES(?,?)", (symbol,last))
             for opened in range(INITIAL - 24 * HOUR_MS, last, HOUR_MS):
                 row = (str(opened), *DATA)
@@ -65,7 +67,7 @@ def make_journal(path: Path, *, publications: int = 26,
         for offset in offsets:
             end = INITIAL + offset * HOUR_MS
             db.execute("INSERT INTO published_hour VALUES (?,?,?,?)",
-                       (end, end+120_000, D, len(SYMBOLS)))
+                       (end, end+120_000, D, len(symbols)))
     path.chmod(0o600)
     return last
 
@@ -107,6 +109,44 @@ class RestResumeReadinessTests(unittest.TestCase):
         self.assertEqual(r["database_mutation_statements"],0)
         self.assertFalse(r["orders_sent"])
         self.assertNotIn("BTCUSDT",json.dumps(r))
+
+    def test_50_member_owner_cohort_closed24h_ranking_and_no_top50_claim(self):
+        self.path.unlink()
+        self.last = make_journal(self.path, symbols=SYMBOLS_50)
+        r = self.check(HOUR_MS + 120_000, expected_members=50)
+        self.assertEqual(r["status"], "historical_checkpoint_gaps_require_review", r)
+        self.assertTrue(r["journal_integrity_verified"])
+        self.assertEqual(r["reviewed_research_contracts"], 50)
+        self.assertEqual(r["stored_candles"], 2500)
+        self.assertEqual(r["published_hours"], 26)
+        self.assertEqual(r["research_closed_24h_ranked_contracts"], 50)
+        self.assertEqual(len(r["research_closed_24h_rank_digest_sha256"]), 64)
+        self.assertEqual(r["research_closed_24h_window_end_ms"], self.last)
+        self.assertTrue(r["rank_is_sample_only_not_marketwide"])
+        self.assertFalse(r["marketwide_top50_verified"])
+        self.assertFalse(r["activation_authorized"])
+        self.assertEqual(r["network_requests"], 0)
+        self.assertNotIn("BTCUSDT", json.dumps(r))
+        self.assertEqual(
+            self.check(HOUR_MS+120_000)["status"],
+            "journal_unavailable_or_integrity_blocked")
+        self.assertEqual(
+            self.check(HOUR_MS+120_000, expected_members=50)["research_closed_24h_rank_digest_sha256"],
+            r["research_closed_24h_rank_digest_sha256"])
+        # The immutable 50-member scope cannot silently masquerade as another cohort.
+        with closing(sqlite3.connect(self.path)) as db, db:
+            db.execute("UPDATE scope SET members_json=? WHERE id=1",
+                       (json.dumps(SYMBOLS_50[:-1]+("BTCUSDT",)),))
+        self.assertFalse(self.check(HOUR_MS+120_000, expected_members=50)
+                         ["journal_integrity_verified"])
+
+    def test_invalid_expected_member_count_fails_before_read(self):
+        for count in (True, 0, -1, 51, 100, "50"):
+            with self.subTest(count=count), patch(
+                "sqlite3.connect", side_effect=AssertionError("must not open")
+            ):
+                r = self.check(HOUR_MS+120_000, expected_members=count)
+                self.assertEqual(r["status"], "invalid_configuration")
 
     def test_initial_publication_at_scope_initial_is_also_supported(self):
         self.path.unlink()
