@@ -166,6 +166,11 @@ class D264PrivateOwnerTests(unittest.TestCase):
         self.assertEqual(proof["frozen_complete_contracts"], 60)
         self.assertEqual(proof["current_provider_negative_count"], 2)
         self.assertEqual(proof["research_frontier_count"], 50)
+        short_docs = proof["short_tradfi_documentary_research"]
+        self.assertEqual(short_docs["short_census_contracts"], 0)
+        self.assertEqual(short_docs["undocumented_shorts_still_possible_crypto_rivals"], 0)
+        self.assertFalse(short_docs["all_short_rivals_independently_disqualified_pit"])
+        self.assertNotIn("documented_short_contracts_only", short_docs)
         sensitivity = proof["conditional_cutoff_sensitivity"]
         self.assertEqual(sensitivity["complete_candle_contracts"], 60)
         self.assertEqual(sensitivity["retrospectively_excluded_complete_contracts"], 2)
@@ -225,6 +230,9 @@ class D264PrivateOwnerTests(unittest.TestCase):
         ids = [x["symbol"] for x in optin["private_research_symbols_only"]]
         self.assertNotIn("SOXLUSDT", ids)
         self.assertNotIn("XAUUSDT", ids)
+        short_docs = optin["short_tradfi_documentary_research"]
+        self.assertEqual(short_docs["short_census_contracts"], 0)
+        self.assertEqual(short_docs["documented_short_contracts_only"], [])
         scenarios = optin["conditional_cutoff_sensitivity"]["scenarios"]
         self.assertEqual(len(scenarios), 3)
         self.assertIn("replacement_symbols_only", scenarios[0])
