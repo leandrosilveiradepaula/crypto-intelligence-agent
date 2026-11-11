@@ -7,7 +7,7 @@ timer or orders. Reuse D256 replay before ranking. Unapproved identities are
 from __future__ import annotations
 
 from contextlib import closing
-from decimal import Decimal
+from decimal import Decimal, localcontext
 import os
 from pathlib import Path
 import sqlite3
@@ -22,7 +22,7 @@ from scripts.audit_j1_marketwide_checkpoint import (
     AuditRejected, _DB, _LOCK, _replay,
 )
 from scripts.audit_bybit_marketwide_closed24h import (
-    MAX_DB_BYTES, _dec, _strict_owner,
+    MAX_DB_BYTES, _MATH, _dec, _strict_owner,
 )
 from .j1_top50_rank_pressure import (
     Top50PressureRejected, pressure_from_closed_turnover,
@@ -98,12 +98,13 @@ def audit_private_top50_pressure(
                 import json
                 catalog = json.loads(scope[0])
                 totals: dict[str, Decimal] = {}
-                for symbol, value in db.execute(
-                    "SELECT symbol,quote_turnover FROM candles ORDER BY symbol,open_ms"
-                ):
-                    if type(symbol) is not str or type(value) is not str:
-                        raise AuditRejected("turnover_invalid")
-                    totals[symbol] = totals.get(symbol, Decimal(0)) + _dec(value)
+                with localcontext(_MATH):
+                    for symbol, value in db.execute(
+                        "SELECT symbol,quote_turnover FROM candles ORDER BY symbol,open_ms"
+                    ):
+                        if type(symbol) is not str or type(value) is not str:
+                            raise AuditRejected("turnover_invalid")
+                        totals[symbol] = totals.get(symbol, Decimal(0)) + _dec(value)
                 # Replayed every 24-row series above; compare the independent
                 # D256 rank digest, including ordering and Decimal spelling.
                 from scripts.audit_bybit_marketwide_closed24h import _digest
