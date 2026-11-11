@@ -13,7 +13,7 @@ class RankResearchAnnotationsTests(unittest.TestCase):
     def test_annotates_known_ambiguous_and_primary_without_approval(self):
         ranked = (
             "BTCUSDT", "CLANKERUSDT", "DGAIUSDT",
-            "BZUSDT", "LITUSDT", "UNKNOWNUSDT",
+            "BZUSDT", "LITUSDT", "FARTCOINUSDT", "UNKNOWNUSDT",
         )
         x = annotate_raw_rank_research(
             ranked, market_window_end_ms=NOV6, include_symbols=True
@@ -25,8 +25,8 @@ class RankResearchAnnotationsTests(unittest.TestCase):
         self.assertEqual(cats["ticker_collision_unresolved"], 2)
         self.assertEqual(cats["bybit_tradfi_documented_retrospective"], 1)
         self.assertEqual(cats["crypto_token_candidate_unverified"], 1)
-        self.assertEqual(cats["identity_unresolved"], 2)
-        self.assertEqual(x["raw_ranked_contracts"], 6)
+        self.assertEqual(cats["identity_unresolved"], 3)
+        self.assertEqual(x["raw_ranked_contracts"], 7)
         self.assertEqual(
             [row["symbol"] for row in x["raw_rank_research_symbols_only"]],
             list(ranked),
