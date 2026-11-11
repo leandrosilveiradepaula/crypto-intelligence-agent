@@ -46,8 +46,10 @@ class FrontierWorklistTests(unittest.TestCase):
                          "archived_crypto_reference_only")
         self.assertEqual(rows[1]["category_unverified"],
                          "ticker_collision_unresolved")
+        # DGAI has two later primary sources but its older D265 category
+        # remains unresolved until a valid PIT venue-identity review.
         self.assertEqual(rows[2]["category_unverified"],
-                         "crypto_token_candidate_unverified")
+                         "identity_unresolved")
         self.assertEqual(rows[3]["category_unverified"],
                          "ticker_collision_unresolved")
         self.assertEqual(rows[5]["category_unverified"],
