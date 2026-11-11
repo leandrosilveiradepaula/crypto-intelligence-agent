@@ -155,6 +155,8 @@ class AutoPrivateJoinTests(unittest.TestCase):
                 owner_ok=True,
             )
         self.assertEqual(r["requests_attempted"], 1)
+        self.assertEqual(r["network_requests"], 1)
+        self.assertEqual(r["retrospective_private_join"]["network_requests"], 0)
         self.assertEqual(r["retrospective_private_join"]["retrospective_top50_research_size"], 50)
         self.assertEqual(r["status"], "automatic_usdt_perpetual_research_candidates_only")
         self.assertFalse(r["marketwide_top50_verified"])
