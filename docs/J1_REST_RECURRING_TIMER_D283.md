@@ -36,3 +36,8 @@ O M1 pode buscar candles fechados faltantes (<=48h) na janela HH:01–HH:15, mas
 2. Prova owner da nova CLI read-only na VPS com SHA final; usar saída sanitizada, zero GET/SQLite writes.
 3. **Somente após gate de instalação de produção** e verificação fresh (<48h), fazer a substituição recorrente controlada, sem alterar o worker/DB; auditar os próximos fechamentos. Se o período necessário para autorização estourar 48h, reavaliar plano de catch-up.
 4. Questão separada: ampliar universo de 2 contratos de pesquisa para 370 candidatos/Top50 **corrente** com elegibilidade/PIT. Isso não se resolve simplesmente instalando timer e não é uma permissão de trading.
+
+
+### Regressão adicional de recuperação realista
+
+`tests/test_j1_rest_incremental_owner.py` agora cobre explicitamente 21h de atraso entre dois `published_hour`: 42 velas adicionais para 2 contratos, apenas **um** checkpoint novo na retomada (não 20 checkpoints fictícios), 0 GET na repetição do mesmo fechamento e preservação da integridade SQLite. Um gap de 49h falha **antes de qualquer GET**, preservando as velas e publicações anteriores. São fixtures offline e não autorizam colocar em produção.
