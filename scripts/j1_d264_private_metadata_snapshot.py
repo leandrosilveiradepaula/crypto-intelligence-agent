@@ -28,6 +28,7 @@ from crypto_intelligence_agent.bybit_identity_crosswalk_research import research
 from crypto_intelligence_agent.j1_top50_frontier_worklist import frontier_review_worklist
 from crypto_intelligence_agent.j1_top50_cutoff_sensitivity import cutoff_sensitivity
 from crypto_intelligence_agent.j1_short_tradfi_primary import audit_short_tradfi
+from crypto_intelligence_agent.j1_cutoff_primary_batch_d278 import batch_research
 from crypto_intelligence_agent.crypto_asset_registry import load_registry_json
 from scripts.audit_bybit_marketwide_closed24h import (
     _MATH, _dec, _digest, _strict_owner, MAX_DB_BYTES,
@@ -340,6 +341,16 @@ def replay_private_snapshot(directory: Path, *,
                     all_complete_ranked_symbols=tuple(ordered),
                     retrospectively_excluded_symbols=frozenset(exclusions),
                     incomplete_candle_contracts=proof["incomplete_24h_contracts"],
+                    include_private_symbols=include_private_symbols,
+                )
+                # Review only the next ranked rivals, without deciding that
+                # conditional exclusions are approved or that 50 are crypto.
+                remaining = tuple(
+                    s for s in ordered if s not in exclusions
+                )
+                out["cutoff_primary_batch_research"] = batch_research(
+                    raw_baseline_frontier=frontier,
+                    possible_replacements=remaining[50:60],
                     include_private_symbols=include_private_symbols,
                 )
                 out["frontier_identity_review_worklist"] = frontier_review_worklist(
