@@ -128,6 +128,75 @@ def seal_current_ranked_scope_once(
     return result
 
 
+
+def capture_and_seal_current_rank_once(
+    *, scope_directory: Path,
+    allow_public_network: bool = False,
+    confirm_region_and_personal_research: bool = False,
+    allow_private_manifest_write: bool = False,
+    owner_ok: bool | None = None,
+    clock_ms=None,
+    client: BoundedBybitPublicClient | None = None,
+) -> dict[str, Any]:
+    """Full-current D286 GET rank -> private N50 epoch in a SINGLE owner run.
+
+    Never emits symbols or raw turnover and never writes a SQLite database.
+    """
+    out = {
+        "schema_version": "j1-capture-seal-current-rank-research-only-v1",
+        "status": "optin_required",
+        "manifest_written": False, "database_modified": False,
+        "network_accessed": False, "requests_attempted": 0,
+        "marketwide_top50_verified": False, "orders_sent": False,
+        "live_trading_authorized": False,
+    }
+    owner = ((os.name == "posix" and os.getuid() == os.geteuid()
+              and os.geteuid() != 0) if owner_ok is None else owner_ok)
+    if (owner is not True or allow_public_network is not True
+            or confirm_region_and_personal_research is not True
+            or allow_private_manifest_write is not True):
+        return out
+    out["status"] = "abstain"
+    try:
+        if (not isinstance(scope_directory, Path)
+                or not scope_directory.is_absolute()):
+            raise ValueError("invalid_manifest_directory")
+        _strict_owner(scope_directory, directory=True)
+        if ((scope_directory / FILE_NAME).exists()
+                or (scope_directory / FILE_NAME).is_symlink()):
+            raise ValueError("research_scope_epoch_already_exists")
+        clock = clock_ms or (lambda: time.time_ns() // 1_000_000)
+        active_client = client if client is not None else BoundedBybitPublicClient()
+        proof = research_current_closed24h_once(
+            client=active_client, clock_ms=clock,
+            allow_public_network=True,
+            confirm_region_and_personal_research=True,
+            include_public_symbols=True, owner_ok=owner,
+        )
+        out["requests_attempted"] = proof.get("requests_attempted", 0)
+        out["network_accessed"] = proof.get("network_accessed", False)
+        if proof.get("status") != (
+            "current_closed24h_provisional_perpetual_rank_research_only"
+        ):
+            out["failure_category"] = "full_current_capture_abstained"
+            return out
+        scope = build_ranked_research_scope(proof, now_ms=clock())
+        _write_scope_file_once(scope_directory, scope)
+        out.update({
+            "status": "sealed_current_auto_rank_research_scope_only",
+            "manifest_written": True,
+            "research_members": 50,
+            "selection_closed_hour_end_ms": scope["closed_hour_end_ms"],
+            "scope_digest_sha256": scope["scope_digest_sha256"],
+            "rank_digest_sha256": scope["closed24h_rank_digest_sha256"],
+            "scope_must_rotate_after_48h": True,
+        })
+    except (CensusAbstain, OSError, ValueError, TypeError, UnicodeError,
+            OverflowError):
+        out["failure_category"] = "current_capture_or_private_manifest_rejected"
+    return out
+
+
 def load_private_ranked_scope(directory: Path, *, now_ms: int) -> dict:
     if not isinstance(directory, Path) or not directory.is_absolute():
         raise ValueError("current_research_scope_path_invalid")
@@ -179,6 +248,11 @@ def main(argv: list[str] | None = None) -> int:
     seal.add_argument("--rank-report-file", required=True, type=Path)
     seal.add_argument("--manifest-directory", required=True, type=Path)
     seal.add_argument("--allow-private-manifest-write", action="store_true")
+    capture = sub.add_parser("capture-seal")
+    capture.add_argument("--manifest-directory", required=True, type=Path)
+    capture.add_argument("--allow-public-network", action="store_true")
+    capture.add_argument("--confirm-region-and-personal-research", action="store_true")
+    capture.add_argument("--allow-private-manifest-write", action="store_true")
     run = sub.add_parser("run")
     run.add_argument("--manifest-directory", required=True, type=Path)
     run.add_argument("--output-directory", required=True, type=Path)
@@ -192,6 +266,14 @@ def main(argv: list[str] | None = None) -> int:
             report_path=args.rank_report_file,
             scope_directory=args.manifest_directory,
             now_ms=time.time_ns() // 1_000_000,
+            allow_private_manifest_write=args.allow_private_manifest_write,
+        )
+        ok = report["status"] == "sealed_current_auto_rank_research_scope_only"
+    elif args.action == "capture-seal":
+        report = capture_and_seal_current_rank_once(
+            scope_directory=args.manifest_directory,
+            allow_public_network=args.allow_public_network,
+            confirm_region_and_personal_research=args.confirm_region_and_personal_research,
             allow_private_manifest_write=args.allow_private_manifest_write,
         )
         ok = report["status"] == "sealed_current_auto_rank_research_scope_only"
