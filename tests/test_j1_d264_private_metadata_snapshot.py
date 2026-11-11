@@ -167,6 +167,12 @@ class D264PrivateOwnerTests(unittest.TestCase):
         self.assertEqual(proof["current_provider_negative_count"], 2)
         self.assertEqual(proof["research_frontier_count"], 50)
         self.assertTrue(proof["current_provider_negative_exclusions_not_pit"])
+        batch = proof["frontier_identity_review_worklist"]
+        self.assertEqual(batch["research_frontier_count"], 50)
+        self.assertEqual(batch["identity_review_pending_count"], 50)
+        self.assertEqual(batch["identity_approved_count"], 0)
+        self.assertNotIn("private_research_worklist_only", batch)
+        self.assertFalse(batch["marketwide_top50_verified"])
         self.assertFalse(proof["marketwide_top50_verified"])
         self.assertFalse(proof["metadata_pit_valid_for_frozen_window"])
         self.assertFalse(proof["network_accessed"])
@@ -213,6 +219,17 @@ class D264PrivateOwnerTests(unittest.TestCase):
         ids = [x["symbol"] for x in optin["private_research_symbols_only"]]
         self.assertNotIn("SOXLUSDT", ids)
         self.assertNotIn("XAUUSDT", ids)
+        worklist = optin["frontier_identity_review_worklist"]
+        self.assertEqual(worklist["identity_review_pending_count"], 50)
+        self.assertEqual(len(worklist["private_research_worklist_only"]), 50)
+        self.assertEqual(
+            [row["symbol"] for row in worklist["private_research_worklist_only"]],
+            ids,
+        )
+        self.assertTrue(all(
+            row["identity_approved"] is False
+            for row in worklist["private_research_worklist_only"]
+        ))
         self.assertFalse(optin["marketwide_top50_verified"])
 
 
