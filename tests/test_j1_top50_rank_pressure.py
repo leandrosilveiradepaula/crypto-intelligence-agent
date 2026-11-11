@@ -74,11 +74,18 @@ class Top50PressureTests(unittest.TestCase):
 
     def test_equal_turnover_deterministic_tie_is_safely_reviewed(self):
         c, a, p, n = sample()
+        # U... sorts after C... on a tie, so it does not displace.
         a["U000USDT"] = a["C049USDT"]
         r = self.run_rank(catalog=c, amounts=a, reviewed=p, excluded=n,
                           show=True)
+        self.assertTrue(r["conditional_mathematical_dominance"])
+        # An otherwise identical tied A... symbol wins the deterministic tie.
+        c[-3] = "A000USDT"
+        a["A000USDT"] = a.pop("U000USDT")
+        r = self.run_rank(catalog=c, amounts=a, reviewed=p, excluded=n,
+                          show=True)
         self.assertFalse(r["conditional_mathematical_dominance"])
-        self.assertIn("U000USDT", r["review_priority_symbols_only"])
+        self.assertEqual(r["review_priority_symbols_only"], ["A000USDT"])
 
     def test_digest_stable_under_order_permutation_and_decimal_spelling(self):
         c, a, p, n = sample()
