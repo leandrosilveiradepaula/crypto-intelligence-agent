@@ -1426,3 +1426,8 @@ A J1 precisa de evidência empírica incremental, não de novos preflights WS. A
 
 ## D272 — Retomada REST só após auditoria owner-only, sem reiniciar coleta (10/11/2026)
 O ensaio finito 24/24 N=2 passou; o timer não possui próximo disparo. O motor M1 já tem cursor incremental e no máximo 48h de catch-up. Antes de qualquer ativação contínua, auditar SQLite existente em modo somente leitura, conferindo cada publicação/cursor/digest, owner 0700/0600, latch e diferença para fechamento UTC. Datas sem publicação não viram PIT automaticamente. Diferenças de 2..48h exigem revisão; acima de 48h bloqueiam a retomada sem reconciliador aprovado. Não reinstalar timer nem criar outro DB por diagnosticar gaps. É decisão de segurança operacional, não aprovação de Top50, sinal, negociação nem implantação.
+
+
+## J1 — decisão de priorização Top 50 por rivais capazes de deslocar o corte (11/11/2026)
+
+Não revisar todos os 819 instrumentos de uma vez nem promover referências antigas/ausência de campos TradFi como crypto. Reutilizar o ranking fechado para priorizar positivamente os candidatos com volume suficiente para disputar os 50 lugares. Um contrato não medido e não excluído segue rival potencial. Dominância é apenas prova matemática condicional em entradas auditadas, não autenticação do provedor, identidade, causalidade PIT ou autorização financeira. O redutor puro mantém flags de mercado/trading false em todos os caminhos. #319 e #517; especificação em `docs/J1_TOP50_RANK_PRESSURE.md`.
