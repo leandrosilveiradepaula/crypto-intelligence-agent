@@ -83,6 +83,14 @@ def _result(status: str = "owner_optin_required") -> dict[str, Any]:
 
 
 def _frontier(value: Any, *, now: int, max_assets: int) -> tuple[tuple[str, ...], str]:
+    # New dynamic research epochs are explicit and sealed separately. The
+    # installed N2 service still reads ONLY its original D264 snapshot.
+    if (type(value) is dict and value.get("schema_version") ==
+            "j1-auto-ranked-research-scope-v1"):
+        from .j1_auto_research_epoch import validate_ranked_research_scope
+        return validate_ranked_research_scope(
+            value, now_ms=now, max_assets=max_assets,
+        )
     if (type(value) is not dict
             or value.get("status") != "retrospective_negative_overlay_research_only"
             or value.get("research_frontier_count") != 50
@@ -378,6 +386,9 @@ def run_hourly_once(*, frozen_directory: Path, output_directory: Path,
             "untrusted_frozen_digests", "untrusted_scope_clock",
             "research_scope_metadata_invalid", "utc_close_window_elapsed_before_commit",
             "catchup_exceeds_48h_owner_review",
+            "current_research_scope_contract_invalid",
+            "current_research_scope_members_invalid",
+            "current_research_scope_provenance_invalid",
         })
         result["failure_category"] = (
             str(exc) if type(exc) is ValueError and str(exc) in safe
