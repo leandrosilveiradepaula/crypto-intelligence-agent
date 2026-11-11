@@ -1431,3 +1431,8 @@ O ensaio finito 24/24 N=2 passou; o timer não possui próximo disparo. O motor 
 ## J1 — decisão de priorização Top 50 por rivais capazes de deslocar o corte (11/11/2026)
 
 Não revisar todos os 819 instrumentos de uma vez nem promover referências antigas/ausência de campos TradFi como crypto. Reutilizar o ranking fechado para priorizar positivamente os candidatos com volume suficiente para disputar os 50 lugares. Um contrato não medido e não excluído segue rival potencial. Dominância é apenas prova matemática condicional em entradas auditadas, não autenticação do provedor, identidade, causalidade PIT ou autorização financeira. O redutor puro mantém flags de mercado/trading false em todos os caminhos. #319 e #517; especificação em `docs/J1_TOP50_RANK_PRESSURE.md`.
+
+
+## J1/D273 — duas fontes primárias de DGAI sem retrodatação (11/11/2026)
+
+O contrato DGAIUSDT possui anúncio Bybit de 04/09/2026 ligando o símbolo a DGrid AI, e anúncio independente Gate de 23/08/2026 ligando DGrid AI/DGAI ao endereço de token BNB Chain. Registrar como **research lead primário**, não crypto aprovado: fontes publicadas antes do censo de 06/11 foram revisadas somente em 11/11, sem prova de observação PIT no censo. Não transformar o limite de 20x da Bybit em alavancagem global. Ver `docs/J1_D273_DGAI_PRIMARY_IDENTITY.md`, #517/#319.

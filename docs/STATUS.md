@@ -1273,3 +1273,8 @@ Preflight main `01bffb798737d7da8eeef1659f18f6ddc3bb8b30`, PRs abertas=0. Issue 
 ## J1 — Top 50: fila de rivais por dominância matemática (11/11/2026)
 
 A questão prioritária é identidade de ativos cripto, não funcionamento do worker incremental. O censo histórico já fornece 819 séries completas de 24h, com negativas TradFi atuais/documentais que não constituem classificação cripto positiva nem são retrospectivamente PIT. O redutor puro da branch `work/issue-319-top50-proof-by-dominance` calcula a fila mínima de concorrentes desconhecidos acima do corte do 50º positivamente revisado; qualquer volume faltante bloqueia certificação. Estado inicial de implementação em branch, sem prova de CI/merge neste registro; `marketwide_top50_verified=false`. A coleta contínua #429 e ativação do timer recorrente são frente independente. Ver `docs/J1_TOP50_RANK_PRESSURE.md`.
+
+
+## J1/D273 — diligência primária DGAIUSDT (11/11/2026)
+
+Dois anúncios primários distintos Bybit/Gate sustentam a hipótese de DGrid AI para DGAIUSDT e identificam o token BNB Chain publicado pela Gate. Implementação de lead versionado e testes adversariais na branch `work/issue-517-d273-dgai-primary-identity`; **sem CI/merge comprovados neste checkpoint**. Fontes foram revisadas depois do censo de 06/11, logo não aprovam identidade PIT, não garantem Top50 nem habilitam trading. Ver `docs/J1_D273_DGAI_PRIMARY_IDENTITY.md`.

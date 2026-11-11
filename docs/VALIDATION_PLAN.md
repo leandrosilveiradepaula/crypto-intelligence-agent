@@ -1076,3 +1076,8 @@ Complemento OPS2: usar obrigatoriamente o formato do ensaio real, com checkpoint
 ## J1/#319 — redutor de rivais do Top 50 (11/11/2026)
 
 Validar `tests/test_j1_top50_rank_pressure.py` com 50 positivos sintéticos, concorrente acima/abaixo do corte, empates determinísticos, candidatos sem 24h, menos de 50 positivos, vetos, contaminação Decimal e nenhuma promoção de gates. A lista de rivais é condicional: somente um catálogo exaustivo e revisões independentes PIT podem permitir certificação posterior. Ver `docs/J1_TOP50_RANK_PRESSURE.md`. Sem HTTP, SQLite, sinais ou ordens nesta entrega.
+
+
+## J1/D273 — prova de identidade primária retrospectiva (11/11/2026)
+
+Executar `tests/test_j1_d273_primary_identity_research.py`: DGAIUSDT Bybit+Gate, datas de publicação versus revisão, veto BZUSDT, duas origens obrigatórias, URL HTTPS sem credenciais/queries, token ID sintaticamente válido, digest estável, entradas maliciosas, nenhuma promoção PIT/Top50/trading. Rodar Linux/docs Windows/offline Chrome/PAPER no SHA final. A aprovação da CI não autentica fontes no passado. Ver `docs/J1_D273_DGAI_PRIMARY_IDENTITY.md`.
