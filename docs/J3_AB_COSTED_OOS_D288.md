@@ -25,3 +25,5 @@ A contribuição concreta é evitar comparar A e B em amostras ou custos diferen
 Gates obrigatórios: Linux/docs, Windows/offline e Chrome/PAPER no HEAD final, revisão e squash merge sem deploy. Esta PR não altera nenhum arquivo de coletor J1, serviço/timer, banco de dados, API, credencial ou execução real.
 
 Próximo trabalho J3: acoplar as duas hipóteses ao replay intrabar com mark/funding/liquidação e, em outra etapa, validar por walk-forward/OOS com histórico real de um universo PIT. A coleta N50 D287 na VPS está em jobs **independentes**, sem bloqueio nesta entrega.
+
+**Precificação de custo explícita:** a entrada e a saída compartilham o mesmo notional de referência fixo; não se infere tamanho de saída a partir da razão de fechamentos (que pode ser Decimal periódico e exceder limites). Assim não inventamos arredondamento, step-size ou valor executável. Os marks continuam ex post e não validados financeiramente.
