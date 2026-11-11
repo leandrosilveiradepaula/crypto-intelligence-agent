@@ -215,6 +215,32 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
                          "frozen_scope_changed_requires_new_journal")
         self.assertEqual(failed["requests_attempted"], 0)
 
+    def test_private_report_rejects_bad_mode_duplicate_json_and_path_types(self):
+        self.report_path.chmod(0o644)
+        self.assertEqual(self.seal()["status"], "abstain")
+        self.report_path.chmod(0o600)
+        self.report_path.write_text(
+            '{"status":"ok","status":"forged"}', encoding="ascii")
+        self.assertEqual(self.seal()["status"], "abstain")
+        self.assertFalse((self.manifest / FILE_NAME).exists())
+        self.save(report())
+        missing_type = seal_current_ranked_scope_once(
+            report_path=None, scope_directory=self.manifest,
+            now_ms=BASE+120_000, allow_private_manifest_write=True,
+            owner_ok=True,
+        )
+        self.assertEqual(missing_type["status"], "abstain")
+        self.assertFalse(missing_type["manifest_written"])
+
+    def test_expired_manifest_blocks_new_epoch_run_before_any_get(self):
+        self.assertTrue(self.seal()["manifest_written"])
+        out = self.run(50*HOUR_MS)
+        self.assertEqual(out["status"], "research_integrity_or_environment_abstain")
+        self.assertEqual(out["failure_category"],
+                         "current_research_scope_provenance_invalid")
+        self.assertEqual(out["requests_attempted"], 0)
+        self.assertFalse(out["orders_sent"])
+
     def test_disabled_and_tampered_and_symlink_block_before_any_get(self):
         with patch("sqlite3.connect", side_effect=AssertionError("DB")):
             off = self.run_epoch(optin=False)
