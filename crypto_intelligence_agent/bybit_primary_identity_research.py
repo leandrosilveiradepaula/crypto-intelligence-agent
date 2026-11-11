@@ -23,7 +23,7 @@ SCHEMA = "j1-bybit-primary-identity-d274-research-v2"
 _SYMBOL = re.compile(r"[A-Z0-9]{1,28}USDT\Z")
 _ASSET_ID = re.compile(r"[a-z0-9]+:[a-z0-9][a-z0-9-]*\Z")
 _CHAIN_CONTRACT = re.compile(r"[a-z0-9][a-z0-9-]{1,24}:0x[0-9a-fA-F]{40}\Z")
-_SAFE_LABEL = re.compile(r"[A-Za-z0-9 ._-]{3,72}\Z")
+_SAFE_LABEL = re.compile(r"[A-Za-z0-9 ()._-]{3,72}\Z")
 
 
 def _public_primary_url(url: str, hostname: str, path_prefix: str) -> None:
