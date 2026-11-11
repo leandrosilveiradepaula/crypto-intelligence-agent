@@ -40,3 +40,10 @@ tests/test_j1_auto_research_epoch.py verifica:
 Todos cenários são offline, sem ordens, API privada, taxas ou instruções de trading.
 
 Gates: CI Linux/docs, Windows/offline e Chrome/PAPER SHA final, revisão e squash merge **sem deploy**. Prova owner na VPS de testes offline/pureza sem substituir o serviço atual; um futuro ensaio N50 real exige manifest D286 obtido causalmente, diretório privado isolado, relógio seguro e avaliação de rate budget. #429/#319 seguem abertas até coortes dinâmicas com rotação segura, atualização contínua de 370 candidatos e homologação de Top50 corrente com PIT verdadeiro. Nenhum resultado financeiro assegurado.
+
+
+## Evidência de execução real — D289, 11/11/2026
+
+A separação entre seleção D286, manifesto D287 e writer M1 foi exercitada na VPS como proprietário `cia-probe`, sem instalar novo timer. O job `08212abda5374f658db32b95c25aafff` completou `capture-seal` entre 21:01:05 e 21:13:28 UTC, 372 GETs, manifesto owner 0600, 50 candidatos e scope digest `b022c1211b230e0be4503bed52858954c7deb68c60a03976e5cd74243f1335cb`. O job `5d207d7d4dd9463594a67abb3958308f` completou `exit=0`: 22:03 UTC = 1.200 velas iniciais/50 GETs; 23:03 UTC = 50 novas velas/50 GETs. Auditoria privada somente leitura confirmou 50 contratos, 1.250 velas, dois checkpoints UTC consecutivos, `status=pass` e nenhuma ordem.
+
+A **prova N50 de duas horas está concluída**, sem duplicar o backfill. Não transformar este resultado em alegação de coleta N50 autônoma 24/7: a execução foi um job finito e o manifesto expira em até 48h. O serviço N2 recorrente anterior ficou intacto. Para #429 é necessária supervisão e renovação causal de epochs (novo journal a cada mudança de composição), com validação da continuidade por mais horas e gate próprio para eventual instalação; para #319 permanecem não certificadas a identidade independente e elegibilidade para negociação. Não autorizar ordens.
