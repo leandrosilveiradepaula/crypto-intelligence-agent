@@ -8,6 +8,7 @@ import unittest
 from scripts.scan_j1_auto_usdt_perps_once import (
     observe_current_usdt_perpetuals,
 )
+from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
 
 NOW = 1_800_000_120_000
 
@@ -41,6 +42,8 @@ class FakeClient:
         self.urls.append(url)
         i = self.requests_attempted
         self.requests_attempted += 1
+        if i >= len(self.pages):
+            raise J1BybitCaptureError("no_fixture_page")
         obj = self.pages[i]
         return json.dumps(obj).encode("utf-8"), obj
 
@@ -92,7 +95,8 @@ class AutoCatalogOnceTests(unittest.TestCase):
     def test_truncated_cursor_denied_without_retry(self):
         result, c = self.call([page([row("BTCUSDT")], cursor="more")])
         self.assertEqual(result["status"], "abstain")
-        self.assertEqual(c.requests_attempted, 1)
+        # One extra, distinct cursor GET is attempted, never retried.
+        self.assertEqual(c.requests_attempted, 2)
         self.assertEqual(result["failure_code"], "auto_catalog_network_rejected")
 
     def test_cross_page_symbol_collision_rejected(self):
