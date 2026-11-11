@@ -27,6 +27,7 @@ from scripts.audit_bybit_marketwide_closed24h import (
 from .j1_top50_rank_pressure import (
     Top50PressureRejected, pressure_from_closed_turnover,
 )
+from .j1_top50_research_priorities import annotate_raw_rank_research
 
 
 def _empty(status: str) -> dict[str, Any]:
@@ -121,6 +122,11 @@ def audit_private_top50_pressure(
                     include_public_symbols=include_public_symbols,
                 )
                 out.update(pressure)
+                out["raw_rank_research_annotations"] = annotate_raw_rank_research(
+                    tuple(ranked[:50]),
+                    market_window_end_ms=proof["capture_window_end_ms"],
+                    include_symbols=include_public_symbols,
+                )
                 out.update({
                     "schema_version": "j1-top50-private-pressure-bridge-v1",
                     "status": "existing_census_rank_review_queue_unverified",
