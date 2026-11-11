@@ -18,8 +18,8 @@ STATUS = "current_auto_ranked_perpetual_research_scope_only"
 HOUR_MS = 3_600_000
 MAX_SCOPE_AGE_MS = 48 * HOUR_MS
 FILE_NAME = "j1-auto-ranked-research-scope-v1.json"
-_SHA = re.compile(r"[0-9a-f]{64}\\Z")
-_SYMBOL = re.compile(r"[A-Z0-9]{1,28}USDT\\Z")
+_SHA = re.compile(r"[0-9a-f]{64}\Z")
+_SYMBOL = re.compile(r"[A-Z0-9]{1,28}USDT\Z")
 _EXPECTED_KEYS = frozenset({
     "schema_version", "status", "closed_hour_end_ms",
     "catalog_pre_observed_at_ms", "catalog_post_observed_at_ms",
