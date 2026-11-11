@@ -143,6 +143,10 @@ def observe_current_usdt_perpetuals(
             attempted if type(attempted) is int and 0 <= attempted <= MAX_PAGES
             else MAX_PAGES
         )
+        # The pure classifier and private SQLite join make zero GETs, but
+        # this owner CLI *does* fetch catalog pages. The outer report must
+        # reflect actual transport attempts, including failed requests.
+        report["network_requests"] = report["requests_attempted"]
     return report
 
 

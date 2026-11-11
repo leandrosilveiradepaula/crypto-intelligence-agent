@@ -24,3 +24,8 @@ A CLI existente \`scripts.scan_j1_auto_usdt_perps_once\` ganha parâmetros opcio
 ## Gates de aceite
 
 CI Linux, Windows/offline e Chrome/PAPER no SHA final da PR, revisão do conjunto de arquivos, squash merge seguro sem deploy. Depois, atualizar VPS com SHA exato, executar testes específicos, verificar modo owner/lock e fazer **uma** prova GET-only/read-only da junção. O número de 50 ranqueados é um resultado retrospectivo de candidatos técnicos, **nunca** confirmação de que os 50 contratos são criptos ou que o histórico foi coletado continuamente.
+
+
+## Prova real VPS D281 — executada após merge
+
+SHA `d4b8afb9b8623a488227d515cf5c2abc7743a602` conferido na VPS `cia-probe`, árvore limpa e 20 testes J1 auto OK. Um GET de catálogo completo: 930 contratos, 370 provisórios, hash `115eb222184de24706f585143d343d9064d52f2d2e0e329de45730e37c231c96`; exclusões de 388 com marcadores TradFi, 25 negativas documentadas, 108 produto fora do alvo e 39 ambiguidades. Janela D256 congelada `1793970000000` ms com 822 membros, 819 com 24h completos, 3 curtos. Cruza 370 candidatos: 370 com 24h completos, 0 faltantes, 0 veto adicional da D264, 452 membros D256 fora do conjunto atual; gera 50 linhas retrospectivas e hash `173688c7b6fd8fde0f49ef970b797757e57a1b655f60a7b457adada`. Sem acesso SQL write, ordens, serviços, nova coleta de candles ou credenciais. Métrica anterior do wrapper `network_requests=0` derivava do núcleo offline, enquanto `requests_attempted=1` demonstrava o GET real; corrigida em branch posterior, preservando `network_requests=0` da subrotina de junção, que é estritamente offline. A prova somente demonstra ranking 24h da janela histórica, **não** que estes 50 sejam criptomoedas certificadas, nem um ranking corrente ou validade PIT de identificação.
