@@ -126,7 +126,8 @@ def audit_existing_rest_resume(
                 return out
             _, scope_digest, raw_members, initial, halted = scopes[0]
             if (type(scope_digest) is not str or _SHA.fullmatch(scope_digest) is None
-                    or type(raw_members) is not str or len(raw_members) > 300
+                    or type(raw_members) is not str
+                    or len(raw_members) > max(300, expected_members * 40)
                     or type(initial) is not int or initial % HOUR_MS
                     or initial < 25 * HOUR_MS or initial > now_ms
                     or halted not in (None, "provider_denied_owner_review",
