@@ -81,6 +81,13 @@ class PrivateTop50PressureTests(unittest.TestCase):
         self.assertEqual(report["short_contracts"], 0)
         self.assertEqual(report["additional_crypto_reviews_needed_at_least"], 50)
         self.assertEqual(len(report["review_priority_symbols_only"]), 50)
+        research = report["raw_rank_research_annotations"]
+        self.assertEqual(research["raw_ranked_contracts"], 50)
+        self.assertEqual(
+            len(research["raw_rank_research_symbols_only"]), 50
+        )
+        self.assertFalse(research["identity_pit_authenticated"])
+        self.assertFalse(research["marketwide_top50_verified"])
         self.assertEqual(report["unresolved_unmeasured_contracts"], 0)
         self.assertEqual(report["network_requests"], 0)
         self.assertFalse(report["marketwide_top50_verified"])
@@ -92,6 +99,13 @@ class PrivateTop50PressureTests(unittest.TestCase):
         report = self.read()
         self.assertEqual(report["status"], "existing_census_rank_review_queue_unverified")
         self.assertNotIn("COIN000", json.dumps(report))
+        self.assertNotIn(
+            "raw_rank_research_symbols_only",
+            report["raw_rank_research_annotations"],
+        )
+        self.assertEqual(
+            report["raw_rank_research_annotations"]["raw_ranked_contracts"], 50
+        )
         self.assertEqual(report["identity_reviewed_positive_count"], 0)
         self.assertEqual(report["retrospective_negative_auto_promoted_count"], 0)
 

@@ -1441,3 +1441,8 @@ Preflight real `main=6ea728e876b8f802e9eefb5dfec0aa2282204af7`, zero PR aberta a
 ## J1/D273 — pesquisa primária DGAI sem rebaixar PIT (11/11/2026)
 
 Preflight `main=72b733bcd5b45545827854bbe64aa67d436ca6c1`, 0 PRs abertas, #319 e #517 OPEN. Branch existente `work/issue-517-d273-dgai-primary-identity` foi aproveitada; registro novo `bybit_primary_identity_research.py`, testes `test_j1_d273_primary_identity_research.py` e documento `docs/J1_D273_DGAI_PRIMARY_IDENTITY.md`. Evidência Bybit 04/09/2026: DGAIUSDT -> DGrid AI; Gate 23/08/2026: DGrid AI/DGAI -> BNB token 0x10D4183389e99233db3cc981c43443Ebd28Ebd5e. Revisão 11/11 não autentica identidade PIT em 06/11. Não promover `marketwide_top50_verified`, não ler dados privados, sem re-coleta ou ordens. **Checkpoint de branch não prova CI/merge**. Próximo: PR, gates 3/3, merge sem deploy se verde; fila privada de rivais D256+D264 continua dependência de execução owner.
+
+
+## J1/D274 — segundo cruzamento primário CLANKER (11/11/2026)
+
+Preflight verificado `main=b0174b58290c55862d4ca525f433ce80c5e395ed`, 0 PRs abertas, #319/#517 OPEN, PR #543 previamente integrada (CI pós-merge PAPER verde; Linux/Windows em execução na consulta). Branch `work/issue-517-d274-primary-clanker-crosswalk`: ampliar registro primário D273/D274 de DGAI e CLANKER, preservar `ticker_collision_unresolved` em D261, adicionar testes de domínios Bybit Learn/Binance Support, datas PIT e token Base, docs. Provas Bybit Learn 29/04/2025 + Binance Futures 12/11/2025; revisão 11/11/2026 não se torna classificação positiva PIT de 06/11. **Branch não equivale a PR/CI/merge**. Próximo gate: PR e CI SHA final; integrar sem deploy somente 3/3 sucesso. Em seguida cruzar a fila real D256/D264 na VPS owner em read-only, sem coleta e sem ordens.

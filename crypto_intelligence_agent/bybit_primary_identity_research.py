@@ -1,6 +1,6 @@
-"""J1 D273: primary-source venue-to-crypto identity leads, research-only.
+"""J1 D273/D274: primary-source venue-to-crypto identity leads, research-only.
 
-The sources below are published first-party announcements, checked by a
+The sources below are published first-party venue information, checked by a
 researcher AFTER the frozen 06-Nov market observation. Their publication date
 is not the researcher's independent observation time, proof of historical
 availability in the collector, or an authenticated identity-allowlist.
@@ -19,11 +19,11 @@ from urllib.parse import urlsplit
 
 from .bybit_tradfi_negative_evidence import NEGATIVE_EVIDENCE
 
-SCHEMA = "j1-bybit-primary-identity-d273-research-v1"
+SCHEMA = "j1-bybit-primary-identity-d274-research-v2"
 _SYMBOL = re.compile(r"[A-Z0-9]{1,28}USDT\Z")
 _ASSET_ID = re.compile(r"[a-z0-9]+:[a-z0-9][a-z0-9-]*\Z")
 _CHAIN_CONTRACT = re.compile(r"[a-z0-9][a-z0-9-]{1,24}:0x[0-9a-fA-F]{40}\Z")
-_SAFE_LABEL = re.compile(r"[A-Za-z0-9 ._-]{3,72}\Z")
+_SAFE_LABEL = re.compile(r"[A-Za-z0-9 ()._-]{3,72}\Z")
 
 
 def _public_primary_url(url: str, hostname: str, path_prefix: str) -> None:
@@ -66,10 +66,26 @@ class PrimaryIdentityLead:
                 or type(self.network_contract_id) is not str
                 or _CHAIN_CONTRACT.fullmatch(self.network_contract_id) is None):
             raise ValueError("invalid primary identity lead")
-        _public_primary_url(self.venue_announcement_url,
-                            "announcements.bybit.com", "/en/article/")
-        _public_primary_url(self.independent_announcement_url,
-                            "www.gate.com", "/pt-br/announcements/article/")
+        venue_allowed = (
+            ("announcements.bybit.com", "/en/article/"),
+            ("www.bybit.com", "/en/learn/"),
+        )
+        independent_allowed = (
+            ("www.gate.com", "/pt-br/announcements/article/"),
+            ("www.binance.com", "/en/support/announcement/detail/"),
+        )
+        def approved(url: str, choices: tuple[tuple[str, str], ...]) -> bool:
+            for hostname, prefix in choices:
+                try:
+                    _public_primary_url(url, hostname, prefix)
+                    return True
+                except ValueError:
+                    continue
+            return False
+        if (not approved(self.venue_announcement_url, venue_allowed)
+                or not approved(self.independent_announcement_url,
+                                independent_allowed)):
+            raise ValueError("identity requires independent primary sources")
         try:
             venue = date.fromisoformat(self.venue_published_on)
             other = date.fromisoformat(self.independent_published_on)
@@ -105,6 +121,22 @@ _ROWS = (
         independent_published_on="2026-08-23",
         research_reviewed_on="2026-11-11",
     ),
+    PrimaryIdentityLead(
+        venue_symbol="CLANKERUSDT",
+        venue_underlying="tokenbot (CLANKER)",
+        canonical_asset_ref="coingecko:tokenbot-2",
+        network_contract_id="base:0x1bc0c42215582d5a085795f4badbac3ff36d1bcb",
+        venue_announcement_url=(
+            "https://www.bybit.com/en/learn/ai/what-is-clanker-tokenbot"
+        ),
+        venue_published_on="2025-04-29",
+        independent_announcement_url=(
+            "https://www.binance.com/en/support/announcement/detail/"
+            "15f01e2861ac46e2b698212cb220f4d7"
+        ),
+        independent_published_on="2025-11-12",
+        research_reviewed_on="2026-11-11",
+    ),
 )
 
 if len({row.venue_symbol for row in _ROWS}) != len(_ROWS):
@@ -129,9 +161,9 @@ def lead_digest() -> str:
 def primary_research_details(symbol: str, *, market_window_end_ms: int) -> dict | None:
     """Return only research details; even 2 sources never approve Top50/trading.
 
-    The dates embedded in sources are publication dates. The first documented
-    independent research review occurred 11-Nov, so this record cannot be
-    treated as PIT identity at the historical 06-Nov market window.
+    The dates embedded in sources are publication dates. Independent research
+    review occurred 11-Nov, so none of these records can be treated as
+    previously authenticated PIT identity at the historical 06-Nov window.
     """
     if (type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None
             or type(market_window_end_ms) is not int

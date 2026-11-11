@@ -1278,3 +1278,8 @@ A questão prioritária é identidade de ativos cripto, não funcionamento do wo
 ## J1/D273 — diligência primária DGAIUSDT (11/11/2026)
 
 Dois anúncios primários distintos Bybit/Gate sustentam a hipótese de DGrid AI para DGAIUSDT e identificam o token BNB Chain publicado pela Gate. Implementação de lead versionado e testes adversariais na branch `work/issue-517-d273-dgai-primary-identity`; **sem CI/merge comprovados neste checkpoint**. Fontes foram revisadas depois do censo de 06/11, logo não aprovam identidade PIT, não garantem Top50 nem habilitam trading. Ver `docs/J1_D273_DGAI_PRIMARY_IDENTITY.md`.
+
+
+## J1/D274 — segunda identidade com fontes primárias (11/11/2026)
+
+CLANKERUSDT: fonte Bybit Learn sobre tokenbot (CLANKER) e listagem perpétua; fonte Binance Futures sobre tokenbot e endereço Base 0x1bc0c42215582d5a085795f4badbac3ff36d1bcb. Branch `work/issue-517-d274-primary-clanker-crosswalk` agrega evidências de pesquisa e regressões; validação e merge devem ser conferidos à parte. Sem reabrir coleta, sem aprovação PIT ou Top50. Ver `docs/J1_D274_CLANKER_PRIMARY_CROSSWALK.md`.

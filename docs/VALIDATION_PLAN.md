@@ -1081,3 +1081,8 @@ Validar `tests/test_j1_top50_rank_pressure.py` com 50 positivos sintéticos, con
 ## J1/D273 — prova de identidade primária retrospectiva (11/11/2026)
 
 Executar `tests/test_j1_d273_primary_identity_research.py`: DGAIUSDT Bybit+Gate, datas de publicação versus revisão, veto BZUSDT, duas origens obrigatórias, URL HTTPS sem credenciais/queries, token ID sintaticamente válido, digest estável, entradas maliciosas, nenhuma promoção PIT/Top50/trading. Rodar Linux/docs Windows/offline Chrome/PAPER no SHA final. A aprovação da CI não autentica fontes no passado. Ver `docs/J1_D273_DGAI_PRIMARY_IDENTITY.md`.
+
+
+## J1/D274 — auditoria de duas origens CLANKER (11/11/2026)
+
+Testar `test_j1_d273_primary_identity_research.py` para D273+D274: URLs Bybit Learn e Binance Support em hosts/caminhos específicos, rejeitar URL com query/credenciais/host inválido, token Base hexadecimal, cronologia estrita, veto de símbolo negativo BZ/XAU, invariante `ticker_collision_unresolved` da D261, não aprovação PIT histórica e nenhuma ordem. CI Linux/docs Windows/offline Chrome/PAPER no head final antes de merge. Ver `docs/J1_D274_CLANKER_PRIMARY_CROSSWALK.md`.
