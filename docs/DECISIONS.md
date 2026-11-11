@@ -1471,3 +1471,8 @@ Decisão do produto: não condicionar a **pesquisa** do mercado à revisão de i
 ## D280 — executar classificação automática sobre catálogo completo sem alterar a coleta (11/11/2026)
 
 Aplicar D279 por um consumidor reutilizável do transporte público já aprovado, em vez de criar outro coletor ou solicitar reset do SQLite D256/D264. Novo CLI GET-only owner-opt-in, paginação completa validada, orçamento, quota/retry fail-closed e saída sanitizada. Nunca misturar a observação do catálogo atual com PIT 06/11, autorização de trading ou dados de mercado 24h; nenhuma classificação positiva se infere da ausência de campo TradFi. Aguardar gates CI SHA final antes de merge e prova real opt-in. Ver `docs/J1_AUTO_USDT_OWNER_CATALOG.md`.
+
+
+## D281 — cruzar candidatos automáticos atuais com SQLite D256 e D264 existentes, sem voltar à diligência manual (11/11/2026)
+
+Depois da prova real D280 na VPS (930 contratos atuais, 370 candidatos provisórios, 1 GET), realizar uma **única junção somente leitura** do conjunto de pesquisa com o censo SQLite D256 e o overlay negativo imutável D264. Reutilizar replay de integridade, lock owner e validação de timestamps, sem reiniciar captura/serviço; aplicar veto D264 mesmo que metadata atual deixe de sinalizar TradFi. Classificar casos sem candles 24h fechados como incompletos; produzir contagens e hash Top50 **retrospectivos** a partir da janela D256, sem fingir elegibilidade PIT de 06/11 ou cripto comprovada em 11/11. Jamais enviar ordens ou publicar em produção. Docs `docs/J1_AUTO_USDT_PRIVATE_RECONCILIATION.md`; issue #319; CI SHA final e prova owner são gates distintos.
