@@ -20,14 +20,15 @@ Isso vincula **um relatório de pesquisa operado pelo owner** a uma coorte fixa,
 
 ## Execução
 
-scripts/run_j1_current_ranked_epoch_once.py tem duas operações opt-in:
+scripts/run_j1_current_ranked_epoch_once.py tem três operações opt-in:
 
 - seal: lê SOMENTE arquivo de relatório D286 já existente, owner POSIX não-root, pasta e arquivo 0700/0600, JSON bounded com rejeição de chaves duplicadas/NaN, e grava UMA VEZ (O_EXCL/fsync, sem overwrite) o arquivo privado j1-auto-ranked-research-scope-v1.json em diretório 0700 distinto. Não faz GET nem SQLite write.
+- capture-seal: **comando único preferencial** para executar o D286 atual diretamente em memória com `include_public_symbols=True` (IDs somente no processo), pedir todos os opt-ins públicos + escrita de manifesto, filtrar/ranquear todos os candidatos e selar N50 sem arquivo intermediário nem emitir símbolos em stdout. Pré-valida que diretório privado 0700 está vazio antes do primeiro GET e abandona sem criar arquivo em falha, drift ou quota. O trabalho de ~370 GETs requer a janela UTC D286 e não substitui o timer N2.
 - run: requer manifesto owner-only, output directory privado 0700 **novo e separado**, quatro flags explícitas (rede pública, armazenamento privado, região/pesquisa, leitura privada). Invoca o EXISTENTE run_hourly_once com seleção 50 por manifesto. O _frontier original D264 continua inalterado como default do serviço N2, e o caminho alternativo só é atingido por schema D287 explícito. O banco M1 de pesquisa é criado no diretório de saída separado, nunca no journal N2 nem D256/D264.
 
 Uma rodada nova recebe até **50 GETs / 1.200 candles 24h fechados**, com janela M1 HH:01..HH:15 UTC. A rodada seguinte recebe no máximo uma nova vela fechada por ativo, sem refazer as 24 horas; repetir a mesma decisão dá 0 GET e 0 novos candles. Conflitos de scope, relógio, quota/10006, escala, DB corrompido ou manifesto expirado causam abstenção, não substituição da identidade anterior. O timer N2 instalado continua funcionando enquanto o D287 é apenas ferramenta de pesquisa executada em journal isolado.
 
-É necessário refazer **um** D286 com --include-public-symbols em uma janela futura e persistir o stdout JSON como arquivo 0600 do owner. O job D286 previamente agendado para 16:01:08 UTC usa a saída sanitizada SEM lista de símbolos: ele é uma prova de ranking e **não produz um manifesto D287**. Não presumir sucesso do job enquanto não houver resultado real registrado.
+A fase **capture-seal** evita manipular arquivos de relatório: em uma única janela D286 ela cria o manifesto privado com os 50 nomes apenas internamente. A fase `seal` offline continua disponível para relatórios D286 já capturados como JSON owner 0600, sem nova rede. É necessário um censo corrente D286 futuro para o N50 dinâmico. O job D286 previamente agendado para 16:01:08 UTC usa a saída sanitizada SEM lista de símbolos: ele é uma prova de ranking e **não produz um manifesto D287**. Não presumir sucesso do job enquanto não houver resultado real registrado.
 
 ## Validação e segurança
 
