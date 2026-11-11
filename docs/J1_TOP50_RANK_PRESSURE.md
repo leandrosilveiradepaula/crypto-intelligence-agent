@@ -40,3 +40,36 @@ Reutilizar censo SQLite D256, snapshot privado D264, registro `CryptoRegistryHis
 Testes sintéticos: 50 positivos com unknown abaixo, rival acima, empate nas duas ordens, menos de 50 positivos, dados não medidos, positivo não medido, high-volume negativo, duplicatas, floats e NaN, nenhuma rede/ordem, digests determinísticos, flags de certificação falsas. CI Linux/docs, Windows/offline, Chrome/PAPER no SHA final; revisão, merge sem produção apenas após gates verdes.
 
 Issue de produto: #319; diligência de identidades: #517; OPS1 independente: #429.
+
+## Ponte operacional integrada ao censo existente
+
+`crypto_intelligence_agent/j1_top50_private_pressure.py` e
+`scripts/audit_j1_top50_private_pressure.py` reusam o journal privado
+`j1-marketwide-closed24h.sqlite`, lock compartilhado e o replay integral
+`_replay` do auditor D256 **sem um único GET**. Revalidam SQLite, 24 candles
+por série, integridade, digest do ranking, escopo e as séries incompletas.
+
+Ao contrário de dossiês efetivamente revisados, os 819 nomes existentes
+continuam **não classificados como crypto por padrão**; isso significa que
+a saída começa com uma **fila das 50 maiores séries completas para revisão**
+e com todas as séries não medidas ainda pendentes. Nenhum veto TradFi
+contemporâneo é automaticamente promovido a negativo histórico.
+
+Execução, apenas em ambiente owner privado com acesso ao arquivo existente:
+
+```bash
+python -m scripts.audit_j1_top50_private_pressure \
+  --directory /home/cia-probe/agent/j1-global-closed24h-private/run \
+  --allow-private-readonly-audit
+```
+
+Opcional `--include-public-symbols` exibe a fila só no terminal privado;
+não copiar volumes/candles/dados privados para GitHub. O comando não pode ser
+executado pelos três métodos read-only disponíveis no conector MCP atual;
+um caminho de execução owner autorizado separado é necessário para a prova
+real de outputs. Ausência de opt-in ou dados corrompidos => abstenção.
+
+**Próxima integração:** usar a fila concreta do owner replay para obtenção de
+identidade positiva Bybit/ativo de fontes independentes e rever
+iterativamente o limiar de 50; o próprio redutor aceita listas positivas e
+negativas **somente quando comprovadas**. O bridge não as fabrica.
