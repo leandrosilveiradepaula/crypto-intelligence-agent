@@ -1283,3 +1283,8 @@ Dois anúncios primários distintos Bybit/Gate sustentam a hipótese de DGrid AI
 ## J1/D274 — segunda identidade com fontes primárias (11/11/2026)
 
 CLANKERUSDT: fonte Bybit Learn sobre tokenbot (CLANKER) e listagem perpétua; fonte Binance Futures sobre tokenbot e endereço Base 0x1bc0c42215582d5a085795f4badbac3ff36d1bcb. Branch `work/issue-517-d274-primary-clanker-crosswalk` agrega evidências de pesquisa e regressões; validação e merge devem ser conferidos à parte. Sem reabrir coleta, sem aprovação PIT ou Top50. Ver `docs/J1_D274_CLANKER_PRIMARY_CROSSWALK.md`.
+
+
+## J1/D275 — frente de identidade Top50 em lote (11/11/2026)
+
+Branch `work/issue-319-d275-frontier-review-batch`: módulo puro para anexar ao replay D264 existente a fila de pesquisa de todos os 50, combinando referências arquivadas e evidências primárias D273/D274 sem promover aprovação. Saída padrão somente contagem/digest, opt-in owner para nomes; testes unitários e SQLite. **Este checkpoint de branch não é CI/merge nem prova owner real.** O conector VPS não consegue executar como `cia-probe` por permissão; não relaxar isolamento. Ver `docs/J1_D275_FRONTIER_BATCH_REVIEW.md`.
