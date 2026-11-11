@@ -234,7 +234,7 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
 
     def test_expired_manifest_blocks_new_epoch_run_before_any_get(self):
         self.assertTrue(self.seal()["manifest_written"])
-        out = self.run(50*HOUR_MS)
+        out = self.run_epoch(50*HOUR_MS)
         self.assertEqual(out["status"], "research_integrity_or_environment_abstain")
         self.assertEqual(out["failure_category"],
                          "current_research_scope_provenance_invalid")
