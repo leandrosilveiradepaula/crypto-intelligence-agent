@@ -1338,3 +1338,8 @@ Confirmado diretamente na VPS: timer `cia-j1-rest-hourly.timer` `active/elapsed/
 ## J2 — hipótese causal de retomada após correção (11/11/2026)
 
 A PR #550 `work/j2-trend-pullback-causal-paper` entrega estratégia B de pesquisa PAPER long/short por tendência EMA medida **antes** da correção, confirmação de rompimento no candle fechado, ATR/volume/cooldown; testes e `docs/J2_TREND_PULLBACK.md`. Correção CI mede a inclinação pré-pullback (o candle de correção invertia o sinal EMA). Esta nota registra escopo, NÃO alega lucro, live trading ou merge; validar CI Linux/Windows/PAPER no head exato, revisar e integrar sem deploy. Próximo: avaliação por replay com custos e OOS de A vs B.
+
+
+## J1/D285 — capacidade de prova 50 contratos sem modificar coleta recorrente (11/11/2026)
+
+Branch `work/issue-429-j1-rest-fifty-cohort-readonly-audit`: auditor owner-only read-only M1 agora aceita de 1 a 50 membros, preservando default 2, com revalidação completa de SQLite 0700/0600, digest/cursor e cálculo digest-only de ranking de turnover USDT por 24 candles fechados em cada membro. Inclui testes com SQLite real 50×50=2500 velas, sem output de símbolos. A implantação recorrente N2 D284 **continua intocada**. Futura prova N50 será somente uma amostra de pesquisa no novo journal, ainda distinta da pool automática D279/N370 e do Top50 corrente de #319; nenhum efeito em ordens. PR, CI e prova VPS ainda dependem de gates.
