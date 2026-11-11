@@ -166,6 +166,11 @@ class D264PrivateOwnerTests(unittest.TestCase):
         self.assertEqual(proof["frozen_complete_contracts"], 60)
         self.assertEqual(proof["current_provider_negative_count"], 2)
         self.assertEqual(proof["research_frontier_count"], 50)
+        rival_batch = proof["cutoff_primary_batch_research"]
+        self.assertEqual(rival_batch["symbol_research_catalog_size"], 9)
+        self.assertNotIn("private_symbol_research_rows_only", rival_batch)
+        self.assertFalse(rival_batch["eligible_crypto_approved"])
+        self.assertFalse(rival_batch["marketwide_top50_verified"])
         short_docs = proof["short_tradfi_documentary_research"]
         self.assertEqual(short_docs["short_census_contracts"], 0)
         self.assertEqual(short_docs["undocumented_shorts_still_possible_crypto_rivals"], 0)
@@ -233,6 +238,10 @@ class D264PrivateOwnerTests(unittest.TestCase):
         short_docs = optin["short_tradfi_documentary_research"]
         self.assertEqual(short_docs["short_census_contracts"], 0)
         self.assertEqual(short_docs["documented_short_contracts_only"], [])
+        rival_batch = optin["cutoff_primary_batch_research"]
+        self.assertEqual(rival_batch["symbol_research_catalog_size"], 9)
+        self.assertIn("private_symbol_research_rows_only", rival_batch)
+        self.assertFalse(rival_batch["identity_pit_authenticated"])
         scenarios = optin["conditional_cutoff_sensitivity"]["scenarios"]
         self.assertEqual(len(scenarios), 3)
         self.assertIn("replacement_symbols_only", scenarios[0])

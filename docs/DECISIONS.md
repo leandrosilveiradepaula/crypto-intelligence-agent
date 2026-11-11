@@ -1456,3 +1456,8 @@ Replay owner real mostrou que remover XAUT (caso de política) desloca LYNUSDT p
 ## J1/D277 — três incompletos referenciam ações TradFi (11/11/2026)
 
 Replay owner D256 comprova 3 séries curtas, DUOLUSDT/FISVUSDT/FNUSDT, 2 candles cada; anúncios oficiais Bybit 06/11 identificam Duolingo/Fiserv/Fabrinet como subjacentes TradFi, e D264 registra indicadores posteriores. Registro D277 é veto **documental retrospectivo**, não prova de identidade PIT na hora congelada nem confirmação de Top50 crypto-only. Não completar candles artificialmente, não excluir por zero de volume, não re-coletar. Ver `docs/J1_D277_SHORT_TRADFI_EVIDENCE.md`.
+
+
+## J1/D278 — diferenciar perpétuo, token independente e migração spot (11/11/2026)
+
+Investigação de 9 rivais do corte em lote. LYN/ELSA/LIT apresentam anúncio Bybit do perpétuo + anúncio independente Binance vinculando ticker a Everlyn AI/HeyElsa/Lighter, porém sem autenticidade de mint/índice Bybit. ICNT possui só fonte independente de perpétuo; AERO só fonte Bybit de migração spot (mudança de endereço Base); DOT/ARIA/BIRB continuam sem cruzamento primário suficiente; CLANKER possui a D274. Não promover colisões D261, não retroagir observação PIT, não usar token spot como prova de derivativo. Ver `docs/J1_D278_CUTOFF_PRIMARY_BATCH.md`.
