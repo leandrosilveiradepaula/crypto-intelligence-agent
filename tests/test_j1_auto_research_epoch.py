@@ -20,7 +20,7 @@ from crypto_intelligence_agent.j1_rest_incremental_owner import (
 )
 from scripts.run_j1_current_ranked_epoch_once import (
     seal_current_ranked_scope_once, load_private_ranked_scope,
-    run_current_ranked_epoch_once,
+    run_current_ranked_epoch_once, capture_and_seal_current_rank_once,
 )
 
 # Use a closed hour before each decision; no fictitious future PIT.
@@ -153,6 +153,63 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
             clock_ms=(lambda: BASE+120_000+delta) if clock is None else clock,
             client=BoundedBybitPublicClient(transport=fake_bybit),
         )
+
+    def test_one_step_capture_seal_uses_50_public_symbols_only_in_manifest(self):
+        module = "scripts.run_j1_current_ranked_epoch_once.research_current_closed24h_once"
+        with patch(module, return_value=report()) as capture:
+            result = capture_and_seal_current_rank_once(
+                scope_directory=self.manifest,
+                allow_public_network=True,
+                allow_private_manifest_write=True,
+                confirm_region_and_personal_research=True,
+                owner_ok=True, clock_ms=lambda: BASE+120_000,
+            )
+        self.assertEqual(result["status"],
+                         "sealed_current_auto_rank_research_scope_only", result)
+        self.assertTrue(result["manifest_written"])
+        self.assertFalse(result["database_modified"])
+        self.assertFalse(result["orders_sent"])
+        self.assertNotIn("BTCUSDT", json.dumps(result))
+        self.assertEqual(
+            load_private_ranked_scope(
+                self.manifest, now_ms=BASE+120_000
+            )["ranked_research_symbols_only"], SYMS)
+        self.assertEqual(capture.call_count, 1)
+        self.assertTrue(capture.call_args.kwargs["include_public_symbols"])
+        self.assertTrue(capture.call_args.kwargs["allow_public_network"])
+        with patch(module, side_effect=AssertionError("no duplicate GET")):
+            repeat = capture_and_seal_current_rank_once(
+                scope_directory=self.manifest, allow_public_network=True,
+                allow_private_manifest_write=True,
+                confirm_region_and_personal_research=True,
+                owner_ok=True, clock_ms=lambda: BASE+120_000,
+            )
+        self.assertEqual(repeat["status"], "abstain")
+        self.assertEqual(repeat["requests_attempted"], 0)
+
+    def test_one_step_capture_seal_abstains_without_optin_or_full_rank(self):
+        module = "scripts.run_j1_current_ranked_epoch_once.research_current_closed24h_once"
+        with patch(module, side_effect=AssertionError("network disabled")):
+            off = capture_and_seal_current_rank_once(
+                scope_directory=self.manifest,
+                owner_ok=True, clock_ms=lambda: BASE+120_000,
+            )
+        self.assertEqual(off["status"], "optin_required")
+        self.assertEqual(off["requests_attempted"], 0)
+        with patch(module, return_value={
+            "status": "abstain", "requests_attempted": 4,
+            "network_accessed": True,
+        }):
+            failed = capture_and_seal_current_rank_once(
+                scope_directory=self.manifest, allow_public_network=True,
+                allow_private_manifest_write=True,
+                confirm_region_and_personal_research=True,
+                owner_ok=True, clock_ms=lambda: BASE+120_000,
+            )
+        self.assertEqual(failed["status"], "abstain")
+        self.assertEqual(failed["requests_attempted"], 4)
+        self.assertFalse(failed["manifest_written"])
+        self.assertFalse((self.manifest / FILE_NAME).exists())
 
     def test_once_sealed_is_immutable_owner_private_and_zero_sql_write(self):
         before = self.report_path.read_bytes()
