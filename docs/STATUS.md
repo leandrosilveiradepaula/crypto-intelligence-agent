@@ -1343,3 +1343,8 @@ A PR #550 `work/j2-trend-pullback-causal-paper` entrega estratégia B de pesquis
 ## J1/D285 — capacidade de prova 50 contratos sem modificar coleta recorrente (11/11/2026)
 
 Branch `work/issue-429-j1-rest-fifty-cohort-readonly-audit`: auditor owner-only read-only M1 agora aceita de 1 a 50 membros, preservando default 2, com revalidação completa de SQLite 0700/0600, digest/cursor e cálculo digest-only de ranking de turnover USDT por 24 candles fechados em cada membro. Inclui testes com SQLite real 50×50=2500 velas, sem output de símbolos. A implantação recorrente N2 D284 **continua intocada**. Futura prova N50 será somente uma amostra de pesquisa no novo journal, ainda distinta da pool automática D279/N370 e do Top50 corrente de #319; nenhum efeito em ordens. PR, CI e prova VPS ainda dependem de gates.
+
+
+## J1/D286 — ranking corrente por 24 candles fechados da pool automática (11/11/2026)
+
+PR #559 em validação: scripts/run_j1_auto_closed24h_rank_once.py consulta todos os candidatos D279 atuais (VPS: 370), 24h fechadas por ativo com Bybit V5 público, scanner de catálogo ANTES e DEPOIS, janela HH:01..HH:15 e GET budget <=450 a 2s de intervalo, sem retries em 10006. Um GET separado mostrou que 44/50 ativos D264 históricos permanecem na pool atual; portanto não reutilizar o frontier antigo para N50. Ranking determinístico Decimal de turnover USDT 24h, somente contagens/digest (nomes públicos sob opt-in) e flags de pesquisa, sem storage/ordens. CI e execução real ainda dependem de gates. Coleta REST N2 em produção permanece intocada; projeto ainda não alega Top50 atual marketwide ou identidade cripto certificada.
