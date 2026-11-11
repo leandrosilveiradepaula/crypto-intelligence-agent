@@ -77,7 +77,8 @@ def seal_current_ranked_scope_once(
         return result
     result["status"] = "abstain"
     try:
-        if (not isinstance(scope_directory, Path)
+        if (not isinstance(report_path, Path)
+                or not isinstance(scope_directory, Path)
                 or not scope_directory.is_absolute()
                 or report_path.parent == scope_directory
                 or report_path in scope_directory.parents
