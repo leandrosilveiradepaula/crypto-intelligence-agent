@@ -1514,3 +1514,11 @@ Depois da PR #551 integrada SHA `ca174b8dc4b98b95bce7fa967ba3ab3668bb34bf` (Linu
 ## J2 — hipótese causal de retomada após correção (11/11/2026)
 
 A PR #550 `work/j2-trend-pullback-causal-paper` entrega estratégia B de pesquisa PAPER long/short por tendência EMA medida **antes** da correção, confirmação de rompimento no candle fechado, ATR/volume/cooldown; testes e `docs/J2_TREND_PULLBACK.md`. Correção CI mede a inclinação pré-pullback (o candle de correção invertia o sinal EMA). Esta nota registra escopo, NÃO alega lucro, live trading ou merge; validar CI Linux/Windows/PAPER no head exato, revisar e integrar sem deploy. Próximo: avaliação por replay com custos e OOS de A vs B.
+
+
+## J1/#429 D285 — auditor N50; worker recorrente N2 independente (11/11/2026)
+
+- Main verificada no início desta tarefa `af40f23423a0e3120b19d2c830393e3c28c792d3`, zero PRs abertas. Gateway de leitura finita #557 teve código corrigido em outro repositório, mas a instalação root-owned não foi alterada.
+- O MCP `cia_j1_rest_timer_status` respondeu novamente `timer_active=true`, `timer_waiting=true`, `next_schedule_present=true`, `last_service_success=true`; seu auditor SQLite estático N2 respondeu `sqlite_owner_audit_blocked` porque o contrato instalado ainda é a versão fixa 100/26, **não** prova corrupção. Última prova SQLite independente owner N2: 142 velas, 27 publicações, 21 timestamps históricos não publicados, após recuperação automática 15:02 UTC.
+- Work `work/issue-429-j1-rest-fifty-cohort-readonly-audit`: leitura owner 1..50 compatível com default N2, ranking de 24h da amostra e testes N50/anti-tamper. Não modificar serviço cron/DB, ordens ou fonte D256/D264. Escopo congelado M1 exige novo diretório para teste N50, não trocar max-assets do serviço instalado. Requisito de produto seguinte: atualizar os 370 candidatos de D279 com candles atuais para Top50 dinâmico; N50 research D264 isolado é prova de capacidade de writer, não Top50 presente.
+- Próximos passos: PR + CI + revisão + merge sem deploy; provar nova leitura N2 na VPS SHA exato; planejar piloto N50 isolado após gate operacional de janela UTC e orçamento GET. Não declarar 24/7 escalado nem sinais reais.
