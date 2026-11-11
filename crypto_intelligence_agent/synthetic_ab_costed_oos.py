@@ -173,9 +173,11 @@ def _event(
         gross = costs.entry_notional_quote_units * (
             outcome_close / signal_close - Decimal(1)
         ) * side_sign
-        exit_size = costs.entry_notional_quote_units * (
-            outcome_close / signal_close
-        )
+        # Charge fees on an explicitly FIXED reference notional. Inferring
+        # a hypothetical exit notional from the non-executable future mark
+        # may produce an unbounded repeating Decimal (e.g. 15/14) and
+        # falsely imply an actual venue fill/lot-size rounding policy.
+        exit_size = costs.entry_notional_quote_units
         funding = ()
         if costs.signed_funding_rate_bps:
             funding = (SyntheticFundingEvent(
