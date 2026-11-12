@@ -13,6 +13,7 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import stat
 import pwd
 import signal
 import socket
@@ -24,6 +25,7 @@ from scripts.install_j1_n50_cutover_once import (
     FALLBACK_SERVICE, HOSTNAME, EXPECTED_ORIGIN, EXPECTED_N2_UNIT_HASH,
     UNIT_ROOT,
 )
+from scripts.render_j1_n50_managed_systemd import render_n50_managed_systemd
 from scripts.preflight_j1_n50_systemd_isolation import (
     n50_systemd_n2_quiescence,
 )
@@ -193,7 +195,23 @@ def preflight(*, source: Path, expected_sha: str) -> dict:
     old_report=_owner_old(source)
     if not _valid_old_forensic(old_report):
         raise ValueError("old_halt_forensic_mismatch")
+    new_service, _ = render_n50_managed_systemd(
+        owner=OWNER, repo=str(source), python=str(PYTHON), root=str(ROOT),
+    )
+    after="After=network-online.target\\n"
+    if new_service.count(after)!=1:
+        raise ValueError("unit_service_template_drift")
+    new_service=new_service.replace(
+        after, after+"OnFailure="+FALLBACK_SERVICE+"\\n",
+    )
+    original=(UNIT_ROOT/N50_SERVICE).read_text("ascii")
+    if (new_service.count("OnFailure="+FALLBACK_SERVICE+"\\n")!=1
+            or new_service.count("WorkingDirectory="+str(source)+"\\n")!=1
+            or original.count("OnFailure="+FALLBACK_SERVICE+"\\n")!=1):
+        raise ValueError("recovery_service_template_invalid")
     return {
+        "service_text":new_service,
+        "original_service_text":original,
         "n2_ok":True,
         "n2_last_published_end_ms":n2["last_published_end_ms"],
         "n2_stored_candles":n2["stored_candles"],
@@ -208,6 +226,44 @@ def preflight(*, source: Path, expected_sha: str) -> dict:
         "n50_timer_before":"disabled",
         "zero_orders":True,
     }
+
+
+def _atomic_service_replace(body: str, *, suffix: str) -> None:
+    """Single pinned service, no symlinks, fsync + replace. Caller owns rollback."""
+    target=UNIT_ROOT/N50_SERVICE
+    tmp=UNIT_ROOT/("."+N50_SERVICE+"."+suffix)
+    if (target.is_symlink() or not target.is_file()
+            or tmp.exists() or tmp.is_symlink()):
+        raise ValueError("service_destination_untrusted")
+    raw=body.encode("ascii")
+    if not 100<len(raw)<16_000:
+        raise ValueError("service_text_size_invalid")
+    fd=os.open(tmp,os.O_WRONLY|os.O_CREAT|os.O_EXCL
+               |getattr(os,"O_NOFOLLOW",0),0o644)
+    try:
+        os.fchmod(fd,0o644)
+        with os.fdopen(fd,"wb") as out:
+            out.write(raw)
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(tmp,target)
+        directory_fd=os.open(UNIT_ROOT,os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        if tmp.exists() or tmp.is_symlink():
+            tmp.unlink()
+
+
+def _restore_original_service(text: str) -> bool:
+    try:
+        _atomic_service_replace(text,suffix="d306-restore")
+        _call(["/usr/bin/systemctl","daemon-reload"],timeout=30)
+        return True
+    except (OSError,ValueError,RuntimeError,subprocess.TimeoutExpired):
+        return False
 
 
 def _return_to_n2() -> bool:
@@ -240,6 +296,8 @@ def execute(*,source: Path,expected_sha: str,
         "old_halt_preserved":False,
         "new_epoch_started":False,
         "n50_timer_enabled":False,
+        "n50_service_repointed":False,
+        "previous_service_restored":None,
         "n2_restored_after_failure":None,
         "systemd_modified":False,
         "network_requests":0,
@@ -261,6 +319,7 @@ def execute(*,source: Path,expected_sha: str,
         out["status"]="early_utc_close_window_required"
         return out
     changed=False
+    service_changed=False
     prior=signal.getsignal(signal.SIGTERM)
     def sigterm(_signum,_frame):
         raise InterruptedError("recovery_interrupted")
@@ -297,6 +356,15 @@ def execute(*,source: Path,expected_sha: str,
             raise RuntimeError("owner_new_epoch_recovery_failed")
         out["new_epoch_started"]=True
         out["old_halt_preserved"]=True
+        # Install the validated D306 owner code for all FUTURE hours, not
+        # just the one-off recovery. Preserve the existing OnFailure unit.
+        service_changed=True
+        _atomic_service_replace(gate["service_text"],suffix="d306-install")
+        _call(["/usr/bin/systemctl","daemon-reload"],timeout=30)
+        _call(["/usr/bin/systemd-analyze","verify",
+               str(UNIT_ROOT/N50_SERVICE),str(UNIT_ROOT/N50_TIMER),
+               str(UNIT_ROOT/FALLBACK_SERVICE)],timeout=30)
+        out["n50_service_repointed"]=True
         _call(["/usr/bin/systemctl","reset-failed",N50_SERVICE],timeout=20)
         _call(["/usr/bin/systemctl","enable","--now",N50_TIMER],timeout=40)
         if (_state(N2_TIMER)!={"LoadState":"loaded","ActiveState":"inactive",
@@ -313,9 +381,14 @@ def execute(*,source: Path,expected_sha: str,
             subprocess.TimeoutExpired):
         if changed:
             out["n2_restored_after_failure"]=_return_to_n2()
+            if service_changed:
+                out["previous_service_restored"]=_restore_original_service(
+                    gate["original_service_text"])
             out["systemd_modified"]=True
-            out["status"]=("rolled_back_to_n2" if out["n2_restored_after_failure"]
-                           else "CRITICAL_n2_rollback_failed")
+            safe=out["n2_restored_after_failure"] and (
+                not service_changed or out["previous_service_restored"])
+            out["status"]=("rolled_back_to_n2" if safe
+                           else "CRITICAL_n2_or_unit_rollback_failed")
         return out
     finally:
         signal.signal(signal.SIGTERM,prior)
