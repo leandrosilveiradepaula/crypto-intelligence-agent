@@ -1557,3 +1557,8 @@ O estágio J3 N50 exige duas publicações íntegros e consecutivas t/t+1h com 5
 ## D303 — preservar a classe sanitizada da falha de provedor no log N50 (12/11/2026 UTC)
 
 A primeira coleta real N50 publicou 1.200 velas, e os fechamentos seguintes publicaram três checkpoints. Na atualização 08:01 UTC, o M1 fez 7 GETs, salvou 6 velas e persistiu o fail-stop `provider_denied_owner_review`. A cascata D291/D293/D294 devolveu apenas `blocked`, escondendo a classificação segura que o M1 já produz (`failure_category`). Decisão: propagar **somente categorias literais da whitelist `_ALLOWED_FAILURES` de M1**, sem símbolos, retMsg, URL, parâmetros, resposta HTTP ou dados privados. Nunca reclassificar o evento de 08h retroativamente: seu subtipo exato não foi armazenado. Nenhuma tentativa de GET adicional para diagnosticar a restrição; N2 fallback continua ativo. D303 é offline e não desbloqueia o latch, não modifica SQLite/timers e não autoriza novo release N50. Repetir com testes adversariais e CI, depois merge sem deploy.
+
+
+## D304 — HALT N50 exige forense read-only, não retry automático (12/11/2026 UTC)
+
+Decisão: tratar o HALT real `provider_denied_owner_review` após 7 GETs, 6 candles parciais e 3 checkpoints completos como bloqueio operacional explícito. Não destravar, reutilizar journal para novo GET ou inventar PIT. Auditoria forense própria D304 revalida cursor/digest/recibo e publica somente contagens, com `resume_authorized=false`. N2 preservado após fallback. Antes de nova tentativa N50, diagnosticar classe de restrição de provedor e preparar nova epoch sob gate próprio, sem operar ordens. Ver `docs/J1_N50_HALTED_OWNER_FORENSIC_D304.md`.

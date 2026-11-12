@@ -1434,3 +1434,8 @@ Concluída a implementação do estudo owner-only J3 com 50×25 candles consecut
 ## J1/D303 — falha do provedor observada no N50; fallback N2 comprovado (12/11/2026 UTC)
 
 Primeiro N50 owner checkpoint: 1.200 candles de 50 contratos, seguido por 3 checkpoints reais até 07 UTC. Às 08:01 UTC, 7 GETs e 6 candles avançados, com `provider_denied_owner_review` no SQLite; `PRAGMA quick_check=ok`, 50 cursores e 1.306 candles no total. N50 terminou exit 65 e acionou OnFailure, deixando timer N50 disabled/inactive e N2 enabled/active. Subtipo exato da resposta do provedor não é reconstituível dos logs já registrados. D303 adiciona telemetria de `failure_category` whitelist M1→D291→D293→D294 para futuras falhas, sem relançar provedor e sem mexer no banco. Homologação 24h e renovação >36h seguem pendentes; #429 continua aberta.
+
+
+## J1/D304 — forense da falha N50 e preservação dos checkpoints (12/11/2026 UTC)
+
+N50 completou 3 publicações horárias; a quarta falhou após 7 GETs e 6 candles parciais com HALT `provider_denied_owner_review`. Fallback N2 foi confirmado ativo, N50 timer inativo. D304 acrescenta auditor owner-only de journal halted, validando SQLite/cursors/manifesto/PIT sem qualquer GET nem liberação de retomada. Nenhuma conclusão de 24h, continuidade Top50, causa específica HTTP ou rentabilidade.
