@@ -1199,3 +1199,8 @@ Testar `test_j2_n50_private_screen.py` com 50×24 linhas SQLite reais fictícias
 ### J5/D301 — HTML privado mobile PT-BR, sem rede e com integridade dupla
 
 `tests/test_j5_n50_private_mobile.py`: exigir schema e 50 métricas D300 derivadas de replay válido, sem flags de trade/fonte autenticada; 50 símbolos USDT distintos e ranking histórico monotônico; timestamp coerente, decimals finitos/bounded, ruptura de BTC e agregados detectáveis; XSS e campos extras negados. Verificar HTML lang=pt-BR, viewport e breakpoints mobile 800/560/340, skip-link/teclado, CSP default-src none, zero script/form/button/network, texto grande PESQUISA PROVISÓRIA/NENHUMA ORDEM. Em POSIX owner-only verificar arquivo 0600 e pasta 0700, idempotência sem overwrite, symlink/owner/opt-ins negados. CLI tem três opt-ins e default sem consultar banco nem gravar. 10 testes PASS no candidato VPS `bb3ded25925ea75ef153fafe05be781be9b9fa10`; CI Linux/docs, Windows/offline e Chrome/PAPER no SHA final; merge sem publicar nem editar timer N50.
+
+
+### J3/D302 — dois checkpoints N50 e 1250 candles com custos ex post
+
+Reproduzir testes test_j3_n50_expost_onehour.py POSIX: 50×25 candles e 2 checkpoints reais com recibo e hash por barra; seleção de prefixo imutável mesmo quando outcome futuro muda; resultado de custos 40bps/100 USDT = 0,4 por evento, diferença exata 2 em 5 e 20 em 50; dado anterior com recibo posterior ao checkpoint bloqueado, assim como hash, gaps, relógio, owner e optin. Resultado padrão não expõe símbolos e nunca autoriza sinais/ordens/finance backtest. Testes owner VPS 10 PASS; CI Linux/docs, Windows/offline e Chrome/PAPER HEAD final, revisão SHA e merge sem deploy. Não fazer experimento real sem publicação t+1h verificável.

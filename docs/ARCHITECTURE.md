@@ -597,3 +597,8 @@ O coletor de pesquisa N50 D294 é chamado por um service oneshot e timer UTC ver
 ### J5/D301 — apresentação HTML privada e offline do observador N50
 
 Conexão unidirecional J1 owner/SQLite → D300 (métricas observadas sem sinais) → D301 renderer puro HTML → arquivo local 0600 opcional em pasta `reports/` 0700. A apresentação valida novamente versão, campos, limites Decimal, timestamp, 50 registros ordenados e todas as flags negativas de trading. Não há servidor, autenticação de contas, conectores, JavaScript, API, mutação do SQLite de mercado ou integração com o executor J4. Um futuro portal remoto exigirá autenticação/autorização próprias.
+
+
+### J3/D302 — labels N50 com fronteira causal explícita
+
+Fluxo somente leitura D287/D294 → auditor D290/D292 → SQLite 50×25 em snapshot → J2 _metrics no prefixo de 24 candles, dado conhecido no primeiro checkpoint → resultado de marcação apenas no candle 25 já publicado → custos fictícios e sumário sem símbolo por padrão. Checks de recebimento anteriores ao primeiro e ao segundo checkpoint não permitem criar PIT retroativo. Nenhum writes, endpoint ou integração com posições/ordens.

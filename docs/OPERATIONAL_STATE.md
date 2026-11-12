@@ -1614,3 +1614,8 @@ D300 evidência incremental: worktree candidato `5118e88cdab80856c257b9b5eb5c1ba
 ## J5/D301 — primeira interface privada de dados N50 (12/11/2026 UTC)
 
 Base de trabalho `80b2c3ad8b9cf4eb193320c6cdb9eef29ef32b70` (head D300 PR #573, posteriormente squash em `95edb62a52ba2fd0619457371281db3b02df2fd0`). Branch `work/issue-6-j5-d301-n50-private-mobile-report`: renderer `j5_n50_private_html`, template `web/n50-private-research-template.html`, CLI `render_j5_n50_private_mobile_once`, 10 testes D301 PASS na VPS, candidato `bb3ded25925ea75ef153fafe05be781be9b9fa10`. Se futuro uso owner com 3 opt-ins, arquivos 0600 em root privado 0700; nenhum HTML foi escrito na produção nesta implementação, sem servidor HTTP, sem ordens, sem rede. Próximo: CI/revisão e merge sem deploy; após primeiro writer N50 comprovado, gerar relatório privado opcional e manter monitor D299. J1 #429 e elegibilidade crypto #319 abertas.
+
+
+## J3/D302 — prova de labels posteriores sem hindsight (12/11/2026 UTC)
+
+Trabalho no branch work/issue-4-j3-d302-n50-expost-mark-window, criado sobre main 95edb62a52ba2fd0619457371281db3b02df2fd0 antes de J5 D301 e refeito sobre main atual após merge. Dois novos arquivos: crypto_intelligence_agent/j3_n50_expost_onehour.py e tests/test_j3_n50_expost_onehour.py. Os 10 testes POSIX com 1250 candles de schema M1 e duas publicações t/t+1h passaram no SHA ca7f513d157673575e6e4b1156afd6d1bc6d4e73. Nada foi executado com dados reais, nenhum SQLite foi modificado e ordens permanecem ausentes. Próximo: CI SHA, revisão, squash merge sem deploy; após pelo menos 2 publicações N50, avaliação owner read-only. #4/#429/#319 abertos; nenhuma comprovação de lucro.

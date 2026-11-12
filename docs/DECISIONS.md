@@ -1548,3 +1548,8 @@ Separar uma ponte **somente leitura e descritiva** para os 50 contratos do journ
 ## D301 — relatório privado N50 no celular não é tela de trades (12/11/2026 UTC)
 
 A ponte J2/D300 fornece métricas **observacionais**, não sinais nem preços autenticados para negociação. J5/D301 renderiza esse contrato exclusivamente como HTML offline PT-BR, sem JavaScript/rede, com aviso de dados provisórios e zero ordens, ranking histórico descritivo e tabela responsiva dos 50 USDT perpétuos observados. Arquivo owner-only 0600 sob root 0700 só com três opt-ins; reexecução idêntica não sobrescreve, outputs de CLI nunca incluem símbolos. Exigir autenticação e gate separado antes de oferecer isso em acesso remoto. Não tocar em PAPER/ordens/live ou em deploy. Ver docs/J5_N50_PRIVATE_MOBILE_D301.md e #6.
+
+
+## D302 — rank anterior e mark posterior são um experimento, nunca execução (12/11/2026 UTC)
+
+O estágio J3 N50 exige duas publicações íntegros e consecutivas t/t+1h com 50×25 candles, revalidando hashes e recibos efetivamente anteriores ao checkpoint pertinente. Usa somente os 24 candles do passado em t para ordenar os contratos e o 25º candle fechado após t+1h para observar o desfecho. Cobra custos hipotéticos fixos, compara rank top/bottom e referência Long 50 sem inferir PnL, fill, OOS validado, financiamento, mark de liquidação ou aprovar sinal. Não aciona J4/ordens e não salva output privado sem autorização. Ver docs/J3_N50_EXPOST_ONEHOUR_D302.md e #4.
