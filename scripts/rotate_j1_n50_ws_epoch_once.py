@@ -105,10 +105,10 @@ def rotate_n50_ws_owner_epoch_once(
             now=clock_ms()
             if type(now) is not int or now<=0:
                 return out
-            # Only HH:02:15..HH:03:00 UTC. First ensure current hour is
-            # actually closed before a fresh causal D287 public capture.
+            # Only HH:01:00..HH:02:00 UTC, enforced by D286 initial
+            # current closed-hour census. HH:02:15 would ALWAYS fail D286.
             phase=now%3_600_000
-            if not 135_000<=phase<=180_000:
+            if not 60_000<=phase<=120_000:
                 out["status"]="n50_ws_rotation_outside_causal_window"
                 return out
             old=None
