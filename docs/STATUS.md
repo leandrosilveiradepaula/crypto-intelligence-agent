@@ -1383,3 +1383,7 @@ Após o piloto D289 e merge D291, D292 adiciona ao auditor read-only N50 (opt-in
 ## J1/D293 — lease compartilhada para censo e writer N50 (12/11/2026 UTC)
 
 Implementados ponto de entrada coordenado, flock global, claim owner-only imutável por fechamento e testes adversariais: não executar censo D286/D287 e writer D291/D292 na mesma janela nem trocar destino por retry, manter recuperação D292 de ação idêntica. Escopo OFF por padrão, sem serviço permanente/deploy; o coletor N2 continua independente. J1 #429 exige ainda rotação automática, instalação supervisionada e soak 24h; #319 exige validação de Top50/identidade para negociação.
+
+## J1/D294 — ciclo N50 gerenciado com renovação por epochs (12/11/2026 UTC)
+
+D294 adiciona `managed_n50_tick_once` e CLI owner OFF por padrão: primeira seleção/selagem, atualização incremental horária no manifesto corrente e troca causal para epoch novo a partir de 36h, protegendo a transição com lock/claim D293 e ponteiro owner-only atômico. Testes offline de crash/conflito/retomada/idade e preservação de journals. **Não é N50 24/7 instalado**; nenhum serviço, timer, ordem ou migration. CI/revisão/merge exigidos; J1 #429 precisa ativação operacional com soak real e #319 ainda qualificação independente.

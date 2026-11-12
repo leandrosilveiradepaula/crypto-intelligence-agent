@@ -579,3 +579,7 @@ O D286 calcula provisoriamente os 50 contratos com maior turnover **das 24 horas
 ### J1/D293 — exclusão entre seleção de universo e coleta por epochs
 
 O M1 possui flock por SQLite; D293 envolve os pontos de entrada públicos N50 `capture_seal` (D286/D287) e `hourly_writer` (D291/D292) em uma *mesma* pasta privada de lock, com flock global nonblocking e claim imutável por fechamento UTC, ação e SHA de paths. Mesmo após crash a claim sobrevive; tentativa de ação/target diferente é recusada antes de GET. Retentativa idêntica delega à idempotência/recuperação dos módulos existentes. Essa exclusão não alcança executores que contornem D293 nem os serviços N2 já instalados; integração N50 com systemd/renovação precisa usar exclusivamente o CLI coordenado após novo gate operacional. Não cria PIT, identidade autenticada ou permissões de ordens.
+
+### J1/D294 — ponteiro para epoch N50 ativo, com transição atômica
+
+`j1_n50_managed_cycle.managed_n50_tick_once` escolhe etapa única por janela UTC sobre D293: sem ponteiro/idade >=36h -> novo epoch/pasta/manifesto D287, promoção fsync/rename do ponteiro; idade <36h -> D291/D292/M1 no journal do epoch ativo. Manager flock separado protege ponteiro, e D293 flock + claim persistente protege o uso do endpoint público entre censo e writer. Nenhum journal anterior é reescrito; o intervalo de rotação não recebe checkpoint PIT fictício. Serviço N50 recorrente não instalado: sem cron/release, sem ordens ou garantias de 24h/Top50.
