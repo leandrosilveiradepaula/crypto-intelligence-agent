@@ -15,7 +15,7 @@ import time
 from typing import Any
 
 from crypto_intelligence_agent.j1_auto_research_epoch import (
-    HOUR_MS, MAX_SCOPE_AGE_MS, validate_ranked_research_scope,
+    HOUR_MS, validate_ranked_research_scope,
 )
 from crypto_intelligence_agent.j1_rest_incremental_owner import (
     _DB_NAME, _SHA, _validate_cursor,
@@ -107,7 +107,7 @@ def audit_halted_n50_epoch(
             if db.execute("PRAGMA integrity_check").fetchone() != ("ok",):
                 return out
             schema = {r[0] for r in db.execute(
-                "SELECT name FROM sqlite_master WHERE type='table")}
+                "SELECT name FROM sqlite_master WHERE type='table'")}
             if not {"scope", "cursor", "candles", "published_hour"} <= schema:
                 return out
             scopes = db.execute(
