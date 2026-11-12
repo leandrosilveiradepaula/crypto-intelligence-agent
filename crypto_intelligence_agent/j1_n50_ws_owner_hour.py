@@ -37,6 +37,7 @@ def _result(status: str) -> dict:
         "missing_contracts": 50,
         "utc_closed_hour_end_ms": None,
         "hour_evidence_sha256": None,
+        "source_provenance": None,
         "ranked_scope_sha256": None,
         "ws_scope_sha256": None,
         "owner_lock_acquired": False,
@@ -101,6 +102,12 @@ def run_n50_ws_owner_hour_once(
             or not decision_at_ms - HOUR_MS <= started_at_ms < decision_at_ms):
         return out
     try:
+        # Do not trust a caller-supplied preclose start time without checking
+        # the real/injected UTC clock before opening any socket or journal.
+        observed_start = wall_ms()
+        if (type(observed_start) is not int
+                or abs(observed_start - started_at_ms) > 5000):
+            return out
         members, ranked_sha = validate_ranked_research_scope(
             ranked_scope, now_ms=started_at_ms, max_assets=50,
         )
@@ -162,6 +169,7 @@ def run_n50_ws_owner_hour_once(
             if evidence["status"] == "ws_hour_50_observed_local_only_not_marketwide":
                 out["status"] = "ws_owner_hour_50_observed_local_only"
                 out["hour_evidence_sha256"] = evidence["evidence_sha256"]
+                out["source_provenance"] = "bybit_public_ws_confirmed"
             elif evidence["status"] == "ws_closed_hour_incomplete_no_pit":
                 out["status"] = "ws_owner_hour_incomplete_no_pit"
                 out["rest_gap_reconciliation_required"] = True
