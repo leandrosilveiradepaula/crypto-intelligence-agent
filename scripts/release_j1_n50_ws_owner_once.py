@@ -46,8 +46,8 @@ EXISTING_UNIT_SHA256 = {
     "cia-j1-n50-fallback.service":
         "bc6c0c32e13ce2a2442cec7b85c62bb7553d63909919b1a7a2d5cc96492e3ac0",
 }
-_SAFE_PATH = re.compile(r"/home/cia-probe/agent/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\Z")
-_SHA = re.compile(r"[0-9a-f]{40}\\Z")
+_SAFE_PATH = re.compile(r"/home/cia-probe/agent/[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\Z")
+_SHA = re.compile(r"[0-9a-f]{40}\Z")
 
 
 def _base(status: str) -> dict[str, Any]:
