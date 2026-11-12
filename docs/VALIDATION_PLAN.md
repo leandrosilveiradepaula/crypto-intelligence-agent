@@ -1208,3 +1208,8 @@ Reproduzir testes test_j3_n50_expost_onehour.py POSIX: 50×25 candles e 2 checkp
 ### J1/D303 — observabilidade de fail-stop sem vazamento
 
 Testar M1→D291→D293→D294 com mocks offline: 7 GETs/6 candles e falha `provider_rate_limit_no_retry` ou `provider_access_or_permission_denied_no_retry` deve permanecer `status=blocked`, `orders_sent=false`, com `failure_category` conhecido em cada camada. Valores maliciosos ou mensagens contendo símbolos/URLs/retMsg devem ser substituídos por `null` (nenhuma cópia literal). Nenhuma camada cria retry ou limpa o latch. Executar testes D291/D293/D294 + suíte CI Linux/docs, Windows/offline e Chrome/PAPER em HEAD final, revisão SHA e merge sem implantação. Estado real N50 08h permanece checkpoint ausente, e restaurar N2 foi a decisão segura.
+
+
+### J1/D304 — auditoria HALT sem retry e sem PIT retroativo
+
+Validar via `test_j1_n50_halted_forensic.py`: SQLite 50×26 + 6 candles com digest real, 3 recibos válidos, 44 cursores no checkpoint anterior e 6 no próximo; `halted_reason=provider_denied_owner_review`; assinatura/counts/recibos íntegros sem autorizar retomada ou ordem; digests adulterados e symlink bloqueiam; sem HALT não marca forense positiva. Regressão de audit D292/D299 e CI Linux/docs+Windows/offline+Chrome/PAPER SHA exato. Pós-merge: owner-only CLI pinada contra journal N50 real; nada de systemd restart, GET, fill ou limpeza de banco.
