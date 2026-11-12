@@ -621,3 +621,6 @@ O modelo de dados distingue: (a) manifesto D287 `scope_digest_sha256` com 50 mem
 
 ## J1/D318 — agendamento WS pré-fechamento com exclusividade de serviço
 N50 REST legado oneshot em HH:01:05 UTC **não é** o WS. Novo trio de templates `cia-j1-n50-ws.timer/service/fallback`: timer HH:59:30 UTC `Persistent=false`, service owner inicia CLI D317 com escopo D287/D316 e jornal WS privado sob lock, preflight read-only exige N2 desabilitado e N50 REST disabled; OnFailure desliga WS e reabilita N2. Renderer puro valida placeholders/caminhos/ExecStart. VPS sem deploy até gate root e evidência do cache corrente. `docs/J1_N50_WS_PRECLOSE_TIMER_D318.md`.
+
+## J1/D320 — pipeline owner inicial e cutover root one-shot
+Bootstrap owner preserva REST HALT e N2 enquanto captura novo manifesto D287 após a janela N2 HH:02, persiste metadados V5 D314 em cache D316 exclusivo e verifica 50 componentes. Release root independente valida worktree SHA/origin limpo, diretórios owner 0700, NTP, hashes das cinco units atuais e N2/REST states; escreve somente 3 units WS novos, inicia timer HH:59:30 e restaura N2 em falha. O broker MCP atual só consegue leitura e **não** deve escalar por `systemd-run` ou reaproveitar unit REST. `docs/J1_N50_WS_ROOT_RELEASE_D320.md`.
