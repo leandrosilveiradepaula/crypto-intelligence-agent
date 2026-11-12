@@ -114,6 +114,25 @@ class ManagedN50EpochTests(unittest.TestCase):
             self.assertEqual(delegate.call_args.kwargs["action"],"hourly_writer")
             self.assertEqual(delegate.call_count,2)
 
+    def test_failstop_reason_survives_managed_tick_without_orders(self):
+        with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate):
+            self.assertEqual(self.invoke()["status"],"epoch_started")
+        self.now=T+HOUR_MS+120_000
+        with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   return_value={
+                       "status":"blocked",
+                       "failure_category":"provider_access_or_permission_denied_no_retry",
+                       "requests_attempted":7,"new_closed_candles":6,
+                       "claims_created":1,
+                   }):
+            out=self.invoke()
+        self.assertEqual(out["status"],"blocked")
+        self.assertEqual(out["failure_category"],
+                         "provider_access_or_permission_denied_no_retry")
+        self.assertEqual((out["requests_attempted"],out["new_closed_candles"]),(7,6))
+        self.assertFalse(out["orders_sent"])
+
     def test_after_37h_rotates_and_preserves_old_epoch_and_immutable_scope(self):
         with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
                    side_effect=self.fake_delegate):
