@@ -17,3 +17,7 @@ CLI `python -m scripts.audit_j1_n50_halted_owner_once --allow-private-readonly-a
 ## Testes e evidências
 
 `tests/test_j1_n50_halted_forensic.py` gera SQLite real 50 contratos, 1.306 candles (1.300 de 3 publicações completas + 6 avançados), 3 recibos com clocks válidos e HALT idêntico à forma do incidente. Verifica que somente os 3 checkpoints são publicados e as 6 linhas parciais continuam contabilizadas separadamente. Cobre digest/recibo adulterados, ausência de HALT, symlink, relógio, owner e opt-in. Regressão J1 N50/D292 e CI Linux/docs Windows/offline Chrome/PAPER antes do merge sem deploy. Depois, owner-only leitura VPS para confirmar o estado real, sem alterar os dados.
+
+### Verificação depois da expiração de 48h
+
+A expiração do manifesto limita **novas decisões de coleta**, mas não pode impedir a revisão histórica de um SQLite preservado. D304 lê o manifesto por validação owner 0600, confere sua observação original e valida sua assinatura no último instante permitido pelo TTL; a leitura de um HALT 60h depois continua permitida **sem rede ou autorização de retomada**. O teste POSIX adversarial verifica esse caso.
