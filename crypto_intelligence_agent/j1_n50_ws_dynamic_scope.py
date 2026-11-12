@@ -23,9 +23,7 @@ from .bybit_paginated_universe_research import _cursor, _response
 from .bybit_public_j1_transport import (
     BoundedBybitPublicClient, J1BybitCaptureError, instruments_url,
 )
-from .j1_auto_research_epoch import (
-    HOUR_MS, MAX_SCOPE_AGE_MS, validate_ranked_research_scope,
-)
+from .j1_auto_research_epoch import validate_ranked_research_scope
 from .market_data import DataValidationError
 
 MAX_CATALOG_PAGES = 4
@@ -363,7 +361,6 @@ def capture_n50_dynamic_ws_metadata_once(
             TypeError, OverflowError):
         # An error never triggers another request. Only a fixed enum is
         # echoed to logs, not a venue message, symbol, URL or access token.
-        from .j1_rest_incremental_owner import _ALLOWED_FAILURES
         category = None
         if fetch.last_provider_retcode == 10006:
             category = "provider_rate_limit_no_retry"
