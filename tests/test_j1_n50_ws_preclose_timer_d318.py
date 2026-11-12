@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest import TestCase, main
+from unittest import TestCase, main, skipUnless
 from unittest.mock import patch
 
 from scripts import preflight_j1_n50_ws_systemd as gate
@@ -101,6 +101,7 @@ class N50WSPrecloseTimerTests(TestCase):
         self.assertEqual(r["network_requests"],0)
         self.assertFalse(r["orders_sent"])
 
+    @skipUnless(os.name == "posix", "POSIX-only owner systemd preflight")
     def test_both_rest_collectors_must_be_quiesced(self):
         seen=[]
         with patch.object(gate.os,"name","posix"),\
@@ -121,6 +122,7 @@ class N50WSPrecloseTimerTests(TestCase):
             "cia-j1-n50-managed.timer","cia-j1-n50-managed.service",
         ])
 
+    @skipUnless(os.name == "posix", "POSIX-only owner systemd preflight")
     def test_live_n2_or_old_n50_timer_blocks_before_ws(self):
         for changed in (
             {"n2_timer":{"active":"active","enabled":"enabled"}},
@@ -143,6 +145,7 @@ class N50WSPrecloseTimerTests(TestCase):
             self.assertFalse(result["n50_ws_start_authorized"])
             self.assertFalse(result["systemd_modified"])
 
+    @skipUnless(os.name == "posix", "POSIX-only owner systemd preflight")
     def test_root_denied_and_service_errors_abstain(self):
         with patch.object(gate.os,"name","posix"),\
              patch.object(gate.os,"getuid",return_value=0),\
