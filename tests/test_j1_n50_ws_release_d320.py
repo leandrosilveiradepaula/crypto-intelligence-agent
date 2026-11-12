@@ -176,8 +176,10 @@ class N50WSRootReleaseTests(unittest.TestCase):
                     rel._safe_owner_dir(directory,os.getuid())
 
     def test_path_and_commit_regex_are_exact(self):
-        self.assertTrue(rel._SAFE_PATH.fullmatch(str(SRC)))
-        self.assertTrue(rel._SAFE_PATH.fullmatch(str(WS)))
+        # Pure POSIX release-path grammar must be tested without WindowsPath
+        # converting leading /home into drive-dependent backslashes.
+        self.assertTrue(rel._SAFE_PATH.fullmatch("/home/cia-probe/agent/j1-n50-ws-a-code-20261112"))
+        self.assertTrue(rel._SAFE_PATH.fullmatch("/home/cia-probe/agent/j1-n50-ws-private-20261112"))
         for path in (
             "/tmp/unsafe",
             "/home/cia-probe/agent/with spaces",
