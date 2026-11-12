@@ -1,0 +1,14 @@
+# J1/D295: OFF BY DEFAULT; gate required before installation.
+# HH:01:05 UTC allows the proven D287 ~12m census to finish before HH:15.
+[Unit]
+Description=CIA J1 managed N50 research timer (OFF BY DEFAULT)
+
+[Timer]
+OnCalendar=*-*-* *:01:05 UTC
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=cia-j1-n50-managed.service
+
+[Install]
+WantedBy=timers.target
