@@ -6,6 +6,7 @@ per-epoch owner replay (D290/D292) is mandatory before counting checkpoints.
 """
 from __future__ import annotations
 
+import argparse
 from contextlib import closing
 import json
 import os
@@ -48,6 +49,7 @@ def _result(status: str) -> dict[str, Any]:
         "unique_published_utc_hours": 0,
         "missing_hours_between_publications": None,
         "latest_published_end_ms": None,
+        "latest_published_age_hours": None,
         "published_last_24_closed_hours": 0,
         "expected_last_24_closed_hours": 24,
         "active_epoch_age_hours": None,
@@ -199,6 +201,7 @@ def audit_managed_n50_epochs(
         out["unique_published_utc_hours"] = len(all_ends)
         out["missing_hours_between_publications"] = skipped
         out["latest_published_end_ms"] = all_ends[-1]
+        out["latest_published_age_hours"] = (now - all_ends[-1]) // HOUR_MS
         phase = now % HOUR_MS
         last_eligible = now // HOUR_MS * HOUR_MS
         if phase < 60_000:
@@ -209,9 +212,30 @@ def audit_managed_n50_epochs(
         )
         out["owner_integrity_verified"] = True
         # 'pass' is replay quality, never a blanket 24/7 guarantee.
-        out["status"] = ("verified_with_missing_pit" if skipped
+        out["status"] = ("stale_active_publication" if
+                         now - all_ends[-1] > 2 * HOUR_MS
+                         else "verified_with_missing_pit" if skipped
                          else "verified_epoch_history")
         return out
     except (CensusAbstain, OSError, ValueError, TypeError, OverflowError,
             sqlite3.Error, json.JSONDecodeError, UnicodeError):
         return _result("blocked")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    # The operational CLI has a pinned path; no caller-selected SQLite/SQL.
+    parser.add_argument("--allow-private-readonly-audit", action="store_true")
+    args = parser.parse_args(argv)
+    report = audit_managed_n50_epochs(**vars(args))
+    print(json.dumps(report, sort_keys=True, separators=(",", ":"),
+                     ensure_ascii=True))
+    return 0 if report["status"] in (
+        "awaiting_first_epoch", "awaiting_first_writer",
+        "verified_epoch_history", "verified_with_missing_pit",
+        "stale_active_publication",
+    ) else 65
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
