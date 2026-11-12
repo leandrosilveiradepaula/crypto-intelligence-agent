@@ -44,15 +44,25 @@ def _state(unit: str) -> dict[str,str]:
     return _show(unit)
 
 
-def _owner_report(*, source: Path, module: str, args: list[str]) -> dict:
-    raw=_call([
+def _owner_report(*, source: Path, module: str, args: list[str],
+                  allow_dataerr: bool = False) -> dict:
+    command=[
         "/usr/sbin/runuser","-u",OWNER,"--",
         "/usr/bin/env","PYTHONPATH="+str(source),str(PYTHON),
         "-m",module,*args,
-    ],timeout=890)
-    obj=json.loads(raw)
-    if type(obj) is not dict or len(raw)>10_000:
+    ]
+    # Even a failed owner capture emits a sanitized JSON status with the
+    # number of GETs and (D303) whitelisted failure class. Do not discard it.
+    cp=subprocess.run(command,capture_output=True,text=True,timeout=890,
+                      shell=False,check=False)
+    if (cp.returncode not in ((0,65) if allow_dataerr else (0,))
+            or not 0<len(cp.stdout)<=10_000):
+        raise RuntimeError("owner_operation_or_output_failed")
+    obj=json.loads(cp.stdout)
+    if type(obj) is not dict:
         raise ValueError("owner_report_invalid")
+    if cp.returncode==65 and obj.get("status")=="new_epoch_sealed_old_halt_preserved":
+        raise ValueError("owner_exit_status_mismatch")
     return obj
 
 
@@ -187,6 +197,7 @@ def execute(*,source: Path,expected_sha: str,
         "n2_restored_after_failure":None,
         "systemd_modified":False,
         "network_requests":0,
+        "failure_category":None,
         "database_mutation_statements":0,
         "orders_sent":False,
         "live_trading_authorized":False,
@@ -222,8 +233,15 @@ def execute(*,source: Path,expected_sha: str,
             source=source,
             module="scripts.recover_j1_n50_halted_epoch_once",
             args=["--confirm-halt-reviewed","--allow-fresh-public-census"],
+            allow_dataerr=True,
         )
-        out["network_requests"]=result.get("requests_attempted",0)
+        attempts=result.get("requests_attempted")
+        if type(attempts) is int and 0<=attempts<=500:
+            out["network_requests"]=attempts
+        failure=result.get("failure_category")
+        from crypto_intelligence_agent.j1_rest_incremental_owner import _ALLOWED_FAILURES
+        if type(failure) is str and failure in _ALLOWED_FAILURES:
+            out["failure_category"]=failure
         if (result.get("status")!="new_epoch_sealed_old_halt_preserved"
                 or result.get("old_epoch_preserved") is not True
                 or result.get("old_journal_sha256_unchanged") is not True
