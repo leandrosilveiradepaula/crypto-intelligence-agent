@@ -1528,3 +1528,8 @@ Decisão: um único `managed_n50_tick_once` baseado nos contratos D287–D293 es
 ## D295 — preparar timer N50 sem sobrepor o serviço N2 legado (12/11/2026 UTC)
 
 Decisão: manter o N2 REST atual ativo até release controlado; novo template N50 é OFF e usa exclusivamente gerenciador D294 com lock D293. Evitar sobreposição de GET: o ExecStartPre N50 bloqueia se **timer ou serviço N2** não estiverem `inactive` via `systemctl show` literal. O timer N50 é HH:01:05 UTC, `Persistent=false`, sem retry automático, com timeout de 900s; o censo e a coleta mantêm suas próprias janelas e fail-stop. Troca reversível do agendamento N2 por N50 é release de produção com gate, observabilidade e rollback, não consequência de CI ou merge. Ver docs/J1_N50_SYSTEMD_GATE_D295.md, #429.
+
+
+## D296 — impedir N50 se o timer N2 puder voltar após reboot (12/11/2026 UTC)
+
+Ao verificar a VPS read-only, o timer N2 estava `loaded/active/enabled` e service `loaded/inactive/static`, enquanto N50 não estava instalado. O gate D295 verificava somente `ActiveState=inactive`, mas timer parado ainda `enabled` poderia reativar após reboot e gerar duas coletas sem lock comum. Endurecer `preflight_j1_n50_systemd_isolation`: N2 timer deve ser `LoadState=loaded`, `ActiveState=inactive`, `UnitFileState=disabled`; N2 service `loaded/inactive` e `static` ou `disabled`. Respostas ausentes/duplicadas/incertas falham fechado. Consulta é read-only e não autoriza cutover; N2 permanece inalterado até release/gate. Ver `docs/J1_N50_SYSTEMD_GATE_D295.md`.

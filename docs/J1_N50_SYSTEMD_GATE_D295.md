@@ -20,3 +20,10 @@ Nenhuma mudança systemd, migração, credencial, dado D256/D264 ou ordem é fei
 4. Acompanhar no mínimo 24 fechamentos UTC consecutivos e passagem de uma rotação >36h com nova coorte; preservar lacunas PIT quando existirem. Se ocorrer erro, bloquear coleta N50 e voltar ao estado anterior conforme rollback aprovado, sem ordenar trades.
 
 **Limite:** nem CI verde nem template versionado demonstram serviço N50 24/7, identidade independente ou Top50 global elegível. Não sugerir ativar N50 com N2 ativo. Sem operações financeiras reais.
+
+
+## D296 — cutover à prova de reboot: N2 deve estar DESABILITADO e INATIVO
+
+Auditoria operacional read-only de 12/11/2026 (UTC): `cia-j1-rest-hourly.timer` apresentou `LoadState=loaded`, `ActiveState=active`, `UnitFileState=enabled`; `cia-j1-rest-hourly.service` apresentou `LoadState=loaded`, `ActiveState=inactive`, `UnitFileState=static`. A consulta ao timer N50 revelou `LoadState=not-found`; portanto **o novo serviço não foi instalado**. O N2 não foi interrompido e reportou último status de serviço com sucesso. Métricas sanitizadas mostraram 24/24 execuções esperadas do coletor N2. A auditoria SQLite read-only retornou `sqlite_owner_audit_blocked`; a causa e integridade completa do banco NÃO foram diagnosticadas por esse endpoint.
+
+Falha de segurança corrigida: o gate D295 original verificava apenas `ActiveState=inactive`. Isso poderia permitir iniciar N50 se N2 timer estivesse **disabled? não: enabled porém parado**, reiniciando no próximo boot. D296 exige ainda `LoadState=loaded` em ambas as unidades e `UnitFileState=disabled` no timer N2; service N2 só pode ser `static` ou `disabled` e `inactive`. Saída ausente, duplicada, malformada, unidade ausente ou `active` bloqueia. Esse gate continua read-only e não executa `disable` nem `start`, tampouco equivale à autorização de produção. Um release posterior deve registrar o estado original, fazer parada reversível **apenas depois de autorização**, validar os três campos, instalar N50 sob gate e verificar o rollback (reativar N2 caso falhe).
