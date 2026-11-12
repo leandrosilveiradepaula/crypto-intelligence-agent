@@ -264,8 +264,9 @@ def observe_private_n50_watchlist(
     )
     if (
         owner is not True or type(owner_ok) not in (bool, type(None))
-        or type(root_directory) is not Path
-        or type(now_ms) not in (int, type(None))
+        or not isinstance(root_directory, Path)
+        or not root_directory.is_absolute()
+        or (now_ms is not None and type(now_ms) is not int)
     ):
         return _empty("owner_environment_abstain")
     # D300 performs private owner/DAC, causal scope, every digest, timestamp,
