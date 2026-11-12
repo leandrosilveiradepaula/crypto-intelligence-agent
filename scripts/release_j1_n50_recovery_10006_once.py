@@ -100,7 +100,9 @@ def preflight(*, source: Path, expected_sha: str) -> dict:
         raise PermissionError("wrong_root_or_host")
     if (not isinstance(source, Path) or not source.is_absolute()
             or source.is_symlink() or not source.is_dir()
+            or source.resolve(strict=True) != source
             or _SAFE_WORKTREE.fullmatch(str(source)) is None
+            or any(part in (".", "..") for part in source.parts)
             or str(source) == ORIGINAL_SOURCE
             or type(expected_sha) is not str
             or re.fullmatch(r"[0-9a-f]{40}", expected_sha) is None
