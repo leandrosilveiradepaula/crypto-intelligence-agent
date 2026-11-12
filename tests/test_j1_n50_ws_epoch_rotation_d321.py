@@ -164,7 +164,7 @@ class N50WSEpochRotationTests(unittest.TestCase):
             confirm_region_and_personal_research=True,
             allow_private_manifest_write=True,
             allow_private_ws_cache_write=True,
-            clock_ms=lambda:OBS+35*HOUR,
+            clock_ms=lambda:T+35*HOUR+75_000,
         )
         # The owner runner should reject before any network or file staging.
         with patch.object(rotate,"capture_and_seal_current_rank_once",
@@ -177,7 +177,7 @@ class N50WSEpochRotationTests(unittest.TestCase):
         self.assertFalse(out["new_epoch_activated"])
 
     def test_rotation_once_per_epoch_when_rank_rate_limited(self):
-        due=NEXT_OBS
+        due=T+37*HOUR+75_000
         # No actual provider I/O, rank fails in a fixture; the next tick
         # must refuse to retry the same failed epoch.
         opts=dict(
