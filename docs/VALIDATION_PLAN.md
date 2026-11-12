@@ -1213,3 +1213,7 @@ Testar M1→D291→D293→D294 com mocks offline: 7 GETs/6 candles e falha `prov
 ### J1/D304 — auditoria HALT sem retry e sem PIT retroativo
 
 Validar via `test_j1_n50_halted_forensic.py`: SQLite 50×26 + 6 candles com digest real, 3 recibos válidos, 44 cursores no checkpoint anterior e 6 no próximo; `halted_reason=provider_denied_owner_review`; assinatura/counts/recibos íntegros sem autorizar retomada ou ordem; digests adulterados e symlink bloqueiam; sem HALT não marca forense positiva. Regressão de audit D292/D299 e CI Linux/docs+Windows/offline+Chrome/PAPER SHA exato. Pós-merge: owner-only CLI pinada contra journal N50 real; nada de systemd restart, GET, fill ou limpeza de banco.
+
+### J3/D305 — estudo pós-HALT não reabre coleta
+
+Testar (test_j3_n50_expost_onehour.py) completo com fixture de 3 publicações/6 linhas parciais: padrão D302 bloqueia HALT, opt-in de arquivo exige validação D304 independente, classifica somente 50×25 últimas linhas válidas, ordena pelos 24 retornos anteriores sem olhar t+1h, não usa as 6 linhas da hora HALT. Suportar leitura após TTL 48h sem permitir GET, adulteração de linha parcial bloqueia (mesmo fora da janela calculada), cutoff e owner inválidos bloqueiam. Testar (test_j3_n50_halted_archive_cli.py): saída contagem arredondada, sem símbolos/valores originais, flags duplas necessárias, nenhuma ordem/SQL write/rede. Rodar suite D304/D302, CI SHA Linux/docs Windows/offline e Chrome/PAPER. Merge sem deploy; futuro resultado OOS/funding/execução requer pesquisas separadas.

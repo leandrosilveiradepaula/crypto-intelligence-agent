@@ -1562,3 +1562,7 @@ A primeira coleta real N50 publicou 1.200 velas, e os fechamentos seguintes publ
 ## D304 — HALT N50 exige forense read-only, não retry automático (12/11/2026 UTC)
 
 Decisão: tratar o HALT real `provider_denied_owner_review` após 7 GETs, 6 candles parciais e 3 checkpoints completos como bloqueio operacional explícito. Não destravar, reutilizar journal para novo GET ou inventar PIT. Auditoria forense própria D304 revalida cursor/digest/recibo e publica somente contagens, com `resume_authorized=false`. N2 preservado após fallback. Antes de nova tentativa N50, diagnosticar classe de restrição de provedor e preparar nova epoch sob gate próprio, sem operar ordens. Ver `docs/J1_N50_HALTED_OWNER_FORENSIC_D304.md`.
+
+## D305 — avaliar apenas retrospectivamente o N50 HALT após validação D304 (12/11/2026 UTC)
+
+Decisão: separar a política de coleta (HALT irreversível na mesma epoch, N2 fallback) da leitura científica do histórico. Permitir opcionalmente J3 ex-post sobre os **últimos dois checkpoints válidos** de journal interrompido, somente após D304 confirmar 50 históricos/digests/cursores, HALT, ausência de gaps e zero autorização de retomada. O caminho padrão D302 continua bloqueando arquivo halted ou antigo. TTL expirado nunca autoriza novo GET, mas não impede auditoria histórica. Saída sanitizada, hipotética, sem símbolos, PnL ou ordens. Ver `docs/J3_N50_HALTED_ARCHIVE_D305.md`.

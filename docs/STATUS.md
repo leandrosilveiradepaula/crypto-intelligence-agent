@@ -1439,3 +1439,7 @@ Primeiro N50 owner checkpoint: 1.200 candles de 50 contratos, seguido por 3 chec
 ## J1/D304 — forense da falha N50 e preservação dos checkpoints (12/11/2026 UTC)
 
 N50 completou 3 publicações horárias; a quarta falhou após 7 GETs e 6 candles parciais com HALT `provider_denied_owner_review`. Fallback N2 foi confirmado ativo, N50 timer inativo. D304 acrescenta auditor owner-only de journal halted, validando SQLite/cursors/manifesto/PIT sem qualquer GET nem liberação de retomada. Nenhuma conclusão de 24h, continuidade Top50, causa específica HTTP ou rentabilidade.
+
+## J3/D305 — primeira comparação histórica real após HALT (12/11/2026 UTC)
+
+Implementado modo J3 de estudo ex post do arquivo HALT (opt-in e D304 obrigatório), sem recolher dados ou limpar latch. Amostra real de 50 contratos, 25 candles cada e um único horizonte t+1h: marcações líquidas de referência hipotéticas para top5 LONG +US$ 24,72, bottom5 SHORT −US$ 5,19 e todos50 LONG +US$ 13,00 sob 18 bps de custos supostos (US$100 de referência por ativo). **Não é PnL nem backtest OOS**, não comprova trading, liquidação ou previsão; J1 N50 continua parado após fallback N2. Testes CI e merge sem deploy exigidos.

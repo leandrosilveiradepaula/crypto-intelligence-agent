@@ -17,8 +17,12 @@ import sqlite3
 import time
 from typing import Any
 
-from .j1_auto_research_epoch import HOUR_MS
+from .j1_auto_research_epoch import (
+    HOUR_MS, FILE_NAME, MAX_SCOPE_AGE_MS,
+    validate_ranked_research_scope,
+)
 from .j1_n50_managed_cycle import _pointer_read
+from .j1_n50_halted_forensic import audit_halted_n50_epoch
 from .j1_rest_incremental_owner import _DB_NAME
 from .j1_rest_resume_readiness import (
     MAX_DB_BYTES, audit_existing_rest_resume,
@@ -31,7 +35,9 @@ from .synthetic_cost_scenarios import (
     BPS_DENOMINATOR, _amount, _rate,
 )
 from scripts.audit_bybit_marketwide_closed24h import _strict_owner, _digest
-from scripts.run_j1_current_ranked_epoch_once import load_private_ranked_scope
+from scripts.run_j1_current_ranked_epoch_once import (
+    load_private_ranked_scope, _decode_private_file, MAX_MANIFEST_BYTES,
+)
 
 _CTX = Context(prec=512)
 _LIMIT = 50 * (BARS + 1)
@@ -42,6 +48,7 @@ def _result(status: str) -> dict[str, Any]:
         "schema_version": "j3-n50-expost-onehour-mark-v1",
         "status": status,
         "quality": "provisional_private_expost_observation_only",
+        "halted_archive_source_verified": False,
         "epoch_id": None,
         "scope_digest_sha256": None,
         "prior_closed_end_ms": None,
@@ -80,6 +87,7 @@ def evaluate_n50_expost_marks(
     *, root_directory: Path = ROOT,
     allow_private_readonly_audit: bool = False,
     include_private_symbols: bool = False,
+    allow_archived_halted_research: bool = False,
     owner_ok: bool | None = None,
     now_ms: int | None = None,
     hypothetical_notional_quote: Decimal = Decimal("100"),
@@ -105,6 +113,7 @@ def evaluate_n50_expost_marks(
             or not root_directory.is_absolute()
             or root_directory.is_symlink()
             or type(include_private_symbols) is not bool
+            or type(allow_archived_halted_research) is not bool
             or (now_ms is not None and type(now_ms) is not int)
             or type(tail_count) is not int or not 1 <= tail_count <= 25):
         return out
@@ -140,7 +149,19 @@ def evaluate_n50_expost_marks(
             _strict_owner(path, directory=True)
             if path.is_symlink():
                 return out
-        scope = load_private_ranked_scope(scope_dir, now_ms=now)
+        if allow_archived_halted_research:
+            # An expired research scope is no longer eligible for NEW GETs.
+            # An immutable past report remains auditable at the original TTL.
+            scope = _decode_private_file(
+                scope_dir / FILE_NAME, max_bytes=MAX_MANIFEST_BYTES)
+            observed = scope.get("catalog_post_observed_at_ms")
+            if type(observed) is not int or observed > now:
+                return out
+            validate_ranked_research_scope(
+                scope, now_ms=min(now, observed + MAX_SCOPE_AGE_MS),
+                max_assets=50)
+        else:
+            scope = load_private_ranked_scope(scope_dir, now_ms=now)
         symbols = scope["ranked_research_symbols_only"]
         digest = scope["scope_digest_sha256"]
         if (len(symbols) != 50 or len(set(symbols)) != 50
@@ -154,27 +175,45 @@ def evaluate_n50_expost_marks(
             return _result("two_checkpoints_required")
         if db_path.is_symlink():
             return out
-        audit = audit_existing_rest_resume(
-            output_directory=journal, now_ms=now,
-            allow_private_readonly_audit=True, expected_members=50,
-            owner_ok=permitted,
-        )
-        if (audit.get("journal_integrity_verified") is not True
-                or audit.get("journal_scope_digest_sha256") != digest
-                or audit.get("reviewed_research_contracts") != 50
-                or audit.get("historical_unpublished_hours") != 0
-                or audit.get("historical_checkpoint_gaps_present") is not False
-                or audit.get("research_closed_24h_ranked_contracts") != 50
-                or audit.get("partial_unpublished_hour") is not False
-                or audit.get("orders_sent") is not False
-                or audit.get("live_trading_authorized") is not False
-                or audit.get("status") != "no_gap"):
-            return _result("unverified_journal_or_missing_pit")
-        if (type(audit.get("published_hours")) is not int
-                or audit["published_hours"] < 2):
+        if allow_archived_halted_research:
+            forensic = audit_halted_n50_epoch(
+                scope_directory=scope_dir, journal_directory=journal,
+                now_ms=now, allow_private_readonly_audit=True,
+                owner_ok=permitted,
+            )
+            if (forensic.get("status") != "halted_owner_review_verified"
+                    or forensic.get("saved_rows_integrity_verified") is not True
+                    or forensic.get("scope_digest_sha256") != digest
+                    or forensic.get("historical_missing_publication_hours") != 0
+                    or forensic.get("resume_authorized") is not False
+                    or forensic.get("orders_sent") is not False):
+                return _result("unverified_halted_archive")
+            count = forensic.get("published_hours")
+            end = forensic.get("last_published_end_ms")
+        else:
+            audit = audit_existing_rest_resume(
+                output_directory=journal, now_ms=now,
+                allow_private_readonly_audit=True, expected_members=50,
+                owner_ok=permitted,
+            )
+            if (audit.get("journal_integrity_verified") is not True
+                    or audit.get("journal_scope_digest_sha256") != digest
+                    or audit.get("reviewed_research_contracts") != 50
+                    or audit.get("historical_unpublished_hours") != 0
+                    or audit.get("historical_checkpoint_gaps_present") is not False
+                    or audit.get("research_closed_24h_ranked_contracts") != 50
+                    or audit.get("partial_unpublished_hour") is not False
+                    or audit.get("orders_sent") is not False
+                    or audit.get("live_trading_authorized") is not False
+                    or audit.get("status") != "no_gap"):
+                return _result("unverified_journal_or_missing_pit")
+            count = audit.get("published_hours")
+            end = audit.get("last_published_end_ms")
+        if type(count) is not int or count < 2:
             return _result("two_checkpoints_required")
-        end = audit["last_published_end_ms"]
-        if type(end) is not int or end % HOUR_MS or end > now or now-end > 2*HOUR_MS:
+        if (type(end) is not int or end % HOUR_MS or end > now
+                or (not allow_archived_halted_research
+                    and now-end > 2*HOUR_MS)):
             return _result("stale_outcome_pit")
         _strict_owner(db_path, directory=False)
         if db_path.stat().st_size > MAX_DB_BYTES:
@@ -274,7 +313,12 @@ def evaluate_n50_expost_marks(
                 for item in ranking
             ), Decimal(0))
         out.update(
-            status="expost_reference_only",
+            status=("archived_halted_expost_reference_only"
+                    if allow_archived_halted_research else "expost_reference_only"),
+            quality=("archived_halted_provisional_mark_observation_only"
+                     if allow_archived_halted_research else
+                     "provisional_private_expost_observation_only"),
+            halted_archive_source_verified=allow_archived_halted_research,
             epoch_id=epoch_id,
             scope_digest_sha256=digest,
             prior_closed_end_ms=signal_end,
