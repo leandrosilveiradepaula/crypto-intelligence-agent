@@ -185,6 +185,14 @@ class CachedOwnerN50WSRunnerTests(unittest.TestCase):
         self.assertFalse((self.ws/WS_SQLITE_NAME).exists())
         self.check_sanitized(r)
 
+    def test_symlinked_ancestor_cannot_redirect_ws_output(self):
+        alias=self.ws.parent/"ws-alias"
+        alias.symlink_to(self.ws,target_is_directory=True)
+        report,_=self.run_it([candle(SYMS[0])],ws_directory=alias)
+        self.assertEqual(report["status"],"ws_owner_window_preflight_abstain")
+        self.assertEqual(self.factory_count,0)
+        self.assertFalse((self.ws/WS_SQLITE_NAME).exists())
+
     def test_open_update_not_closed(self):
         frames=[candle(s) for s in SYMS[:-1]]
         frames.append(candle(SYMS[-1],confirm=False))
