@@ -1563,3 +1563,8 @@ Preflight main `7719ccc312e3674775d85d8c828f1b6c5e5e7de4`, PR #562/D289 integrad
 ## J1/D291 — worker N50 supervisionado, ainda OFF (12/11/2026 UTC)
 
 Base main verificada `a678d0dccb96c390bc0cf1071976b5fff2e63288`, PR #563/D290 integrada CI 3/3 SHA `34b90168ac68a2d5d4bb31a29bc6616b69f84abd`. Branch `work/issue-429-j1-n50-supervised-hourly-runner` implementa um único runner opt-in com D290 planner + auditoria owner SQLite D287 e delegação ao M1. Sem alteração dos jobs D289 concluídos, N2 timer/DB, sistema de ordens ou mercado. Próximo: CI, correções de regressão, merge sem deploy, depois serialização de renovação de epochs e planejamento de unidade OFF por padrão com gate separado.
+
+
+## J1/D292 — recuperação causal de N50 parcial (12/11/2026 UTC)
+
+Base `main` verificada `d3af6226da725e3ce073740094f1f9f2629ccef6` (PR #564 integrada, CI Linux/Windows/PAPER). Branch `work/issue-429-j1-d292-partial-journal-recovery`: auditor owner `allow_unpublished_partial_hour=True` somente N50; D290 planner só aceita estados parciais revalidados e D291 usa o mesmo writer M1. Testes em `tests/test_j1_n50_partial_resume.py` com SQLite real e situações adversariais. Nenhuma execução VPS ou systemd acionada; seguir CI/revisão, squash merge sem deploy, depois rotação serializada de epoch por lock global. Não declarar continuidade N50 24/7 nem elegibilidade de trading.
