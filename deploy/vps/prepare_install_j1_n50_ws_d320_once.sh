@@ -67,22 +67,26 @@ test "$(stat -c '%a' "$WS_DIR")" = 700
 cd "$CODE"
 
 # D287 current 24h ranking is only causal during the first 15m after an
-# hourly close. Start a new census within HH:01:15..HH:03:00, or wait for
-# the next UTC hour. Waiting happens inside the operator's one-shot process.
+# hourly close. Begin only at HH:02:15..HH:02:30, after the usual N2
+# HH:02 run is finished, leaving ~12m30s for the D287 catalogue.
+# Waiting happens inside the operator's one-shot process.
 NOW="$(date -u +%s)"
 PHASE="$((NOW % 3600))"
-if (( PHASE < 75 )); then
-  WAIT="$((75 - PHASE))"
-elif (( PHASE <= 180 )); then
+if (( PHASE < 135 )); then
+  WAIT="$((135 - PHASE))"
+elif (( PHASE <= 150 )); then
   WAIT=0
 else
-  WAIT="$((3675 - PHASE))"
+  WAIT="$((3735 - PHASE))"
 fi
 if (( WAIT > 0 )); then
   echo "STAGE_2_WAITING_FOR_CAUSAL_UTC_CENSUS_WINDOW"
   /usr/bin/sleep "$WAIT"
 fi
 
+# Refuse to compete with an unusually long-running N2 hourly cycle.
+# Failing here preserves the healthy N2 timer without new network requests.
+test "$(/usr/bin/systemctl is-active cia-j1-rest-hourly.service)" = inactive
 echo "STAGE_3_CAPTURE_FRESH_D287_50"
 # The bounded rank may issue public GETs; any 10006/error halts here with N2
 # unchanged and no new WS unit installed. Do not retry the failed epoch.
