@@ -1566,3 +1566,7 @@ Decisão: tratar o HALT real `provider_denied_owner_review` após 7 GETs, 6 cand
 ## D305 — avaliar apenas retrospectivamente o N50 HALT após validação D304 (12/11/2026 UTC)
 
 Decisão: separar a política de coleta (HALT irreversível na mesma epoch, N2 fallback) da leitura científica do histórico. Permitir opcionalmente J3 ex-post sobre os **últimos dois checkpoints válidos** de journal interrompido, somente após D304 confirmar 50 históricos/digests/cursores, HALT, ausência de gaps e zero autorização de retomada. O caminho padrão D302 continua bloqueando arquivo halted ou antigo. TTL expirado nunca autoriza novo GET, mas não impede auditoria histórica. Saída sanitizada, hipotética, sem símbolos, PnL ou ordens. Ver `docs/J3_N50_HALTED_ARCHIVE_D305.md`.
+
+## D306 — recuperar N50 por nova coorte imutável após falha recuperável, com gate reversível (12/11/2026)
+
+O bloqueio N50 08:01 ocorreu no 7º GET/HYPEUSDT; D304 preserva 3 checkpoints e 6 candles incompletos. Duas verificações **públicas separadas** da VPS comprovaram HYPEUSDT LinearPerpetual/Trading/USDT e 1 candle fechado atual; elas não revelam o erro histórico de provedor. D306 opta por nova época/censo, com dupla flag, prova forense completa e N2 quiescido, preservando integralmente o journal HALT. Novo serviço N50 usa SHA revisto; retorno N2 e restauração da unit em falha. Nunca limpar HALT, não inserir hora faltante ou afirmar 24h por previsão. Ver `docs/J1_N50_CONTROLLED_RECOVERY_D306.md`.

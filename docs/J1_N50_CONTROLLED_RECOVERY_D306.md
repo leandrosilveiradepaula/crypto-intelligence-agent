@@ -1,0 +1,25 @@
+# J1/D306 — recuperação controlada do N50, sem apagar o HALT e com fallback N2
+
+## Problema que bloqueou a coleta real
+
+12/11/2026: N50 funcionou de 05:00 a 07:00 UTC e selou 3 checkpoints reais de 50 contratos, 1.306 candles (6 parciais do fechamento 08:00). No quarto writer, 6 dos primeiros 7 GETs concluíram; o 7º contrato na lista era `HYPEUSDT`, após o que M1 salvou `provider_denied_owner_review` e o N50 service exit65 ativou fallback para N2. D304 comprovou a integridade de cada linha do journal; D303 passou a expor classes de falha futuras, mas **a categoria exata do evento 08:01 não existe nos logs antigos e não pode ser fabricada**.
+
+Diagnóstico de rede com 2 **novas consultas públicas isoladas e limitadas a 1 GET cada**, executadas como `cia-probe` na VPS, sem modificar SQLite: `instruments-info?category=linear&symbol=HYPEUSDT&limit=1` retornou `LinearPerpetual/Trading/USDT`; uma requisição `/v5/market/kline` para a hora fechada corrente do mesmo contrato retornou 1 candle válido. Jobs `13220262aa6440ec8a483d9b7a194695` e `1a8aafd5e86e466eacdded1f151fd1a4` EXIT0, 1 GET cada, nenhum retCode de erro. Isto confirma que não há indisponibilidade persistente desse contrato **no momento do teste**, mas não permite concluir qual erro interrompeu a primeira coleta; o gate de provedor mantém risco de novo failstop.
+
+Fonte oficial Bybit: https://bybit-exchange.github.io/docs/v5/error e https://bybit-exchange.github.io/docs/v5/rate-limit — 10006 pode ser limite, 10017/10029 símbolo, 10009 região e 10024 compliance; essas categorias são diferentes e exigem tratamento diferenciado. Não usar respostas de provedores terceiros para liberar ordens.
+
+## Decisão de engenharia — nova epoch, não limpar HALT
+
+**Não modificar ou liberar o antigo journal `epoch-1794456000000`.** D306 acrescenta a `managed_n50_tick_once` uma flag **explicitamente desligada por padrão**: `recover_halted_epoch_once=True`. Exige D304 completo, mesmo digest antigo, HALT `provider_denied_owner_review`, zero gaps históricos e zero permissão de retomada. Sob o lock global D293 + manager lock D294, realiza **somente uma nova varredura e sela uma coorte N50 com 24 candles anteriores fechados**, em outra pasta privada e outro SQLite inicialmente vazio; troca ponteiro atômico somente ao final. Não converte candles salvos na hora interrompida em checkpoints. Sem flag, o serviço padrão mantém comportamento existente.
+
+A CLI owner `scripts.recover_j1_n50_halted_epoch_once` é explícita, limitada à raiz privada D296, exige dupla confirmação de HALT e novo censo, exige comprovadamente o N2 timer **inactive/disabled** e N2 service inactive, valida os digests SHA-256 do banco e manifesto antigo **antes e depois**, confere novo manifesto selado e seu journal ainda vazio. Não executa systemctl.
+
+A CLI root `scripts.release_j1_n50_halt_recovery_once` só pode agir com ambas `--confirm-recovery-cutover` e `--allow-systemd-modifications`, Git worktree owner limpa e SHA main exato, NTP, usuário/host pinados, hashes dos cinco arquivos unit N2/N50/fallback pinados, N50 desabilitado após fallback, N2 timer ativo, auditor read-only N2 íntegro e D304 antigo íntegro com 3 checkpoints/6 parciais. O auditor N2 lê os gaps efetivos (`25` na verificação de 12/11), em vez do número `21` congelado antes do cutover; não oculta intervalos perdidos e recusa qualquer incoerência entre horas, candles e checkpoints. Essa liberação **só inicia no começo de HH:01 UTC** para garantir margem para até 372 GETs com 2 segundos de intervalo.
+
+A operação desabilita temporariamente N2, confere isolamento (inclusive reboot), executa **uma** captura owner da nova coorte, valida novo ponteiro e preservação do SQLite antigo, atualiza de forma atômica apenas o arquivo de unidade N50 para usar o SHA revisto, mantém `OnFailure=cia-j1-n50-fallback.service`, verifica systemd e só então habilita o timer N50. Diante de qualquer falha conhecida, desabilita N50, retorna N2 e restaura o conteúdo original da unidade N50 se alterada. A coleta passa a ser feita pelo serviço systemd N50 novo nas janelas posteriores; o fallback original permanece o mesmo.
+
+## Restrições e prova de aceite
+
+Nenhum trade, testnet, segredo, autenticação, POST, migração em SQLite ou custo novo. O máximo é um censo público de pesquisa por execução, com validação de relógio, recursos e owner. Uma nova coorte é **Top50 provisório por volume fechado do conjunto Bybit**; #319 ainda exige revisão crypto-only independente, e o produto não deve chamar de Top50 global certificado. No cenário de nova falha externa, preservar número de GETs, classe sanitizada, rollback N2 e dados em vez de criar status falso. N50 24h e 36h de rotação precisam ser realmente observados antes de declarar J1 concluída.
+
+Validação antes do cutover: testes de manager, owner, root release, CI Linux/docs + Windows/offline + Chrome/PAPER no SHA final, testes VPS, preflight read-only root PASS usando fonte principal e sem systemd write. Qualquer reprovação impede ação. Controle de versão e estado em docs/OPERATIONAL_STATE.md e issue #429.
