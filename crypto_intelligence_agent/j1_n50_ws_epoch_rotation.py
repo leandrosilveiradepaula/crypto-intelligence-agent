@@ -33,6 +33,7 @@ _FIELDS=frozenset((
     "activated_at_ms","pointer_sha256",
 ))
 _REST_HALT=Path("/home/cia-probe/agent/j1-n50-managed-d296-private")
+_OWNER_ROOT=Path("/home/cia-probe/agent")
 
 
 def _canonical(obj: Any) -> bytes:
