@@ -101,6 +101,7 @@ def run_n50_ws_owner_hour_once(
             or type(started_at_ms) is not int
             or not decision_at_ms - HOUR_MS <= started_at_ms < decision_at_ms):
         return out
+    phase = "preflight"
     try:
         # Do not trust a caller-supplied preclose start time without checking
         # the real/injected UTC clock before opening any socket or journal.
@@ -131,6 +132,7 @@ def run_n50_ws_owner_hour_once(
             return out
 
         # Check DAC, inode and one nonblocking flock BEFORE any WS factory call.
+        phase = "owner_lock_or_lease"
         with exclusive_owner_ws_writer(
             journal=journal, allow_private_ws_writer=True,
         ):
@@ -180,5 +182,6 @@ def run_n50_ws_owner_hour_once(
             TypeError, OverflowError, KeyError, UnicodeError):
         # The owner-only SQLite may hold independently auditable partial rows.
         # Never delete, retry the venue, silently change epoch or leak paths.
-        out["status"] = "ws_owner_integrity_or_lock_abstain"
+        out["status"] = ("ws_owner_preflight_abstain" if phase == "preflight"
+                         else "ws_owner_integrity_or_lock_abstain")
         return out
