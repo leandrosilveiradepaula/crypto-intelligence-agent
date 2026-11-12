@@ -1619,3 +1619,6 @@ PO autorizou a implantação, mas o canal MCP não tem capacidade de DAC/systemd
 
 ## D321 — N50 WS com epoch imutável e rotação >=36h antes do vencimento 48h (12/11/2026)
 Escolher ponteiro owner 0600 atômico para diretórios separados 0700 de manifesto/cache/journal, não symlink nem sobrescrita de SQLite REST HALT/WS. Rotação só após >=36h e aprovação integral D287+D314/D316 sob lock; não reconsultar antes e não repetir 10006 na mesma coorte. Serviço WS futuro lê o ponteiro antes de abrir socket; D320 estático continua intacto até migração root com rollback. Falhas preservam epoch anterior até expirar em 48h e então fallback N2. D321 código/CI não constituem prova de rotação real.
+
+## D322 — preferir instalação N50 WS rotativa em uma única operação root (12/11/2026)
+D320 era instalador estático e D321 adicionou rotação separada. Para reduzir intervenções do PO, usar UM instalador novo que executa D287/D314/D316+ponteiro D321 após HH:01:15 e instala cinco unidades WS+rotação de uma vez, com rollback de ambos os timers WS para N2. É código OFF por padrão e usa SHA exato + flags root; CI/merge não executam VPS. Abandonar uso dos comandos D320 HH:02:15 e D321 WS estático. Preservar REST HALT, quotas/no retry 10006, ordens zero, homologação 24h e 36h somente real. `docs/J1_N50_WS_ROTATING_RELEASE_D322.md`.
