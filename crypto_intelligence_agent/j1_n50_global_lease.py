@@ -7,7 +7,6 @@ The durable claim is NOT a market PIT or a trading authorization.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from hashlib import sha256
 import json
 import os
@@ -32,7 +31,6 @@ MAX_PHASE_MS = 15 * 60_000
 LOCK_FILE = ".n50-census-writer.lock"
 CLAIM_PATTERN = re.compile(r"claim-[0-9]{13}\.json\Z")
 MAX_CLAIM_BYTES = 700
-_ACTIONS = frozenset(("capture_seal", "hourly_writer"))
 
 
 def _report(status: str, reason: str = "") -> dict[str, Any]:
@@ -155,6 +153,7 @@ def coordinated_n50_once(
             or (action == "hourly_writer"
                 and (not isinstance(output_directory, Path)
                      or not output_directory.is_absolute()
+                     or output_directory == lock_directory
                      or output_directory in lock_directory.parents
                      or lock_directory in output_directory.parents
                      or output_directory == manifest_directory
