@@ -116,7 +116,8 @@ class SyntheticPartialCostedReplayTests(unittest.TestCase):
         evidence = x.sanitized_report()
         self.assertEqual(evidence["status"], "synthetic_partial_exit_mark_reference_only")
         self.assertNotIn("fixture_j4_costed", json.dumps(evidence))
-        self.assertNotIn("110", json.dumps(evidence))  # no actual exit marks
+        self.assertNotIn("reference_exit_price_quote", evidence)
+        self.assertNotIn("fixture_position_id", evidence)
 
     def test_short_direction_reverses_gross_and_funding(self):
         p = position(side=SyntheticSide.SHORT)
