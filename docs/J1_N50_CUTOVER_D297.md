@@ -32,3 +32,7 @@ A aplicação é feita só após validação dos gates, mesmos parâmetros e fla
 2. Observar primeiro fechamento N50 após censo no próprio timer, validar 50 contratos, 1.200 candles na primeira hora de writer, +50 por hora seguinte, checkpoints UTC, 0700/0600, 0 ordens e no máximo 50 GETs/h nas horas ordinárias.
 3. Acompanhar ≥24 fechamentos e pelo menos uma rotação real >36h, com novo journal e scope e preservação do antigo. Confirmar execução sem terminal, watchdog, recuperação/rollback e auditoria.
 4. Sem execução financeira real. CI verde demonstra código, não lucratividade nem disponibilidade contínua.
+
+### Failback automático durante a execução
+
+A unidade N50 instalada por D297 aponta `OnFailure=cia-j1-n50-fallback.service`. A unidade root-only versionada em `deploy/systemd/cia-j1-n50-fallback.service.template` não lê dados, não chama exchange nem habilita trading: desativa o timer N50 e reabilita o timer legado N2 se o worker N50 falhar. O instalador inclui essa terceira unidade no preflight/`systemd-analyze verify` e remove todas no rollback de instalação. Esse mecanismo cobre falha do *serviço* N50, mas **não** é um watchdog de ausência de execuções ou falhas silenciosas com exit 0; o soak 24h continua obrigatório.

@@ -1401,3 +1401,5 @@ Consulta real ao systemd VPS confirmou N2 timer `loaded/active/enabled`, N2 serv
 ## J1/D297 — caminho de cutover N2→N50 sem operar manualmente cada hora (12/11/2026 UTC)
 
 VPS N2 auditado pelo proprietário `cia-probe`: SQLite íntegro, 166 velas, 39 checkpoints e 21 horas históricas sem publicações (não fabricar PIT). Worktree N50 separado D296 SHA verificado e 45 testes N50 PASS; raiz 0700 criada sem ativar N50. D297 agrega instalador one-shot de release com preflight N2 owner, pin SHA, escrita de unidades N50, parada reversível de N2 e rollback automático se falha; só aplica com flags explícitas. J1 #429 em aberto até soak real de 24h/renovação, #319 identidade ainda não certificada. Nenhuma operação financeira.
+
+**Aprimoramento D297:** falha explícita do serviço N50 aciona unidade `OnFailure` que desabilita N50 e reabilita N2 sem ordens nem escrita no banco. Ainda falta monitorar falhas silenciosas/ausência de execução para declarar supervisão 24/7.
