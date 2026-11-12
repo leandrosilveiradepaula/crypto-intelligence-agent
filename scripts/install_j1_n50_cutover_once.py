@@ -22,6 +22,7 @@ N2_TIMER = "cia-j1-rest-hourly.timer"
 N2_SERVICE = "cia-j1-rest-hourly.service"
 N50_TIMER = "cia-j1-n50-managed.timer"
 N50_SERVICE = "cia-j1-n50-managed.service"
+FALLBACK_SERVICE = "cia-j1-n50-fallback.service"
 UNIT_ROOT = Path("/etc/systemd/system")
 EXPECTED_N2_UNIT_HASH = {
     N2_TIMER: "d7e91d88ea6ed6f1f20b074345dd2f9ad6429dce",
@@ -126,19 +127,34 @@ def preflight(*, source: Path, root: Path, python: Path, sha: str) -> dict:
             or n2_service != {"LoadState": "loaded", "ActiveState": "inactive",
                               "UnitFileState": "static"}):
         raise ValueError("unexpected_live_n2_state")
-    for name in (N50_TIMER, N50_SERVICE):
+    for name in (N50_TIMER, N50_SERVICE, FALLBACK_SERVICE):
         if ((UNIT_ROOT / name).exists() or (UNIT_ROOT / name).is_symlink()
                 or _show(name)["LoadState"] != "not-found"):
             raise ValueError("n50_already_installed")
     audit = _audit_n2(source=source, python=python)
     service, timer = render_n50_managed_systemd(
         owner="cia-probe", repo=str(source), python=str(python), root=str(root))
+    if service.count("After=network-online.target\\n") != 1:
+        raise ValueError("service_template_drift")
+    service = service.replace("After=network-online.target\\n",
+                              "After=network-online.target\\n"
+                              "OnFailure=" + FALLBACK_SERVICE + "\\n")
+    fallback = (source / "deploy/systemd" /
+                "cia-j1-n50-fallback.service.template").read_text("ascii")
+    if (fallback.count("User=root\\n") != 1
+            or fallback.count("ExecStart=-/usr/bin/systemctl disable --now "
+                              + N50_TIMER + "\\n") != 1
+            or fallback.count("ExecStartPost=/usr/bin/systemctl enable --now "
+                              + N2_TIMER + "\\n") != 1
+            or "ExecStart=/bin/" in fallback):
+        raise ValueError("fallback_template_drift")
     return {"source_sha": sha, "n2_integrity": True,
             "n2_published_hours": audit["published_hours"],
             "n2_stored_candles": audit["stored_candles"],
             "known_historical_gaps": 21,
             "n50_root_private_and_empty": True,
-            "service_text": service, "timer_text": timer}
+            "service_text": service, "timer_text": timer,
+            "fallback_text": fallback}
 
 
 def _unit_write(name: str, body: str) -> None:
@@ -178,7 +194,7 @@ def _rollback() -> bool:
                 _call(argv, timeout=30)
             except (OSError, RuntimeError, subprocess.TimeoutExpired):
                 ok = False
-    for name in (N50_TIMER, N50_SERVICE):
+    for name in (N50_TIMER, N50_SERVICE, FALLBACK_SERVICE):
         path = UNIT_ROOT / name
         if path.is_file() and not path.is_symlink():
             try:
@@ -220,11 +236,13 @@ def execute(*, source: Path, root: Path, python: Path, sha: str,
     signal.signal(signal.SIGTERM, terminated)
     try:
         changed = True
+        _unit_write(FALLBACK_SERVICE, plan["fallback_text"])
         _unit_write(N50_SERVICE, plan["service_text"])
         _unit_write(N50_TIMER, plan["timer_text"])
         _call(["/usr/bin/systemctl", "daemon-reload"], timeout=30)
         _call(["/usr/bin/systemd-analyze", "verify",
-               str(UNIT_ROOT/N50_SERVICE), str(UNIT_ROOT/N50_TIMER)],
+               str(UNIT_ROOT/N50_SERVICE), str(UNIT_ROOT/N50_TIMER),
+               str(UNIT_ROOT/FALLBACK_SERVICE)],
               timeout=30)
         if _show(N2_SERVICE)["ActiveState"] != "inactive":
             raise RuntimeError("n2_became_active")
