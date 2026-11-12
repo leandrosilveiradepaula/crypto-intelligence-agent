@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
+import subprocess
 import unittest
 from unittest.mock import patch
 
