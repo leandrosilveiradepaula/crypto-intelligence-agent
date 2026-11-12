@@ -22,8 +22,8 @@ def exit_result(state="inactive", code=0, stderr="",
                 loaded="loaded", unit_state="disabled"):
     return SimpleNamespace(
         returncode=code,
-        stdout=(f"LoadState={loaded}\\nActiveState={state}\\n"
-                f"UnitFileState={unit_state}\\n"),
+        stdout=(f"LoadState={loaded}\nActiveState={state}\n"
+                f"UnitFileState={unit_state}\n"),
         stderr=stderr,
     )
 
@@ -95,9 +95,9 @@ class N50ServiceIsolationTests(unittest.TestCase):
                 cp=exit_result()
                 if kind=="nonzero": cp.returncode=1
                 elif kind=="stderr": cp.stderr="warning"
-                elif kind=="duplicate": cp.stdout+="ActiveState=inactive\\n"
-                elif kind=="missing": cp.stdout="ActiveState=inactive\\n"
-                else: cp.stdout+="Unknown=extra\\n"
+                elif kind=="duplicate": cp.stdout+="ActiveState=inactive\n"
+                elif kind=="missing": cp.stdout="ActiveState=inactive\n"
+                else: cp.stdout+="Unknown=extra\n"
                 return cp
             with self.subTest(kind=kind):
                 out=n50_systemd_n2_quiescence(
