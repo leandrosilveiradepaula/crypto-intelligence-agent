@@ -1379,3 +1379,7 @@ D290 PR #563 merge SHA `a678d0dccb96c390bc0cf1071976b5fff2e63288`; D291 adiciona
 ## J1/D292 — correção de retomada após parada parcial (12/11/2026 UTC)
 
 Após o piloto D289 e merge D291, D292 adiciona ao auditor read-only N50 (opt-in, N2 inalterado) reconhecimento de bootstrap e incremento incompletos, permitindo retomar pelo próprio M1 apenas dentro da mesma janela horária e sem fabricação de checkpoints. Adversariais de SQLite/cursor/digest e CI ainda exigidos; nenhum timer, produção, ordem ou ativação introduzidos.
+
+## J1/D293 — lease compartilhada para censo e writer N50 (12/11/2026 UTC)
+
+Implementados ponto de entrada coordenado, flock global, claim owner-only imutável por fechamento e testes adversariais: não executar censo D286/D287 e writer D291/D292 na mesma janela nem trocar destino por retry, manter recuperação D292 de ação idêntica. Escopo OFF por padrão, sem serviço permanente/deploy; o coletor N2 continua independente. J1 #429 exige ainda rotação automática, instalação supervisionada e soak 24h; #319 exige validação de Top50/identidade para negociação.

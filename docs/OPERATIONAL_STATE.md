@@ -1568,3 +1568,7 @@ Base main verificada `a678d0dccb96c390bc0cf1071976b5fff2e63288`, PR #563/D290 in
 ## J1/D292 — recuperação causal de N50 parcial (12/11/2026 UTC)
 
 Base `main` verificada `d3af6226da725e3ce073740094f1f9f2629ccef6` (PR #564 integrada, CI Linux/Windows/PAPER). Branch `work/issue-429-j1-d292-partial-journal-recovery`: auditor owner `allow_unpublished_partial_hour=True` somente N50; D290 planner só aceita estados parciais revalidados e D291 usa o mesmo writer M1. Testes em `tests/test_j1_n50_partial_resume.py` com SQLite real e situações adversariais. Nenhuma execução VPS ou systemd acionada; seguir CI/revisão, squash merge sem deploy, depois rotação serializada de epoch por lock global. Não declarar continuidade N50 24/7 nem elegibilidade de trading.
+
+## J1/D293 — coordenação global N50 sem release (12/11/2026 UTC)
+
+Main pré-branch confirmada `c3c9a373078fecd533f549e1d94dce952c342b80` (PR #565/D292 MERGED, Linux/docs Windows/PAPER verdes). Branch `work/issue-429-j1-d293-n50-global-lease` adiciona `j1_n50_global_lease.coordinated_n50_once`, CLI `run_j1_n50_coordinated_once` e testes reais POSIX flock/claims. Protege **somente** pontos de entrada coordenados, com opt-ins e paths privados, sem executar GET na criação de código, sem mudar N2, sem ordens, cron, systemd ou migração. Próximo: CI exata e revisão/merge sem deploy; em bloco posterior preparar rotação causal baseada na decisão D290 e integração systemd N50 OFF-by-default sob gate de release. Evidência real N50 permanece D289 (2h/1250 candles).
