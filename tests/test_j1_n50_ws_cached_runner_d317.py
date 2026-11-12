@@ -109,6 +109,20 @@ class CachedOwnerN50WSRunnerTests(unittest.TestCase):
         self.assertTrue(session.closed)
         self.check_sanitized(r)
 
+    def test_ten_second_preclose_start_is_bounded_before_receipt_expires(self):
+        # A 150s default lease starting only 11s before close would otherwise
+        # finish 139s after the boundary, outside D313 receipt safety.
+        self.time.utc = DECISION - 11_000
+        report,_=self.run_it(
+            [candle(s) for s in SYMS],
+            budget=WSRunBudget(max_sessions=1,max_frames=250,max_seconds=150),
+        )
+        self.assertEqual(report["status"],"ws_owner_hour_50_observed_local_only",report)
+        self.assertEqual(report["confirmed_contracts"],50)
+        self.assertIsNotNone(report["hour_evidence_sha256"])
+        self.assertLessEqual(self.time.utc,DECISION+120_000)
+        self.check_sanitized(report)
+
     def test_49_of_50_keeps_partial_rows_and_abstains(self):
         r,_=self.run_it([candle(s) for s in SYMS[:-1]])
         self.assertEqual(r["status"],"ws_owner_hour_incomplete_no_pit")
