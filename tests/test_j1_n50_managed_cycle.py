@@ -11,7 +11,8 @@ from crypto_intelligence_agent.j1_auto_research_epoch import (
     SCHEMA, STATUS, HOUR_MS, FILE_NAME, _binding,
 )
 from crypto_intelligence_agent.j1_n50_managed_cycle import (
-    ACTIVE_FILE, MANAGER_LOCK, managed_n50_tick_once,
+    ACTIVE_FILE, ACTIVE_SCHEMA, MANAGER_LOCK, _pointer_write,
+    managed_n50_tick_once,
 )
 from crypto_intelligence_agent.j1_n50_global_lease import _record_claim
 from hashlib import sha256
@@ -220,6 +221,40 @@ class ManagedN50EpochTests(unittest.TestCase):
             out=self.invoke()
         self.assertEqual(out["status"],"epoch_started")
         self.assertEqual(nested[0]["reason"],"manager_lock_busy")
+
+    def test_identical_staged_pointer_recovered_after_crash(self):
+        decision=T
+        ptr={
+            "schema_version": ACTIVE_SCHEMA,
+            "epoch_id":f"epoch-{decision:013d}",
+            "scope_digest_sha256":sealed(decision)["scope_digest_sha256"],
+            "catalog_post_observed_at_ms":decision+120_000,
+        }
+        raw=json.dumps(ptr,sort_keys=True,
+                       separators=(",",":"),ensure_ascii=True).encode("ascii")+b"\\n"
+        stage=self.root/f".n50-pointer-{decision:013d}.tmp"
+        stage.write_bytes(raw)
+        stage.chmod(0o600)
+        _pointer_write(self.root,ptr,decision=decision)
+        self.assertFalse(stage.exists())
+        self.assertEqual(json.loads((self.root/ACTIVE_FILE).read_text()),ptr)
+        self.assertEqual((self.root/ACTIVE_FILE).stat().st_mode & 0o777,0o600)
+
+    def test_tampered_staged_pointer_blocks_without_overwriting_active(self):
+        decision=T
+        ptr={
+            "schema_version":ACTIVE_SCHEMA,
+            "epoch_id":f"epoch-{decision:013d}",
+            "scope_digest_sha256":sealed(decision)["scope_digest_sha256"],
+            "catalog_post_observed_at_ms":decision+120_000,
+        }
+        stage=self.root/f".n50-pointer-{decision:013d}.tmp"
+        stage.write_bytes(b"tampered")
+        stage.chmod(0o600)
+        with self.assertRaises(ValueError):
+            _pointer_write(self.root,ptr,decision=decision)
+        self.assertFalse((self.root/ACTIVE_FILE).exists())
+        self.assertEqual(stage.read_bytes(),b"tampered")
 
 
 if __name__=="__main__":
