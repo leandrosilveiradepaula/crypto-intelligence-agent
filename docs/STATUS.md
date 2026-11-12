@@ -1455,3 +1455,7 @@ Sem interromper a observação N50 J1, adicionado módulo puro de marcação fin
 ## J2/D308 — watchlist descritiva privada de 50 contratos, sem sinais (12/11/2026 UTC)
 
 Composição causal e offline da leitura auditada D300: rompimento do fechamento acima/abaixo dos 23 candles anteriores, retorno relativo ao BTC e intensidade do turnover da barra fechada, com ordenação determinística e no máximo cinco observações por direção. Dados insuficientes/corrompidos recusados, lista de símbolos OFF por padrão e nenhuma ordem, GET, alteração de SQLite ou systemd. Testes adversariais em `tests/test_j2_n50_descriptive_watchlist.py`, contrato em `docs/J2_N50_DESCRIPTIVE_WATCHLIST_D308.md`. CI/revisão/merge a validar; não declarar estratégia validada, alpha, Top50 global nem homologação J1. N50 D306 supervisionado, com 24h/rotação ainda pendentes.
+
+## J1/D309 — testemunho de 24h N50 somente leitura (12/11/2026 UTC)
+
+D309 adiciona `j1_n50_24h_witness.py`, CLI owner-only e testes adversariais: compõe o replay privado D299 (todas as epochs, incluindo HALT forense) com estado read-only de quatro unidades systemd para distinguir 24 PITs fechados reais, janela ainda incompleta, failback N2, serviço falho e falta da última publicação. Nunca declara `continuous_collector_verified=true` apenas por contar 24 candles, nem converte 24h em prova de rotação após 36h ou Top50 crypto-only global. Sem deploy, ordens, GET, mudança de banco/systemd ou credenciais. Contrato em `docs/J1_N50_CLOSED24H_WITNESS_D309.md`; testes e CI/PR a validar antes de merge.
