@@ -149,6 +149,15 @@ def run_cached_n50_ws_owner_window(
             journal = SQLiteOfflineClosedStreamJournal.create(journal_path)
             _safe_stat(journal_path, directory=False)
             out["private_ws_journal_created"] = True
+        # D313 accepts receipt no later than 120s after close. Clamp the
+        # finite WS lease to <=119s post-close, even when started only 10s
+        # before the boundary. Otherwise a healthy 50/50 could become stale
+        # solely because the default 150-second budget ran too long.
+        max_safe_seconds = (remaining + 119_000) // 1000
+        bounded = WSRunBudget(
+            max_sessions=budget.max_sessions, max_frames=budget.max_frames,
+            max_seconds=min(budget.max_seconds, max_safe_seconds),
+        )
         # D315 checks the live wall clock again, obtains the owner POSIX lock
         # BEFORE calling injected session_factory, and independently audits
         # exact 50-of-50 in a read-only SQLite transaction.
@@ -157,7 +166,7 @@ def run_cached_n50_ws_owner_window(
             journal=journal, decision_at_ms=next_close,
             started_at_ms=now, session_factory=session_factory,
             allow_private_ws_writer=True, allow_injected_public_ws=True,
-            budget=budget, clock=clock, wall_ms=wall_ms, sleeper=sleeper,
+            budget=bounded, clock=clock, wall_ms=wall_ms, sleeper=sleeper,
         )
         out["status"] = detail["status"]
         out["failure_category"] = detail["failure_category"]
