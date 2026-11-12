@@ -198,16 +198,16 @@ def preflight(*, source: Path, expected_sha: str) -> dict:
     new_service, _ = render_n50_managed_systemd(
         owner=OWNER, repo=str(source), python=str(PYTHON), root=str(ROOT),
     )
-    after="After=network-online.target\\n"
+    after="After=network-online.target\n"
     if new_service.count(after)!=1:
         raise ValueError("unit_service_template_drift")
     new_service=new_service.replace(
-        after, after+"OnFailure="+FALLBACK_SERVICE+"\\n",
+        after, after+"OnFailure="+FALLBACK_SERVICE+"\n",
     )
     original=(UNIT_ROOT/N50_SERVICE).read_text("ascii")
-    if (new_service.count("OnFailure="+FALLBACK_SERVICE+"\\n")!=1
-            or new_service.count("WorkingDirectory="+str(source)+"\\n")!=1
-            or original.count("OnFailure="+FALLBACK_SERVICE+"\\n")!=1):
+    if (new_service.count("OnFailure="+FALLBACK_SERVICE+"\n")!=1
+            or new_service.count("WorkingDirectory="+str(source)+"\n")!=1
+            or original.count("OnFailure="+FALLBACK_SERVICE+"\n")!=1):
         raise ValueError("recovery_service_template_invalid")
     return {
         "service_text":new_service,
