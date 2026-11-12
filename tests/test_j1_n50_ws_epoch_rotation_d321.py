@@ -219,22 +219,22 @@ class N50WSEpochRotationTests(unittest.TestCase):
                           kwargs["ws_directory"]))
             return {"status":"ws_owner_hour_50_observed_local_only"}
         from crypto_intelligence_agent import bybit_public_ws_once
-        with patch.object(cli.time,"time_ns",return_value=(OBS+1000)*1_000_000),\\
+        with patch.object(cli.time,"time_ns",return_value=(OBS+1000)*1_000_000),\
              patch.object(bybit_public_ws_once,"_real_session_factory",
-                          return_value=None),\\
+                          return_value=None),\
              patch.object(cli,"run_cached_n50_ws_owner_window",
-                          side_effect=record),\\
+                          side_effect=record),\
              redirect_stdout(StringIO()):
             self.assertEqual(ws_cli(["--state-directory",str(self.state)]
                                      +all_flags),0)
         man2,ws2=self.candidate("second",NEXT,NEXT_OBS)
         self.assertEqual(self.activate(man2,ws2,NEXT_OBS).status,
                          "active_n50_ws_epoch_rotated")
-        with patch.object(cli.time,"time_ns",return_value=NEXT_OBS*1_000_000),\\
+        with patch.object(cli.time,"time_ns",return_value=NEXT_OBS*1_000_000),\
              patch.object(bybit_public_ws_once,"_real_session_factory",
-                          return_value=None),\\
+                          return_value=None),\
              patch.object(cli,"run_cached_n50_ws_owner_window",
-                          side_effect=record),\\
+                          side_effect=record),\
              redirect_stdout(StringIO()):
             self.assertEqual(ws_cli(["--state-directory",str(self.state)]
                                      +all_flags),0)
