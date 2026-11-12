@@ -30,7 +30,7 @@ HOUR_MS = 3_600_000
 MIN_PHASE_MS = 60_000
 MAX_PHASE_MS = 15 * 60_000
 LOCK_FILE = ".n50-census-writer.lock"
-CLAIM_PATTERN = re.compile(r"claim-[0-9]{13}\\.json\\Z")
+CLAIM_PATTERN = re.compile(r"claim-[0-9]{13}\.json\Z")
 MAX_CLAIM_BYTES = 700
 _ACTIONS = frozenset(("capture_seal", "hourly_writer"))
 
