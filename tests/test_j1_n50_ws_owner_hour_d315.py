@@ -172,8 +172,9 @@ class N50WSOwnerHourTests(unittest.TestCase):
         self.assertEqual(report["source_provenance"], "bybit_public_ws_confirmed")
         self.assertTrue(report["owner_lock_acquired"])
         self.assertTrue(session.closed)
-        self.assertEqual(len(session.sent), 1)
-        self.assertEqual(len(session.sent[0]["args"]), 50)
+        subscribe = [item for item in session.sent if item["op"] == "subscribe"]
+        self.assertEqual(len(subscribe), 1)  # heartbeat pings are expected
+        self.assertEqual(len(subscribe[0]["args"]), 50)
         self.assert_sanitized(report)
 
     def test_forty_nine_are_preserved_but_never_called_complete(self):
