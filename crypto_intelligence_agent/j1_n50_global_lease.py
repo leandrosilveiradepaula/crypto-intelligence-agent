@@ -40,6 +40,7 @@ def _report(status: str, reason: str = "") -> dict[str, Any]:
         "action": "none", "decision_end_ms": None,
         "requests_attempted": 0,
         "new_closed_candles": 0,
+        "failure_category": None,
         "claims_created": 0,
         "other_journals_modified": False,
         "systemd_modified": False,
@@ -229,6 +230,11 @@ def coordinated_n50_once(
             out["claims_created"] = 1 if created else 0
             out["requests_attempted"] = result.get("requests_attempted", 0)
             out["new_closed_candles"] = result.get("new_closed_candles", 0)
+            # Propagate only the M1-vetted classification, not raw response.
+            from crypto_intelligence_agent.j1_rest_incremental_owner import _ALLOWED_FAILURES
+            failure = result.get("failure_category")
+            if type(failure) is str and failure in _ALLOWED_FAILURES:
+                out["failure_category"] = failure
             return out
         finally:
             try:

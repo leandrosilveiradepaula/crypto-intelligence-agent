@@ -1430,3 +1430,7 @@ A partir da ponte J2/D300 (PR #573 integrada, squash SHA `95edb62a52ba2fd0619457
 ## J3/D302 — primeira avaliação observacional de 2 horas N50 (12/11/2026 UTC)
 
 Concluída a implementação do estudo owner-only J3 com 50×25 candles consecutivos de uma mesma coorte, seleção fixada apenas por retornos anteriores, marcação posterior t+1h e custos explícitos hipotéticos. **10 testes PASSED** no worktree VPS candidato ca7f513d157673575e6e4b1156afd6d1bc6d4e73. Não é PnL, backtest OOS validado, fill ou sinal. Dados reais precisam de duas publicações; primeiro censo N50 já ocorreu, mas não antecipar outcome.
+
+## J1/D303 — falha do provedor observada no N50; fallback N2 comprovado (12/11/2026 UTC)
+
+Primeiro N50 owner checkpoint: 1.200 candles de 50 contratos, seguido por 3 checkpoints reais até 07 UTC. Às 08:01 UTC, 7 GETs e 6 candles avançados, com `provider_denied_owner_review` no SQLite; `PRAGMA quick_check=ok`, 50 cursores e 1.306 candles no total. N50 terminou exit 65 e acionou OnFailure, deixando timer N50 disabled/inactive e N2 enabled/active. Subtipo exato da resposta do provedor não é reconstituível dos logs já registrados. D303 adiciona telemetria de `failure_category` whitelist M1→D291→D293→D294 para futuras falhas, sem relançar provedor e sem mexer no banco. Homologação 24h e renovação >36h seguem pendentes; #429 continua aberta.

@@ -120,6 +120,38 @@ class SupervisedN50OnceTests(unittest.TestCase):
         self.assertFalse(r["continuous_collector_verified"])
         self.assertNotIn("USDT",str(r))
 
+    def test_writer_failstop_category_is_sanitized_and_exposed(self):
+        failed = worker()
+        failed.update(
+            status="research_provider_fail_stop",
+            failure_category="provider_rate_limit_no_retry",
+            requests_attempted=7, new_closed_candles=6,
+        )
+        with patch("crypto_intelligence_agent.j1_n50_supervised_once._strict_owner"), \
+                patch("crypto_intelligence_agent.j1_n50_supervised_once.load_private_ranked_scope",
+                      return_value=manifest()), \
+                patch("pathlib.Path.is_file", return_value=True), \
+                patch("crypto_intelligence_agent.j1_n50_supervised_once.audit_existing_rest_resume",
+                      return_value=readiness()), \
+                patch("crypto_intelligence_agent.j1_n50_supervised_once.run_current_ranked_epoch_once",
+                      return_value=failed):
+            out=self.invoke()
+        self.assertEqual(out["status"],"blocked")
+        self.assertEqual(out["failure_category"],"provider_rate_limit_no_retry")
+        self.assertEqual((out["requests_attempted"],out["new_closed_candles"]),(7,6))
+        failed["failure_category"]="TOKEN-USDT: sensitive provider retMsg"
+        with patch("crypto_intelligence_agent.j1_n50_supervised_once._strict_owner"), \
+                patch("crypto_intelligence_agent.j1_n50_supervised_once.load_private_ranked_scope",
+                      return_value=manifest()), \
+                patch("pathlib.Path.is_file",return_value=True), \
+                patch("crypto_intelligence_agent.j1_n50_supervised_once.audit_existing_rest_resume",
+                      return_value=readiness()), \
+                patch("crypto_intelligence_agent.j1_n50_supervised_once.run_current_ranked_epoch_once",
+                      return_value=failed):
+            denied=self.invoke()
+        self.assertIsNone(denied["failure_category"])
+        self.assertNotIn("TOKEN-USDT",str(denied))
+
     def test_untrusted_audit_will_not_trigger_get(self):
         bad=readiness()
         bad["journal_scope_digest_sha256"]="f"*64

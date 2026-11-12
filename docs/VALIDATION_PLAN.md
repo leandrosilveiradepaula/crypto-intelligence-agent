@@ -1204,3 +1204,7 @@ Testar `test_j2_n50_private_screen.py` com 50×24 linhas SQLite reais fictícias
 ### J3/D302 — dois checkpoints N50 e 1250 candles com custos ex post
 
 Reproduzir testes test_j3_n50_expost_onehour.py POSIX: 50×25 candles e 2 checkpoints reais com recibo e hash por barra; seleção de prefixo imutável mesmo quando outcome futuro muda; resultado de custos 40bps/100 USDT = 0,4 por evento, diferença exata 2 em 5 e 20 em 50; dado anterior com recibo posterior ao checkpoint bloqueado, assim como hash, gaps, relógio, owner e optin. Resultado padrão não expõe símbolos e nunca autoriza sinais/ordens/finance backtest. Testes owner VPS 10 PASS; CI Linux/docs, Windows/offline e Chrome/PAPER HEAD final, revisão SHA e merge sem deploy. Não fazer experimento real sem publicação t+1h verificável.
+
+### J1/D303 — observabilidade de fail-stop sem vazamento
+
+Testar M1→D291→D293→D294 com mocks offline: 7 GETs/6 candles e falha `provider_rate_limit_no_retry` ou `provider_access_or_permission_denied_no_retry` deve permanecer `status=blocked`, `orders_sent=false`, com `failure_category` conhecido em cada camada. Valores maliciosos ou mensagens contendo símbolos/URLs/retMsg devem ser substituídos por `null` (nenhuma cópia literal). Nenhuma camada cria retry ou limpa o latch. Executar testes D291/D293/D294 + suíte CI Linux/docs, Windows/offline e Chrome/PAPER em HEAD final, revisão SHA e merge sem implantação. Estado real N50 08h permanece checkpoint ausente, e restaurar N2 foi a decisão segura.

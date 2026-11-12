@@ -48,6 +48,7 @@ def _out(status: str, reason: str = "") -> dict[str, Any]:
         "operation": "none", "epoch_id": None,
         "claims_created": 0, "pointer_updated": False,
         "new_closed_candles": 0, "requests_attempted": 0,
+        "failure_category": None,
         "network_accessed": False, "trading_enabled": False,
         "systemd_modified": False, "other_journals_modified": False,
         "continuous_collector_verified": False,
@@ -325,6 +326,10 @@ def managed_n50_tick_once(
             out["new_closed_candles"]=result.get("new_closed_candles",0)
             out["requests_attempted"]=result.get("requests_attempted",0)
             out["network_accessed"]=out["requests_attempted"] > 0
+            from crypto_intelligence_agent.j1_rest_incremental_owner import _ALLOWED_FAILURES
+            failure = result.get("failure_category")
+            if type(failure) is str and failure in _ALLOWED_FAILURES:
+                out["failure_category"] = failure
             return out
         finally:
             try:
