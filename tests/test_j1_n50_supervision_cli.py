@@ -64,8 +64,9 @@ def audit():
     }
 
 
-MANIFEST = Path("/private/n50/scope")
-JOURNAL = Path("/private/n50/output")
+ROOT = Path.cwd().resolve() / "fixture_only_n50"
+MANIFEST = ROOT / "scope"
+JOURNAL = ROOT / "output"
 
 
 class N50SupervisionCliTests(unittest.TestCase):
@@ -107,7 +108,7 @@ class N50SupervisionCliTests(unittest.TestCase):
                 {"owner_ok":False},
                 {"manifest_directory":JOURNAL},
                 {"output_directory":Path("relative/path")},
-                {"manifest_directory":Path("/private")},
+                {"manifest_directory":ROOT},
             ):
                 with self.subTest(opts=opts):
                     out=self.run_once(**opts)
