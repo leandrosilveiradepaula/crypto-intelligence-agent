@@ -1622,3 +1622,7 @@ Escolher ponteiro owner 0600 atômico para diretórios separados 0700 de manifes
 
 ## D322 — preferir instalação N50 WS rotativa em uma única operação root (12/11/2026)
 D320 era instalador estático e D321 adicionou rotação separada. Para reduzir intervenções do PO, usar UM instalador novo que executa D287/D314/D316+ponteiro D321 após HH:01:15 e instala cinco unidades WS+rotação de uma vez, com rollback de ambos os timers WS para N2. É código OFF por padrão e usa SHA exato + flags root; CI/merge não executam VPS. Abandonar uso dos comandos D320 HH:02:15 e D321 WS estático. Preservar REST HALT, quotas/no retry 10006, ordens zero, homologação 24h e 36h somente real. `docs/J1_N50_WS_ROTATING_RELEASE_D322.md`.
+
+## D323 — testemunho owner-only de 24 fechamentos N50 WebSocket (12/11/2026)
+
+Após a implementação offline D322, um witness de leitura deve exigir as últimas 24 horas UTC consecutivas de 50 contratos da MESMA coorte D321 a partir do SQLite WS, com replay integral D313 e conferência da última hora 50/50, e isolamento systemd WS/rotação versus N2/REST legado. Nenhuma GET, escrita, ordem ou reativação de N50 REST. Diagnóstico válido comprova apenas persistência LOCAL dos 1.200 fechamentos auditados e condição atual de timers/serviço; não certifica 36h de rotação, origem autenticada, Top50 cripto global, uptime ininterrupto ou rentabilidade. Implementação no módulo j1_n50_ws_24h_witness.py, CLI opt-in e testes; liberação na VPS depende do gate de instalação D322 e de coleta efetiva. #585/#429/#319 permanecem abertas.
