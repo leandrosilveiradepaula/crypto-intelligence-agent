@@ -315,3 +315,8 @@ Cada linha persiste em memória o UTC de fechamento, UTC de registro, membros, d
 ### J1 D287 — insumo para sinais, não seleção de entrada automática
 
 O ranking D286 de contratos USDT perpétuos por 24 velas 1h fechadas é universo PROVISÓRIO para pesquisa, com filtro negativo TradFi automatizado e sem depender de dossiês manuais individuais. D287 vincula causalmente sua lista Top50 a um epoch de candles privados, sem trocar o universo retroativamente ou fornecer informação futura ao motor de estratégias. Os sinais J2/J3 só poderão consumir dados de candles e snapshots cuja captura ocorreu antes da decisão, com PIT/qualidade/custos aplicados; nem o manifesto N50 nem a classificação USDT confirmam identidade cripto independentemente ou liquidez exequível. Alavancagem 50x não muda validações de risco e não autoriza trading real.
+
+
+## J2/D300 — features descritivas de N50 no mundo real, sem estratégia autorizada
+
+A primeira ponte read-only D300 usa exclusivamente 24 barras 1h fechadas por contrato e valida todos os digests e o último checkpoint D290 antes de calcular retorno anterior, volatilidade normalizada de 14 barras, turnover USDT observado, expansão da última barra e diferença relativa à BTCUSDT. A ordenação por retorno observado NÃO é ranking de entrada, score preditivo ou geração de posição. Ausência de BTC invalida a força relativa; ausência de checkpoint integral, gaps, dados adulterados e recência excedida impedem análise. A coorte é provisória, não autentica identidade externa nem volume exequível. J2/PRE1–PRE5 permanece sintética e não recebe input real sem uma autorização futura de gates J1/J3/J4/J6. Ver `docs/J2_N50_CAUSAL_READONLY_D300.md`.
