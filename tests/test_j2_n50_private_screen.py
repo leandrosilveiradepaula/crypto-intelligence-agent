@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import closing
-from decimal import Decimal
+from decimal import Context, Decimal, localcontext
 import json
 import os
 from pathlib import Path
@@ -18,7 +18,7 @@ from crypto_intelligence_agent.j1_n50_managed_cycle import (
     ACTIVE_SCHEMA, ACTIVE_FILE, _pointer_write,
 )
 from crypto_intelligence_agent.j2_n50_private_screen import (
-    audit_private_n50_research, _metrics, PrivateResearchAbstain,
+    audit_private_n50_research, _metrics,
 )
 from scripts.audit_bybit_marketwide_closed24h import _digest
 
@@ -252,6 +252,35 @@ class N50PrivateJ2ScreenTests(unittest.TestCase):
             with conn:
                 conn.execute("UPDATE candles SET high='NaN' WHERE rowid=1")
         self.assertNotEqual(self.scan()["status"],"descriptive_research_ready")
+
+    def test_numeric_fixture_return_atr_turnover_and_direction(self):
+        unchanged=(Decimal(100),Decimal(105),Decimal(95),Decimal(100),
+                   Decimal(10),Decimal(100))
+        for final, expected_return, expected_direction, denominator in (
+            ((Decimal(100),Decimal(111),Decimal(99),Decimal(110),
+              Decimal(10),Decimal(200)),
+             Decimal(10),"above_prior_23h_high",Decimal(110)),
+            ((Decimal(100),Decimal(101),Decimal(89),Decimal(90),
+              Decimal(10),Decimal(200)),
+             Decimal(-10),"below_prior_23h_low",Decimal(90)),
+        ):
+            with self.subTest(expected_direction=expected_direction):
+                bars=[(i*HOUR_MS,unchanged if i<23 else final)
+                      for i in range(24)]
+                with localcontext(Context(prec=7)):
+                    result=_metrics("TESTUSDT",bars)
+                with localcontext(Context(prec=50)):
+                    expected_atr=(Decimal(13)*Decimal(10)+Decimal(12))/Decimal(14)
+                    expected_atr_pct=expected_atr/denominator*Decimal(100)
+                self.assertEqual(result["return_24bars_pct"],expected_return)
+                self.assertEqual(result["quote_turnover_24bars_usdt"],
+                                 Decimal(2500))
+                self.assertEqual(result["last_quote_turnover_vs_prior23_mean"],
+                                 Decimal(2))
+                self.assertEqual(result["last_closed_bar_breakout"],
+                                 expected_direction)
+                self.assertEqual(result["mean_true_range_14_pct"],
+                                 expected_atr_pct)
 
     def test_pure_metrics_do_not_look_into_next_candle(self):
         twentyfour=[]
