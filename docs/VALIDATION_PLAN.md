@@ -1178,3 +1178,5 @@ Teste `tests/test_j1_n50_systemd_isolation.py`: aceitar apenas N2 timer `loaded/
 **D297 failback:** validar presença de `OnFailure=cia-j1-n50-fallback.service`, arquivo fallback root-only com apenas comandos fixos para timers; travamento, não-execução e reinício pós reboot demandam watchdog independente e soak real. O teste de rollback remove service, timer e fallback.
 
 Testar `tests/test_j1_n2_backup_d297.py` via POSIX real SQLite: origem íntegra, cópia 0600, SHA256, mesmo número de candles e checkpoints, zero escrita de origem, proibição de sobrescrita, destino com symlink e fonte corrompida bloqueados. Gate de VPS pré-cutover requer `backup_verified` em pasta owner-only antes de instalar units.
+
+D297 teste de failback: `test_j1_n50_managed_cli_failback_d297.py` deve provar que `deferred`, `blocked`, `optin_required` geram exit=65, permitindo o OnFailure do systemd; somente captura/rotação/persistência bem-sucedida geram exit 0.
