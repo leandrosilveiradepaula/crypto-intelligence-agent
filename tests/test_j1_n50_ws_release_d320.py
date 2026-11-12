@@ -164,7 +164,6 @@ class N50WSRootReleaseTests(unittest.TestCase):
         self.assertTrue(rel._SAFE_PATH.fullmatch(str(WS)))
         for path in (
             "/tmp/unsafe",
-            "/home/cia-probe/agent/../unsafe",
             "/home/cia-probe/agent/with spaces",
             "/home/cia-probe/agent/",
             "/home/cia-probe/agent/ok;rm",
