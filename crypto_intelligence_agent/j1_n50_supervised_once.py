@@ -6,7 +6,6 @@ no auth/private endpoints or trading. D290 plan is evaluated before GET.
 """
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 import time
@@ -99,7 +98,7 @@ def run_supervised_n50_once(
         else:
             # Never assume that a missing DB means a fresh start: all files,
             # including abandoned locks, must be absent to permit bootstrap.
-            if list(output_directory.iterdir()):
+            if next(output_directory.iterdir(), None) is not None:
                 return _report("blocked", "existing_epoch_without_journal")
             audit = None
         decision = plan_n50_supervision(
