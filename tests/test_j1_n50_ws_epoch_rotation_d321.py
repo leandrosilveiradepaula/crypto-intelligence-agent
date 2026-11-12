@@ -204,6 +204,42 @@ class N50WSEpochRotationTests(unittest.TestCase):
         self.assertEqual(capture.call_count,1)
         self.assertEqual(self.read(OBS+1000).ws_directory,self.ws1)
 
+    def test_owner_ws_cli_uses_current_pointer_not_old_static_directories(self):
+        from scripts import run_j1_n50_ws_owner_active_once as cli
+        all_flags=[
+            "--allow-private-pointer-read","--allow-private-manifest-read",
+            "--allow-private-ws-scope-read","--allow-private-ws-writer",
+            "--allow-public-websocket",
+            "--confirm-region-and-personal-research",
+            "--allow-create-ws-journal",
+        ]
+        paths=[]
+        def record(**kwargs):
+            paths.append((kwargs["manifest_directory"],
+                          kwargs["ws_directory"]))
+            return {"status":"ws_owner_hour_50_observed_local_only"}
+        from crypto_intelligence_agent import bybit_public_ws_once
+        with patch.object(cli.time,"time_ns",return_value=(OBS+1000)*1_000_000),\\
+             patch.object(bybit_public_ws_once,"_real_session_factory",
+                          return_value=None),\\
+             patch.object(cli,"run_cached_n50_ws_owner_window",
+                          side_effect=record),\\
+             redirect_stdout(StringIO()):
+            self.assertEqual(ws_cli(["--state-directory",str(self.state)]
+                                     +all_flags),0)
+        man2,ws2=self.candidate("second",NEXT,NEXT_OBS)
+        self.assertEqual(self.activate(man2,ws2,NEXT_OBS).status,
+                         "active_n50_ws_epoch_rotated")
+        with patch.object(cli.time,"time_ns",return_value=NEXT_OBS*1_000_000),\\
+             patch.object(bybit_public_ws_once,"_real_session_factory",
+                          return_value=None),\\
+             patch.object(cli,"run_cached_n50_ws_owner_window",
+                          side_effect=record),\\
+             redirect_stdout(StringIO()):
+            self.assertEqual(ws_cli(["--state-directory",str(self.state)]
+                                     +all_flags),0)
+        self.assertEqual(paths,[(self.man1,self.ws1),(man2,ws2)])
+
     def test_owner_ws_cli_requires_flags_before_pointer_or_network(self):
         buf=StringIO()
         with patch("scripts.run_j1_n50_ws_owner_active_once.load_active_n50_ws_epoch",
