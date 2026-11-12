@@ -1156,3 +1156,7 @@ Reexecutar `test_j1_n50_partial_resume.py` e suites D287/D290/D291/M1/readiness:
 ### J1/D293 — lock global N50 entre captura e writer
 
 Rodar `test_j1_n50_global_lease.py` em Linux POSIX com tempfile owner 0700, flock no mesmo processo e arquivo claim 0600: captura bloqueia writer da mesma hora, writer bloqueia captura, retry do mesmo action/target preserva claim, lock concorrente falha fechado, adulteração/symlink/owner/path/clock/opt-in negados antes de GET. Reexecutar tests D287–D292, M1, readiness e CI Linux/docs, Windows/offline e Chrome/PAPER HEAD final; revisar diff, SHA e merge sem deploy. Nenhum teste sintético prova serviço N50 24/7 e nenhuma execução real ocorre sem gate.
+
+### J1/D294 — lifecycle owner-only de rotação N50
+
+Validar `test_j1_n50_managed_cycle.py` com diretórios POSIX 0700, ponteiro 0600, tempo fake: bootstrap por D286/D287, atualização seguinte por D291 sem recaptura, rotação após 36h/51h preservando bytes dos epochs anteriores, captura que falha deixa ponteiro antigo, staged pointer crash recuperável somente se payload exato, recuperação de manifesto selado só com claim idêntica, symlink/tamper/conflito/owner/opt-in/UTC bloqueados e flock simultâneo sem GET. Reexecutar regressões D287–D293/M1/readiness; CI Linux/docs Windows Chrome/PAPER SHA final, revisão e merge sem deploy. Não inferir 24/7 da CI nem liberar trading.
