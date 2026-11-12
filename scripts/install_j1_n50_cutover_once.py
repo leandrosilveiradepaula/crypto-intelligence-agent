@@ -7,6 +7,10 @@ No orders, credentials, private API calls, migrations or database writes.
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
+from hashlib import sha256
+import sqlite3
+import stat
 import json
 import os
 from pathlib import Path
@@ -132,6 +136,27 @@ def preflight(*, source: Path, root: Path, python: Path, sha: str) -> dict:
                 or _show(name)["LoadState"] != "not-found"):
             raise ValueError("n50_already_installed")
     audit = _audit_n2(source=source, python=python)
+    # A separately owner-created N2 rollback snapshot is mandatory.
+    # Never trust the gateway's obsolete finite-only audit for this gate.
+    backup = root / "n2-before-cutover.sqlite"
+    if backup.is_symlink() or not backup.is_file():
+        raise ValueError("n2_rollback_copy_missing")
+    st = backup.lstat()
+    if (st.st_uid != expected_owner or st.st_nlink != 1
+            or not stat.S_ISREG(st.st_mode)
+            or stat.S_IMODE(st.st_mode) != 0o600
+            or not 0 < st.st_size <= 16 * 1024 * 1024):
+        raise ValueError("n2_rollback_copy_permissions_invalid")
+    with closing(sqlite3.connect(backup.as_uri() + "?mode=ro", uri=True,
+                                timeout=2)) as check:
+        check.execute("PRAGMA query_only=ON")
+        if (check.execute("PRAGMA integrity_check").fetchone() != ("ok",)
+                or check.execute("SELECT COUNT(*) FROM candles").fetchone() !=
+                   (audit["stored_candles"],)
+                or check.execute("SELECT COUNT(*) FROM published_hour").fetchone()
+                   != (audit["published_hours"],)):
+            raise ValueError("n2_rollback_copy_stale_or_invalid")
+    backup_digest = sha256(backup.read_bytes()).hexdigest()
     service, timer = render_n50_managed_systemd(
         owner="cia-probe", repo=str(source), python=str(python), root=str(root))
     if service.count("After=network-online.target\n") != 1:
@@ -151,6 +176,7 @@ def preflight(*, source: Path, root: Path, python: Path, sha: str) -> dict:
     return {"source_sha": sha, "n2_integrity": True,
             "n2_published_hours": audit["published_hours"],
             "n2_stored_candles": audit["stored_candles"],
+            "backup_sha256": backup_digest,
             "known_historical_gaps": 21,
             "n50_root_private_and_empty": True,
             "service_text": service, "timer_text": timer,
@@ -226,6 +252,7 @@ def execute(*, source: Path, root: Path, python: Path, sha: str,
     plan = preflight(source=source, root=root, python=python, sha=sha)
     result["n2_integrity_checked"] = True
     result["n2_stored_candles"] = plan["n2_stored_candles"]
+    result["n2_rollback_backup_sha256"] = plan["backup_sha256"]
     if confirm_controlled_cutover is not True or allow_systemd_modifications is not True:
         result["status"] = "preflight_pass_no_changes"
         return result
