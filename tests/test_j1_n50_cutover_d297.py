@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -31,6 +32,7 @@ def valid_audit():
     }
 
 
+@unittest.skipUnless(os.name == "posix", "systemd cutover is POSIX-only")
 class D297CutoverTests(unittest.TestCase):
     def setUp(self):
         self.temp = TemporaryDirectory()
