@@ -341,6 +341,11 @@ class OfflineStreamAudit:
         default_factory=tuple, repr=False, compare=False,
     )
     declared_gap_markers: int = 0
+    # D313: one optional, same-SQLite-snapshot closed-hour N50 attestation.
+    # Never implies 24h continuity, a valid live source or a published REST PIT.
+    hour_evidence_expected: int | None = None
+    hour_evidence_confirmed: int | None = None
+    hour_evidence_sha256: str | None = None
 
     def sanitized_report(self) -> dict:
         result = {
@@ -356,6 +361,14 @@ class OfflineStreamAudit:
             "canonical_ohlcv_approved": False, "rights_for_live_authorized": False,
             "network_requests": 0, "orders_sent": False,
         }
+        if self.hour_evidence_expected is not None:
+            result.update({
+                "hour_evidence_expected": self.hour_evidence_expected,
+                "hour_evidence_confirmed": self.hour_evidence_confirmed,
+                "hour_evidence_sha256": self.hour_evidence_sha256,
+                "hour_evidence_source": "bybit_public_ws_confirmed_fixture",
+                "hour_evidence_live_verified": False,
+            })
         if self.pit_scope_count is not None:
             result.update({
                 "historical_720h_status": (
@@ -501,6 +514,7 @@ class SQLiteOfflineClosedStreamJournal:
     def audit(self, *, scope: OfflineReviewedStreamScope,
               decision_at_ms: int, as_of_ms: int,
               historical_scopes: tuple[OfflineReviewedStreamScope, ...] | None = None,
+              hour_evidence_symbols: tuple[str, ...] | None = None,
               ) -> OfflineStreamAudit:
         if (type(scope) is not OfflineReviewedStreamScope
                 or type(decision_at_ms) is not int
@@ -508,6 +522,18 @@ class SQLiteOfflineClosedStreamJournal:
                 or decision_at_ms % HOUR_MS
                 or not decision_at_ms + 1000 <= as_of_ms < decision_at_ms + HOUR_MS):
             raise DataValidationError("offline ranking requires closed UTC decision clock")
+        # The optional N50 proof is a *selected* set of exactly 50 symbols
+        # already present in this reviewed WS scope. Reject duplications and
+        # wrong membership before reading private SQLite data.
+        if hour_evidence_symbols is not None:
+            eligible = {m.symbol for m in scope.contracts}
+            if (type(hour_evidence_symbols) is not tuple
+                    or len(hour_evidence_symbols) != 50
+                    or any(type(sym) is not str for sym in hour_evidence_symbols)
+                    or tuple(sorted(set(hour_evidence_symbols))) != hour_evidence_symbols
+                    or not set(hour_evidence_symbols).issubset(eligible)
+                    or scope.observed_at_ms >= decision_at_ms):
+                raise DataValidationError("untrusted closed-hour evidence member set")
         # Legacy 24h calls preserve the original one-scope contract. The 720h
         # path explicitly opts into a bounded PIT series without altering DB.
         epoch_times = (_validate_pit_scopes(scope, historical_scopes, decision_at_ms)
@@ -633,6 +659,29 @@ class SQLiteOfflineClosedStreamJournal:
                             "rows": [item for item in summary
                                      if start_720 <= item[1] < decision_at_ms],
                         }))
+                # D313: compute current closed-hour proof IN THE SAME BEGIN
+                # snapshot as the full integrity/digest/gap replay above.
+                # Never count subscription ACK or an unconfirmed/open update.
+                hour_confirmed = hour_digest = None
+                if hour_evidence_symbols is not None:
+                    at_open = decision_at_ms - HOUR_MS
+                    found = []
+                    for symbol in hour_evidence_symbols:
+                        event = by_symbol.get(symbol, {}).get(at_open)
+                        if event is not None and event["received_ms"] <= as_of_ms:
+                            found.append([
+                                symbol, event["received_ms"], _sha(_json(event)),
+                            ])
+                    hour_confirmed = len(found)
+                    if hour_confirmed == 50:
+                        hour_digest = _sha(_json({
+                            "schema": "j1-n50-ws-hourly-proof-v1",
+                            "decision": decision_at_ms,
+                            "scope_ms": scope.observed_at_ms,
+                            "registry": scope.registry_sha256,
+                            "members": list(hour_evidence_symbols),
+                            "confirmed": found,
+                        }))
                 # 24h sample ranking is unchanged by an incomplete 720h window.
                 # Neither is an authenticated marketwide ranking.
                 return OfflineStreamAudit(
@@ -644,6 +693,9 @@ class SQLiteOfflineClosedStreamJournal:
                     history_digest, len(epoch_times) if epoch_times is not None else None,
                     tuple(values) if not missing else (),
                     declared_gap_markers=len(expected_gaps),
+                    hour_evidence_expected=(50 if hour_evidence_symbols is not None else None),
+                    hour_evidence_confirmed=hour_confirmed,
+                    hour_evidence_sha256=hour_digest,
                 )
         except sqlite3.DatabaseError:
             raise DataGapError("offline journal read-only audit failed") from None
