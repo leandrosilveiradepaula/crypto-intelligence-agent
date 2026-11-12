@@ -87,7 +87,8 @@ class OwnerCandidateTests(unittest.TestCase):
         with (
             patch.object(owner, "_strict_owner"),
             patch.object(owner, "_pointer_read",
-                         return_value={"epoch_id": owner.EXPECTED_HALTED_EPOCH}),
+                         return_value={"epoch_id": owner.EXPECTED_HALTED_EPOCH,
+                                       "scope_digest_sha256": "a"*64}),
             patch.object(owner, "audit_halted_n50_epoch",
                          return_value=forensic()) as audit,
         ):
