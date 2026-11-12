@@ -181,7 +181,30 @@ class N50ManagedHealthTests(unittest.TestCase):
         db.chmod(0o600)
         with patch("scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
                    return_value={"journal_integrity_verified":False}):
-            self.assertEqual(self.inspect()["status"],"blocked")
+            transient=self.inspect()
+            self.assertEqual(transient["status"],"in_progress_unverified")
+            self.assertFalse(transient["owner_integrity_verified"])
+            self.assertEqual(self.inspect(now=T+HOUR_MS+16*60_000)["status"],
+                             "blocked")
+
+    def test_verified_partial_bootstrap_remains_unpublished(self):
+        m,j=self.make_epoch()
+        fake={
+            "journal_integrity_verified":True,
+            "journal_scope_digest_sha256":m["scope_digest_sha256"],
+            "reviewed_research_contracts":50,
+            "orders_sent":False,"live_trading_authorized":False,
+            "marketwide_top50_verified":False,
+            "stored_candles":312,"published_hours":0,
+            "status":"unpublished_bootstrap_resume_ready",
+        }
+        with patch("scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
+                   return_value=fake):
+            out=self.inspect()
+        self.assertEqual(out["status"],"partial_first_writer",out)
+        self.assertEqual(out["stored_candles"],312)
+        self.assertEqual(out["published_checkpoints"],0)
+        self.assertFalse(out["owner_integrity_verified"])
 
     def test_wrong_epoch_and_bogus_pointer_block_without_network(self):
         m,j=self.make_epoch()
