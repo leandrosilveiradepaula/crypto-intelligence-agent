@@ -200,7 +200,18 @@ def kline_url(symbol: str, start: int, end: int) -> str:
 
 
 class BoundedBybitPublicClient:
-    def __init__(self, transport: Callable[[str, int], bytes] | None = None):
+    def __init__(
+        self, transport: Callable[[str, int], bytes] | None = None,
+        *, min_interval_seconds: float = MIN_PUBLIC_GET_INTERVAL_SECONDS,
+    ):
+        # D311: bounded, optional conservative pacing for the N50 hourly
+        # worker. This does not modify the 372-request capture path, allow
+        # HTTP retries, or infer a guaranteed quota from the provider.
+        if (type(min_interval_seconds) not in (int, float)
+                or not MIN_PUBLIC_GET_INTERVAL_SECONDS
+                   <= min_interval_seconds <= 12.0):
+            raise ValueError("invalid_public_get_pacing")
+        self.min_interval_seconds = float(min_interval_seconds)
         self.transport = transport
         self.requests_attempted = 0
         # None means the first request is not artificially delayed. A real
@@ -278,7 +289,7 @@ class BoundedBybitPublicClient:
             # Do not retry a failing request: a 10006 always propagates and
             # leaves the already-committed SQLite research history intact.
             if self._last_request is not None:
-                remaining = (MIN_PUBLIC_GET_INTERVAL_SECONDS
+                remaining = (self.min_interval_seconds
                              - (time.monotonic() - self._last_request))
                 if remaining > 0:
                     time.sleep(remaining)
