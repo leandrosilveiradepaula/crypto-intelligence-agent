@@ -74,3 +74,8 @@ A consulta explícita `--journal ... --position-id fixture_...` lê um arquivo S
 
 ## J5/PRE5 #170 — seleção explícita de múltiplas posições fictícias
 Uma tela em português pode apresentar várias posições PAPER provenientes de **um mesmo snapshot SQLite de leitura**, mantendo venue, símbolo e lado separados. Cada cartão e linha expõe seus próprios fills, reservas/UNKNOWN, saldo e checkpoint UTC. É incorreto somar unidades de contratos diferentes; a tela e o JSON não produzem número agregado de posições financeiras, lucro, alavancagem ou risco de carteira. A seleção exige IDs específicos, jamais varredura pública de contas. Não se trata de monitoramento financeiro prospectivo e a J5 #6 continua aberta até que existam fontes legítimas, autenticação, privacidade e conexão segura com execução automática aprovada.
+
+
+### J5/D301 — exibição de pesquisa, distinta do robô de ordens
+
+A tela privada opcional de mercado N50 mostra exclusivamente métricas já observadas (retorno anterior, true range, volume, contexto BTC e rompimento da última barra) em PT-BR no celular. Nunca converter variação histórica em sinal/ordem ou misturar com posições PAPER. HTML sem rede/script e com aviso explícito de dados provisórios e 0 ordens. A futura interface do robô com contas/posições/execução continua exigindo J4/J6, autenticação e gate de produção separado.

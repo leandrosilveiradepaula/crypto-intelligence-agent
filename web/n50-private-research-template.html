@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'">
+  <meta name="description" content="Relatório privado e estático de pesquisa N50. Não são recomendações de compra ou venda.">
+  <title>Crypto Intelligence Agent — Pesquisa N50</title>
+  <!-- J5/D301: owner-only, offline, unauthenticated research data from audited J1.
+       NEVER upload, serve publicly, use as a trading screen or infer 24h uptime. -->
+  <style>
+    :root { color-scheme: dark; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      --bg:#0b141e; --panel:#142231; --lighter:#1b2c3e; --border:#384c5e;
+      --text:#f0f6fc; --muted:#b8c8d7; --accent:#94e1cb; --amber:#ffda87; --red:#ffa9a9; }
+    *,*::before,*::after { box-sizing:border-box; }
+    body { margin:0; min-width:280px; line-height:1.5; color:var(--text); background:var(--bg); }
+    h1,h2,h3,p { margin-top:0; }
+    h1 { font-size:clamp(1.8rem,5vw,3rem); letter-spacing:-.04em; line-height:1.12; }
+    h2 { font-size:clamp(1.2rem,3vw,1.55rem); }
+    h3 { font-size:1rem; }
+    .page { width:min(100% - 30px,1120px); margin-inline:auto; }
+    a { color:var(--accent); }
+    :focus-visible { outline:3px solid var(--amber); outline-offset:4px; }
+    .skip { position:fixed; z-index:10; top:8px; left:8px; padding:12px 16px; border-radius:10px;
+      color:#13202b; background:var(--amber); transform:translateY(-180%); text-decoration:none; }
+    .skip:focus-visible { transform:translateY(0); }
+    header { background:#101c29; border-bottom:1px solid var(--border); }
+    .brand { padding:18px 0; font-weight:760; letter-spacing:.01em; overflow-wrap:anywhere; }
+    main { padding:28px 0 54px; }
+    .eyebrow { color:var(--accent); text-transform:uppercase; font-size:.75rem; font-weight:750; letter-spacing:.11em; }
+    .lead { color:var(--muted); max-width:840px; }
+    .warning { padding:18px; margin:24px 0; border:2px solid #a88336;
+      border-radius:14px; background:#2b2519; color:#ffe9b1; }
+    .warning p { margin:8px 0 0; font-size:.91rem; }
+    .fine { color:var(--muted); font-size:.83rem; overflow-wrap:anywhere; }
+    .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0; }
+    .stat,.asset { padding:20px; border:1px solid var(--border); border-radius:15px; background:var(--panel); min-width:0; }
+    .stat dt { color:var(--muted); font-size:.8rem; }
+    .stat dd { margin:8px 0 0; font-size:clamp(1.4rem,3vw,2.25rem); font-weight:760;
+      line-height:1.14; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+    .section { margin-top:34px; }
+    .cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .asset h3 { letter-spacing:.015em; overflow-wrap:anywhere; }
+    .asset strong { display:block; font-size:1.45rem; margin:8px 0; font-variant-numeric:tabular-nums; }
+    .asset p { color:var(--muted); font-size:.83rem; margin:4px 0; }
+    .positive { color:var(--accent); }
+    .negative { color:var(--red); }
+    .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:15px;
+      background:var(--panel); scrollbar-color:var(--accent) var(--panel); }
+    table { border-collapse:collapse; width:100%; min-width:940px; text-align:left; }
+    caption { padding:12px 16px; text-align:left; font-size:.82rem; color:var(--muted); }
+    th,td { padding:13px; vertical-align:top; overflow-wrap:anywhere; }
+    th { background:var(--lighter); font-size:.78rem; color:var(--muted); }
+    td { border-top:1px solid var(--border); font-size:.86rem; font-variant-numeric:tabular-nums; }
+    .muted { color:var(--muted); }
+    footer { border-top:1px solid var(--border); padding:22px 0 32px; color:var(--muted); font-size:.78rem; }
+    @media(max-width:800px) { .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:560px) { main { padding-top:22px; } .cards { grid-template-columns:1fr; }
+      .stat,.asset { padding:16px; } .stats { gap:9px; } }
+    @media(max-width:340px) { .stats { grid-template-columns:1fr; } }
+    @media(prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#conteudo">Pular para o conteúdo</a>
+  <header><div class="page brand">Crypto Intelligence Agent · Observações privadas</div></header>
+  <main id="conteudo" class="page" tabindex="-1" data-mode="private_research" data-trading="disabled" data-schema="j5-n50-private-report-v1">
+    <p class="eyebrow">Dados fechados · somente leitura</p>
+    <h1>Panorama dos 50 perpétuos USDT</h1>
+    <p class="lead">O ranking mostra somente variações que já ocorreram na janela de 24 candles fechados. Não estima o que vai acontecer nem seleciona operações.</p>
+    <aside class="warning" aria-label="Aviso obrigatório de limites dos dados">
+      <strong>PESQUISA PROVISÓRIA — NENHUMA ORDEM</strong>
+      <p>Identidade cripto e Top 50 global não certificados. Sem sinal aprovado, sem gestão de posição, sem execução automática e sem promessa de retorno. Ativos apresentados são uma coorte observada, não oportunidades recomendadas.</p>
+    </aside>
+    <p class="fine">Último fechamento: <strong>__CLOSED_UTC__</strong> · Consulta: <strong>__OBSERVED_UTC__</strong></p>
+    <p class="fine">Contexto BTC: __BTC_CONTEXT__ · Estado: __STATUS_TEXT__</p>
+
+    <dl class="stats" aria-label="Resumo descritivo do universo">
+      <div class="stat"><dt>Ativos auditados</dt><dd>__ASSET_COUNT__</dd></div>
+      <div class="stat"><dt>Fechou acima da máxima anterior</dt><dd>__UP_COUNT__</dd></div>
+      <div class="stat"><dt>Fechou abaixo da mínima anterior</dt><dd>__DOWN_COUNT__</dd></div>
+      <div class="stat"><dt>Fechamento dentro da faixa</dt><dd>__INSIDE_COUNT__</dd></div>
+    </dl>
+
+    <section class="section" aria-labelledby="variacoes">
+      <h2 id="variacoes">Maiores variações passadas</h2>
+      <p class="fine">Estas observações são ordenadas por retorno já ocorrido. Uma variação alta não representa vantagem estatística para a próxima hora.</p>
+      <div class="cards">__TOP_CARDS__</div>
+    </section>
+
+    <section class="section" aria-labelledby="universo">
+      <h2 id="universo">Universo observado</h2>
+      <p class="fine" id="tabela-ajuda">No celular, deslize a tabela horizontalmente ou use as setas horizontais do teclado. Percentuais relativos ao mesmo fechamento UTC.</p>
+      <div class="table-wrap" role="region" tabindex="0" aria-label="Tabela de observações dos 50 ativos" aria-describedby="tabela-ajuda">
+        <table>
+          <caption>Movimento anterior, diferença frente ao BTC, amplitude de 14 barras, turnover 24h em USDT e observação da última barra.</caption>
+          <thead><tr><th scope="col">Ordem histórica</th><th scope="col">Contrato</th><th scope="col">Variação</th><th scope="col">Vs. BTC (p.p.)</th><th scope="col">Amplitude 14h</th><th scope="col">Turnover USDT</th><th scope="col">Última barra</th></tr></thead>
+          <tbody>__ROWS__</tbody>
+        </table>
+      </div>
+    </section>
+    <p class="fine section">Integridade da janela: __DIGEST_PREFIX__ · Esta visualização é estática e local. Não atualiza automaticamente e não possui acesso à exchange.</p>
+  </main>
+  <footer><div class="page">J5/D301 · arquivo privado · dados de pesquisa auditados, não negociação · Nenhuma ordem enviada.</div></footer>
+</body>
+</html>

@@ -1420,3 +1420,8 @@ D297/D298 realizaram cutover autorizado com rollback: N50 timer active/enabled, 
 Criada ponte para a primeira observação de mercado real de 24 candles 1h por cada um dos 50 ativos N50, com replay integral da J1, last published checkpoint, manifest/provenance, digests por candle e métricas Decimal: retorno observado, volatilidade/true range, turnover, último rompimento e comparação BTC quando BTC estiver na coorte. Não gera sinais nem ordens, não reutiliza fixtures sintéticas para dados reais. Testes POSIX locais na VPS: 10 PASS no candidato D300; só executar CLI real após primeiro writer N50. Primeira captura automática N50 de 04:01–04:13 UTC consumiu 372 GETs e criou o epoch, sem candles ainda. Monitor de continuidade segue ativo; J1 não encerrada.
 
 D300 QA adicional: 11 testes de tela de pesquisa N50 PASS na VPS após adicionar fixtures numéricas determinísticas de alta/baixa; 2.509 testes completos PASS no worktree anterior sem mudanças de lógica além de testes. Fonte N50 real: 50 membros USDT, BTC referência presente, identidade externa ainda não certificada; primeira publicação horária futura precisa de evidência independente, sem trading.
+
+
+## J5/D301 — panorama privado mobile para N50 (12/11/2026 UTC)
+
+A partir da ponte J2/D300 (PR #573 integrada, squash SHA `95edb62a52ba2fd0619457371281db3b02df2fd0`), D301 entrega HTML único PT-BR com CSP fechada, cards e tabela responsiva, somente dados de pesquisa N50 auditados, data UTC, contexto BTC e avisos de não-trading. CLI opt-in tríplice pode salvar relatório local owner 0600, nunca publicar. Testes de privacidade, acessibilidade, injeção e modo somente leitura: 10 PASS na VPS candidata. Não é produto web online, não libera ordens e não atesta 24h coletadas.
