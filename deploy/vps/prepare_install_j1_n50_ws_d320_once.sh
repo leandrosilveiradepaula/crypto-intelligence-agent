@@ -114,7 +114,7 @@ echo "STAGE_4_CACHE_D314_OWNER_METADATA"
 echo "STAGE_5_ROOT_CUTOVER_WITH_FAILBACK"
 # Read-only preflight and actual install/cutover happen in the same
 # SHA-pinned root module; errors restore N2 if isolation already began.
-"$PY" -m scripts.release_j1_n50_ws_owner_once \
+PYTHONDONTWRITEBYTECODE=1 "$PY" -m scripts.release_j1_n50_ws_owner_once \
   --source "$CODE" --expected-sha "$SHA" \
   --manifest "$MANIFEST" --ws-dir "$WS_DIR" \
   --confirm-n50-ws-cutover --allow-systemd-modifications
