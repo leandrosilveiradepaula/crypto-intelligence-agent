@@ -18,6 +18,7 @@ import stat
 from typing import Any
 
 from .j1_auto_research_epoch import HOUR_MS
+from .j2_n50_descriptive_watchlist import build_descriptive_watchlist
 
 TEMPLATE = Path(__file__).resolve().parent.parent / "web" / "n50-private-research-template.html"
 EXPECTED_ENVELOPE = frozenset((
@@ -224,6 +225,57 @@ def render_n50_private_html(report: dict) -> str:
                 '<p>Vs. BTC: '+relative+' p.p.</p>'
                 '<p>'+escape(direction)+'</p></article>'
             )
+    # D310: never recompute observations with a second set of heuristics.
+    # Delegate the entire selection, direction and ranking to reviewed D308.
+    # D300 may legitimately lack BTC; report an explicit abstention instead.
+    if report["btc_context_available"]:
+        watch = build_descriptive_watchlist(
+            report, include_private_symbols=True,
+        )
+        _require(watch["status"] == "descriptive_watchlist_ready"
+                 and watch["owner_journal_integrity_verified"] is True
+                 and watch["window_digest_sha256"] ==
+                 report["window_digest_sha256"]
+                 and watch["latest_published_end_ms"] ==
+                 report["latest_published_end_ms"]
+                 and watch["audited_assets"] == 50
+                 and watch["orders_sent"] is False
+                 and watch["approved_for_live_use"] is False
+                 and watch["approved_for_signals"] is False,
+                 "unverified_j2_d308_watchlist")
+        def _items(items: list[dict[str, Any]]) -> str:
+            if not items:
+                return '<li class="muted">Nenhum rompimento sob estes critérios.</li>'
+            rendered: list[str] = []
+            for row in items:
+                symbol = escape(row["symbol"], quote=True)
+                relative = _format(_number(
+                    row["relative_vs_btc_pct_points"],
+                    can_be_negative=True,
+                ))
+                intensity = _format(_number(
+                    row["last_quote_turnover_vs_prior23_mean"],
+                    can_be_negative=False,
+                ))
+                rendered.append(
+                    '<li><strong>'+symbol+'</strong>'
+                    '<span class="fine">Vs. BTC: '+relative+
+                    ' p.p. · intensidade de turnover: '+intensity+
+                    '×</span></li>'
+                )
+            return "".join(rendered)
+        watch_status = "Observação de 24 fechamentos auditados, não validada fora da amostra."
+        watch_up_count = str(watch["observed_up_breakout_candidates"])
+        watch_down_count = str(watch["observed_down_breakout_candidates"])
+        watch_up_rows = _items(watch["up_breakout_watchlist"])
+        watch_down_rows = _items(watch["down_breakout_watchlist"])
+    else:
+        # No BTC denominator means NO invented relative-strength ranking.
+        watch_status = "Indisponível: esta coorte não contém referência BTC."
+        watch_up_count = "0"
+        watch_down_count = "0"
+        watch_up_rows = '<li class="muted">Sem contexto BTC auditado.</li>'
+        watch_down_rows = '<li class="muted">Sem contexto BTC auditado.</li>'
     replacements = {
         "__CLOSED_UTC__": escape(_utc(end)),
         "__OBSERVED_UTC__": escape(_utc(now)),
@@ -240,6 +292,11 @@ def render_n50_private_html(report: dict) -> str:
         "__DIGEST_PREFIX__": report["window_digest_sha256"][:16],
         "__TOP_CARDS__": "".join(cards),
         "__ROWS__": "".join(lines),
+        "__WATCHLIST_STATUS__": escape(watch_status),
+        "__WATCHLIST_UP_COUNT__": watch_up_count,
+        "__WATCHLIST_DOWN_COUNT__": watch_down_count,
+        "__WATCHLIST_UP_ROWS__": watch_up_rows,
+        "__WATCHLIST_DOWN_ROWS__": watch_down_rows,
     }
     for mark, value in replacements.items():
         _require(html.count(mark) == 1, "template_contract_drift")
