@@ -125,7 +125,7 @@ def _read_bytes(state_directory: Path) -> dict:
     for key in ("manifest_directory","ws_directory"):
         val=obj[key]
         if (type(val) is not str or len(val)>300
-                or not val.startswith("/home/cia-probe/agent/")):
+                or not val.startswith(str(_OWNER_ROOT)+"/")):
             raise DataValidationError("N50 pointer stored path invalid")
     if obj["manifest_directory"]==obj["ws_directory"]:
         raise DataValidationError("N50 pointer directories not isolated")
