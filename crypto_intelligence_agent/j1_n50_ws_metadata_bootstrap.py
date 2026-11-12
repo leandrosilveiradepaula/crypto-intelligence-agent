@@ -121,6 +121,10 @@ def cache_current_n50_ws_metadata_once(
             or client is not None and type(client) is not BoundedBybitPublicClient):
         return out
     try:
+        # No symlinked ancestor may redirect WS output into REST HALT.
+        if (manifest_directory.resolve(strict=True) != manifest_directory
+                or ws_directory.resolve(strict=True) != ws_directory):
+            return out
         _safe_stat(manifest_directory, directory=True)
         _safe_stat(ws_directory, directory=True)
         with _exclusive_metadata_ingress(ws_directory):
