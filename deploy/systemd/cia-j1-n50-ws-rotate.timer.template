@@ -1,0 +1,14 @@
+# D321: lazy rotation eligibility check hourly; public GET only after 36h.
+# OFF BY DEFAULT pending separate root release/migration of D320 static unit.
+[Unit]
+Description=CIA J1 N50 WS owner cohort rotation eligibility at UTC HH:01:15
+
+[Timer]
+OnCalendar=*-*-* *:01:15 UTC
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=cia-j1-n50-ws-rotate.service
+
+[Install]
+WantedBy=timers.target

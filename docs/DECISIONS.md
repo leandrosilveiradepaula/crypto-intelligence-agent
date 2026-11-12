@@ -1616,3 +1616,6 @@ D317 precisa conectar 10–60s antes do fechamento UTC, portanto `cia-j1-n50-ws.
 
 ## D320 — implantar WS N50 somente após manifesto/cache reais em epoch nova (12/11/2026)
 PO autorizou a implantação, mas o canal MCP não tem capacidade de DAC/systemd: é proibido contornar essa permissão. Instalação root fora do broker deve ocorrer em uma única jornada pinada a SHA e unidades existentes, **primeiro** censo D287 fresco e cache D314/D316 owner 0700/0600, **depois** atomicamente nova unit WS HH:59:30, quiescência reversível N2 e fallback. Falha 10006 durante censo mantém N2, não reusa HALT REST nem faz ordens. Dois opt-ins no módulo release; D320 não é comprovação de 24h/36h. Contrato `docs/J1_N50_WS_ROOT_RELEASE_D320.md`.
+
+## D321 — N50 WS com epoch imutável e rotação >=36h antes do vencimento 48h (12/11/2026)
+Escolher ponteiro owner 0600 atômico para diretórios separados 0700 de manifesto/cache/journal, não symlink nem sobrescrita de SQLite REST HALT/WS. Rotação só após >=36h e aprovação integral D287+D314/D316 sob lock; não reconsultar antes e não repetir 10006 na mesma coorte. Serviço WS futuro lê o ponteiro antes de abrir socket; D320 estático continua intacto até migração root com rollback. Falhas preservam epoch anterior até expirar em 48h e então fallback N2. D321 código/CI não constituem prova de rotação real.

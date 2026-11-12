@@ -624,3 +624,6 @@ N50 REST legado oneshot em HH:01:05 UTC **não é** o WS. Novo trio de templates
 
 ## J1/D320 — pipeline owner inicial e cutover root one-shot
 Bootstrap owner preserva REST HALT e N2 enquanto captura novo manifesto D287 após a janela N2 HH:02, persiste metadados V5 D314 em cache D316 exclusivo e verifica 50 componentes. Release root independente valida worktree SHA/origin limpo, diretórios owner 0700, NTP, hashes das cinco units atuais e N2/REST states; escreve somente 3 units WS novos, inicia timer HH:59:30 e restaura N2 em falha. O broker MCP atual só consegue leitura e **não** deve escalar por `systemd-run` ou reaproveitar unit REST. `docs/J1_N50_WS_ROOT_RELEASE_D320.md`.
+
+### J1/D321 — separar ativações WS da coorte fixa D320
+Novo `j1_n50_ws_epoch_rotation` valida ponteiro owner 0600 por SHA canônico e D287+D316, e ativa epoch somente via write-rename atômico após >=36h. `scripts.rotate_j1_n50_ws_epoch_once` sob lock/claim horário HH:01:15 captura ranking+metadados, um intento por coorte; `scripts.run_j1_n50_ws_owner_active_once` lê o estado em HH:59:30 e executa D317 sem GET. Templates rotativos não modificam D318/D320 instalado. Root owner de epochs dedicado `/home/cia-probe/agent/j1-n50-ws-epochs`, sem permissão de escrita genérica no HALT REST. Release de upgrade independente; sem ordens.

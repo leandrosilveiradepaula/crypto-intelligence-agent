@@ -1,0 +1,30 @@
+# D321: one-shot owner rotation, never edits systemd or REST HALT.
+# All new mutable data is under an owner 0700 dedicated WS epoch root.
+[Unit]
+Description=CIA J1 N50 WS 36h owner epoch rollover (research only)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=@OWNER@
+WorkingDirectory=@REPO@
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=@PYTHON@ -m scripts.preflight_j1_n50_ws_systemd --require-old-collectors-quiesced
+ExecStart=@PYTHON@ -m scripts.rotate_j1_n50_ws_epoch_once --state-directory @STATE_DIR@ --epoch-root @EPOCH_ROOT@ --allow-private-rotation --allow-public-network --confirm-region-and-personal-research --allow-private-manifest-write --allow-private-ws-cache-write
+TimeoutStartSec=2400
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=@EPOCH_ROOT@
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal
