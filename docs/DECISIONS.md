@@ -1590,3 +1590,7 @@ Exibir na página privada e estática J5/D301 as contagens e até cinco observa�
 ## D311 — não repetir rate-limit; reduzir pressão de GET no N50 incremental (12/11/2026)
 
 Em 16:01 UTC a VPS registrou categoria explícita `provider_rate_limit_no_retry` na quarta tentativa do N50, após 3 candles parciais, sem checkpoint. Fallback N2 automático teve sucesso sem ordem. Corrigir apenas cadência per-client no writer N50 de 2s para 8s com intervalo validado, mantendo censo inicial 372 GETs, N2 e clients de teste no default 2s; não acrescentar retry em 10006, não liberar HOURLY incompleto e não afirmar quota garantida. Respeitar limite 15min UTC e HALT forense. Sem reiniciar N50, alterar bancos, reusar release D306 para o novo incidente, emissão de ordens ou implantar automaticamente. Documentado em `docs/J1_N50_RATE_LIMIT_MITIGATION_D311.md`.
+
+## D312 — recuperar 10006 da epoch atual por forense e nova coorte, não reaplicar release antigo (12/11/2026)
+
+Usar a prova D304 vinculada ao **ponteiro ativo** D294 e à epoch exata `epoch-1794492000000`, com digests, receipts e cursores, sem confiar em contagens fixas de 08:01 ou em sucesso systemd. O root gate só funciona se owner provar HALT `provider_denied_owner_review` e N2 estiver íntegro; mantém serviço N50 disabled, troca apenas working directory da unidade e preserva fallback. Release de produção requer autorização/gate independente, duas flags e janela UTC, com rollback verificado. Não recuperar com retentativas de 10006 na mesma epoch. Contrato `docs/J1_N50_RATE_LIMIT_RECOVERY_D312.md`.
