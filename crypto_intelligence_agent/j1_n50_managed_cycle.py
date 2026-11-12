@@ -102,27 +102,43 @@ def _pointer_write(root: Path, pointer: dict, *, decision: int) -> None:
     raw = (json.dumps(pointer, sort_keys=True,
                       separators=(",", ":"), ensure_ascii=True).encode("ascii")
            + b"\n")
-    if len(raw) > MAX_POINTER_BYTES or tmp.exists() or tmp.is_symlink():
-        raise ValueError("pointer_collision_or_oversize")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL
-                 | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        with os.fdopen(fd, "wb", closefd=False) as dest:
-            dest.write(raw)
-            dest.flush()
-            os.fsync(fd)
-        os.replace(tmp, target)
-        # Ensure pointer directory entries are durably recorded.
-        dir_fd = os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    if len(raw) > MAX_POINTER_BYTES:
+        raise ValueError("pointer_oversize")
+    if tmp.exists() or tmp.is_symlink():
+        # A crash may occur AFTER writing/fsync and BEFORE atomic rename.
+        # Only the SAME fully valid payload is adoptable, never a partial
+        # file, modified target or symlink. Leave mismatches for owner review.
+        _strict_owner(tmp, directory=False)
+        fd = os.open(tmp, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         try:
-            os.fsync(dir_fd)
+            st = os.fstat(fd)
+            if (not stat.S_ISREG(st.st_mode) or st.st_nlink != 1
+                    or st.st_uid != os.geteuid()
+                    or stat.S_IMODE(st.st_mode) != 0o600
+                    or st.st_size != len(raw)):
+                raise ValueError("pointer_staged_invalid")
+            with os.fdopen(fd, "rb", closefd=False) as src:
+                if src.read(MAX_POINTER_BYTES + 1) != raw:
+                    raise ValueError("pointer_staged_drift")
+            os.fsync(fd)
         finally:
-            os.close(dir_fd)
-    except BaseException:
-        tmp.unlink(missing_ok=True)
-        raise
+            os.close(fd)
+    else:
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                     | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        try:
+            with os.fdopen(fd, "wb", closefd=False) as dest:
+                dest.write(raw)
+                dest.flush()
+                os.fsync(fd)
+        finally:
+            os.close(fd)
+    os.replace(tmp, target)
+    dir_fd = os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(dir_fd)
     finally:
-        os.close(fd)
+        os.close(dir_fd)
 
 
 def _epoch_dirs(epochs: Path, *, decision: int) -> tuple[str, Path, Path]:
