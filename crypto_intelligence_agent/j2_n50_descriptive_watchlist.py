@@ -10,7 +10,6 @@ from decimal import Context, Decimal, InvalidOperation, localcontext
 import os
 from pathlib import Path
 import re
-import time
 from typing import Any
 
 from .j1_auto_research_epoch import HOUR_MS
