@@ -82,3 +82,7 @@ A nova função `cache_current_n50_ws_metadata_once` (`j1_n50_ws_metadata_bootst
 O comando `scripts.cache_j1_n50_ws_metadata_owner_once` realiza essa única captura somente com suas cinco flags explícitas; sem flags não faz rede, serviço ou alterações no SQLite. O segundo comando `scripts.run_j1_n50_ws_owner_cached_once` é para a janela pré-fechamento e requer um cache D316 pré-existente. Nenhum dos dois foi instalado/executado na VPS nesta entrega.
 
 Teste sintético `tests/test_j1_n50_ws_metadata_bootstrap_d317.py`: one-GET completo, replay do mesmo cache, recusa segunda captura, 10006, TryFi malicioso, locks concorrentes, flags ausentes e janela causal expirada; zero WS, GET kline REST, ordens e systemd.
+
+### Limite causal de duração da lease
+
+Mesmo iniciando apenas 10 segundos antes da virada, a função reduz o `WSRunBudget.max_seconds` efetivo para encerrar até aproximadamente 119 segundos após o fechamento, pois D313 rejeita recibos além de 120s. Um lease de 150s que partisse a 11s do fechamento ultrapassaria a janela de evidência sem essa proteção. O teto não aumenta requisições, não gera retries e não altera o relógio do candle. Teste com fake-clock cobre essa fronteira.
