@@ -1559,3 +1559,7 @@ A PR #550 `work/j2-trend-pullback-causal-paper` entrega estratégia B de pesquis
 ## J1/D290 — continuidade após piloto N50 (11/11/2026)
 
 Preflight main `7719ccc312e3674775d85d8c828f1b6c5e5e7de4`, PR #562/D289 integrada após Linux/docs, Windows e Chrome/PAPER aprovados. Evidência D289 em #429: job `5d207d7d4dd9463594a67abb3958308f` exit0, 1.250 candles, 2 checkpoints. Branch `work/issue-429-j1-n50-supervision-rotation-plan` adiciona política inerte de supervisão: decisão baseada em manifesto selado + read-only auditoria owner, recusa gaps/drift e planeja renovação por novo epoch antes de 48h sem GET/SQLite/systemd. Não aciona coleta, não instala serviço, não altera N2 e não autoriza trading. Próximo gate: CI SHA exato, revisão, merge sem deploy; ampliar auditor digest binding owner e preparar orquestração serializada offline, mantendo gate de implantação separado.
+
+## J1/D291 — worker N50 supervisionado, ainda OFF (12/11/2026 UTC)
+
+Base main verificada `a678d0dccb96c390bc0cf1071976b5fff2e63288`, PR #563/D290 integrada CI 3/3 SHA `34b90168ac68a2d5d4bb31a29bc6616b69f84abd`. Branch `work/issue-429-j1-n50-supervised-hourly-runner` implementa um único runner opt-in com D290 planner + auditoria owner SQLite D287 e delegação ao M1. Sem alteração dos jobs D289 concluídos, N2 timer/DB, sistema de ordens ou mercado. Próximo: CI, correções de regressão, merge sem deploy, depois serialização de renovação de epochs e planejamento de unidade OFF por padrão com gate separado.

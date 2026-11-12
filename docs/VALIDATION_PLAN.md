@@ -1143,3 +1143,7 @@ Validar `tests/test_j1_auto_research_epoch.py`: relatório D286 de dois catálog
 ### J1/D290 — política inerte de supervisão N50 e binding do journal
 
 Testar `tests/test_j1_n50_supervision.py` com fake clock HH:00, HH:01..HH:15, fora da janela, bootstrap, reentrada idempotente, gaps passados/futuros, contagens 1.200/1.250, 36h de renovação, 48h de expiração, SHA de manifesto adulterado, scope de journal discordante, flags habilitadoras falsas, nenhum acesso a SQLite/network/systemd. Reexecutar `test_j1_rest_resume_readiness.py` com digest privado exposto somente após auditoria owner bem-sucedida, sem nomes, preços ou troca de schema. CI Linux/Windows/PAPER, revisão de SHA exato e merge sem deploy. Gate operacional externo continua obrigatório antes de criar qualquer serviço N50.
+
+### J1/D291 — one-shot N50 supervisionado sem duplicar writer
+
+Tests `tests/test_j1_n50_supervised_once.py` fake owner: seis opt-ins, recusa de caminhos/symlinks, manifest inválido, journal íntegro/gaps/rotação/lock, bootstrap somente com diretório privado vazio, delegação de parâmetros ao writer M1, flags de trading sempre falsas. Reexecutar D287/D290/M1/readiness. CI Linux/docs + Windows/offline + Chrome/PAPER no SHA HEAD, revisão, merge sem deploy. Release do supervisor e serialização de captura/rotação seguem gate operacional separado.
