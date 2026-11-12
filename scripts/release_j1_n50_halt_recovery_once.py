@@ -14,7 +14,10 @@ import json
 import os
 from pathlib import Path
 import stat
-import pwd
+try:
+    import pwd
+except ImportError:  # Windows/offline may inspect and import release policy.
+    pwd = None
 import signal
 import socket
 import subprocess
@@ -140,7 +143,7 @@ def _owner_old(source: Path) -> dict:
 
 
 def preflight(*, source: Path, expected_sha: str) -> dict:
-    if (os.name!="posix" or os.getuid()!=0 or os.geteuid()!=0
+    if (os.name!="posix" or pwd is None or os.getuid()!=0 or os.geteuid()!=0
             or socket.gethostname()!=HOSTNAME):
         raise PermissionError("wrong_host_or_root_uid")
     if (not isinstance(source,Path) or not source.is_absolute()
