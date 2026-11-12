@@ -1511,3 +1511,8 @@ A base D264 de 50 membros antigos não coincide com o catálogo D279 atual (44 s
 ## D288 — comparação pareada A/B sintética, mesmos folds purgados e mesmos custos (11/11/2026)
 
 Comparar estratégias J2 A `synthetic_compression_breakout_v1` e B `synthetic_trend_pullback_v1` por `synthetic_ab_costed_oos`, com **mesma** sequência PRE3/PRE4, sinais calculados somente no prefixo causal e mark futuro exposto apenas para observação posterior. Aplicar o *mesmo* cenário de fees/slippage/funding fictícios via `SyntheticCostScenario`, sem reutilizar PnL real ou afirmar preços executáveis. A comparação é um **filtro de hipóteses** e não valida rentabilidade, intrabar, margem, venue ou ordens. Ver `docs/J3_AB_COSTED_OOS_D288.md`. Manter escopo separado das tarefas J1/#429 e do coletor N50 D287.
+
+
+## D292 — recuperar journal N50 parcial na própria janela UTC, sem retroagir PIT (12/11/2026 UTC)
+
+Decisão: tolerar apenas os estados causais de transação por símbolo do writer REST M1: N50 bootstrap inicial com 1..50 membros completos e nenhum checkpoint, ou N50 incremento com 1..50 membros já avançados uma única hora além da última publicação íntegra. A auditoria read-only revalida as velas/digests/cursors de todos os membros, conteudo/tempo do scope e contagem por fase; só apresenta status recuperável com opt-in N50 e na janela UTC da decisão. D290/D291 retomam pelo M1 existente (sem duplicar worker). Depois de HH:15, gap, corrupção, outro scope ou HALT, bloquear. Manter auditoria N2 default estrita e não preencher PIT de horas perdidas. D292 é mudança offline sem novos timers, release de produção ou negociação; ver #429 e `docs/J1_N50_SUPERVISED_HOUR_D291.md`.

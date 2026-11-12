@@ -1147,3 +1147,8 @@ Testar `tests/test_j1_n50_supervision.py` com fake clock HH:00, HH:01..HH:15, fo
 ### J1/D291 — one-shot N50 supervisionado sem duplicar writer
 
 Tests `tests/test_j1_n50_supervised_once.py` fake owner: seis opt-ins, recusa de caminhos/symlinks, manifest inválido, journal íntegro/gaps/rotação/lock, bootstrap somente com diretório privado vazio, delegação de parâmetros ao writer M1, flags de trading sempre falsas. Reexecutar D287/D290/M1/readiness. CI Linux/docs + Windows/offline + Chrome/PAPER no SHA HEAD, revisão, merge sem deploy. Release do supervisor e serialização de captura/rotação seguem gate operacional separado.
+
+
+### J1/D292 — recuperar cursor parcial sem criar checkpoint
+
+Reexecutar `test_j1_n50_partial_resume.py` e suites D287/D290/D291/M1/readiness: SQLite N50 com 13×24 candles de bootstrap e nenhuma publicação, 17 candles incrementais acima de última publicação íntegra, nenhuma recuperação por default N2, impossibilidade de retomar após HH:15 ou na próxima hora, checksum adulterado, nenhuma vela/nenhum progresso, HALT por provedor, vínculo de scope, flags de trading falsas. CI Linux/docs + Windows/offline + Chrome/PAPER no SHA final. Merge sem deploy; produção permanece gate separado.
