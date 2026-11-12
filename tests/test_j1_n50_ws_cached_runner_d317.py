@@ -65,7 +65,16 @@ class CachedOwnerN50WSRunnerTests(unittest.TestCase):
         )
 
     def run_it(self,frames=(),**changes):
-        session=FakeSession(self.time,market=frames)
+        send_pongs=changes.pop("send_pongs",False)
+        class HealthyPongSession(FakeSession):
+            def send(self,raw):
+                super().send(raw)
+                if json.loads(raw).get("op")=="ping":
+                    # The venue replies with a bounded heartbeat ACK.
+                    self.queue.append({"op":"ping","ret_msg":"pong"})
+        session=(HealthyPongSession if send_pongs else FakeSession)(
+            self.time,market=frames,
+        )
         def factory():
             self.factory_count+=1
             return session
@@ -116,6 +125,7 @@ class CachedOwnerN50WSRunnerTests(unittest.TestCase):
         report,_=self.run_it(
             [candle(s) for s in SYMS],
             budget=WSRunBudget(max_sessions=1,max_frames=250,max_seconds=150),
+            send_pongs=True,
         )
         self.assertEqual(report["status"],"ws_owner_hour_50_observed_local_only",report)
         self.assertEqual(report["confirmed_contracts"],50)
