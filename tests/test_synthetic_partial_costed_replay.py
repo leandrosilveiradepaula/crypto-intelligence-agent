@@ -132,6 +132,62 @@ class SyntheticPartialCostedReplayTests(unittest.TestCase):
         self.assertEqual(x.signed_funding_cost_quote, D(-1))
         self.assertEqual(x.hypothetical_net_mark_reference_quote, D("-1169.54"))
 
+    def test_mixed_initial_and_remaining_bases_conserve_25_unit_runner(self):
+        custom = SyntheticExitPlan(
+            initial_units=D(100),
+            tranches=(
+                SyntheticExitTranche(ExitBasis.INITIAL_POSITION, D(25)),
+                SyntheticExitTranche(ExitBasis.REMAINING_BALANCE, D(40)),
+                SyntheticExitTranche(ExitBasis.INITIAL_POSITION, D(20)),
+            ),
+            residual_floor_percent=D(25),
+        )
+        p = open_synthetic_position(
+            fixture_position_id="fixture_mixed_costed",
+            side=SyntheticSide.LONG, opened_at_ms=1_000,
+            exit_plan=custom, synthetic_margin_units=D(5),
+            settings=SyntheticLeverageSettings(50),
+        )
+        filled=(
+            fill(p,"mixed25",1,"25",2_000,"110"),
+            fill(p,"mixed30",2,"30",3_000,"120"),
+            fill(p,"mixed20",3,"20",4_000,"90"),
+        )
+        zero=rates(entry_fee_bps=D(0),exit_fee_bps=D(0),
+                   entry_adverse_slippage_bps=D(0),
+                   exit_adverse_slippage_bps=D(0))
+        x=self.evaluate(position=p,marked_fills=filled,
+                        funding_events=(),cost_rates=zero)
+        self.assertEqual(x.filled_units,D(75))
+        self.assertEqual(x.residual_units,D(25))
+        self.assertEqual(x.runner_floor_units,D(25))
+        self.assertEqual(x.realized_gross_reference_quote,D(650))
+        self.assertEqual(x.residual_mark_gross_reference_quote,D(750))
+        self.assertEqual(x.hypothetical_net_mark_reference_quote,D(1400))
+        self.assertFalse(x.orders_sent)
+
+    def test_funding_after_all_units_exited_cannot_charge_closed_position(self):
+        plan=SyntheticExitPlan(
+            initial_units=D(100),
+            tranches=(SyntheticExitTranche(ExitBasis.INITIAL_POSITION,D(100)),),
+            residual_floor_percent=D(0),
+        )
+        p=open_synthetic_position(
+            fixture_position_id="fixture_close_all",
+            side=SyntheticSide.LONG,opened_at_ms=1_000,
+            exit_plan=plan,synthetic_margin_units=D(2),
+            settings=SyntheticLeverageSettings(50),
+        )
+        closed=(fill(p,"closedall",1,"100",2_000,"110"),)
+        out=self.evaluate(position=p,marked_fills=closed,funding_events=())
+        self.assertEqual(out.residual_units,D(0))
+        self.assertEqual(out.exit_fee_slippage_quote,D("16.50"))
+        # A later funding event cannot silently invent fresh exposure.
+        with self.assertRaises(DataValidationError):
+            self.evaluate(position=p,marked_fills=closed,
+                          funding_events=(funding(
+                              "fixture_funding_after_close",3_000,"100","1"),))
+
     def test_duplicate_fill_and_funding_not_double_counted(self):
         dup_fills=(self.fills[0], self.fills[0], *self.fills[1:])
         dup_funding=(funding(), funding())
