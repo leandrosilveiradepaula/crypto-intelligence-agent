@@ -1533,3 +1533,8 @@ Decisão: manter o N2 REST atual ativo até release controlado; novo template N5
 ## D296 — impedir N50 se o timer N2 puder voltar após reboot (12/11/2026 UTC)
 
 Ao verificar a VPS read-only, o timer N2 estava `loaded/active/enabled` e service `loaded/inactive/static`, enquanto N50 não estava instalado. O gate D295 verificava somente `ActiveState=inactive`, mas timer parado ainda `enabled` poderia reativar após reboot e gerar duas coletas sem lock comum. Endurecer `preflight_j1_n50_systemd_isolation`: N2 timer deve ser `LoadState=loaded`, `ActiveState=inactive`, `UnitFileState=disabled`; N2 service `loaded/inactive` e `static` ou `disabled`. Respostas ausentes/duplicadas/incertas falham fechado. Consulta é read-only e não autoriza cutover; N2 permanece inalterado até release/gate. Ver `docs/J1_N50_SYSTEMD_GATE_D295.md`.
+
+
+## D297 — release N50 como cutover reversível, nunca coexistência ativa com N2 (12/11/2026 UTC)
+
+Decisão: implantar, apenas sob gate operacional, N50 gerenciado via worktree dedicado com SHA fixo e raiz privada separada; não alterar o checkout D287 de N2. O executor D297 requer auditoria owner-only do SQLite de N2, integridade e timestamp recente, unidades antigas com hashes pinados e N2 ativo antes do início. Gravar N50 units primeiro, desabilitar N2 somente após preflight; ativar N50 timer após D296 confirmar que N2 timer está também **disabled**, com rollback automático para N2 em falhas. Nenhuma ordem é habilitada. A prova de N50 contínuo requer dados reais posteriores, não é efeito do release. Ver `docs/J1_N50_CUTOVER_D297.md`.

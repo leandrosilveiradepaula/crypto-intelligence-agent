@@ -1396,3 +1396,8 @@ Após D294 (PR #567 integrada, SHA a verificar no gate), adicionados service/tim
 ## J1/D296 — validação read-only e correção do gate N2→N50 (12/11/2026 UTC)
 
 Consulta real ao systemd VPS confirmou N2 timer `loaded/active/enabled`, N2 service `loaded/inactive/static`, N50 timer `not-found/inactive`. Corrigido gate D295 para exigir N2 timer tanto `inactive` quanto `disabled` antes de qualquer start N50 (evita dupla execução após reboot); também exige `LoadState=loaded` e service N2 `inactive/static|disabled`. Novos testes adversariais de resultados systemctl. Nada foi instalado, parado, iniciado ou negociado. Status real do N50 24/7 permanece falso.
+
+
+## J1/D297 — caminho de cutover N2→N50 sem operar manualmente cada hora (12/11/2026 UTC)
+
+VPS N2 auditado pelo proprietário `cia-probe`: SQLite íntegro, 166 velas, 39 checkpoints e 21 horas históricas sem publicações (não fabricar PIT). Worktree N50 separado D296 SHA verificado e 45 testes N50 PASS; raiz 0700 criada sem ativar N50. D297 agrega instalador one-shot de release com preflight N2 owner, pin SHA, escrita de unidades N50, parada reversível de N2 e rollback automático se falha; só aplica com flags explícitas. J1 #429 em aberto até soak real de 24h/renovação, #319 identidade ainda não certificada. Nenhuma operação financeira.

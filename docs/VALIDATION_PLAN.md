@@ -1169,3 +1169,8 @@ Validar `test_j1_n50_managed_cycle.py` com diretórios POSIX 0700, ponteiro 0600
 ### J1/D296 — isolamento sobre reboot / preflight systemd
 
 Teste `tests/test_j1_n50_systemd_isolation.py`: aceitar apenas N2 timer `loaded/inactive/disabled` e service `loaded/inactive/static|disabled`. Rejeitar timer `enabled` mas `inactive`, serviço `active`, unidades `not-found`, stdout com duplicatas ou campos inesperados/ausentes, falha/timeout/stderr; nenhuma chamada à rede ou modificação de unidades. CI docs+Linux, Windows e Chrome/PAPER no HEAD final, revisão de diff, merge sem deploy. Em VPS só leitura; o gate de release de produção ainda é necessário para cutover.
+
+
+### J1/D297 — canário reversível do timer N50
+
+`tests/test_j1_n50_cutover_d297.py`: preflight sem escrita; cutover só com dois opt-ins; falha no enable N50 retorna N2 ativo/enabled e remove units novas; falha durante gravação também restaura N2; auditor N2 bloqueia drift/historical gaps extras; root errado rejeitado antes de systemd. CI Linux/docs, Windows/offline e Chrome/PAPER no HEAD exato; review e merge sem deploy. Na VPS, conferir worktree SHA, ROOT 0700, owner SQLite PASS, NTP, hashes N2 pinados, `systemd-analyze verify` e etapa plan read-only; só aplicar se gates aprovados. Pós-release observar N50 real ≥24h e rotação antes de fechar #429.
