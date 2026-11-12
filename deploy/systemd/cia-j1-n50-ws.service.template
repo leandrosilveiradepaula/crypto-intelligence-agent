@@ -1,0 +1,32 @@
+# J1/D318: isolated N50 WS owner lease, OFF BY DEFAULT until root release gate.
+# Requires a fresh existing D287 manifest and D316 metadata cache, 0700 owner dirs.
+# N2 must be inactive/disabled; old N50 REST timer must be disabled.
+[Unit]
+Description=CIA J1 N50 WS preclose lease, confirmed candles only (NO TRADING)
+Wants=network-online.target
+After=network-online.target
+OnFailure=cia-j1-n50-ws-fallback.service
+
+[Service]
+Type=oneshot
+User=@OWNER@
+WorkingDirectory=@REPO@
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=@PYTHON@ -m scripts.preflight_j1_n50_ws_systemd --require-old-collectors-quiesced
+ExecStart=@PYTHON@ -m scripts.run_j1_n50_ws_owner_cached_once --manifest-directory @MANIFEST@ --ws-directory @WS_DIR@ --allow-private-manifest-read --allow-private-ws-scope-read --allow-private-ws-writer --allow-public-websocket --confirm-region-and-personal-research --allow-create-ws-journal
+TimeoutStartSec=210
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=@WS_DIR@
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal
