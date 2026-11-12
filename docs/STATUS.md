@@ -1374,3 +1374,8 @@ D289 real concluiu 50 contratos/1.250 candles/2 horas consecutivas. D290 adicion
 ## J1/D291 — runner seguro da hora N50 (12/11/2026 UTC)
 
 D290 PR #563 merge SHA `a678d0dccb96c390bc0cf1071976b5fff2e63288`; D291 adiciona execução única owner de coleta N50 baseada na decisão read-only D290, seis opt-ins, journal existente auditado ou novo output 0700 vazio, janela UTC e renovação fail-closed antes de 48h. Usa **o mesmo writer D287/M1** em vez de duplicar REST, SQLite ou lock. Branch `work/issue-429-j1-n50-supervised-hourly-runner`; sem timer/release/ordens. PR/CI/merge D291 exigem evidências próprias.
+
+
+## J1/D292 — correção de retomada após parada parcial (12/11/2026 UTC)
+
+Após o piloto D289 e merge D291, D292 adiciona ao auditor read-only N50 (opt-in, N2 inalterado) reconhecimento de bootstrap e incremento incompletos, permitindo retomar pelo próprio M1 apenas dentro da mesma janela horária e sem fabricação de checkpoints. Adversariais de SQLite/cursor/digest e CI ainda exigidos; nenhum timer, produção, ordem ou ativação introduzidos.
