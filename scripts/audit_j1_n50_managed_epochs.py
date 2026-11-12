@@ -166,17 +166,35 @@ def audit_managed_n50_epochs(
             audit = audit_existing_rest_resume(
                 output_directory=journal_dir, now_ms=now,
                 allow_private_readonly_audit=True, expected_members=50,
+                allow_unpublished_partial_hour=True,
                 owner_ok=owner,
             )
-            if (audit.get("journal_integrity_verified") is not True
-                    or audit.get("journal_scope_digest_sha256") != digest
+            if audit.get("journal_integrity_verified") is not True:
+                # The M1 writer creates its SQLite/cursors before its first
+                # completed per-symbol transaction. Do not label the active
+                # hour healthy or corrupt while the safe window is open.
+                if (folder.name == active and len(folders) == 1
+                        and 60_000 <= now % HOUR_MS <= 900_000):
+                    out["status"] = "in_progress_unverified"
+                    return out
+                return _result("blocked")
+            if (audit.get("journal_scope_digest_sha256") != digest
                     or audit.get("reviewed_research_contracts") != 50
                     or audit.get("orders_sent") is not False
                     or audit.get("live_trading_authorized") is not False
                     or audit.get("marketwide_top50_verified") is not False
                     or type(audit.get("stored_candles")) is not int
-                    or type(audit.get("published_hours")) is not int
-                    or audit["published_hours"] < 1):
+                    or type(audit.get("published_hours")) is not int):
+                return _result("blocked")
+            if audit["published_hours"] == 0:
+                if (folder.name == active and len(folders) == 1
+                        and audit.get("status") ==
+                            "unpublished_bootstrap_resume_ready"):
+                    out["status"] = "partial_first_writer"
+                    out["stored_candles"] = audit["stored_candles"]
+                    return out
+                return _result("blocked")
+            if audit["published_hours"] < 0:
                 return _result("blocked")
             ends = _published_ends(
                 db_path, expected=audit["published_hours"],
@@ -232,6 +250,7 @@ def main(argv: list[str] | None = None) -> int:
                      ensure_ascii=True))
     return 0 if report["status"] in (
         "awaiting_first_epoch", "awaiting_first_writer",
+        "in_progress_unverified", "partial_first_writer",
         "verified_epoch_history", "verified_with_missing_pit",
         "stale_active_publication",
     ) else 65
