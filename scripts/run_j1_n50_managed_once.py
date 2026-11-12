@@ -25,7 +25,7 @@ def main(argv: list[str] | None = None) -> int:
     result=managed_n50_tick_once(**vars(p.parse_args(argv)))
     print(json.dumps(result,sort_keys=True,separators=(",",":"),ensure_ascii=True))
     return 0 if result["status"] in (
-        "epoch_started","epoch_rotated","research_hour_persisted","deferred",
+        "epoch_started","epoch_rotated","research_hour_persisted",
     ) else 65
 
 
