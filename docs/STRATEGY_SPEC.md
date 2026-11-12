@@ -325,3 +325,7 @@ A primeira ponte read-only D300 usa exclusivamente 24 barras 1h fechadas por con
 ## J3/D302 — observação de desfecho sem estratégia aprovada
 
 O ranking de retorno anterior de 24h (métricas J2 D300) pode ser testado retrospectivamente somente após um segundo checkpoint horário real. A próxima barra é rótulo ex post e não muda a escolha dos maiores/menores retornos anteriores. Custo em bps e notional abstratos são premissas, não exchange fills, PnL ou vantagem. Não otimizar janelas sobre o resultado futuro; sem mark/maintenance, intrabar, funding e OOS não aprovar sinais ou 50x.
+
+## J4/D307 — apuração de gestão de vencedores sem falsa execução
+
+A aritmética 50/60/70 da posição **restante** continua a deixar 6% residual. Para avaliar hipótese com preços fornecidos (não OHLC inferido), `synthetic_partial_costed_replay.py` soma marcas de referência LONG/SHORT, cobra custos de entrada sobre todas as unidades, custos de saída somente em fills fictícios confirmados, e funding assinado sobre o saldo anterior ao evento com notional sintético ao preço de entrada. Não calcula retorno sobre margem de moeda não certificada, liquidação, tax tier real ou execução; `leverage_at_open` permanece imutável. Nenhum saldo residual deve ser implicitamente vendido.

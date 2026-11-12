@@ -1447,3 +1447,7 @@ Implementado modo J3 de estudo ex post do arquivo HALT (opt-in e D304 obrigatór
 ## J1/D306 — resolver N50 diretamente, sem desvio para J2–J5 (12/11/2026 UTC)
 
 Primeiro N50 chegou a 3 horas reais, mas parou em 08:01 UTC (7 GETs, 6 candles). Identificado o 7º contrato HYPEUSDT e comprovado com 2 GETs distintos de diagnóstico que o contrato segue ativo e uma vela fechada pode ser obtida hoje. O erro remoto das 08:01 não foi registrado em subtipo; não atribuir causa sem prova. D306 implementa nova coorte de coleta com D304 forensic gate, mantém antiga SQLite intacta, exige N2 quiescido, altera unit N50 só com release root duplo e preserva rollback N2. Preflight N2 considera 25 lacunas históricas reais após failback em vez de 21 do piloto. J1 permanece aberta até CI/cutover, 24 horas consecutivas e rotação real. Ordens zero.
+
+## J4/D307 — pesquisa de parciais e runner com custos hipotéticos (12/11/2026 UTC)
+
+Sem interromper a observação N50 J1, adicionado módulo puro de marcação financeira sintética de exits parciais, runner e funding assinado, compatível com PRE1–PRE3 e custos J3/PRE2; inclui dedup de fills e controle de causalidade/marca obsoleta. Apenas fixtures, sem rede/ordens/fills reais ou alteração de serviço. J4 #5 segue aberta, sem backtest financeiro aprovado. Evidência: `docs/J4_PARTIAL_COSTED_REPLAY_D307.md`.
