@@ -1549,6 +1549,11 @@ Separar uma ponte **somente leitura e descritiva** para os 50 contratos do journ
 
 A ponte J2/D300 fornece métricas **observacionais**, não sinais nem preços autenticados para negociação. J5/D301 renderiza esse contrato exclusivamente como HTML offline PT-BR, sem JavaScript/rede, com aviso de dados provisórios e zero ordens, ranking histórico descritivo e tabela responsiva dos 50 USDT perpétuos observados. Arquivo owner-only 0600 sob root 0700 só com três opt-ins; reexecução idêntica não sobrescreve, outputs de CLI nunca incluem símbolos. Exigir autenticação e gate separado antes de oferecer isso em acesso remoto. Não tocar em PAPER/ordens/live ou em deploy. Ver docs/J5_N50_PRIVATE_MOBILE_D301.md e #6.
 
+
+## D302 — rank anterior e mark posterior são um experimento, nunca execução (12/11/2026 UTC)
+
+O estágio J3 N50 exige duas publicações íntegros e consecutivas t/t+1h com 50×25 candles, revalidando hashes e recibos efetivamente anteriores ao checkpoint pertinente. Usa somente os 24 candles do passado em t para ordenar os contratos e o 25º candle fechado após t+1h para observar o desfecho. Cobra custos hipotéticos fixos, compara rank top/bottom e referência Long 50 sem inferir PnL, fill, OOS validado, financiamento, mark de liquidação ou aprovar sinal. Não aciona J4/ordens e não salva output privado sem autorização. Ver docs/J3_N50_EXPOST_ONEHOUR_D302.md e #4.
+
 ## D303 — preservar a classe sanitizada da falha de provedor no log N50 (12/11/2026 UTC)
 
 A primeira coleta real N50 publicou 1.200 velas, e os fechamentos seguintes publicaram três checkpoints. Na atualização 08:01 UTC, o M1 fez 7 GETs, salvou 6 velas e persistiu o fail-stop `provider_denied_owner_review`. A cascata D291/D293/D294 devolveu apenas `blocked`, escondendo a classificação segura que o M1 já produz (`failure_category`). Decisão: propagar **somente categorias literais da whitelist `_ALLOWED_FAILURES` de M1**, sem símbolos, retMsg, URL, parâmetros, resposta HTTP ou dados privados. Nunca reclassificar o evento de 08h retroativamente: seu subtipo exato não foi armazenado. Nenhuma tentativa de GET adicional para diagnosticar a restrição; N2 fallback continua ativo. D303 é offline e não desbloqueia o latch, não modifica SQLite/timers e não autoriza novo release N50. Repetir com testes adversariais e CI, depois merge sem deploy.
