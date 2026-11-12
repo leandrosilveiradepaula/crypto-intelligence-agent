@@ -1164,3 +1164,8 @@ Validar `test_j1_n50_managed_cycle.py` com diretórios POSIX 0700, ponteiro 0600
 ### J1/D295 — package OFF de timer/service N50 e gate N2 quiesced
 
 `tests/test_j1_n50_systemd_isolation.py`: sem opt-in -> zero systemctl; timer e service N2 ambos inactive -> preflight read-only; active/activating/failed/unknown/nonzero/stderr/timeout -> fail-closed; renderer rejeita root, injection, paths relativos/nested e mantém User, ExecStartPre obrigatório, relógio HH:01:05 UTC, Persistent=false, sem comandos de instalação. CI Linux/docs Windows/offline Chrome/PAPER no head final, revisão SHA e merge sem deploy. Antes de release VPS, requer gate separado e preflight real owner de N2 e root N50, rollback e 24 fechamentos reais + rotação; nunca autorizar ordens.
+
+
+### J1/D296 — isolamento sobre reboot / preflight systemd
+
+Teste `tests/test_j1_n50_systemd_isolation.py`: aceitar apenas N2 timer `loaded/inactive/disabled` e service `loaded/inactive/static|disabled`. Rejeitar timer `enabled` mas `inactive`, serviço `active`, unidades `not-found`, stdout com duplicatas ou campos inesperados/ausentes, falha/timeout/stderr; nenhuma chamada à rede ou modificação de unidades. CI docs+Linux, Windows e Chrome/PAPER no HEAD final, revisão de diff, merge sem deploy. Em VPS só leitura; o gate de release de produção ainda é necessário para cutover.

@@ -18,8 +18,14 @@ R = "/home/cia-probe/agent/repo"
 D = "/home/cia-probe/agent/n50-managed"
 
 
-def exit_result(state="inactive",code=0,stderr=""):
-    return SimpleNamespace(returncode=code,stdout=state+"\n",stderr=stderr)
+def exit_result(state="inactive", code=0, stderr="",
+                loaded="loaded", unit_state="disabled"):
+    return SimpleNamespace(
+        returncode=code,
+        stdout=(f"LoadState={loaded}\nActiveState={state}\n"
+                f"UnitFileState={unit_state}\n"),
+        stderr=stderr,
+    )
 
 
 class N50ServiceIsolationTests(unittest.TestCase):
@@ -32,48 +38,71 @@ class N50ServiceIsolationTests(unittest.TestCase):
         self.assertEqual(out["network_requests"],0)
         self.assertFalse(out["orders_sent"])
 
-    def test_both_legacy_units_must_be_inactive(self):
+    def test_both_legacy_units_must_be_inactive_and_timer_disabled(self):
         observed=[]
         def safe(argv,**kw):
             observed.append((argv,kw))
-            return exit_result()
+            return exit_result(unit_state=(
+                "disabled" if argv[2].endswith(".timer") else "static"))
         out=n50_systemd_n2_quiescence(
             require_n2_quiesced=True,command_runner=safe)
         self.assertEqual(out["status"],"n2_quiesced_preflight_only",out)
         self.assertTrue(out["n2_timer_inactive"])
+        self.assertTrue(out["n2_timer_disabled"])
         self.assertTrue(out["n2_service_inactive"])
+        self.assertTrue(out["n2_units_loaded"])
         self.assertEqual(len(observed),2)
         self.assertEqual(observed[0][0],[
             "/usr/bin/systemctl","show","cia-j1-rest-hourly.timer",
-            "--property=ActiveState","--value","--no-pager"])
+            "--property=LoadState","--property=ActiveState",
+            "--property=UnitFileState","--no-pager"])
         self.assertEqual(observed[1][0][2],"cia-j1-rest-hourly.service")
         self.assertTrue(all(x[1]["timeout"]==3 for x in observed))
         self.assertTrue(all(x[1]["check"] is False for x in observed))
         self.assertFalse(out["n50_start_authorized"])
 
-    def test_active_failed_or_unknown_units_fail_closed(self):
-        for states in (
-            ("active","inactive"),("inactive","active"),
-            ("failed","inactive"),("inactive","activating"),
-            ("unknown","inactive"),("inactive","inactive"),
+    def test_active_failed_unknown_and_enabled_timer_fail_closed(self):
+        for timer_state,service_state,timer_unit,loaded in (
+            ("active","inactive","enabled","loaded"),
+            ("inactive","active","disabled","loaded"),
+            ("failed","inactive","disabled","loaded"),
+            ("inactive","activating","disabled","loaded"),
+            ("unknown","inactive","disabled","loaded"),
+            ("inactive","inactive","enabled","loaded"),
+            ("inactive","inactive","static","loaded"),
+            ("inactive","inactive","disabled","not-found"),
         ):
-            for error in (None, "nonzero", "stderr"):
-                if states == ("inactive","inactive") and error is None:
-                    continue
-                got=[]
-                def bad(_argv,**_kw):
-                    i=len(got)
-                    got.append(i)
-                    st=states[i]
-                    return exit_result(
-                        st,code=3 if error=="nonzero" else 0,
-                        stderr="error" if error=="stderr" else "",
-                    )
-                with self.subTest(states=states,error=error):
-                    out=n50_systemd_n2_quiescence(
-                        require_n2_quiesced=True,command_runner=bad)
-                    self.assertEqual(out["status"],"blocked",out)
-                    self.assertFalse(out["n50_start_authorized"])
+            got=[]
+            def bad(argv,**_kw):
+                i=len(got)
+                got.append(i)
+                return exit_result(
+                    state=timer_state if i==0 else service_state,
+                    unit_state=timer_unit if i==0 else "static",
+                    loaded=loaded,
+                )
+            with self.subTest(timer_state=timer_state,
+                              service_state=service_state,timer_unit=timer_unit,
+                              loaded=loaded):
+                out=n50_systemd_n2_quiescence(
+                    require_n2_quiesced=True,command_runner=bad)
+                self.assertEqual(out["status"],"blocked",out)
+                self.assertFalse(out["n50_start_authorized"])
+
+    def test_bad_exit_stderr_and_malformed_systemd_output_denied(self):
+        for kind in ("nonzero","stderr","duplicate","missing","unexpected"):
+            def bad(argv,**_kw):
+                cp=exit_result()
+                if kind=="nonzero": cp.returncode=1
+                elif kind=="stderr": cp.stderr="warning"
+                elif kind=="duplicate": cp.stdout+="ActiveState=inactive\n"
+                elif kind=="missing": cp.stdout="ActiveState=inactive\n"
+                else: cp.stdout+="Unknown=extra\n"
+                return cp
+            with self.subTest(kind=kind):
+                out=n50_systemd_n2_quiescence(
+                    require_n2_quiesced=True,command_runner=bad)
+                self.assertEqual(out["status"],"blocked",out)
 
     def test_process_timeout_and_missing_systemctl_fail_closed(self):
         for ex in (

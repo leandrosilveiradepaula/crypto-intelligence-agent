@@ -1391,3 +1391,8 @@ D294 adiciona `managed_n50_tick_once` e CLI owner OFF por padrão: primeira sele
 ## J1/D295 — pacote de implantação N50 ainda OFF (12/11/2026 UTC)
 
 Após D294 (PR #567 integrada, SHA a verificar no gate), adicionados service/timer systemd N50 inertes com entrada única no gerenciador D294, renderer de owner/paths e preflight que **recusa N50 enquanto N2 timer ou worker estiver ativo**. Não houve instalação ou mudança na VPS. Próximo gate: CI/revisão/merge sem deploy, preparação owner/root/rollback de produção e autorização de release antes de substituir agendamento, seguido de soak real >=24h e rotação causal. Sem ordens reais.
+
+
+## J1/D296 — validação read-only e correção do gate N2→N50 (12/11/2026 UTC)
+
+Consulta real ao systemd VPS confirmou N2 timer `loaded/active/enabled`, N2 service `loaded/inactive/static`, N50 timer `not-found/inactive`. Corrigido gate D295 para exigir N2 timer tanto `inactive` quanto `disabled` antes de qualquer start N50 (evita dupla execução após reboot); também exige `LoadState=loaded` e service N2 `inactive/static|disabled`. Novos testes adversariais de resultados systemctl. Nada foi instalado, parado, iniciado ou negociado. Status real do N50 24/7 permanece falso.
