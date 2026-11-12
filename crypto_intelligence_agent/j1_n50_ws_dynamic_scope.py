@@ -9,7 +9,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from hashlib import sha256
 import json
-from typing import Any
+import os
+import time
+from typing import Any, Callable
 
 from .bybit_closed_stream_cache import (
     OfflineReviewedStreamScope, _scope_contract_fingerprint,
@@ -18,6 +20,9 @@ from .bybit_instrument_volume_contract import (
     BybitLinearInstrumentResearch, _epoch_millis, _positive_decimal,
 )
 from .bybit_paginated_universe_research import _cursor, _response
+from .bybit_public_j1_transport import (
+    BoundedBybitPublicClient, J1BybitCaptureError, instruments_url,
+)
 from .j1_auto_research_epoch import (
     HOUR_MS, MAX_SCOPE_AGE_MS, validate_ranked_research_scope,
 )
@@ -236,3 +241,133 @@ def admit_dynamic_n50_ws_scope(
     return DynamicN50WSAdmission(
         ws_scope, ranked_digest, metadata_sha, page_received_at_ms[-1],
     )
+
+
+@dataclass(frozen=True)
+class DynamicN50WSMetadataCapture:
+    """A bounded opt-in caller for the D314 pure admission function.
+
+    No timers, no WS connection, no persistence, no source authentication.
+    The typed, possibly private admission is never emitted by sanitized_report.
+    """
+    status: str
+    requests_attempted: int
+    failure_category: str | None = None
+    admission: DynamicN50WSAdmission | None = field(default=None, repr=False)
+
+    def sanitized_report(self) -> dict[str, Any]:
+        return {
+            "schema_version": "j1-n50-ws-metadata-capture-once-v1",
+            "status": self.status,
+            "failure_category": self.failure_category,
+            "requests_attempted": self.requests_attempted,
+            "selected_contracts": (
+                self.admission.selected_contracts if self.admission else 0
+            ),
+            "metadata_sha256": (
+                self.admission.metadata_sha256 if self.admission else None
+            ),
+            "network_accessed": self.requests_attempted > 0,
+            "websocket_connections_opened": 0,
+            "database_mutation_statements": 0,
+            "systemd_modified": False,
+            "source_authenticated": False,
+            "crypto_identity_independently_verified": False,
+            "marketwide_top50_verified": False,
+            "live_trading_authorized": False,
+            "orders_sent": False,
+        }
+
+
+def capture_n50_dynamic_ws_metadata_once(
+    *, ranked_scope: dict,
+    allow_public_network: bool = False,
+    confirm_region_and_personal_research: bool = False,
+    enable_n50_ws_metadata_capture: bool = False,
+    owner_ok: bool | None = None,
+    client: BoundedBybitPublicClient | None = None,
+    clock_ms: Callable[[], int] | None = None,
+) -> DynamicN50WSMetadataCapture:
+    """Exactly one bounded paginated public metadata scan, no retry on 10006.
+
+    The D286 original rank-capture remains unchanged. A separate owner caller
+    may opt into reading <=4 current V5 pages. The 50 dynamic members MUST
+    already be sealed in D287 before the first request. This function makes
+    no journal edits and cannot activate the systemd or WS collector.
+    """
+    if (allow_public_network is not True
+            or confirm_region_and_personal_research is not True
+            or enable_n50_ws_metadata_capture is not True):
+        return DynamicN50WSMetadataCapture("owner_optin_required", 0)
+    permitted = ((os.name == "posix" and os.getuid() == os.geteuid()
+                  and os.geteuid() != 0)
+                 if owner_ok is None else owner_ok)
+    if permitted is not True:
+        return DynamicN50WSMetadataCapture("owner_permission_denied", 0)
+    if (client is not None and type(client) is not BoundedBybitPublicClient
+            or clock_ms is not None and not callable(clock_ms)):
+        return DynamicN50WSMetadataCapture("invalid_metadata_capture_arguments", 0)
+    clock = clock_ms or (lambda: time.time_ns() // 1_000_000)
+    try:
+        now = clock()
+        validate_ranked_research_scope(
+            ranked_scope, now_ms=now, max_assets=50,
+        )
+    except (ValueError, TypeError, KeyError):
+        return DynamicN50WSMetadataCapture("untrusted_ranked_scope_no_get", 0)
+    # Reject an injected client with a preconsumed budget. There is exactly
+    # one logical catalog attempt per call, always a fresh HTTP client.
+    fetch = client if client is not None else BoundedBybitPublicClient()
+    if fetch.requests_attempted != 0:
+        return DynamicN50WSMetadataCapture("client_budget_already_used", 0)
+    pages: list[dict] = []
+    cursors: list[str | None] = []
+    receipts: list[int] = []
+    expected: str | None = None
+    try:
+        for _ in range(MAX_CATALOG_PAGES):
+            checked = clock()
+            if (type(checked) is not int
+                    or not ranked_scope["catalog_post_observed_at_ms"]
+                          <= checked
+                          <= ranked_scope["catalog_post_observed_at_ms"] + MAX_SNAPSHOT_LAG_MS):
+                raise DataValidationError("catalog outside D287 metadata UTC window")
+            _, payload = fetch.get(instruments_url(cursor=expected))
+            stamp = clock()
+            if type(stamp) is not int:
+                raise DataValidationError("catalog receipt UTC invalid")
+            _, data, _ = _response(
+                payload, label="N50 WS metadata", at_ms=stamp, age_ms=30_000,
+            )
+            next_cursor = _cursor(data.get("nextPageCursor"), terminal_ok=True)
+            if next_cursor and (next_cursor == expected or next_cursor in cursors):
+                raise DataValidationError("WS catalog cursor loop")
+            pages.append(payload)
+            cursors.append(expected)
+            receipts.append(stamp)
+            if next_cursor == "":
+                break
+            expected = next_cursor
+        else:
+            raise DataValidationError("WS catalog exceeded four pages")
+        admission = admit_dynamic_n50_ws_scope(
+            ranked_scope=ranked_scope, instrument_pages=tuple(pages),
+            requested_cursors=tuple(cursors),
+            page_received_at_ms=tuple(receipts), now_ms=clock(),
+        )
+        return DynamicN50WSMetadataCapture(
+            "dynamic_n50_ws_metadata_captured_research_only",
+            fetch.requests_attempted, admission=admission,
+        )
+    except (J1BybitCaptureError, DataValidationError, ValueError, OSError,
+            TypeError, OverflowError):
+        # An error never triggers another request. Only a fixed enum is
+        # echoed to logs, not a venue message, symbol, URL or access token.
+        from .j1_rest_incremental_owner import _ALLOWED_FAILURES
+        category = None
+        if fetch.last_provider_retcode == 10006:
+            category = "provider_rate_limit_no_retry"
+        return DynamicN50WSMetadataCapture(
+            "dynamic_n50_ws_metadata_abstained_no_retry",
+            fetch.requests_attempted, failure_category=category,
+        )
