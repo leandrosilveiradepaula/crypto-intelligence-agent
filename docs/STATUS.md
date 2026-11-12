@@ -1425,3 +1425,8 @@ D300 QA adicional: 11 testes de tela de pesquisa N50 PASS na VPS após adicionar
 ## J5/D301 — panorama privado mobile para N50 (12/11/2026 UTC)
 
 A partir da ponte J2/D300 (PR #573 integrada, squash SHA `95edb62a52ba2fd0619457371281db3b02df2fd0`), D301 entrega HTML único PT-BR com CSP fechada, cards e tabela responsiva, somente dados de pesquisa N50 auditados, data UTC, contexto BTC e avisos de não-trading. CLI opt-in tríplice pode salvar relatório local owner 0600, nunca publicar. Testes de privacidade, acessibilidade, injeção e modo somente leitura: 10 PASS na VPS candidata. Não é produto web online, não libera ordens e não atesta 24h coletadas.
+
+
+## J3/D302 — primeira avaliação observacional de 2 horas N50 (12/11/2026 UTC)
+
+Concluída a implementação do estudo owner-only J3 com 50×25 candles consecutivos de uma mesma coorte, seleção fixada apenas por retornos anteriores, marcação posterior t+1h e custos explícitos hipotéticos. **10 testes PASSED** no worktree VPS candidato ca7f513d157673575e6e4b1156afd6d1bc6d4e73. Não é PnL, backtest OOS validado, fill ou sinal. Dados reais precisam de duas publicações; primeiro censo N50 já ocorreu, mas não antecipar outcome.

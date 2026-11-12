@@ -320,3 +320,8 @@ O ranking D286 de contratos USDT perpétuos por 24 velas 1h fechadas é universo
 ## J2/D300 — features descritivas de N50 no mundo real, sem estratégia autorizada
 
 A primeira ponte read-only D300 usa exclusivamente 24 barras 1h fechadas por contrato e valida todos os digests e o último checkpoint D290 antes de calcular retorno anterior, volatilidade normalizada de 14 barras, turnover USDT observado, expansão da última barra e diferença relativa à BTCUSDT. A ordenação por retorno observado NÃO é ranking de entrada, score preditivo ou geração de posição. Ausência de BTC invalida a força relativa; ausência de checkpoint integral, gaps, dados adulterados e recência excedida impedem análise. A coorte é provisória, não autentica identidade externa nem volume exequível. J2/PRE1–PRE5 permanece sintética e não recebe input real sem uma autorização futura de gates J1/J3/J4/J6. Ver `docs/J2_N50_CAUSAL_READONLY_D300.md`.
+
+
+## J3/D302 — observação de desfecho sem estratégia aprovada
+
+O ranking de retorno anterior de 24h (métricas J2 D300) pode ser testado retrospectivamente somente após um segundo checkpoint horário real. A próxima barra é rótulo ex post e não muda a escolha dos maiores/menores retornos anteriores. Custo em bps e notional abstratos são premissas, não exchange fills, PnL ou vantagem. Não otimizar janelas sobre o resultado futuro; sem mark/maintenance, intrabar, funding e OOS não aprovar sinais ou 50x.
