@@ -231,7 +231,7 @@ class ManagedN50EpochTests(unittest.TestCase):
             "catalog_post_observed_at_ms":decision+120_000,
         }
         raw=json.dumps(ptr,sort_keys=True,
-                       separators=(",",":"),ensure_ascii=True).encode("ascii")+b"\\n"
+                       separators=(",",":"),ensure_ascii=True).encode("ascii")+b"\n"
         stage=self.root/f".n50-pointer-{decision:013d}.tmp"
         stage.write_bytes(raw)
         stage.chmod(0o600)
