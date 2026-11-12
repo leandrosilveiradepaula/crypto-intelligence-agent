@@ -1570,3 +1570,7 @@ Decisão: separar a política de coleta (HALT irreversível na mesma epoch, N2 f
 ## D306 — recuperar N50 por nova coorte imutável após falha recuperável, com gate reversível (12/11/2026)
 
 O bloqueio N50 08:01 ocorreu no 7º GET/HYPEUSDT; D304 preserva 3 checkpoints e 6 candles incompletos. Duas verificações **públicas separadas** da VPS comprovaram HYPEUSDT LinearPerpetual/Trading/USDT e 1 candle fechado atual; elas não revelam o erro histórico de provedor. D306 opta por nova época/censo, com dupla flag, prova forense completa e N2 quiescido, preservando integralmente o journal HALT. Novo serviço N50 usa SHA revisto; retorno N2 e restauração da unit em falha. Nunca limpar HALT, não inserir hora faltante ou afirmar 24h por previsão. Ver `docs/J1_N50_CONTROLLED_RECOVERY_D306.md`.
+
+## D307 — contabilizar saídas parciais, runner e funding em referência sintética (12/11/2026 UTC)
+
+A J4 pode comparar hipóteses de winner management por evento, preservando o plano PRE1 e o replay de fills PRE2/PRE3; nunca inferir preenchimento a partir de candle. Custos J3 PRE2 são reutilizados por parcial; custo de entrada pago sobre a quantidade inicial, runner só recebe marca hipotética e não exit fee antecipada, funding sintético é calculado sobre saldo conhecido com notional ao preço de entrada e cronologia estrita. Nenhum cálculo sobre margem abstrata vira PnL de venue ou prova de liquidação segura em 50x. Ver `docs/J4_PARTIAL_COSTED_REPLAY_D307.md`.
