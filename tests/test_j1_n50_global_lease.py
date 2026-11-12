@@ -109,7 +109,7 @@ class N50GlobalLeaseTests(unittest.TestCase):
             self.assertEqual(self.invoke("capture_seal",clock_ms=lambda:T+20_000)["status"],"deferred")
             self.assertEqual(self.invoke("capture_seal",manifest_directory=self.lock)["status"],"blocked")
             self.assertEqual(self.invoke("capture_seal",lock_directory=Path("relative"))["status"],"blocked")
-            self.assertEqual(self.invoke("capture_seal",action="unsupported")["status"],"blocked")
+            self.assertEqual(self.invoke("unsupported")["status"],"blocked")
 
 if __name__=="__main__":
     unittest.main()
