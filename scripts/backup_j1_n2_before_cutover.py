@@ -11,7 +11,10 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
-import pwd
+try:
+    import pwd
+except ImportError:  # Windows CI imports the module but cannot deploy it.
+    pwd = None
 import sqlite3
 import stat
 
@@ -44,7 +47,8 @@ def backup_j1_n2_once(*, allow_owner_readonly_backup: bool = False,
     if allow_owner_readonly_backup is not True:
         result["status"] = "optin_required"
         return result
-    permitted = ((os.name == "posix" and os.getuid() == os.geteuid()
+    permitted = ((os.name == "posix" and pwd is not None
+                  and os.getuid() == os.geteuid()
                   and os.geteuid() == pwd.getpwnam("cia-probe").pw_uid)
                  if owner_ok is None else owner_ok)
     if permitted is not True or not isinstance(source, Path) or not isinstance(
