@@ -159,6 +159,94 @@ class N50ManagedHealthTests(unittest.TestCase):
         self.assertEqual(out["published_checkpoints"],1)
         self.assertFalse(out["owner_integrity_verified"])
 
+    def test_old_halted_epoch_is_forensically_verified_not_republished(self):
+        old_scope,old_journal=self.make_epoch(
+            decision=T,
+            pubs=[T+HOUR_MS,T+2*HOUR_MS,T+3*HOUR_MS],
+        )
+        new_scope,new_journal=self.make_epoch(
+            decision=T+37*HOUR_MS,
+            pubs=[T+38*HOUR_MS],
+        )
+        current=T+38*HOUR_MS+180_000
+        forensic={
+            "status":"halted_owner_review_verified",
+            "saved_rows_integrity_verified":True,
+            "scope_digest_sha256":old_scope["scope_digest_sha256"],
+            "historical_missing_publication_hours":0,
+            "resume_authorized":False,"orders_sent":False,
+            "network_requests":0,"database_mutation_statements":0,
+            "published_hours":3,"stored_candles":1306,
+            "partial_contracts_at_next_hour":6,
+            "last_published_end_ms":T+3*HOUR_MS,
+        }
+        def simulate_audit(*,output_directory,**kwargs):
+            if output_directory==old_journal:
+                return {"journal_integrity_verified":False}
+            return valid_audit(
+                T+38*HOUR_MS,new_scope["scope_digest_sha256"],1200,
+            )
+        with patch(
+            "scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
+            side_effect=simulate_audit,
+        ), patch(
+            "crypto_intelligence_agent.j1_n50_halted_forensic.audit_halted_n50_epoch",
+            return_value=forensic,
+        ) as replay:
+            report=self.inspect(now=current)
+        self.assertEqual(report["status"],"verified_with_missing_pit",report)
+        self.assertEqual(report["epoch_count"],2)
+        self.assertEqual(report["audited_journals"],2)
+        self.assertEqual(report["archived_halted_epochs"],1)
+        self.assertEqual(report["archived_partial_unpublished_contracts"],6)
+        self.assertEqual(report["stored_candles"],2506)
+        self.assertEqual(report["published_checkpoints"],4)
+        self.assertEqual(report["unique_published_utc_hours"],4)
+        self.assertEqual(report["missing_hours_between_publications"],34)
+        self.assertEqual(report["published_last_24_closed_hours"],1)
+        self.assertTrue(report["owner_integrity_verified"])
+        self.assertFalse(report["continuous_collector_verified"])
+        self.assertFalse(report["orders_sent"])
+        self.assertEqual(replay.call_args.kwargs["owner_ok"],True)
+
+    def test_archived_halt_tampering_blocks_even_when_new_epoch_is_healthy(self):
+        old_scope,old_journal=self.make_epoch(
+            decision=T,
+            pubs=[T+HOUR_MS,T+2*HOUR_MS,T+3*HOUR_MS],
+        )
+        new_scope,new_journal=self.make_epoch(
+            decision=T+37*HOUR_MS,
+            pubs=[T+38*HOUR_MS],
+        )
+        forensic={
+            "status":"halted_owner_review_verified",
+            "saved_rows_integrity_verified":True,
+            "scope_digest_sha256":"0"*64,
+            "historical_missing_publication_hours":0,
+            "resume_authorized":False,"orders_sent":False,
+            "network_requests":0,"database_mutation_statements":0,
+            "published_hours":3,"stored_candles":1306,
+            "partial_contracts_at_next_hour":6,
+            "last_published_end_ms":T+3*HOUR_MS,
+        }
+        def simulate_audit(*,output_directory,**kwargs):
+            if output_directory==old_journal:
+                return {"journal_integrity_verified":False}
+            return valid_audit(
+                T+38*HOUR_MS,new_scope["scope_digest_sha256"],1200,
+            )
+        with patch(
+            "scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
+            side_effect=simulate_audit,
+        ), patch(
+            "crypto_intelligence_agent.j1_n50_halted_forensic.audit_halted_n50_epoch",
+            return_value=forensic,
+        ):
+            report=self.inspect(now=T+38*HOUR_MS+180_000)
+        self.assertEqual(report["status"],"blocked")
+        self.assertFalse(report["owner_integrity_verified"])
+        self.assertEqual(report["published_checkpoints"],0)
+
     def test_one_valid_real_pit_does_not_claim_24h(self):
         m,j=self.make_epoch()
         with patch("scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",

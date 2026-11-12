@@ -1443,3 +1443,7 @@ N50 completou 3 publicações horárias; a quarta falhou após 7 GETs e 6 candle
 ## J3/D305 — primeira comparação histórica real após HALT (12/11/2026 UTC)
 
 Implementado modo J3 de estudo ex post do arquivo HALT (opt-in e D304 obrigatório), sem recolher dados ou limpar latch. Amostra real de 50 contratos, 25 candles cada e um único horizonte t+1h: marcações líquidas de referência hipotéticas para top5 LONG +US$ 24,72, bottom5 SHORT −US$ 5,19 e todos50 LONG +US$ 13,00 sob 18 bps de custos supostos (US$100 de referência por ativo). **Não é PnL nem backtest OOS**, não comprova trading, liquidação ou previsão; J1 N50 continua parado após fallback N2. Testes CI e merge sem deploy exigidos.
+
+## J1/D306 — resolver N50 diretamente, sem desvio para J2–J5 (12/11/2026 UTC)
+
+Primeiro N50 chegou a 3 horas reais, mas parou em 08:01 UTC (7 GETs, 6 candles). Identificado o 7º contrato HYPEUSDT e comprovado com 2 GETs distintos de diagnóstico que o contrato segue ativo e uma vela fechada pode ser obtida hoje. O erro remoto das 08:01 não foi registrado em subtipo; não atribuir causa sem prova. D306 implementa nova coorte de coleta com D304 forensic gate, mantém antiga SQLite intacta, exige N2 quiescido, altera unit N50 só com release root duplo e preserva rollback N2. Preflight N2 considera 25 lacunas históricas reais após failback em vez de 21 do piloto. J1 permanece aberta até CI/cutover, 24 horas consecutivas e rotação real. Ordens zero.

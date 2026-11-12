@@ -44,6 +44,8 @@ def _result(status: str) -> dict[str, Any]:
         "active_epoch_id": None,
         "epoch_count": 0,
         "audited_journals": 0,
+        "archived_halted_epochs": 0,
+        "archived_partial_unpublished_contracts": 0,
         "stored_candles": 0,
         "published_checkpoints": 0,
         "unique_published_utc_hours": 0,
@@ -208,14 +210,54 @@ def audit_managed_n50_epochs(
                 owner_ok=owner,
             )
             if audit.get("journal_integrity_verified") is not True:
-                # The M1 writer creates its SQLite/cursors before its first
-                # completed per-symbol transaction. Do not label the active
-                # hour healthy or corrupt while the safe window is open.
-                if (folder.name == active
-                        and 60_000 <= now % HOUR_MS <= 900_000):
-                    out["status"] = "in_progress_unverified"
-                    return out
-                return _result("blocked")
+                if folder.name != active:
+                    # After D306's authorized new-epoch recovery the old M1
+                    # journal remains deliberately HALTED and unmodified.
+                    # Replay it independently using D304, not the active
+                    # D290 resume policy. Its six unpublished candles are
+                    # NEVER promoted to historical PIT checkpoints.
+                    from crypto_intelligence_agent.j1_n50_halted_forensic import (
+                        audit_halted_n50_epoch,
+                    )
+                    forensic = audit_halted_n50_epoch(
+                        scope_directory=scope_dir, journal_directory=journal_dir,
+                        allow_private_readonly_audit=True, owner_ok=owner,
+                        now_ms=now,
+                    )
+                    if (forensic.get("status") != "halted_owner_review_verified"
+                            or forensic.get("saved_rows_integrity_verified") is not True
+                            or forensic.get("scope_digest_sha256") != digest
+                            or forensic.get("historical_missing_publication_hours") != 0
+                            or forensic.get("resume_authorized") is not False
+                            or forensic.get("orders_sent") is not False
+                            or forensic.get("network_requests") != 0
+                            or forensic.get("database_mutation_statements") != 0
+                            or type(forensic.get("published_hours")) is not int
+                            or type(forensic.get("stored_candles")) is not int
+                            or type(forensic.get("partial_contracts_at_next_hour")) is not int):
+                        return _result("blocked")
+                    out["archived_halted_epochs"] += 1
+                    out["archived_partial_unpublished_contracts"] += (
+                        forensic["partial_contracts_at_next_hour"])
+                    # Only the already-published rows, not the six partial
+                    # candles, are counted below as published checkpoints.
+                    audit = {
+                        "journal_scope_digest_sha256": digest,
+                        "reviewed_research_contracts":50,
+                        "orders_sent":False,
+                        "live_trading_authorized":False,
+                        "marketwide_top50_verified":False,
+                        "stored_candles":forensic["stored_candles"],
+                        "published_hours":forensic["published_hours"],
+                        "last_published_end_ms":forensic["last_published_end_ms"],
+                    }
+                else:
+                    # First owner writer may be mid-transaction in HH:01–15;
+                    # never label it healthy or corrupt prematurely.
+                    if 60_000 <= now % HOUR_MS <= 900_000:
+                        out["status"] = "in_progress_unverified"
+                        return out
+                    return _result("blocked")
             if (audit.get("journal_scope_digest_sha256") != digest
                     or audit.get("reviewed_research_contracts") != 50
                     or audit.get("orders_sent") is not False
