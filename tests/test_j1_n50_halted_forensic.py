@@ -105,6 +105,16 @@ class HaltedN50ForensicTests(unittest.TestCase):
         self.assertEqual(report["database_mutation_statements"],0)
         self.assertNotIn("TST00USDT",json.dumps(report))
 
+    def test_expired_manifest_still_allows_no_network_forensic_replay(self):
+        # Research scope expires for NEW decisions in 48h; immutable records
+        # must remain forensically verifiable without authorizing a retry.
+        result=self.audit(now_ms=T+60*HOUR_MS+180_000)
+        self.assertEqual(result["status"],"halted_owner_review_verified",result)
+        self.assertEqual(result["published_hours"],3)
+        self.assertEqual(result["partial_contracts_at_next_hour"],6)
+        self.assertFalse(result["resume_authorized"])
+        self.assertEqual(result["network_requests"],0)
+
     def test_without_optin_no_private_access(self):
         with patch("crypto_intelligence_agent.j1_n50_halted_forensic.load_private_ranked_scope",
                    side_effect=AssertionError("should not read")):
