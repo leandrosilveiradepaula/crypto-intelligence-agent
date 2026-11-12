@@ -49,6 +49,8 @@ def _out(status: str, reason: str = "") -> dict[str, Any]:
         "claims_created": 0, "pointer_updated": False,
         "new_closed_candles": 0, "requests_attempted": 0,
         "failure_category": None,
+        "halted_epoch_recovery_verified": False,
+        "previous_epoch_preserved": False,
         "network_accessed": False, "trading_enabled": False,
         "systemd_modified": False, "other_journals_modified": False,
         "continuous_collector_verified": False,
@@ -191,6 +193,7 @@ def managed_n50_tick_once(
     allow_private_manifest_write: bool = False,
     confirm_region_and_personal_research: bool = False,
     enable_managed_n50_tick: bool = False,
+    recover_halted_epoch_once: bool = False,
     owner_ok: bool | None = None,
     clock_ms: Callable[[], int] | None = None,
     client=None,
@@ -207,7 +210,8 @@ def managed_n50_tick_once(
     permitted = ((os.name == "posix" and fcntl is not None
                   and os.getuid() == os.geteuid() and os.geteuid() != 0)
                  if owner_ok is None else owner_ok)
-    if permitted is not True or fcntl is None:
+    if (permitted is not True or fcntl is None
+            or type(recover_halted_epoch_once) is not bool):
         return _out("blocked", "posix_owner_required")
     if not isinstance(root_directory, Path) or not root_directory.is_absolute():
         return _out("blocked", "invalid_root")
@@ -240,6 +244,9 @@ def managed_n50_tick_once(
             except OSError:
                 return _out("blocked", "manager_lock_busy")
             active = _pointer_read(root_directory)
+            if recover_halted_epoch_once and active is None:
+                return _out("blocked", "halted_recovery_requires_active_epoch")
+            recovery_verified = False
             age = None
             if active is not None:
                 active_root = epochs / active["epoch_id"]
@@ -261,7 +268,30 @@ def managed_n50_tick_once(
                 age = now - active["catalog_post_observed_at_ms"]
                 if age < 0:
                     return _out("blocked", "future_active_scope")
-            rotate = active is None or age >= RENEWAL_DUE_MS
+                if recover_halted_epoch_once:
+                    # Never clear the HALT or reuse the saved 6 partial candles.
+                    # A new frozen epoch is the ONLY recovery action.
+                    from .j1_n50_halted_forensic import audit_halted_n50_epoch
+                    verified = audit_halted_n50_epoch(
+                        scope_directory=scope, journal_directory=journal,
+                        allow_private_readonly_audit=True, owner_ok=permitted,
+                        now_ms=now,
+                    )
+                    if (verified.get("status") != "halted_owner_review_verified"
+                            or verified.get("saved_rows_integrity_verified") is not True
+                            or verified.get("halted_reason") !=
+                               "provider_denied_owner_review"
+                            or verified.get("scope_digest_sha256") !=
+                               active["scope_digest_sha256"]
+                            or verified.get("historical_missing_publication_hours") != 0
+                            or verified.get("resume_authorized") is not False
+                            or verified.get("orders_sent") is not False
+                            or verified.get("network_requests") != 0
+                            or verified.get("database_mutation_statements") != 0):
+                        return _out("blocked", "halted_recovery_forensic_gate_failed")
+                    recovery_verified = True
+            rotate = (active is None or age >= RENEWAL_DUE_MS
+                      or recovery_verified)
             if rotate:
                 epoch_id, new_scope, new_journal = _epoch_dirs(
                     epochs,decision=decision)
@@ -301,7 +331,12 @@ def managed_n50_tick_once(
                         fresh["catalog_post_observed_at_ms"],
                 }
                 _pointer_write(root_directory,new_pointer,decision=decision)
-                out=_out("epoch_rotated" if active else "epoch_started")
+                out=_out(
+                    "epoch_recovered_from_halt" if recovery_verified
+                    else "epoch_rotated" if active else "epoch_started"
+                )
+                out["halted_epoch_recovery_verified"] = recovery_verified
+                out["previous_epoch_preserved"] = bool(active)
                 out["operation"]="capture_seal"
                 out["epoch_id"]=epoch_id
                 out["pointer_updated"]=True
