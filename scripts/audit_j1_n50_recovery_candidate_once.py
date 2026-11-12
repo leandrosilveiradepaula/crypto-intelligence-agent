@@ -72,7 +72,10 @@ def candidate(*, expected_epoch_id: str = EXPECTED_HALTED_EPOCH,
                 or type(last) is not int or last % 3_600_000
                 or type(published) is not int or not 1 <= published <= 72
                 or type(partial) is not int or not 1 <= partial < 50
-                or type(stored) is not int or stored != 50 * (24 + published - 1) + partial
+                # D304 independently validates expected rows against the
+                # actual initial_end_ms, including the valid first-PIT offset.
+                or type(stored) is not int or stored < 1200 + partial
+                or (stored - partial) % 50 != 0
                 or type(digest) is not str or len(digest) != 64
                 or digest != active["scope_digest_sha256"]):
             return out
