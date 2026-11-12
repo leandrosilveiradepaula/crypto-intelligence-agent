@@ -212,6 +212,13 @@ def preflight(*, source: Path, expected_sha: str) -> dict:
             or new_service.count("WorkingDirectory="+str(source)+"\n")!=1
             or original.count("OnFailure="+FALLBACK_SERVICE+"\n")!=1):
         raise ValueError("recovery_service_template_invalid")
+    # Existing unit hash was independently pinned above. This cutover may
+    # ONLY repoint the code worktree; service hardening/OnFailure/timers must
+    # remain byte-for-byte identical to the installed known-good D298 unit.
+    old_source="/home/cia-probe/agent/j1-n50-managed-d298-code"
+    if (original.count(old_source)!=1
+            or original.replace(old_source,str(source))!=new_service):
+        raise ValueError("n50_unit_repoint_only_invariant_failed")
     return {
         "service_text":new_service,
         "original_service_text":original,
