@@ -38,6 +38,10 @@ def _base(status: str) -> dict[str, Any]:
         "historical_unpublished_hours": None,
         "historical_checkpoint_gaps_present": False,
         "stored_candles": 0,
+        "initial_end_ms": None,
+        "partial_unpublished_hour": False,
+        "bootstrap_partial_unpublished": False,
+        "partial_contracts_at_target": 0,
         "journal_scope_digest_sha256": None,
         "reviewed_research_contracts": 0,
         "research_closed_24h_ranked_contracts": 0,
@@ -79,6 +83,7 @@ def audit_existing_rest_resume(
     allow_private_readonly_audit: bool = False,
     owner_ok: bool | None = None,
     expected_members: int = EXPECTED_MEMBERS,
+    allow_unpublished_partial_hour: bool = False,
 ) -> dict[str, Any]:
     """Read an owner-only research journal of 1..50 pinned members without IO writes.
 
@@ -94,7 +99,9 @@ def audit_existing_rest_resume(
             or not output_directory.is_absolute()
             or type(owner_ok) not in (bool, type(None))
             or type(expected_members) is not int
-            or not 1 <= expected_members <= MAX_RESEARCH_MEMBERS):
+            or not 1 <= expected_members <= MAX_RESEARCH_MEMBERS
+            or type(allow_unpublished_partial_hour) is not bool
+            or (allow_unpublished_partial_hour and expected_members != 50)):
         return _base("invalid_configuration")
     owner = ((os.name == "posix" and os.getuid() == os.geteuid()
               and os.geteuid() != 0) if owner_ok is None else owner_ok)
@@ -144,7 +151,45 @@ def audit_existing_rest_resume(
                 "SELECT end_ms,observed_at_ms,scope_digest,observed_contracts "
                 "FROM published_hour ORDER BY end_ms LIMIT ?",
                 (MAX_PUBLISHED + 1,)).fetchall()
-            if not 1 <= len(published) <= MAX_PUBLISHED:
+            if len(published) > MAX_PUBLISHED:
+                return out
+            if not published:
+                # M1 persists whole per-symbol transactions before its FIRST
+                # publication. Resume only within the original close window.
+                if (not allow_unpublished_partial_hour or halted is not None
+                        or not SETTLE_MS <= now_ms % HOUR_MS <= LATEST_START_MS
+                        or _next_safe_target(now_ms) != initial):
+                    return out
+                cursors = [_validate_cursor(db, symbol, initial, initial)
+                           for symbol in members]
+                start = initial - 24 * HOUR_MS
+                if any(cursor not in (start, initial) for cursor in cursors):
+                    return out
+                complete = sum(cursor == initial for cursor in cursors)
+                if complete < 1:
+                    return out
+                stored = db.execute("SELECT COUNT(*) FROM candles").fetchone()[0]
+                if (stored != 24 * complete
+                        or db.execute("SELECT COUNT(*) FROM cursor").fetchone()[0]
+                        != expected_members):
+                    return out
+                out.update({
+                    "status": "unpublished_bootstrap_resume_ready",
+                    "initial_end_ms": initial,
+                    "next_eligible_end_ms": initial,
+                    "published_hours": 0,
+                    "stored_candles": stored,
+                    "reviewed_research_contracts": len(members),
+                    "historical_unpublished_hours": 0,
+                    "partial_unpublished_hour": True,
+                    "bootstrap_partial_unpublished": True,
+                    "partial_contracts_at_target": complete,
+                    "catchup_hours": 1,
+                    "catchup_within_worker_limit": True,
+                    "unobserved_closed_hours": 0,
+                    "journal_scope_digest_sha256": scope_digest,
+                    "journal_integrity_verified": True,
+                })
                 return out
             # The real 24-run trial had a 2-hour catch-up: 18:00 candles
             # were stored but no retroactive 18:00 published_hour was forged.
@@ -172,11 +217,27 @@ def audit_existing_rest_resume(
             last = published[-1][0]
             if last > now_ms:
                 return out
-            cursors = [_validate_cursor(db, symbol, initial, last)
+            target = _next_safe_target(now_ms)
+            partial_window = (
+                allow_unpublished_partial_hour and halted is None
+                and historical_missing == 0
+                and SETTLE_MS <= now_ms % HOUR_MS <= LATEST_START_MS
+                and target == last + HOUR_MS
+            )
+            upper = target if partial_window else last
+            cursors = [_validate_cursor(db, symbol, initial, upper)
                        for symbol in members]
-            if any(cursor != last for cursor in cursors):
+            if any(cursor not in ((last, target) if partial_window else (last,))
+                   for cursor in cursors):
                 return out
-            expected_candles = expected_members * (24 + (last - initial)//HOUR_MS)
+            partial_count = (
+                sum(cursor == target for cursor in cursors)
+                if partial_window else 0
+            )
+            expected_candles = (
+                expected_members * (24 + (last - initial)//HOUR_MS)
+                + partial_count
+            )
             stored = db.execute("SELECT COUNT(*) FROM candles").fetchone()[0]
             if type(stored) is not int or stored != expected_candles:
                 return out
@@ -214,6 +275,9 @@ def audit_existing_rest_resume(
             # complete, contiguous and digest-verified history.
             out.update({
                 "last_published_end_ms": last,
+                "initial_end_ms": initial,
+                "partial_unpublished_hour": partial_count > 0,
+                "partial_contracts_at_target": partial_count,
                 "published_hours": len(published),
                 "historical_unpublished_hours": historical_missing,
                 "historical_checkpoint_gaps_present": historical_missing > 0,
@@ -236,7 +300,9 @@ def audit_existing_rest_resume(
             out["unobserved_closed_hours"] = max(0, delta - 1)
             out["catchup_hours"] = max(0, delta)
             out["catchup_within_worker_limit"] = 0 <= delta <= MAX_CATCHUP_HOURS
-            if delta < 0:
+            if partial_count and delta == 1:
+                out["status"] = "unpublished_partial_hour_resume_ready"
+            elif delta < 0:
                 out["status"] = "clock_before_last_publication"
             elif delta > MAX_CATCHUP_HOURS:
                 out["status"] = "catchup_exceeds_48h_blocked"
