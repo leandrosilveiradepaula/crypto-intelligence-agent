@@ -133,6 +133,120 @@ class ManagedN50EpochTests(unittest.TestCase):
         self.assertEqual((out["requests_attempted"],out["new_closed_candles"]),(7,6))
         self.assertFalse(out["orders_sent"])
 
+    def test_one_off_verified_halt_forces_fresh_epoch_before_36h(self):
+        with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate):
+            self.assertEqual(self.invoke()["status"],"epoch_started")
+        old=self.root/"epochs"/f"epoch-{T:013d}"
+        old_scope=(old/"scope"/FILE_NAME).read_bytes()
+        old_journal=old/"journal"/"immutable-halted-research.sqlite"
+        old_journal.write_bytes(b"sealed-verified-journal")
+        old_journal.chmod(0o600)
+        self.now=T+8*HOUR_MS+120_000
+        proof={
+            "status":"halted_owner_review_verified",
+            "saved_rows_integrity_verified":True,
+            "halted_reason":"provider_denied_owner_review",
+            "scope_digest_sha256":sealed(T)["scope_digest_sha256"],
+            "historical_missing_publication_hours":0,
+            "resume_authorized":False,
+            "orders_sent":False,
+            "network_requests":0,
+            "database_mutation_statements":0,
+        }
+        with patch("crypto_intelligence_agent.j1_n50_halted_forensic.audit_halted_n50_epoch",
+                   return_value=proof) as forensic, patch(
+                   "crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate) as delegate:
+            out=self.invoke(recover_halted_epoch_once=True)
+        self.assertEqual(out["status"],"epoch_recovered_from_halt",out)
+        self.assertEqual(out["requests_attempted"],372)
+        self.assertTrue(out["halted_epoch_recovery_verified"])
+        self.assertTrue(out["previous_epoch_preserved"])
+        self.assertNotEqual(out["epoch_id"],old.name)
+        self.assertEqual((old/"scope"/FILE_NAME).read_bytes(),old_scope)
+        self.assertEqual(old_journal.read_bytes(),b"sealed-verified-journal")
+        self.assertEqual(delegate.call_args.kwargs["action"],"capture_seal")
+        self.assertEqual(forensic.call_args.kwargs["owner_ok"],True)
+        self.now+=HOUR_MS
+        with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate) as writer:
+            next_hour=self.invoke()
+        self.assertEqual(next_hour["status"],"research_hour_persisted")
+        self.assertEqual(next_hour["epoch_id"],out["epoch_id"])
+        self.assertEqual(writer.call_args.kwargs["action"],"hourly_writer")
+
+    def test_halt_proof_denied_cannot_issue_any_capture_get_or_move_pointer(self):
+        with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate):
+            self.assertEqual(self.invoke()["status"],"epoch_started")
+        self.now=T+8*HOUR_MS+120_000
+        previous=(self.root/ACTIVE_FILE).read_bytes()
+        denial_cases=[
+            {"status":"blocked"},
+            {"status":"halted_owner_review_verified","saved_rows_integrity_verified":True,
+             "halted_reason":"provider_denied_owner_review",
+             "scope_digest_sha256":"0"*64,"historical_missing_publication_hours":0,
+             "resume_authorized":False,"orders_sent":False,"network_requests":0,
+             "database_mutation_statements":0},
+            {"status":"halted_owner_review_verified","saved_rows_integrity_verified":True,
+             "halted_reason":"candle_or_storage_integrity",
+             "scope_digest_sha256":sealed(T)["scope_digest_sha256"],
+             "historical_missing_publication_hours":0,"resume_authorized":False,
+             "orders_sent":False,"network_requests":0,"database_mutation_statements":0},
+        ]
+        for denied in denial_cases:
+            with self.subTest(denied=denied.get("halted_reason")), patch(
+                    "crypto_intelligence_agent.j1_n50_halted_forensic.audit_halted_n50_epoch",
+                    return_value=denied), patch(
+                    "crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                    side_effect=AssertionError("forensic denied, no GET")):
+                out=self.invoke(recover_halted_epoch_once=True)
+            self.assertEqual(out["status"],"blocked")
+            self.assertEqual(out["reason"],"halted_recovery_forensic_gate_failed")
+            self.assertEqual((self.root/ACTIVE_FILE).read_bytes(),previous)
+            self.assertFalse(out["network_accessed"])
+
+    def test_halt_capture_fails_without_overwriting_old_pointer(self):
+        with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate):
+            self.assertEqual(self.invoke()["status"],"epoch_started")
+        before=(self.root/ACTIVE_FILE).read_bytes()
+        self.now=T+8*HOUR_MS+120_000
+        valid={
+            "status":"halted_owner_review_verified",
+            "saved_rows_integrity_verified":True,
+            "halted_reason":"provider_denied_owner_review",
+            "scope_digest_sha256":sealed(T)["scope_digest_sha256"],
+            "historical_missing_publication_hours":0,
+            "resume_authorized":False,"orders_sent":False,
+            "network_requests":0,"database_mutation_statements":0,
+        }
+        with patch("crypto_intelligence_agent.j1_n50_halted_forensic.audit_halted_n50_epoch",
+                   return_value=valid), patch(
+                   "crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   return_value={"status":"blocked","requests_attempted":3}):
+            result=self.invoke(recover_halted_epoch_once=True)
+        self.assertEqual(result["status"],"blocked")
+        self.assertEqual((self.root/ACTIVE_FILE).read_bytes(),before)
+        self.assertFalse(result["pointer_updated"])
+        self.assertEqual(result["requests_attempted"],0)  # no false success report
+
+    def test_halt_explicit_optin_is_bool_and_does_not_override_default(self):
+        with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate):
+            self.assertEqual(self.invoke()["status"],"epoch_started")
+        self.now=T+8*HOUR_MS+120_000
+        with patch("crypto_intelligence_agent.j1_n50_halted_forensic.audit_halted_n50_epoch",
+                   side_effect=AssertionError("must not audit for normal writer")), patch(
+                   "crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
+                   side_effect=self.fake_delegate) as writer:
+            normal=self.invoke()
+            invalid=self.invoke(recover_halted_epoch_once=1)
+        self.assertEqual(normal["status"],"research_hour_persisted")
+        self.assertEqual(writer.call_args.kwargs["action"],"hourly_writer")
+        self.assertEqual(invalid["status"],"blocked")
+
     def test_after_37h_rotates_and_preserves_old_epoch_and_immutable_scope(self):
         with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
                    side_effect=self.fake_delegate):
