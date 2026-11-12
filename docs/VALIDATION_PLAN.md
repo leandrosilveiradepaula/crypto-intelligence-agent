@@ -1251,3 +1251,6 @@ Testar `tests/test_j1_n50_ws_dynamic_scope_d314.py`: catálogo atual fornecido e
 
 ### D317 — teste de ingresso D314 -> D316 e CLIs separados
 `tests/test_j1_n50_ws_metadata_bootstrap_d317.py`: manifesto owner 0600, primeiro GET de metadados N50 válido com cache imutável, leitura D316 sem novo GET, recusa cache existente, 10006 sem retry, TradFi, lock concorrente, janela causal >15m, flags ausentes/CLI OFF, zero WS e ordens. `tests/test_j1_n50_ws_owner_cli_d317.py`: apenas injeta socket público após flags e owner; sem execução real de rede. Revalidar regressões D314/D315/D316 e suite Linux/Windows/PAPER no head final antes de merge, sem produção.
+
+## J1/D318 — validar clock e exclusividade do novo timer WS
+`python -m unittest discover -s tests -p test_j1_n50_ws_preclose_timer_d318.py -v` valida `HH:59:30 UTC`, unidade WS específica (nunca REST às HH:01:05), N2/REST preflight conservador em fake systemctl, root recusado, caminho injetado/overlap recusado, fallback seguro e nenhum install/enable no renderer. `systemd-analyze calendar '*-*-* *:59:30 UTC'` confirmou normalização e próxima execução read-only em VPS. CI Linux/docs Windows/offline e Chrome/PAPER no head final, revisão do SHA e merge sem release. Homologação da VPS com 24 fechamentos reais e rotação 36h continua independente.

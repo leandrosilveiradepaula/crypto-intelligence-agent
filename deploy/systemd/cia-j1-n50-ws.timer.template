@@ -1,0 +1,15 @@
+# J1/D318: dedicated N50 WebSocket timer, OFF BY DEFAULT.
+# Start 30 seconds BEFORE the next closed 1h candle (D317 requires 10..60s).
+# Never repoint the old N50 REST managed timer to this time.
+[Unit]
+Description=CIA J1 N50 WS preclose hourly timer (OFF BY DEFAULT)
+
+[Timer]
+OnCalendar=*-*-* *:59:30 UTC
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=cia-j1-n50-ws.service
+
+[Install]
+WantedBy=timers.target

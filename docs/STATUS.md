@@ -1487,3 +1487,6 @@ Branch `work/issue-585-j1-d317-ws-owner-runner` em base D316/PR #590. A composi�
 
 ### D317 — ponte de bootstrap metadata agora completa em código
 A captura pública D314 retorna recibos privados de páginas/cursores/horários (omitidos em repr/relatório); `cache_current_n50_ws_metadata_once` lê D287 já selado, trava owner antes do GET e persiste D316 uma única vez, sem retry em 10006. Dois CLIs separados, ambos OFF por padrão: capturar metadados 1–4 GET com cinco opt-ins; coletar hora WS cacheada 50/50 com cinco opt-ins, sem REST kline. Código ainda não instalado/executado na VPS. CI e revisão desta ampliação D317 pendentes.
+
+## J1/D318 — corrigido horário do agendamento WS N50 (12/11/2026 UTC)
+Novo timer WS `HH:59:30 UTC` (pré-fechamento) separado do timer REST N50 legado `HH:01:05`, com serviço owner chamando D317, preflight N2 e REST quiescidos, fallback N2 e renderer inerte. Expressão systemd confirmada diretamente na VPS com `systemd-analyze calendar`. Esta é alteração **de código/template**, não implantação: N2 continua ativo e N50 REST disabled; ainda é necessário manifesto D287 atual+cache D316, gate de instalação e habilitação do WS, depois prova real 24h/rotação. `docs/J1_N50_WS_PRECLOSE_TIMER_D318.md`.
