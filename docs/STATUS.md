@@ -1459,3 +1459,7 @@ Composição causal e offline da leitura auditada D300: rompimento do fechamento
 ## J1/D309 — testemunho de 24h N50 somente leitura (12/11/2026 UTC)
 
 D309 adiciona `j1_n50_24h_witness.py`, CLI owner-only e testes adversariais: compõe o replay privado D299 (todas as epochs, incluindo HALT forense) com estado read-only de quatro unidades systemd para distinguir 24 PITs fechados reais, janela ainda incompleta, failback N2, serviço falho e falta da última publicação. Nunca declara `continuous_collector_verified=true` apenas por contar 24 candles, nem converte 24h em prova de rotação após 36h ou Top50 crypto-only global. Sem deploy, ordens, GET, mudança de banco/systemd ou credenciais. Contrato em `docs/J1_N50_CLOSED24H_WITNESS_D309.md`; testes e CI/PR a validar antes de merge.
+
+## J5/D310 — apresentação móvel da watchlist D308 (12/11/2026 UTC)
+
+Extensão da página HTML privada J5/D301 para exibir observações determinísticas D308 com BTC/turnover/rompimento, contagens e limite de cinco por sentido. A interface usa a função pura D308 existente, abstém se o relatório não passa no mesmo audit/digest e não mostra lista sem BTC; símbolos privados apenas no HTML salvo com as três flags pré-existentes. Testes regressivos próprios e contrato em `docs/J5_N50_D308_WATCHLIST_MOBILE_D310.md`; CI/revisão/merge a validar. Sem deploy, ordens, serviços novos, banco ou alteração de pesquisa de mercado. J1 #429/#319 seguem abertas.
