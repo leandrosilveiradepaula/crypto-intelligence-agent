@@ -1370,3 +1370,7 @@ O job owner de captura/selagem D287 `08212abda5374f658db32b95c25aafff` terminou 
 ## J1/D290 — plano de supervisão N50 e renovação em epoch (11/11/2026)
 
 D289 real concluiu 50 contratos/1.250 candles/2 horas consecutivas. D290 adiciona decisão pura `j1_n50_supervision.plan_n50_supervision`, com bloqueios de gaps, falsa PIT, identidade, scope drift, relógio, contagens, replays sem comprovação e reexecução duplicada. Aos 36h exige transição controlada e serializada para novo manifesto/journal (limite D287 de 48h), sem instalar serviço nem sobrepor censo e GETs do coletor. Auditor owner precisa expor binding scope de forma independente antes de habilitar operação real. Ver docs/J1_N50_SUPERVISION_D290.md. PR/CI/merge exigem prova separada.
+
+## J1/D291 — runner seguro da hora N50 (12/11/2026 UTC)
+
+D290 PR #563 merge SHA `a678d0dccb96c390bc0cf1071976b5fff2e63288`; D291 adiciona execução única owner de coleta N50 baseada na decisão read-only D290, seis opt-ins, journal existente auditado ou novo output 0700 vazio, janela UTC e renovação fail-closed antes de 48h. Usa **o mesmo writer D287/M1** em vez de duplicar REST, SQLite ou lock. Branch `work/issue-429-j1-n50-supervised-hourly-runner`; sem timer/release/ordens. PR/CI/merge D291 exigem evidências próprias.
