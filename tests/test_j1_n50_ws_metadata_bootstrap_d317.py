@@ -157,6 +157,14 @@ class OwnerN50WSMetadataIngressTests(unittest.TestCase):
         self.assertEqual(self.gets,[])
         self.assertFalse((self.ws/CACHE_NAME).exists())
 
+    def test_symlink_alias_to_ws_directory_denied_before_catalog_get(self):
+        alias=self.ws.parent/"alias-ws"
+        alias.symlink_to(self.ws,target_is_directory=True)
+        out=self.call(ws_directory=alias)
+        self.assertEqual(out["status"],"ws_metadata_bootstrap_preflight_abstain")
+        self.assertEqual(self.gets,[])
+        self.assertFalse((self.ws/CACHE_NAME).exists())
+
     def test_untrusted_tradfi_metadata_has_no_cache(self):
         doc=page(tuple(SYMS))
         doc["result"]["list"][0]["underlyingTicker"]="AAPL"
