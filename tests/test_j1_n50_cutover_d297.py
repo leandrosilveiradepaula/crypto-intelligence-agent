@@ -65,6 +65,7 @@ class D297CutoverTests(unittest.TestCase):
         plan = {
             "source_sha": SHA, "n2_integrity": True,
             "n2_published_hours": 39, "n2_stored_candles": 166,
+            "backup_sha256": "a"*64,
             "service_text": "[Unit]\nDescription=offline service\n",
             "timer_text": "[Timer]\nOnCalendar=*-*-* *:01:05 UTC\n",
             "fallback_text": "[Unit]\nDescription=offline failback\n",
@@ -86,6 +87,7 @@ class D297CutoverTests(unittest.TestCase):
             x = install.execute(**self.opts())
         self.assertEqual(x["status"], "preflight_pass_no_changes")
         self.assertEqual(x["n2_stored_candles"], 166)
+        self.assertEqual(x["n2_rollback_backup_sha256"], "a"*64)
         self.assertEqual(self.calls, [])
         self.assertEqual(list(self.units.iterdir()), [])
         self.assertFalse(x["n50_timer_enabled"])
