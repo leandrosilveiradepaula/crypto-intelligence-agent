@@ -121,7 +121,6 @@ class N50HourlyWSEvidenceTests(unittest.TestCase):
         self.assertEqual((result["confirmed_contracts"],
                           result["missing_contracts"]), (49,1))
         self.assertIsNone(result["evidence_sha256"])
-        self.append(50) if False else None  # do not reinsert 49 prior events
         event = parse_offline_confirmed_kline(
             candle(MEMBERS[-1]), scope=self.ws_scope,
             received_at_ms=DECISION+2000,
