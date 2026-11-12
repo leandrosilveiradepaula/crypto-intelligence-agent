@@ -15,7 +15,7 @@ import time
 from typing import Any
 
 from crypto_intelligence_agent.j1_auto_research_epoch import (
-    HOUR_MS, validate_ranked_research_scope,
+    HOUR_MS, MAX_SCOPE_AGE_MS, FILE_NAME, validate_ranked_research_scope,
 )
 from crypto_intelligence_agent.j1_rest_incremental_owner import (
     _DB_NAME, _SHA, _validate_cursor,
@@ -24,7 +24,9 @@ from crypto_intelligence_agent.j1_rest_resume_readiness import (
     MAX_DB_BYTES, SETTLE_MS, LATEST_START_MS,
 )
 from scripts.audit_bybit_marketwide_closed24h import CensusAbstain, _strict_owner
-from scripts.run_j1_current_ranked_epoch_once import load_private_ranked_scope
+from scripts.run_j1_current_ranked_epoch_once import (
+    MAX_MANIFEST_BYTES, _decode_private_file,
+)
 
 MAX_FORENSIC_HOURS = 72
 _HALTS = frozenset(("provider_denied_owner_review",
@@ -87,9 +89,15 @@ def audit_halted_n50_epoch(
             _strict_owner(path, directory=True)
         # Forensics may replay an expired scope without proposing any
         # market action; revalidate at its last allowed read instant.
-        snapshot = load_private_ranked_scope(scope_directory, now_ms=now)
+        snapshot = _decode_private_file(
+            scope_directory / FILE_NAME, max_bytes=MAX_MANIFEST_BYTES,
+        )
+        observed = snapshot.get("catalog_post_observed_at_ms")
+        if (type(observed) is not int or observed > now):
+            return out
         members, digest = validate_ranked_research_scope(
-            snapshot, now_ms=now, max_assets=50,
+            snapshot, now_ms=min(now, observed + MAX_SCOPE_AGE_MS),
+            max_assets=50,
         )
         if len(members) != 50:
             return out
