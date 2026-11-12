@@ -1451,3 +1451,7 @@ Primeiro N50 chegou a 3 horas reais, mas parou em 08:01 UTC (7 GETs, 6 candles).
 ## J4/D307 — pesquisa de parciais e runner com custos hipotéticos (12/11/2026 UTC)
 
 Sem interromper a observação N50 J1, adicionado módulo puro de marcação financeira sintética de exits parciais, runner e funding assinado, compatível com PRE1–PRE3 e custos J3/PRE2; inclui dedup de fills e controle de causalidade/marca obsoleta. Apenas fixtures, sem rede/ordens/fills reais ou alteração de serviço. J4 #5 segue aberta, sem backtest financeiro aprovado. Evidência: `docs/J4_PARTIAL_COSTED_REPLAY_D307.md`.
+
+## J2/D308 — watchlist descritiva privada de 50 contratos, sem sinais (12/11/2026 UTC)
+
+Composição causal e offline da leitura auditada D300: rompimento do fechamento acima/abaixo dos 23 candles anteriores, retorno relativo ao BTC e intensidade do turnover da barra fechada, com ordenação determinística e no máximo cinco observações por direção. Dados insuficientes/corrompidos recusados, lista de símbolos OFF por padrão e nenhuma ordem, GET, alteração de SQLite ou systemd. Testes adversariais em `tests/test_j2_n50_descriptive_watchlist.py`, contrato em `docs/J2_N50_DESCRIPTIVE_WATCHLIST_D308.md`. CI/revisão/merge a validar; não declarar estratégia validada, alpha, Top50 global nem homologação J1. N50 D306 supervisionado, com 24h/rotação ainda pendentes.
