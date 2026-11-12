@@ -56,7 +56,7 @@ def render_rotating_ws_systemd(
         " --epoch-root "+epoch_root+" " in rotator,
         "ReadWritePaths="+epoch_root+"\n" in rotator,
         rotator.count("ExecStart=")==1,
-        "OnCalendar=*-*-* *:02:15 UTC\n" in timer,
+        "OnCalendar=*-*-* *:01:15 UTC\n" in timer,
         "Persistent=false\n" in timer,
         "AccuracySec=1s\n" in timer,
         "Unit=cia-j1-n50-ws-rotate.service\n" in timer,
