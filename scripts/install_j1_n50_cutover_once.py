@@ -95,9 +95,15 @@ def preflight(*, source: Path, root: Path, python: Path, sha: str) -> dict:
     if (os.name != "posix" or pwd is None or os.geteuid() != 0 or os.getuid() != 0
             or socket.gethostname() != HOSTNAME):
         raise PermissionError("wrong_host_or_uid")
+    # The verified Python venv entrypoint is intentionally a symlink to
+    # the OS-owned interpreter. Refuse any other symlink or interpreter.
+    approved_python = Path("/home/cia-probe/agent/ws-venv/bin/python")
     if (not all(isinstance(p, Path) and p.is_absolute()
-                and not p.is_symlink() for p in (source, root, python))
-            or not python.is_file() or not source.is_dir()
+                and not p.is_symlink() for p in (source, root))
+            or python != approved_python
+            or not python.is_file()
+            or python.resolve(strict=True) != Path("/usr/bin/python3.12")
+            or not source.is_dir()
             or not root.is_dir() or root in source.parents
             or source in root.parents):
         raise ValueError("invalid_release_paths")
@@ -114,13 +120,16 @@ def preflight(*, source: Path, root: Path, python: Path, sha: str) -> dict:
     if _call(["/usr/bin/timedatectl", "show",
               "--property=NTPSynchronized", "--value"]) != "yes":
         raise ValueError("ntp_unavailable")
-    if _call(["/usr/bin/git", "-C", str(source), "rev-parse", "HEAD"]) != sha:
+    # Root's Git refuses a cia-probe-owned repository as dubious
+    # ownership. Read Git metadata *as the actual worktree owner*;
+    # never weaken safe.directory or root's global Git configuration.
+    owner_git = ["/usr/sbin/runuser", "-u", "cia-probe", "--",
+                 "/usr/bin/git", "-C", str(source)]
+    if _call(owner_git + ["rev-parse", "HEAD"]) != sha:
         raise ValueError("release_sha_drift")
-    if _call(["/usr/bin/git", "-C", str(source), "status",
-              "--porcelain"]):
+    if _call(owner_git + ["status", "--porcelain"]):
         raise ValueError("release_source_dirty")
-    if _call(["/usr/bin/git", "-C", str(source), "remote",
-              "get-url", "origin"]) != EXPECTED_ORIGIN:
+    if _call(owner_git + ["remote", "get-url", "origin"]) != EXPECTED_ORIGIN:
         raise ValueError("remote_drift")
     for unit, digest in EXPECTED_N2_UNIT_HASH.items():
         path = UNIT_ROOT / unit
