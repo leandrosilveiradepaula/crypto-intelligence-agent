@@ -1263,3 +1263,7 @@ Rodar `python -m unittest discover -s tests -p test_j1_n50_ws_release_d320.py -v
 
 ## J1/D322 — gate de instalação rotativa N50 WS em um disparo
 `python -m unittest discover -s tests -p test_j1_n50_ws_rotating_release_d322.py -v` e `bash -n deploy/vps/prepare_install_j1_n50_ws_rotating_d322_once.sh` verificam default OFF, preflight fail-closed, 5 units O_EXCL sem substituição do REST, resposta N2->WS->rotator, rollback N2 caso disable N2, enable WS ou enable rotator falhem parcialmente, fallback desliga os 2 timers e restauro N2. Conferir HH:01:15 dentro contrato D286 e WS HH:59:30. Linux/docs, Windows/offline (POSIX skips), Chrome/PAPER SHA final. A CI não comprova rede WS real, 24 candles ou rotação após 36h; isso depende de root SSH depois do gate.
+
+## J1/D323 — witness WS 50 x 24 horas sem rede
+
+A suíte tests/test_j1_n50_ws_24h_witness_d323.py cobre testemunho read-only de 1.200 candles fechados confirmados na mesma coorte (50 por hora e 24 horas consecutivas), lacunas 49/50 ou 23h, captação do snapshot SQLite audit() D313, hashes e escopo D321/D316, janela UTC de auditoria, falha do WS, failback N2 e rotação inativa. Verificar proibição de HTTP/WS, mutações, ordens, relatório com símbolos/preços, e gates owner/flags. Exigir CI Linux/docs, Windows/offline, Chrome/PAPER no commit final e revisão. Testes offline não certificam instalação VPS nem coleta/rotação reais; depois de D322 executar comando owner somente leitura e confrontar evidência 24h/36h com gates separados.
