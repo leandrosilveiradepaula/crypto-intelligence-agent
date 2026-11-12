@@ -115,6 +115,55 @@ def create(root: Path, *, hours=2):
     return dbpath
 
 
+
+def create_halted_archive(root: Path) -> Path:
+    """Extend the sealed real-layout 2h fixture to 3 receipts + 6 partial rows."""
+    dbpath=create(root,hours=2)
+    third=LAST+HOUR_MS
+    fourth=third+HOUR_MS
+    with closing(sqlite3.connect(dbpath)) as db:
+        with db:
+            scope=manifest()
+            db.execute(
+                "INSERT INTO published_hour VALUES(?,?,?,50)",
+                (third,third+120_000,scope["scope_digest_sha256"]),
+            )
+            db.execute("UPDATE scope SET halted_reason='provider_denied_owner_review'")
+            for i,symbol in enumerate(SYMS):
+                previous=db.execute(
+                    "SELECT close FROM candles WHERE symbol=? AND open_ms=?",
+                    (symbol,FIRST),
+                ).fetchone()
+                assert previous is not None
+                op=Decimal(previous[0])
+                cl=op+Decimal("0.5")
+                raw=tuple(format(x,"f") for x in (
+                    op, op+3, op-3, cl, Decimal(10), Decimal(100)
+                ))
+                db.execute(
+                    "INSERT INTO candles VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (symbol,LAST,*raw,third+90_000,
+                     _digest([symbol,(str(LAST),*raw)])),
+                )
+                cursor=third
+                if i<6:
+                    extra=tuple(format(x,"f") for x in (
+                        cl, cl+3, cl-3, cl+Decimal("0.25"),
+                        Decimal(10), Decimal(100)
+                    ))
+                    db.execute(
+                        "INSERT INTO candles VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        (symbol,third,*extra,fourth+90_000,
+                         _digest([symbol,(str(third),*extra)])),
+                    )
+                    cursor=fourth
+                db.execute(
+                    "UPDATE cursor SET next_open_ms=? WHERE symbol=?",
+                    (cursor,symbol),
+                )
+    return dbpath
+
+
 @unittest.skipUnless(os.name=="posix", "POSIX-only owner SQLite replay")
 class J3N50ExpostTests(unittest.TestCase):
     def setUp(self):
@@ -272,6 +321,73 @@ class J3N50ExpostTests(unittest.TestCase):
         self.assertEqual(out["number_of_profitable_fills_verified"],0)
         self.assertTrue(all(row["hypothetical_reference_not_an_order"] is True
                             for row in out["private_mark_observations"]))
+
+
+    def test_halted_archive_is_research_only_and_preserves_original_default(self):
+        create_halted_archive(self.root)
+        now=T+4*HOUR_MS+180_000
+        normal=self.inspect(now_ms=now)
+        self.assertNotEqual(normal["status"],"expost_reference_only")
+        archived=self.inspect(now_ms=now,allow_archived_halted_research=True)
+        self.assertEqual(
+            archived["status"],"archived_halted_expost_reference_only",archived,
+        )
+        self.assertTrue(archived["halted_archive_source_verified"])
+        self.assertEqual(archived["audited_contracts"],50)
+        self.assertEqual(archived["observed_candles_per_contract"],25)
+        self.assertEqual(archived["prior_closed_end_ms"],LAST)
+        self.assertEqual(archived["outcome_closed_end_ms"],LAST+HOUR_MS)
+        self.assertFalse(archived["orders_sent"])
+        self.assertFalse(archived["financial_backtest_approved"])
+        self.assertFalse(archived["approved_for_signals"])
+        self.assertFalse(archived["fees_and_funding_venue_verified"])
+        self.assertEqual(archived["private_mark_observations"],[])
+        self.assertNotIn("BTCUSDT",json.dumps(archived))
+
+    def test_expired_archived_manifest_can_be_replayed_without_new_get(self):
+        create_halted_archive(self.root)
+        archived=self.inspect(
+            now_ms=T+60*HOUR_MS+180_000,
+            allow_archived_halted_research=True,
+        )
+        self.assertEqual(
+            archived["status"],"archived_halted_expost_reference_only",
+            archived,
+        )
+        self.assertEqual(archived["network_requests"],0)
+
+    def test_archived_corrupted_partial_row_is_never_research_ready(self):
+        dbpath=create_halted_archive(self.root)
+        with closing(sqlite3.connect(dbpath)) as db:
+            db.execute(
+                "UPDATE candles SET digest_sha256='bad' "
+                "WHERE open_ms=? AND symbol=?",
+                (LAST+HOUR_MS,SYMS[0]),
+            )
+            db.commit()
+        out=self.inspect(
+            now_ms=T+4*HOUR_MS+180_000,
+            allow_archived_halted_research=True,
+        )
+        self.assertEqual(out["status"],"unverified_halted_archive",out)
+        self.assertFalse(out["halted_archive_source_verified"])
+        self.assertFalse(out["orders_sent"])
+
+    def test_archived_flag_requires_explicit_boolean_and_owner_optin(self):
+        with patch(
+            "crypto_intelligence_agent.j3_n50_expost_onehour._pointer_read",
+            side_effect=AssertionError("must not read"),
+        ):
+            self.assertEqual(
+                self.inspect(
+                    allow_archived_halted_research=True,
+                    allow_private_readonly_audit=False,
+                )["status"],"optin_required",
+            )
+            self.assertEqual(
+                self.inspect(allow_archived_halted_research=1)["status"],"blocked",
+            )
+
 
 
 if __name__ == "__main__":
