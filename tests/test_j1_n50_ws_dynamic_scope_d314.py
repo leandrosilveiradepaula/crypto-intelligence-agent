@@ -12,7 +12,10 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from crypto_intelligence_agent.j1_n50_ws_dynamic_scope import (
-    admit_dynamic_n50_ws_scope,
+    admit_dynamic_n50_ws_scope, capture_n50_dynamic_ws_metadata_once,
+)
+from crypto_intelligence_agent.bybit_public_j1_transport import (
+    BoundedBybitPublicClient, instruments_url,
 )
 from crypto_intelligence_agent.bybit_ws_supervisor import _topic_batches
 from crypto_intelligence_agent.bybit_closed_stream_cache import (
@@ -228,6 +231,123 @@ class DynamicN50WSScopeTests(unittest.TestCase):
         ):
             with self.subTest(name=name), self.assertRaises(DataValidationError):
                 self.build(**{name:value})
+
+
+class OwnerDynamicMetadataCaptureTests(unittest.TestCase):
+    def invoke(self, **kw):
+        args = dict(
+            ranked_scope=sealed(T),
+            owner_ok=True,
+            allow_public_network=True,
+            confirm_region_and_personal_research=True,
+            enable_n50_ws_metadata_capture=True,
+            clock_ms=lambda: OBS,
+        )
+        args.update(kw)
+        return capture_n50_dynamic_ws_metadata_once(**args)
+
+    def test_missing_owner_or_optin_makes_zero_network_gets(self):
+        calls = []
+        client = BoundedBybitPublicClient(
+            transport=lambda *_: calls.append("get") or
+            b'{"retCode":10006,"retMsg":"secret"}',
+        )
+        for key, value in (
+            ("owner_ok",False),("allow_public_network",False),
+            ("confirm_region_and_personal_research",False),
+            ("enable_n50_ws_metadata_capture",False),
+        ):
+            with self.subTest(key=key):
+                result = self.invoke(client=client, **{key:value})
+                self.assertEqual(result.requests_attempted,0)
+                self.assertIsNone(result.admission)
+                self.assertFalse(result.sanitized_report()["orders_sent"])
+        self.assertEqual(calls,[])
+        self.assertEqual(client.requests_attempted,0)
+
+    def test_one_current_catalog_get_admits_50_dynamic_perps(self):
+        calls=[]
+        wire=json.dumps(page(tuple(SYMS))).encode("ascii")
+        client=BoundedBybitPublicClient(
+            transport=lambda url, size: calls.append(url) or wire,
+        )
+        result=self.invoke(client=client)
+        self.assertEqual(result.status,
+                         "dynamic_n50_ws_metadata_captured_research_only")
+        self.assertEqual(result.requests_attempted,1)
+        self.assertEqual(calls,[instruments_url()])
+        self.assertEqual(len(_topic_batches(result.admission.ws_scope)[0]),50)
+        report=result.sanitized_report()
+        self.assertEqual(report["selected_contracts"],50)
+        self.assertTrue(report["network_accessed"])
+        self.assertFalse(report["source_authenticated"])
+        self.assertFalse(report["marketwide_top50_verified"])
+        self.assertFalse(report["orders_sent"])
+
+    def test_two_pages_get_exact_pagination_and_zero_retries(self):
+        first=page(tuple(SYMS[:25]),cursor="PAGETWO")
+        second=page(tuple(SYMS[25:]))
+        seen=[]
+        docs=[first,second]
+        def fetch(url,size):
+            seen.append(url)
+            return json.dumps(docs.pop(0)).encode("ascii")
+        client=BoundedBybitPublicClient(transport=fetch)
+        result=self.invoke(client=client)
+        self.assertEqual(result.requests_attempted,2)
+        self.assertEqual(len(seen),2)
+        self.assertEqual(seen[0],instruments_url())
+        self.assertEqual(seen[1],instruments_url(cursor="PAGETWO"))
+        self.assertEqual(result.admission.selected_contracts,50)
+
+    def test_retcode_10006_aborts_once_and_never_leaks_provider_body(self):
+        urls=[]
+        def wire(url,limit):
+            urls.append(url)
+            return b'{"retCode":10006,"retMsg":"SENSITIVE_MARKET_SYMBOL_TOKEN"}'
+        client=BoundedBybitPublicClient(transport=wire)
+        result=self.invoke(client=client)
+        self.assertEqual(result.status,
+                         "dynamic_n50_ws_metadata_abstained_no_retry")
+        self.assertEqual(result.requests_attempted,1)
+        self.assertEqual(result.failure_category,"provider_rate_limit_no_retry")
+        self.assertIsNone(result.admission)
+        self.assertEqual(len(urls),1)
+        self.assertNotIn("SENSITIVE",json.dumps(result.sanitized_report()))
+        self.assertFalse(result.sanitized_report()["live_trading_authorized"])
+
+    def test_stale_ranked_scope_denies_before_issuing_catalog_get(self):
+        calls=[]
+        client=BoundedBybitPublicClient(
+            transport=lambda *_: calls.append("get") or b'{"retCode":0}',
+        )
+        changed=sealed(T)
+        changed["scope_digest_sha256"]="a"*64
+        result=self.invoke(ranked_scope=changed,client=client)
+        self.assertEqual(result.status,"untrusted_ranked_scope_no_get")
+        self.assertEqual(result.requests_attempted,0)
+        self.assertEqual(calls,[])
+
+    def test_preconsumed_client_or_malformed_result_has_no_retry(self):
+        client=BoundedBybitPublicClient(
+            transport=lambda *_: json.dumps(page(tuple(SYMS))).encode("ascii"),
+        )
+        client.get(instruments_url())
+        self.assertEqual(
+            self.invoke(client=client).status,"client_budget_already_used",
+        )
+        broken=page(tuple(SYMS[:49]))
+        calls=[]
+        failing=BoundedBybitPublicClient(
+            transport=lambda url,size: calls.append(url) or json.dumps(
+                broken).encode("ascii"),
+        )
+        result=self.invoke(client=failing)
+        self.assertEqual(result.status,
+                         "dynamic_n50_ws_metadata_abstained_no_retry")
+        self.assertEqual(result.requests_attempted,1)
+        self.assertEqual(len(calls),1)
+        self.assertIsNone(result.admission)
 
 
 if __name__ == "__main__":
