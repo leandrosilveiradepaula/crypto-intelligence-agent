@@ -1425,3 +1425,7 @@ D300 QA adicional: 11 testes de tela de pesquisa N50 PASS na VPS após adicionar
 ## J5/D301 — panorama privado mobile para N50 (12/11/2026 UTC)
 
 A partir da ponte J2/D300 (PR #573 integrada, squash SHA `95edb62a52ba2fd0619457371281db3b02df2fd0`), D301 entrega HTML único PT-BR com CSP fechada, cards e tabela responsiva, somente dados de pesquisa N50 auditados, data UTC, contexto BTC e avisos de não-trading. CLI opt-in tríplice pode salvar relatório local owner 0600, nunca publicar. Testes de privacidade, acessibilidade, injeção e modo somente leitura: 10 PASS na VPS candidata. Não é produto web online, não libera ordens e não atesta 24h coletadas.
+
+## J1/D303 — falha do provedor observada no N50; fallback N2 comprovado (12/11/2026 UTC)
+
+Primeiro N50 owner checkpoint: 1.200 candles de 50 contratos, seguido por 3 checkpoints reais até 07 UTC. Às 08:01 UTC, 7 GETs e 6 candles avançados, com `provider_denied_owner_review` no SQLite; `PRAGMA quick_check=ok`, 50 cursores e 1.306 candles no total. N50 terminou exit 65 e acionou OnFailure, deixando timer N50 disabled/inactive e N2 enabled/active. Subtipo exato da resposta do provedor não é reconstituível dos logs já registrados. D303 adiciona telemetria de `failure_category` whitelist M1→D291→D293→D294 para futuras falhas, sem relançar provedor e sem mexer no banco. Homologação 24h e renovação >36h seguem pendentes; #429 continua aberta.
