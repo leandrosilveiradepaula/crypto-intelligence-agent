@@ -583,3 +583,7 @@ O M1 possui flock por SQLite; D293 envolve os pontos de entrada públicos N50 `c
 ### J1/D294 — ponteiro para epoch N50 ativo, com transição atômica
 
 `j1_n50_managed_cycle.managed_n50_tick_once` escolhe etapa única por janela UTC sobre D293: sem ponteiro/idade >=36h -> novo epoch/pasta/manifesto D287, promoção fsync/rename do ponteiro; idade <36h -> D291/D292/M1 no journal do epoch ativo. Manager flock separado protege ponteiro, e D293 flock + claim persistente protege o uso do endpoint público entre censo e writer. Nenhum journal anterior é reescrito; o intervalo de rotação não recebe checkpoint PIT fictício. Serviço N50 recorrente não instalado: sem cron/release, sem ordens ou garantias de 24h/Top50.
+
+### J1/D295 — separação deploy: N50 managed unit isolada de N2
+
+O coletor de pesquisa N50 D294 é chamado por um service oneshot e timer UTC versionados, mas **não instalados**. ExecStartPre valida de forma read-only que as duas unidades N2 estão inactive antes de permitir o N50; nenhuma claim D293 protege o coletor legado N2, portanto coexistência ativa de ambos é bloqueada para evitar exceder a quota agregada. Arquivos novos `deploy/systemd/cia-j1-n50-managed.*.template` e renderer seguro; serviço owner não-root, diretório root privado, file-system sandbox, sem restart. Release separado e soak real exigidos para status contínuo.

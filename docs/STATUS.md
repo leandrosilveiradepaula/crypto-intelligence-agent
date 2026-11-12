@@ -1387,3 +1387,7 @@ Implementados ponto de entrada coordenado, flock global, claim owner-only imutá
 ## J1/D294 — ciclo N50 gerenciado com renovação por epochs (12/11/2026 UTC)
 
 D294 adiciona `managed_n50_tick_once` e CLI owner OFF por padrão: primeira seleção/selagem, atualização incremental horária no manifesto corrente e troca causal para epoch novo a partir de 36h, protegendo a transição com lock/claim D293 e ponteiro owner-only atômico. Testes offline de crash/conflito/retomada/idade e preservação de journals. **Não é N50 24/7 instalado**; nenhum serviço, timer, ordem ou migration. CI/revisão/merge exigidos; J1 #429 precisa ativação operacional com soak real e #319 ainda qualificação independente.
+
+## J1/D295 — pacote de implantação N50 ainda OFF (12/11/2026 UTC)
+
+Após D294 (PR #567 integrada, SHA a verificar no gate), adicionados service/timer systemd N50 inertes com entrada única no gerenciador D294, renderer de owner/paths e preflight que **recusa N50 enquanto N2 timer ou worker estiver ativo**. Não houve instalação ou mudança na VPS. Próximo gate: CI/revisão/merge sem deploy, preparação owner/root/rollback de produção e autorização de release antes de substituir agendamento, seguido de soak real >=24h e rotação causal. Sem ordens reais.
