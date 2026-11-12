@@ -134,18 +134,18 @@ def preflight(*, source: Path, root: Path, python: Path, sha: str) -> dict:
     audit = _audit_n2(source=source, python=python)
     service, timer = render_n50_managed_systemd(
         owner="cia-probe", repo=str(source), python=str(python), root=str(root))
-    if service.count("After=network-online.target\\n") != 1:
+    if service.count("After=network-online.target\n") != 1:
         raise ValueError("service_template_drift")
-    service = service.replace("After=network-online.target\\n",
-                              "After=network-online.target\\n"
-                              "OnFailure=" + FALLBACK_SERVICE + "\\n")
+    service = service.replace("After=network-online.target\n",
+                              "After=network-online.target\n"
+                              "OnFailure=" + FALLBACK_SERVICE + "\n")
     fallback = (source / "deploy/systemd" /
                 "cia-j1-n50-fallback.service.template").read_text("ascii")
-    if (fallback.count("User=root\\n") != 1
+    if (fallback.count("User=root\n") != 1
             or fallback.count("ExecStart=-/usr/bin/systemctl disable --now "
-                              + N50_TIMER + "\\n") != 1
+                              + N50_TIMER + "\n") != 1
             or fallback.count("ExecStartPost=/usr/bin/systemctl enable --now "
-                              + N2_TIMER + "\\n") != 1
+                              + N2_TIMER + "\n") != 1
             or "ExecStart=/bin/" in fallback):
         raise ValueError("fallback_template_drift")
     return {"source_sha": sha, "n2_integrity": True,
