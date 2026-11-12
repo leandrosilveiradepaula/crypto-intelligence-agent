@@ -251,7 +251,7 @@ def execute(
     try:
         units = preflight(source=source, expected_sha=expected_sha,
                           manifest=manifest, ws_dir=ws_dir)
-    except (OSError, ValueError, TypeError, PermissionError,
+    except (OSError, ValueError, TypeError, PermissionError, KeyError,
             subprocess.SubprocessError, RuntimeError):
         out["status"] = "preflight_blocked_N2_untouched"
         return out
