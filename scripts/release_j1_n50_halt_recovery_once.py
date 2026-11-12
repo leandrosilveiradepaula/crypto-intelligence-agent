@@ -20,7 +20,7 @@ import subprocess
 import time
 
 from scripts.install_j1_n50_cutover_once import (
-    _audit_n2, _call, _show, N2_SERVICE, N2_TIMER, N50_TIMER, N50_SERVICE,
+    _call, _show, N2_SERVICE, N2_TIMER, N50_TIMER, N50_SERVICE,
     FALLBACK_SERVICE, HOSTNAME, EXPECTED_ORIGIN, EXPECTED_N2_UNIT_HASH,
     UNIT_ROOT,
 )
@@ -84,6 +84,51 @@ def _valid_old_forensic(report: dict) -> bool:
             and report.get("systemd_modified") is False)
 
 
+def _audit_live_n2_recovery(*, source: Path) -> dict:
+    """Recheck the ACTUAL continuous N2 owner journal without a 21-gap constant.
+
+    The original D297 gate pinned 21 missing historical PITs at first cutover.
+    After its correct failback at 08:01, four additional N2 PITs were absent
+    while N50 was running. The restored N2 audit now truthfully reports 25
+    missing checkpoints; those are not corrupt rows or permission to fake PIT.
+    """
+    obj=_owner_report(
+        source=source,
+        module="scripts.audit_j1_rest_resume_readiness",
+        args=[
+            "--output-directory",
+            "/home/cia-probe/agent/j1-rest-m3-20261109/canary",
+            "--expected-members","2","--allow-private-readonly-audit",
+        ],
+    )
+    now=time.time_ns()//1_000_000
+    missing=obj.get("historical_unpublished_hours")
+    initial=obj.get("initial_end_ms")
+    last=obj.get("last_published_end_ms")
+    published=obj.get("published_hours")
+    stored=obj.get("stored_candles")
+    hour_ms=3_600_000
+    if (obj.get("schema_version")!="j1_rest_resume_readiness_v1"
+            or obj.get("journal_integrity_verified") is not True
+            or obj.get("reviewed_research_contracts")!=2
+            or obj.get("research_closed_24h_ranked_contracts")!=2
+            or obj.get("orders_sent") is not False
+            or obj.get("live_trading_authorized") is not False
+            or obj.get("marketwide_top50_verified") is not False
+            or obj.get("historical_checkpoint_gaps_present") is not True
+            or obj.get("status")!="historical_checkpoint_gaps_require_review"
+            or type(missing) is not int or not 21<=missing<=72
+            or type(initial) is not int or initial%hour_ms
+            or type(last) is not int or last%hour_ms or last<=initial
+            or not 0<=now-last<=2*hour_ms
+            or type(published) is not int or published<39
+            or type(stored) is not int
+            or stored!=2*(24+(last-initial)//hour_ms)
+            or published+missing != 1+(last-initial)//hour_ms):
+        raise ValueError("owner_n2_recovery_readiness_gate_failed")
+    return obj
+
+
 def _owner_old(source: Path) -> dict:
     return _owner_report(
         source=source,
@@ -144,7 +189,7 @@ def preflight(*, source: Path, expected_sha: str) -> dict:
             or _state(N50_SERVICE)["ActiveState"] not in ("failed","inactive")
             or _state(FALLBACK_SERVICE)["LoadState"]!="loaded"):
         raise ValueError("expected_failback_systemd_state_missing")
-    n2=_audit_n2(source=source,python=PYTHON)
+    n2=_audit_live_n2_recovery(source=source)
     old_report=_owner_old(source)
     if not _valid_old_forensic(old_report):
         raise ValueError("old_halt_forensic_mismatch")
@@ -152,6 +197,7 @@ def preflight(*, source: Path, expected_sha: str) -> dict:
         "n2_ok":True,
         "n2_last_published_end_ms":n2["last_published_end_ms"],
         "n2_stored_candles":n2["stored_candles"],
+        "n2_historical_unpublished_hours":n2["historical_unpublished_hours"],
         "old_halt_verified":True,
         "old_stored_candles":1306,
         "old_published_hours":3,
