@@ -146,6 +146,19 @@ class N50ManagedHealthTests(unittest.TestCase):
         self.assertFalse(out["owner_integrity_verified"])
         self.assertFalse(out["continuous_collector_verified"])
 
+    def test_new_active_epoch_waits_for_writer_preserving_old_pit(self):
+        old,j=self.make_epoch()
+        new,j2=self.make_epoch(decision=T+37*HOUR_MS,
+                               pubs=None,active=True)
+        with patch("scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
+                   return_value=valid_audit(T+HOUR_MS,
+                                            old["scope_digest_sha256"])):
+            out=self.inspect(now=T+37*HOUR_MS+180_000)
+        self.assertEqual(out["status"],"awaiting_first_writer",out)
+        self.assertEqual(out["epoch_count"],2)
+        self.assertEqual(out["published_checkpoints"],1)
+        self.assertFalse(out["owner_integrity_verified"])
+
     def test_one_valid_real_pit_does_not_claim_24h(self):
         m,j=self.make_epoch()
         with patch("scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
