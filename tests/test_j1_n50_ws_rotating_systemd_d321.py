@@ -29,7 +29,7 @@ class WSRotatingSystemdUnitTests(unittest.TestCase):
         self.assertIn("OnFailure=cia-j1-n50-ws-fallback.service",ws)
         self.assertIn("scripts.rotate_j1_n50_ws_epoch_once",rotator)
         self.assertIn(" --epoch-root "+ROOT,rotator)
-        self.assertIn("OnCalendar=*-*-* *:02:15 UTC",timer)
+        self.assertIn("OnCalendar=*-*-* *:01:15 UTC",timer)
         self.assertIn("AccuracySec=1s",timer)
         self.assertIn("Persistent=false",timer)
         self.assertIn("Unit=cia-j1-n50-ws-rotate.service",timer)
@@ -41,7 +41,7 @@ class WSRotatingSystemdUnitTests(unittest.TestCase):
         old=(Path(__file__).resolve().parents[1]/
              "deploy/systemd/cia-j1-n50-ws.timer.template").read_text("ascii")
         self.assertIn("OnCalendar=*-*-* *:59:30 UTC",old)
-        self.assertNotIn("OnCalendar=*-*-* *:02:15 UTC",old)
+        self.assertNotIn("OnCalendar=*-*-* *:01:15 UTC",old)
 
     def test_untrusted_paths_and_root_are_denied(self):
         for values in (
