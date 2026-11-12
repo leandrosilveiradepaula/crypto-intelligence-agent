@@ -71,6 +71,32 @@ def _verified_directory(path: Path) -> None:
     _strict_owner(path, directory=True)
 
 
+def _capture_candidate_pending(path: Path, *, now: int) -> bool:
+    """An unpromoted epoch is expected only during its current capture hour.
+
+    No manifest content is trusted, and no new SQLITE checkpoint is implied.
+    """
+    decision = now // HOUR_MS * HOUR_MS
+    if (path.name != f"epoch-{decision:013d}"
+            or not 60_000 <= now % HOUR_MS <= 900_000):
+        return False
+    _verified_directory(path)
+    scope = path / "scope"
+    journal = path / "journal"
+    _verified_directory(scope)
+    _verified_directory(journal)
+    if next(journal.iterdir(), None) is not None:
+        return False
+    contents = list(scope.iterdir())
+    if len(contents) > 1:
+        return False
+    if contents:
+        if contents[0].name != FILE_NAME or contents[0].is_symlink():
+            return False
+        _strict_owner(contents[0], directory=False)
+    return True
+
+
 def _published_ends(path: Path, *, expected: int, last: int) -> list[int]:
     _strict_owner(path, directory=False)
     if path.is_symlink() or path.stat().st_size > MAX_DB_BYTES:
@@ -124,12 +150,24 @@ def audit_managed_n50_epochs(
         folders.sort(key=lambda x: x.name)
         pointer = _pointer_read(root_directory)
         if pointer is None:
-            return _result("awaiting_first_epoch") if not folders else out
+            if not folders:
+                return _result("awaiting_first_epoch")
+            if (len(folders) == 1
+                    and _capture_candidate_pending(folders[0], now=now)):
+                out["status"] = "capture_in_progress_unverified"
+                out["epoch_count"] = 1
+            return out
         active = pointer["epoch_id"]
         if active not in {p.name for p in folders}:
             return out
         out["active_epoch_id"] = active
         out["epoch_count"] = len(folders)
+        pending = [p for p in folders if p.name > active]
+        if pending:
+            if (len(pending) == 1
+                    and _capture_candidate_pending(pending[0], now=now)):
+                out["status"] = "rotation_in_progress_unverified"
+            return out
         all_ends: list[int] = []
         for folder in folders:
             _verified_directory(folder)
@@ -251,6 +289,7 @@ def main(argv: list[str] | None = None) -> int:
     return 0 if report["status"] in (
         "awaiting_first_epoch", "awaiting_first_writer",
         "in_progress_unverified", "partial_first_writer",
+        "capture_in_progress_unverified", "rotation_in_progress_unverified",
         "verified_epoch_history", "verified_with_missing_pit",
         "stale_active_publication",
     ) else 65
