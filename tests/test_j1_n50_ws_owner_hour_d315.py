@@ -169,6 +169,7 @@ class N50WSOwnerHourTests(unittest.TestCase):
         self.assertEqual(report["subscriptions_acknowledged"], 1)
         self.assertEqual(len(report["hour_evidence_sha256"]), 64)
         self.assertEqual(report["utc_closed_hour_end_ms"], DECISION)
+        self.assertEqual(report["source_provenance"], "bybit_public_ws_confirmed")
         self.assertTrue(report["owner_lock_acquired"])
         self.assertTrue(session.closed)
         self.assertEqual(len(session.sent), 1)
@@ -181,6 +182,7 @@ class N50WSOwnerHourTests(unittest.TestCase):
         self.assertEqual((report["confirmed_contracts"], report["missing_contracts"]), (49, 1))
         self.assertTrue(report["rest_gap_reconciliation_required"])
         self.assertIsNone(report["hour_evidence_sha256"])
+        self.assertIsNone(report["source_provenance"])
         self.assertTrue(session.closed)
         self.assert_sanitized(report)
 
@@ -206,6 +208,13 @@ class N50WSOwnerHourTests(unittest.TestCase):
         report, _ = self.run_it(frames)
         self.assertEqual(report["status"], "ws_owner_hour_incomplete_no_pit", report)
         self.assertEqual(report["confirmed_contracts"], 49)
+
+    def test_untrusted_declared_start_clock_abstains_before_socket(self):
+        self.clock.utc = DECISION + 30_000
+        report, _ = self.run_it([candle(s) for s in SYMS])
+        self.assertEqual(report["status"], "ws_owner_preflight_abstain")
+        self.assertEqual(len(self.seen), 0)
+        self.assertFalse(report["owner_lock_acquired"])
 
     def test_bad_ack_stops_before_any_ws_journal_append(self):
         report, session = self.run_it([candle(s) for s in SYMS], bad_ack=True)
