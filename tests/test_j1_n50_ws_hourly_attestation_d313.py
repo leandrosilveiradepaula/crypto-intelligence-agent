@@ -6,6 +6,7 @@ restarts systemd or certifies continuous live trading/Top50 market coverage.
 from __future__ import annotations
 
 from copy import deepcopy
+from contextlib import closing
 from dataclasses import replace
 from decimal import Decimal
 import json
@@ -184,7 +185,7 @@ class N50HourlyWSEvidenceTests(unittest.TestCase):
     def test_sqlite_tamper_blocks_entire_proof_even_if_fifty_rows_present(self):
         self.append(50)
         self.assertEqual(self.attest()["confirmed_contracts"], 50)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("UPDATE confirmed SET digest=? WHERE symbol=?",
                        ("b"*64, MEMBERS[0]))
         self.assertEqual(self.attest()["status"],"ws_closed_hour_abstain")
