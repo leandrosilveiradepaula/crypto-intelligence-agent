@@ -169,6 +169,8 @@ class N50WSRootReleaseTests(unittest.TestCase):
             "/home/cia-probe/agent/ok;rm",
         ):
             self.assertIsNone(rel._SAFE_PATH.fullmatch(path))
+        with self.assertRaises(ValueError):
+            rel._safe_owner_dir(Path("/home/cia-probe/agent/../unsafe"),1000)
         self.assertTrue(rel._SHA.fullmatch(SHA))
         self.assertIsNone(rel._SHA.fullmatch(SHA+";"))
 
