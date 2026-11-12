@@ -156,6 +156,7 @@ class RotatingWSRootReleaseTests(TestCase):
             ("/usr/bin/systemctl","enable","--now",rel.N2_TIMER),
         ])
 
+    @skipUnless(os.name=="posix", "root systemd renderer requires POSIX absolute paths")
     def test_root_renderer_keeps_ws_preclose_rotation_and_dual_fallback(self):
         man=ROOT/"j1-n50-ws-manifest-1800000000000"
         ws=ROOT/"j1-n50-ws-private-1800000000000"
