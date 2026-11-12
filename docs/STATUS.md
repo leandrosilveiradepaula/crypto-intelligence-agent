@@ -1493,3 +1493,6 @@ Novo timer WS `HH:59:30 UTC` (pré-fechamento) separado do timer REST N50 legado
 
 ## J1/D320 — kit executável de instalação WS N50 em uma só execução (12/11/2026 UTC)
 Após D318 (timer HH:59:30), D320 acrescenta instalador owner/root para novos diretórios, checkout exato, censo D287 + metadata D314/D316, units WS e fallback N2. **Ainda não executado na VPS:** conexão MCP atual root restrita não consegue acessar `cia-probe` nem gravar em systemd; não confundir com aceite J1. Código de release OFF sem duas flags, root SSH independente após CI/revisão. N2 permanece ativo; N50 REST antigo desligado e preservado. `docs/J1_N50_WS_ROOT_RELEASE_D320.md`.
+
+### J1/D321 — resolver expiração do manifesto/cache N50 em 48h sem alterar produção
+Novo epoch pointer privado atômico rotaciona a cada >=36h somente se D287+D314/D316 nova coorte 50/50 estiverem válidas, sem misturar journal antigo. Rotator owner tem claim de uma tentativa por coorte e não repete 10006; novo WS CLI seleciona epoch ativo por ponteiro ao HH:59:30. Templates de rotação HH:02:15 separados e OFF. Código candidato a CI/PR; não instalado na VPS nem habilita N50. Contrato `docs/J1_N50_WS_EPOCH_ROTATION_D321.md`.
