@@ -48,7 +48,7 @@ def _out(status: str, reason: str = "") -> dict[str, Any]:
         "operation": "none", "epoch_id": None,
         "claims_created": 0, "pointer_updated": False,
         "new_closed_candles": 0, "requests_attempted": 0,
-        "network_enabled": False, "trading_enabled": False,
+        "network_accessed": False, "trading_enabled": False,
         "systemd_modified": False, "other_journals_modified": False,
         "continuous_collector_verified": False,
         "marketwide_top50_verified": False,
@@ -249,6 +249,8 @@ def managed_n50_tick_once(
                 epoch_id, new_scope, new_journal = _epoch_dirs(
                     epochs,decision=decision)
                 new_file = new_scope / FILE_NAME
+                if next(new_journal.iterdir(), None) is not None:
+                    return _out("blocked", "new_epoch_journal_not_empty")
                 if new_file.is_file() and not new_file.is_symlink():
                     # Crash between successful capture and pointer update.
                     # Adopt only a D287 sealed scope with the exact D293
@@ -260,8 +262,6 @@ def managed_n50_tick_once(
                 else:
                     if new_file.is_symlink() or next(new_scope.iterdir(),None) is not None:
                         return _out("blocked", "incomplete_scope_not_adoptable")
-                    if next(new_journal.iterdir(),None) is not None:
-                        return _out("blocked", "new_epoch_journal_not_empty")
                     result = coordinated_n50_once(
                         lock_directory=lock_directory,action="capture_seal",
                         manifest_directory=new_scope,
@@ -290,6 +290,7 @@ def managed_n50_tick_once(
                 out["pointer_updated"]=True
                 out["claims_created"]=result.get("claims_created",0)
                 out["requests_attempted"]=result.get("requests_attempted",0)
+                out["network_accessed"]=out["requests_attempted"] > 0
                 return out
             result=coordinated_n50_once(
                 lock_directory=lock_directory,action="hourly_writer",
@@ -307,6 +308,7 @@ def managed_n50_tick_once(
             out["claims_created"]=result.get("claims_created",0)
             out["new_closed_candles"]=result.get("new_closed_candles",0)
             out["requests_attempted"]=result.get("requests_attempted",0)
+            out["network_accessed"]=out["requests_attempted"] > 0
             return out
         finally:
             try:
