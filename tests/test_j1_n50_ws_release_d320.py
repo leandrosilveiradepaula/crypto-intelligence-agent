@@ -169,7 +169,7 @@ class N50WSRootReleaseTests(unittest.TestCase):
             directory.chmod(0o700)
             # Override only the allowed root prefix for a temporary fixture.
             with patch.object(rel,"_SAFE_PATH",
-                              re.compile(re.escape(str(directory))+r"\\Z")):
+                              re.compile(re.escape(str(directory))+r"\Z")):
                 rel._safe_owner_dir(directory,os.getuid())
                 directory.chmod(0o755)
                 with self.assertRaises(ValueError):
