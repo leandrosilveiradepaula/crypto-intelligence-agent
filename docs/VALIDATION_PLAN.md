@@ -1180,3 +1180,8 @@ Teste `tests/test_j1_n50_systemd_isolation.py`: aceitar apenas N2 timer `loaded/
 Testar `tests/test_j1_n2_backup_d297.py` via POSIX real SQLite: origem íntegra, cópia 0600, SHA256, mesmo número de candles e checkpoints, zero escrita de origem, proibição de sobrescrita, destino com symlink e fonte corrompida bloqueados. Gate de VPS pré-cutover requer `backup_verified` em pasta owner-only antes de instalar units.
 
 D297 teste de failback: `test_j1_n50_managed_cli_failback_d297.py` deve provar que `deferred`, `blocked`, `optin_required` geram exit=65, permitindo o OnFailure do systemd; somente captura/rotação/persistência bem-sucedida geram exit 0.
+
+
+### J1/D299 — auditor owner N50 pós-release
+
+`tests/test_j1_n50_managed_health.py`: owner POSIX 0700 e 0600, ponteiro D294 e manifesto D287 válidos, período sem journal após censo, primeiro checkpoint sem inferir 24h, leitura D290 independente, múltiplos checkpoints com gap reconhecido, symlink/adulteração, digest do scope, dados com status de integridade negado e publicação obsoleta bloqueada da classificação saudável. Verificar que output não inclui símbolo/preço e `continuous_collector_verified=false`. CI Linux/docs + Windows/offline + Chrome/PAPER HEAD exato, merge sem deploy e teste read-only via VPS após primeiro fechamento real. 

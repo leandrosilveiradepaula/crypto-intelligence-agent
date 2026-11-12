@@ -1408,3 +1408,8 @@ VPS N2 auditado pelo proprietário `cia-probe`: SQLite íntegro, 166 velas, 39 c
 ## J1/D298 — impedimento real de release corrigido em código (12/11/2026 UTC)
 
 D297 PR #570 integrada, backup N2 SQLite owner 0600 verificado, 166 candles/39 publicações. Preflight N50 real foi bloqueado sem alterar systemd: venv Python é symlink oficial e Git root recusa checkout owner. D298 endurece liberação para aceitar somente symlink Python pinado resolvendo para `/usr/bin/python3.12` e faz revisão Git sob `cia-probe`, sem relaxar proteção Git. Gate ainda requer CI/merge, preflight root PASS e rollout reversível; não declarar N50 24/7.
+
+
+## J1/D299 — coleta N50 agora agendada na VPS; observabilidade sem fabricar PIT (12/11/2026 UTC)
+
+D297/D298 realizaram cutover autorizado com rollback: N50 timer active/enabled, N2 timer inativo/disabled e backup íntegro preservado, zero ordens. D299 adiciona auditor read-only owner de epochs D294, scope D287 e journals M1/D290, retornando contagens reais, lacunas e cobertura dos 24 fechamentos. Código/testes offline não instalam nada. N50 24/7 e rotação continuam **não verificados** até observações reais; #429/#319 abertas.
