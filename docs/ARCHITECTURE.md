@@ -618,3 +618,6 @@ O modelo de dados distingue: (a) manifesto D287 `scope_digest_sha256` com 50 mem
 
 ### D317 bootstrap de metadados separado do feed WS
 `j1_n50_ws_metadata_bootstrap` usa manifesto D287, chama `capture_n50_dynamic_ws_metadata_once` D314 (máximo quatro GET públicos, zero retry em 10006) e guarda os recibos privados na cache D316, sob flock exclusivo e arquivo O_EXCL 0600. D314 passa páginas/cursores/timestamps em campos repr=False do dataclass de captura; a saída pública continua só contagens/status. Quando a epoch e o cache estão prontos, `j1_n50_ws_cached_runner` aciona D315 a cada fechamento explicitamente autorizado, **sem GET adicional**. As interfaces de CLI são independentes e OFF por padrão; nenhuma ativação VPS realizada.
+
+## J1/D318 — agendamento WS pré-fechamento com exclusividade de serviço
+N50 REST legado oneshot em HH:01:05 UTC **não é** o WS. Novo trio de templates `cia-j1-n50-ws.timer/service/fallback`: timer HH:59:30 UTC `Persistent=false`, service owner inicia CLI D317 com escopo D287/D316 e jornal WS privado sob lock, preflight read-only exige N2 desabilitado e N50 REST disabled; OnFailure desliga WS e reabilita N2. Renderer puro valida placeholders/caminhos/ExecStart. VPS sem deploy até gate root e evidência do cache corrente. `docs/J1_N50_WS_PRECLOSE_TIMER_D318.md`.
