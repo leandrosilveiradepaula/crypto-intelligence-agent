@@ -149,6 +149,7 @@ def _unit_write(name: str, body: str) -> None:
     fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
                  getattr(os, "O_NOFOLLOW", 0), 0o644)
     try:
+        os.fchmod(fd, 0o644)
         with os.fdopen(fd, "wb") as out:
             out.write(body.encode("ascii"))
             out.flush()
@@ -166,14 +167,17 @@ def _unit_write(name: str, body: str) -> None:
 
 def _rollback() -> bool:
     ok = True
-    for argv in (
-        ["/usr/bin/systemctl", "disable", "--now", N50_TIMER],
-        ["/usr/bin/systemctl", "stop", N50_SERVICE],
+    # A failed first unit write may leave neither N50 unit installed.
+    # Missing units are not a rollback error, and must not prevent N2 restore.
+    for name, argv in (
+        (N50_TIMER, ["/usr/bin/systemctl", "disable", "--now", N50_TIMER]),
+        (N50_SERVICE, ["/usr/bin/systemctl", "stop", N50_SERVICE]),
     ):
-        try:
-            _call(argv, timeout=30)
-        except (OSError, RuntimeError, subprocess.TimeoutExpired):
-            ok = False
+        if (UNIT_ROOT / name).is_file():
+            try:
+                _call(argv, timeout=30)
+            except (OSError, RuntimeError, subprocess.TimeoutExpired):
+                ok = False
     for name in (N50_TIMER, N50_SERVICE):
         path = UNIT_ROOT / name
         if path.is_file() and not path.is_symlink():
