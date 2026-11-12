@@ -76,6 +76,20 @@ class N50GlobalLeaseTests(unittest.TestCase):
             self.assertEqual(self.invoke("hourly_writer",
                              output_directory=self.scope)["status"],"blocked")
 
+    def test_writer_failure_class_survives_lease_without_provider_details(self):
+        with patch("crypto_intelligence_agent.j1_n50_global_lease.run_supervised_n50_once",
+                   return_value={
+                       "status":"blocked",
+                       "failure_category":"provider_route_or_symbol_unavailable_no_retry",
+                       "requests_attempted":7,"new_closed_candles":6,
+                   }):
+            out=self.invoke("hourly_writer")
+        self.assertEqual(out["status"],"blocked")
+        self.assertEqual(out["failure_category"],
+                         "provider_route_or_symbol_unavailable_no_retry")
+        self.assertEqual((out["requests_attempted"],out["new_closed_candles"]),(7,6))
+        self.assertFalse(out["orders_sent"])
+
     def test_nested_call_fails_on_live_flock_without_deadlock(self):
         observed=[]
         def nested(**kw):
