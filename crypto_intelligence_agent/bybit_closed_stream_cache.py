@@ -346,6 +346,11 @@ class OfflineStreamAudit:
     hour_evidence_expected: int | None = None
     hour_evidence_confirmed: int | None = None
     hour_evidence_sha256: str | None = None
+    # Private selected members absent in the last closed hour, produced only
+    # by the same read-only SQLite audit snapshot; never shown in repr/report.
+    private_missing_hour_members: tuple[str, ...] = field(
+        default_factory=tuple, repr=False, compare=False,
+    )
 
     def sanitized_report(self) -> dict:
         result = {
@@ -663,15 +668,20 @@ class SQLiteOfflineClosedStreamJournal:
                 # snapshot as the full integrity/digest/gap replay above.
                 # Never count subscription ACK or an unconfirmed/open update.
                 hour_confirmed = hour_digest = None
+                hour_missing: tuple[str, ...] = ()
                 if hour_evidence_symbols is not None:
                     at_open = decision_at_ms - HOUR_MS
                     found = []
+                    missing_members = []
                     for symbol in hour_evidence_symbols:
                         event = by_symbol.get(symbol, {}).get(at_open)
                         if event is not None and event["received_ms"] <= as_of_ms:
                             found.append([
                                 symbol, event["received_ms"], _sha(_json(event)),
                             ])
+                        else:
+                            missing_members.append(symbol)
+                    hour_missing = tuple(missing_members)
                     hour_confirmed = len(found)
                     if hour_confirmed == 50:
                         hour_digest = _sha(_json({
@@ -696,6 +706,7 @@ class SQLiteOfflineClosedStreamJournal:
                     hour_evidence_expected=(50 if hour_evidence_symbols is not None else None),
                     hour_evidence_confirmed=hour_confirmed,
                     hour_evidence_sha256=hour_digest,
+                    private_missing_hour_members=hour_missing,
                 )
         except sqlite3.DatabaseError:
             raise DataGapError("offline journal read-only audit failed") from None
