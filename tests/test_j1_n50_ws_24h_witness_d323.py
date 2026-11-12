@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import unittest
 from unittest.mock import patch
 
@@ -111,7 +112,7 @@ class WS24hWitnessTests(unittest.TestCase):
             self.assertEqual(w.observe_n50_ws_24h()["status"],"owner_optin_required")
             self.assertEqual(w.observe_n50_ws_24h(
                 enable_ws_24h_witness=True)["status"],"owner_optin_required")
-            with patch.object(w.os,"geteuid",return_value=0):
+            with patch.object(w.os,"geteuid",return_value=0,create=True):
                 self.assertEqual(w.observe_n50_ws_24h(
                     enable_ws_24h_witness=True,allow_private_readonly_audit=True
                 )["status"],"owner_environment_abstain")
@@ -120,6 +121,7 @@ class WS24hWitnessTests(unittest.TestCase):
                 state_directory=Path("/tmp/unapproved")
             )["status"],"owner_environment_abstain")
 
+    @unittest.skipUnless(os.name == "posix", "owner UID/DAC paths require POSIX")
     def test_readonly_owner_abstains_cleanly_if_pointer_unavailable(self):
         with patch.object(w.os,"getuid",return_value=1234), \
              patch.object(w.os,"geteuid",return_value=1234), \
