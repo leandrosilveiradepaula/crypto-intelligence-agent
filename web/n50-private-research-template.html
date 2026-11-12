@@ -53,6 +53,13 @@
     th,td { padding:13px; vertical-align:top; overflow-wrap:anywhere; }
     th { background:var(--lighter); font-size:.78rem; color:var(--muted); }
     td { border-top:1px solid var(--border); font-size:.86rem; font-variant-numeric:tabular-nums; }
+    .watch-columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .observation-list { margin:10px 0 0; padding-left:22px; }
+    .observation-list li { padding:9px 0; border-top:1px solid var(--border); font-size:.88rem; overflow-wrap:anywhere; }
+    .observation-list li:first-child { border-top:0; }
+    .observation-list strong { font-size:.91rem; }
+    .observation-list .fine { display:block; margin:3px 0 0; }
+    @media(max-width:560px) { .watch-columns { grid-template-columns:1fr; } }
     .muted { color:var(--muted); }
     footer { border-top:1px solid var(--border); padding:22px 0 32px; color:var(--muted); font-size:.78rem; }
     @media(max-width:800px) { .stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
@@ -88,6 +95,23 @@
       <h2 id="variacoes">Maiores variações passadas</h2>
       <p class="fine">Estas observações são ordenadas por retorno já ocorrido. Uma variação alta não representa vantagem estatística para a próxima hora.</p>
       <div class="cards">__TOP_CARDS__</div>
+    </section>
+
+    <section class="section" aria-labelledby="observacoes-combinadas" data-kind="descriptive-only">
+      <h2 id="observacoes-combinadas">Rompimentos e força relativa — somente observação</h2>
+      <p class="fine">Critérios fixos J2/D308: rompimento de 23 candles anteriores, desempenho relativo ao BTC em 24 candles e turnover da última hora pelo menos igual à média das 23 anteriores. Não são entradas, recomendações ou sinais validados.</p>
+      <p class="fine" id="watchlist-contexto">__WATCHLIST_STATUS__</p>
+      <div class="watch-columns" aria-describedby="watchlist-contexto">
+        <section class="stat" aria-label="Observações de rompimento de alta">
+          <h3>Alta observada <span class="muted">(__WATCHLIST_UP_COUNT__)</span></h3>
+          <ol class="observation-list">__WATCHLIST_UP_ROWS__</ol>
+        </section>
+        <section class="stat" aria-label="Observações de rompimento de baixa">
+          <h3>Baixa observada <span class="muted">(__WATCHLIST_DOWN_COUNT__)</span></h3>
+          <ol class="observation-list">__WATCHLIST_DOWN_ROWS__</ol>
+        </section>
+      </div>
+      <p class="fine">A lista exibe até cinco contratos em cada sentido. Não contém preço de entrada, stop, alvo, alavancagem, expectativa de retorno nem ordens.</p>
     </section>
 
     <section class="section" aria-labelledby="universo">
