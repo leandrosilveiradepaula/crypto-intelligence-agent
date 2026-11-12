@@ -14,7 +14,10 @@ import stat
 import json
 import os
 from pathlib import Path
-import pwd
+try:
+    import pwd
+except ImportError:  # Windows CI imports the module but cannot deploy it.
+    pwd = None
 import signal
 import socket
 import subprocess
@@ -89,7 +92,7 @@ def _audit_n2(*, source: Path, python: Path) -> dict:
 
 
 def preflight(*, source: Path, root: Path, python: Path, sha: str) -> dict:
-    if (os.geteuid() != 0 or os.getuid() != 0
+    if (os.name != "posix" or pwd is None or os.geteuid() != 0 or os.getuid() != 0
             or socket.gethostname() != HOSTNAME):
         raise PermissionError("wrong_host_or_uid")
     if (not all(isinstance(p, Path) and p.is_absolute()
