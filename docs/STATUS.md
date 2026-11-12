@@ -1471,3 +1471,7 @@ Incidente confirmado pelo journald: N50 falhou 16:01:12 UTC, exit65, `provider_r
 ## J1/D312 — preparação de recuperação da nova epoch HALT 10006 (12/11/2026)
 
 Com N50 timer inactive/disabled e N2 active/enabled após o incidente real 16:01 UTC (10006, 4 GETs, 3 parciais), o script D306 anterior (fixo a epoch antiga com 3 PITs/6 parciais) não pode ser reaproveitado. D312 introduz auditoria owner-only da epoch ativa `epoch-1794492000000` via forense D304 e um release root OFF por padrão, SHA e units pinadas, com dupla confirmação apenas após gate produção, novo censo/epoch, preservação do HALT e rollback para N2. Não é deploy, homologação 24h ou permissão de trading. Contrato e testes em `docs/J1_N50_RATE_LIMIT_RECOVERY_D312.md`. Em paralelo, #585 é a rota WS-first para deixar de requisitar ~50 candles REST por hora.
+
+## J1/D314 — escopo dinâmico D287→WebSocket sem lista fixa (12/11/2026 UTC)
+
+Integração offline de 50 símbolos USDT perpétuos do manifesto D287 com metadados V5 atuais de catálogo paginado em um `OfflineReviewedStreamScope` estritamente **provisório** para uso por `bybit_ws_supervisor`, cache e auditoria D313. Valida paginação completa, campos contra TradFi, timestamps, tipo perpétuo, precisão financeira, hashes e todos os 50 membros. Teste ponta a ponta offline gera 50/50 no journal WS e falha fechado em caso incompleto. Código, testes e `docs/J1_N50_WS_DYNAMIC_ADMISSION_D314.md` ainda sujeitos a CI/revisão. Não executado na VPS; N50 continua disabled e fallback N2 ativo, com #585/#429/#319 abertas.
