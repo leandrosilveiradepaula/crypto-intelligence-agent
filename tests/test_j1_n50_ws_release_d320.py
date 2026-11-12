@@ -173,6 +173,15 @@ class N50WSRootReleaseTests(unittest.TestCase):
         self.assertTrue(rel._SHA.fullmatch(SHA))
         self.assertIsNone(rel._SHA.fullmatch(SHA+";"))
 
+    @unittest.skipUnless(os.name == "posix", "Bash installer is POSIX-only")
+    def test_staging_script_has_valid_bash_syntax(self):
+        path=Path(__file__).resolve().parents[1]/"deploy/vps/prepare_install_j1_n50_ws_d320_once.sh"
+        result=subprocess.run(
+            ["/usr/bin/bash","-n",str(path)],
+            capture_output=True,text=True,timeout=10,check=False,
+        )
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_staging_script_never_modifies_existing_rest_n50_template(self):
         path=Path(__file__).resolve().parents[1]/"deploy/vps/prepare_install_j1_n50_ws_d320_once.sh"
         src=path.read_text("ascii")
