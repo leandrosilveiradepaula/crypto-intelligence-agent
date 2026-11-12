@@ -126,6 +126,26 @@ class N50ManagedHealthTests(unittest.TestCase):
         self.assertFalse(out["owner_integrity_verified"])
         self.assertEqual(out["published_checkpoints"],0)
 
+    def test_current_capture_and_rotation_are_explicitly_unverified(self):
+        m,j=self.make_epoch(pubs=None,active=False)
+        early=self.inspect(now=T+180_000)
+        self.assertEqual(early["status"],"capture_in_progress_unverified",early)
+        self.assertFalse(early["owner_integrity_verified"])
+        self.assertEqual(early["network_requests"],0)
+        self.assertEqual(self.inspect(now=T+16*60_000)["status"],"blocked")
+
+    def test_unpromoted_rotation_never_forges_a_checkpoint(self):
+        m,j=self.make_epoch()
+        fresh,j2=self.make_epoch(decision=T+37*HOUR_MS,
+                                 pubs=None,active=False)
+        with patch("scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
+                   side_effect=AssertionError("no current PIT while capturing")):
+            out=self.inspect(now=T+37*HOUR_MS+180_000)
+        self.assertEqual(out["status"],"rotation_in_progress_unverified",out)
+        self.assertEqual(out["published_checkpoints"],0)
+        self.assertFalse(out["owner_integrity_verified"])
+        self.assertFalse(out["continuous_collector_verified"])
+
     def test_one_valid_real_pit_does_not_claim_24h(self):
         m,j=self.make_epoch()
         with patch("scripts.audit_j1_n50_managed_epochs.audit_existing_rest_resume",
