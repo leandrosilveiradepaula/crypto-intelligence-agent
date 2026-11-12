@@ -157,7 +157,7 @@ def audit_managed_n50_epochs(
                 out["active_epoch_age_hours"] = (now - observed) // HOUR_MS
             db_path = journal_dir / _DB_NAME
             if not db_path.exists() and not db_path.is_symlink():
-                if folder.name == active and not all_ends and len(folders) == 1:
+                if folder.name == active:
                     out["status"] = "awaiting_first_writer"
                     return out
                 return _result("blocked")
@@ -173,7 +173,7 @@ def audit_managed_n50_epochs(
                 # The M1 writer creates its SQLite/cursors before its first
                 # completed per-symbol transaction. Do not label the active
                 # hour healthy or corrupt while the safe window is open.
-                if (folder.name == active and len(folders) == 1
+                if (folder.name == active
                         and 60_000 <= now % HOUR_MS <= 900_000):
                     out["status"] = "in_progress_unverified"
                     return out
@@ -187,11 +187,11 @@ def audit_managed_n50_epochs(
                     or type(audit.get("published_hours")) is not int):
                 return _result("blocked")
             if audit["published_hours"] == 0:
-                if (folder.name == active and len(folders) == 1
+                if (folder.name == active
                         and audit.get("status") ==
                             "unpublished_bootstrap_resume_ready"):
                     out["status"] = "partial_first_writer"
-                    out["stored_candles"] = audit["stored_candles"]
+                    out["stored_candles"] += audit["stored_candles"]
                     return out
                 return _result("blocked")
             if audit["published_hours"] < 0:
