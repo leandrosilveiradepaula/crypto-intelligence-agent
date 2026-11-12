@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from decimal import Decimal
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -215,6 +216,7 @@ class WatchlistTests(unittest.TestCase):
                 include_private_symbols=True,
                 confirm_private_symbol_output=True,
                 owner_ok=True,
+                root_directory=Path.cwd(),  # absolute on Windows and POSIX fixture
                 now_ms=END+100_000,
             )
         self.assertEqual(out["status"], "descriptive_watchlist_ready")
