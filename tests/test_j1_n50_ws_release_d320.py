@@ -3,7 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import os
+import re
 import subprocess
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
@@ -158,6 +160,20 @@ class N50WSRootReleaseTests(unittest.TestCase):
         self.assertEqual(r["status"],"ws_unit_install_failed_N2_untouched")
         self.assertFalse(r["units_created"])
         self.assertFalse(r["n2_quiesced"])
+
+    @unittest.skipUnless(os.name == "posix", "positive 0700 owner DAC on POSIX")
+    def test_real_posixpath_owner_private_directory_passes(self):
+        with TemporaryDirectory() as tmp:
+            directory=Path(tmp)/"owner-private"
+            directory.mkdir(mode=0o700)
+            directory.chmod(0o700)
+            # Override only the allowed root prefix for a temporary fixture.
+            with patch.object(rel,"_SAFE_PATH",
+                              re.compile(re.escape(str(directory))+r"\\Z")):
+                rel._safe_owner_dir(directory,os.getuid())
+                directory.chmod(0o755)
+                with self.assertRaises(ValueError):
+                    rel._safe_owner_dir(directory,os.getuid())
 
     def test_path_and_commit_regex_are_exact(self):
         self.assertTrue(rel._SAFE_PATH.fullmatch(str(SRC)))
