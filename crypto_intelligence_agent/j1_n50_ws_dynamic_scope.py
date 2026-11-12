@@ -252,6 +252,11 @@ class DynamicN50WSMetadataCapture:
     requests_attempted: int
     failure_category: str | None = None
     admission: DynamicN50WSAdmission | None = field(default=None, repr=False)
+    # Private validated HTTP source receipts for a D316 owner cache writer.
+    # Never printed in repr() or sanitized_report(), including on failure.
+    instrument_pages: tuple[dict, ...] | None = field(default=None, repr=False)
+    requested_cursors: tuple[str | None, ...] | None = field(default=None, repr=False)
+    page_received_at_ms: tuple[int, ...] | None = field(default=None, repr=False)
 
     def sanitized_report(self) -> dict[str, Any]:
         return {
@@ -356,6 +361,9 @@ def capture_n50_dynamic_ws_metadata_once(
         return DynamicN50WSMetadataCapture(
             "dynamic_n50_ws_metadata_captured_research_only",
             fetch.requests_attempted, admission=admission,
+            instrument_pages=tuple(pages),
+            requested_cursors=tuple(cursors),
+            page_received_at_ms=tuple(receipts),
         )
     except (J1BybitCaptureError, DataValidationError, ValueError, OSError,
             TypeError, OverflowError):

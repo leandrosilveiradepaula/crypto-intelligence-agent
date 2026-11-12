@@ -1604,3 +1604,9 @@ Após incidente Bybit 10006 e forense owner PASS (1203 candles, um PIT, três pa
 
 ## D316 — persistir as páginas D314 uma única vez por epoch, nunca recapturar a cada hora (12/11/2026)
 Para manter identidade/replay do journal WS dinâmico entre leases, guardar manifesto D287 + páginas/cursores/receipts D314 em cache privado owner 0700/0600 com criação exclusiva, hash canônico e leitura revalidada pelo **mesmo** D314, digest esperado da coorte ativa e TTL 48h. Não usar o registro WS fixo de 52, não converter histórico REST, não substituir identidade independente (#319) por hash, não automatizar GET sob HALT 10006. Opt-in privado e produção OFF. Contrato `docs/J1_N50_WS_PRIVATE_CACHE_D316.md`, issue #585.
+
+## D317 — N50 WS primeiro pela janela pré-fechamento com manifesto e cache imutáveis (12/11/2026)
+O executor owner nunca deve reconsultar catálogo a cada lease nem inferir que o scope D316 continua válido para uma epoch D287 diferente. A função offline com sessão injetada exige manifesto/cache da mesma SHA, inicia 10–60s antes da virada UTC, usa SQLite WS privado distinto do HALT REST, D315 como único writer+ACK e D313 como auditor 50/50. 49/50 não é PIT; pedido de gap não é execução REST. Não introduzir deploy/scheduler ou ordens sem gate. Contrato `docs/J1_N50_WS_CACHED_RUNNER_D317.md`, #585.
+
+### D317 — ingresso de metadados 1x por epoch, separado da assinatura WS
+O recibo V5 público D314, até quatro páginas e sem retry 10006, só poderá ser persistido em cache D316 privado por processo owner não-root com cinco opt-ins, lock exclusivo 0600, validação D287/D314 e criação O_EXCL. Coleta ao vivo por hora usa cache, não consome GET de metadados por fechamento. Campos privados de captura nunca entram em repr/log/relatório sanitizado; nenhum GET de OHLC REST ou ordem. Gate de release VPS e observação real ainda separados. #585.
