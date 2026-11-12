@@ -320,7 +320,22 @@ def managed_n50_tick_once(
                     )
                 if result["status"] not in (
                         "capture_sealed","sealed_current_auto_rank_research_scope_only"):
-                    return _out("blocked", "current_rank_capture_abstained")
+                    denied=_out("blocked", "current_rank_capture_abstained")
+                    count=result.get("requests_attempted")
+                    if type(count) is int and 0<=count<=500:
+                        denied["requests_attempted"]=count
+                        denied["network_accessed"]=count>0
+                    claims=result.get("claims_created")
+                    if type(claims) is int and 0<=claims<=1:
+                        denied["claims_created"]=claims
+                    # Do not copy arbitrary provider messages into logs.
+                    from crypto_intelligence_agent.j1_rest_incremental_owner import (
+                        _ALLOWED_FAILURES,
+                    )
+                    failure=result.get("failure_category")
+                    if type(failure) is str and failure in _ALLOWED_FAILURES:
+                        denied["failure_category"]=failure
+                    return denied
                 fresh = load_private_ranked_scope(new_scope, now_ms=clock())
                 if fresh["closed_hour_end_ms"] != decision:
                     return _out("blocked","capture_clock_drift")
