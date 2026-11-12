@@ -101,6 +101,7 @@ def _show(unit: str) -> dict[str, str]:
 def _safe_owner_dir(path: Path, uid: int) -> None:
     if (type(path) is not Path or not path.is_absolute()
             or _SAFE_PATH.fullmatch(str(path)) is None
+            or ".." in path.parts
             or path.resolve(strict=True) != path):
         raise ValueError("owner_directory_path_invalid")
     s = path.lstat()
