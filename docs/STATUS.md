@@ -1403,3 +1403,8 @@ Consulta real ao systemd VPS confirmou N2 timer `loaded/active/enabled`, N2 serv
 VPS N2 auditado pelo proprietário `cia-probe`: SQLite íntegro, 166 velas, 39 checkpoints e 21 horas históricas sem publicações (não fabricar PIT). Worktree N50 separado D296 SHA verificado e 45 testes N50 PASS; raiz 0700 criada sem ativar N50. D297 agrega instalador one-shot de release com preflight N2 owner, pin SHA, escrita de unidades N50, parada reversível de N2 e rollback automático se falha; só aplica com flags explícitas. J1 #429 em aberto até soak real de 24h/renovação, #319 identidade ainda não certificada. Nenhuma operação financeira.
 
 **Aprimoramento D297:** falha explícita do serviço N50 aciona unidade `OnFailure` que desabilita N50 e reabilita N2 sem ordens nem escrita no banco. Ainda falta monitorar falhas silenciosas/ausência de execução para declarar supervisão 24/7.
+
+
+## J1/D298 — impedimento real de release corrigido em código (12/11/2026 UTC)
+
+D297 PR #570 integrada, backup N2 SQLite owner 0600 verificado, 166 candles/39 publicações. Preflight N50 real foi bloqueado sem alterar systemd: venv Python é symlink oficial e Git root recusa checkout owner. D298 endurece liberação para aceitar somente symlink Python pinado resolvendo para `/usr/bin/python3.12` e faz revisão Git sob `cia-probe`, sem relaxar proteção Git. Gate ainda requer CI/merge, preflight root PASS e rollout reversível; não declarar N50 24/7.
