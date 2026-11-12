@@ -86,3 +86,7 @@ Teste sintético `tests/test_j1_n50_ws_metadata_bootstrap_d317.py`: one-GET comp
 ### Limite causal de duração da lease
 
 Mesmo iniciando apenas 10 segundos antes da virada, a função reduz o `WSRunBudget.max_seconds` efetivo para encerrar até aproximadamente 119 segundos após o fechamento, pois D313 rejeita recibos além de 120s. Um lease de 150s que partisse a 11s do fechamento ultrapassaria a janela de evidência sem essa proteção. O teto não aumenta requisições, não gera retries e não altera o relógio do candle. Teste com fake-clock cobre essa fronteira.
+
+### Isolamento de caminhos e ancestrais
+
+Os dois caminhos owner de manifesto/cache exigem diretórios privados canônicos; `Path.resolve(strict=True)` deve coincidir com o próprio caminho fornecido. Um symlink em qualquer ancestral, mesmo que o diretório final seja 0700/0600, é negado antes de abrir rede ou journal, evitando contornar a proibição de escrever sob a raiz REST HALT. Testes adversariais cobrem aliases de diretório para bootstrap e runner.
