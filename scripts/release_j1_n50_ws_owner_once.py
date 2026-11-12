@@ -218,6 +218,7 @@ def _write_new_unit_once(name: str, text: str) -> None:
         | getattr(os, "O_NOFOLLOW", 0), 0o644,
     )
     with os.fdopen(fd, "wb") as stream:
+        os.fchmod(stream.fileno(), 0o644)
         stream.write(data)
         stream.flush()
         os.fsync(stream.fileno())
