@@ -17,7 +17,7 @@ from .j2_n50_private_screen import ROOT, audit_private_n50_research
 
 _DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 _SYMBOL = re.compile(r"[A-Z0-9]{1,28}USDT\Z")
-_DECIMAL = re.compile(r"-?(?:0|[1-9][0-9]{0,39})(?:\.[0-9]{1,48})?\Z")
+_DECIMAL = re.compile(r"-?(?:0|[1-9][0-9]{0,39})(?:\.[0-9]{1,90})?\Z")
 _BREAKOUTS = frozenset({
     "above_prior_23h_high", "below_prior_23h_low", "inside_prior_23h_range",
 })
