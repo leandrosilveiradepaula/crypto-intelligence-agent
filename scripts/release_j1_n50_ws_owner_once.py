@@ -121,9 +121,10 @@ def _owner_verification(source: Path, manifest: Path, ws_dir: Path) -> None:
         "directory=Path(os.environ['CIA_WS']),current_at_ms=t,"
         "expected_ranked_scope_sha256=s['scope_digest_sha256'],"
         "allow_private_scope_read=True);"
-        "assert a.status=='private_n50_ws_admission_loaded_revalidated';"
-        "assert a.ranked_scope==s and a.admission.selected_contracts==50;"
-        "print('OWNER_SCOPE_CACHE_50_VERIFIED')"
+        "print('OWNER_SCOPE_CACHE_50_VERIFIED' if ("
+        "a.status=='private_n50_ws_admission_loaded_revalidated' and "
+        "a.admission is not None and a.ranked_scope==s and "
+        "a.admission.selected_contracts==50) else 'OWNER_SCOPE_CACHE_NOT_VERIFIED')"
     )
     out = _run([
         "/usr/sbin/runuser", "-u", OWNER, "--",
