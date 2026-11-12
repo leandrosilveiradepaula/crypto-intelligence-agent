@@ -16,6 +16,8 @@ def plan():
         "old_halt_verified":True,
         "n2_last_published_end_ms":T,
         "n2_stored_candles":400,
+        "service_text":"rendered-pinned-service",
+        "original_service_text":"original-pinned-service",
     }
 
 
@@ -118,7 +120,8 @@ class N50RecoveryReleasePolicyTests(unittest.TestCase):
              mod,"_call",side_effect=call), patch.object(
              mod,"_owner_report",return_value=result), patch.object(
              mod,"n50_systemd_n2_quiescence",
-             return_value={"status":"n2_quiesced_preflight_only"}):
+             return_value={"status":"n2_quiesced_preflight_only"}), patch.object(
+             mod,"_atomic_service_replace") as replace:
             out=mod.execute(source=SOURCE,expected_sha=SHA,
                             confirm_recovery_cutover=True,
                             allow_systemd_modifications=True)
@@ -130,6 +133,9 @@ class N50RecoveryReleasePolicyTests(unittest.TestCase):
                          ["--now",mod.N2_TIMER])
         self.assertEqual(commands[-1][-2:],
                          ["--now",mod.N50_TIMER])
+        self.assertTrue(out["n50_service_repointed"])
+        replace.assert_called_once_with("rendered-pinned-service",
+                                        suffix="d306-install")
 
     def test_capture_failure_restores_n2_without_false_n50_status(self):
         calls=[]
@@ -157,6 +163,40 @@ class N50RecoveryReleasePolicyTests(unittest.TestCase):
         self.assertFalse(out["new_epoch_started"])
         self.assertTrue(out["n2_restored_after_failure"])
         restore.assert_called_once()
+
+    def test_failure_after_repoint_restores_unit_and_n2(self):
+        calls=[]
+        def cmds(argv,*,timeout=20):
+            calls.append(argv)
+            if "reset-failed" in argv:
+                raise RuntimeError("simulated_failed_unit")
+            return ""
+        report={
+            "status":"new_epoch_sealed_old_halt_preserved",
+            "old_epoch_preserved":True,"old_journal_sha256_unchanged":True,
+            "old_scope_sha256_unchanged":True,"new_scope_created":True,
+            "orders_sent":False,"requests_attempted":372,
+        }
+        with patch.object(mod,"preflight",return_value=plan()), patch.object(
+             mod.time,"time_ns",return_value=(T+80_000)*1_000_000), patch.object(
+             mod,"_state",side_effect=state), patch.object(
+             mod,"_call",side_effect=cmds), patch.object(
+             mod,"_owner_report",return_value=report), patch.object(
+             mod,"n50_systemd_n2_quiescence",
+             return_value={"status":"n2_quiesced_preflight_only"}), patch.object(
+             mod,"_atomic_service_replace") as write, patch.object(
+             mod,"_return_to_n2",return_value=True) as n2, patch.object(
+             mod,"_restore_original_service",return_value=True) as restore:
+            out=mod.execute(source=SOURCE,expected_sha=SHA,
+                            confirm_recovery_cutover=True,
+                            allow_systemd_modifications=True)
+        self.assertEqual(out["status"],"rolled_back_to_n2",out)
+        self.assertTrue(out["new_epoch_started"])
+        self.assertFalse(out["n50_timer_enabled"])
+        self.assertTrue(out["previous_service_restored"])
+        n2.assert_called_once()
+        restore.assert_called_once_with("original-pinned-service")
+        write.assert_called_once()
 
     def test_no_n2_isolation_never_runs_owner_capture(self):
         with patch.object(mod,"preflight",return_value=plan()), patch.object(
