@@ -11,6 +11,7 @@ from pathlib import Path
 import time
 from typing import Any
 
+from crypto_intelligence_agent.bybit_public_j1_transport import BoundedBybitPublicClient
 from crypto_intelligence_agent.j1_n50_supervision import plan_n50_supervision
 from crypto_intelligence_agent.j1_rest_incremental_owner import _DB_NAME, _ALLOWED_FAILURES
 from crypto_intelligence_agent.j1_rest_resume_readiness import audit_existing_rest_resume
@@ -18,6 +19,12 @@ from scripts.audit_bybit_marketwide_closed24h import _strict_owner
 from scripts.run_j1_current_ranked_epoch_once import (
     load_private_ranked_scope, run_current_ranked_epoch_once,
 )
+
+# D311: only the incremental N50 50-member writer. 50 GETs at this
+# maximum paced cadence require ~400 seconds (< the 15-minute UTC gate).
+# The independent 372-request N50 universe-capture path retains its 2s pace.
+# A 10006 still aborts immediately with no GET retry and triggers N2 fallback.
+N50_HOURLY_MIN_GET_INTERVAL_SECONDS = 8.0
 
 
 def _report(status: str, reason: str = "") -> dict[str, Any]:
@@ -117,6 +124,15 @@ def run_supervised_n50_once(
             return out
         # Still needs all six explicit opt-ins above. Revalidation inside
         # the D287 runner and M1 writer catches scope/time changes and races.
+        # Create this only AFTER the owner, journal and UTC gates accept
+        # this tick. Existing injected offline fixtures keep their client.
+        # Never add a retry on 10006, sleep on failed requests or change N2.
+        hourly_client = (
+            client if client is not None else
+            BoundedBybitPublicClient(
+                min_interval_seconds=N50_HOURLY_MIN_GET_INTERVAL_SECONDS,
+            )
+        )
         result = run_current_ranked_epoch_once(
             manifest_directory=manifest_directory,
             output_directory=output_directory,
@@ -124,7 +140,7 @@ def run_supervised_n50_once(
             allow_public_network=True,
             allow_private_storage=True,
             confirm_region_and_personal_research=True,
-            owner_ok=owner, clock_ms=clock, client=client,
+            owner_ok=owner, clock_ms=clock, client=hourly_client,
         )
         out = _report(
             "research_hour_persisted"
