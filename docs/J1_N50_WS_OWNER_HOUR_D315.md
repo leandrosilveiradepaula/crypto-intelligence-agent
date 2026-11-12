@@ -9,7 +9,7 @@ componentes **já testados** em um fluxo único:
 
 1. `DynamicN50WSAdmission` (D314) vincula exatamente os 50 contratos do
    manifesto D287 ao escopo de metadados, sem usar o registro local fixo de 52.
-   Valida hashes, tipos, timestamps, membro exato e pré-existência do escopo
+   Valida hashes, tipos, timestamps, clock inicial UTC conferido, membro exato e pré-existência do escopo
    antes da hora-alvo fechada.
 2. `exclusive_owner_ws_writer` (OPS3) verifica DAC POSIX 0700/0600,
    journal SQLite isolado e flock não bloqueante **antes** de solicitar
@@ -34,8 +34,10 @@ componentes **já testados** em um fluxo único:
   fornecido pelo executor autorizado, `journal` WS já separado e
   `WSRunBudget`. Não há código que crie socket HTTP/WS neste módulo,
   consulte Bybit, reinicie systemd ou publique ordens.
-- A fonte do evento persistido é o pipeline público de `confirm=true`
-  `bybit_public_ws_confirmed`, não `bybit_rest_closed_kline`. O relatório
+- Eventos passam pelo parser `confirm=true` e pelo journal WS separado
+  (não o banco REST). Apenas quando 50/50 passa, o relatório declara
+  `source_provenance=bybit_public_ws_confirmed`; o journal existente conserva
+  seu próprio schema WS e não é rotulado retroativamente como REST. O relatório
   contém somente contagens/hashes/flags; nenhum ticker, preço, payload,
   URL, segredo ou stack trace. Há `closed_events_appended_to_ws_journal`,
   portanto não alegar **zero writes** no journal WS; somente
