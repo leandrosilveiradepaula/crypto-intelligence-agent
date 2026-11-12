@@ -1463,3 +1463,7 @@ D309 adiciona `j1_n50_24h_witness.py`, CLI owner-only e testes adversariais: com
 ## J5/D310 — apresentação móvel da watchlist D308 (12/11/2026 UTC)
 
 Extensão da página HTML privada J5/D301 para exibir observações determinísticas D308 com BTC/turnover/rompimento, contagens e limite de cinco por sentido. A interface usa a função pura D308 existente, abstém se o relatório não passa no mesmo audit/digest e não mostra lista sem BTC; símbolos privados apenas no HTML salvo com as três flags pré-existentes. Testes regressivos próprios e contrato em `docs/J5_N50_D308_WATCHLIST_MOBILE_D310.md`; CI/revisão/merge a validar. Sem deploy, ordens, serviços novos, banco ou alteração de pesquisa de mercado. J1 #429/#319 seguem abertas.
+
+## J1/D311 — limite Bybit 10006 no writer N50, fallback N2 real (12/11/2026 16:11 UTC)
+
+Incidente confirmado pelo journald: N50 falhou 16:01:12 UTC, exit65, `provider_rate_limit_no_retry`, 4 GETs, 3 candles parciais sem recibo da hora; N50 timer disabled e N2 active/enabled pelo OnFailure. N2 concluiu 16:02:04 UTC em success0 com 2 GETs e 6 candles, coorte de apenas 2 contratos. A janela de 24h N50 e rotação permanecem NÃO homologadas. D311 acrescenta cadência opcional entre GETs reais de 2–12s e usa 8s somente no writer incremental N50, preservando captura de universo N50 e N2 em 2s e **sem retry no 10006**. Correção é apenas código/CI, sem nova recuperação VPS; auditoria forense e gate root necessários antes de qualquer cutover. Detalhes e critérios em `docs/J1_N50_RATE_LIMIT_MITIGATION_D311.md`.

@@ -1586,3 +1586,7 @@ Não aceitar `systemctl active/enabled` ou sucesso de um writer como prova de 24
 ## D310 — integrar watchlist observacional D308 ao HTML móvel J5 (12/11/2026 UTC)
 
 Exibir na página privada e estática J5/D301 as contagens e até cinco observações de cada direção calculadas pelo **mesmo motor D308** (rompimentos 23h, força relativa vs BTC, turnover), sem duplicar lógica nem inventar sinais. BTC ausente implica abstenção explícita; divergência entre auditoria D300 e seleção D308 bloqueia renderização. Preservar CSP, ausência de JavaScript/rede e gates owner-only de leitura/gravação/símbolos. Não é previsão, backtest OOS, operação, recomendação, homologação J1 nem certificação de Top50. Contrato e testes em `docs/J5_N50_D308_WATCHLIST_MOBILE_D310.md`.
+
+## D311 — não repetir rate-limit; reduzir pressão de GET no N50 incremental (12/11/2026)
+
+Em 16:01 UTC a VPS registrou categoria explícita `provider_rate_limit_no_retry` na quarta tentativa do N50, após 3 candles parciais, sem checkpoint. Fallback N2 automático teve sucesso sem ordem. Corrigir apenas cadência per-client no writer N50 de 2s para 8s com intervalo validado, mantendo censo inicial 372 GETs, N2 e clients de teste no default 2s; não acrescentar retry em 10006, não liberar HOURLY incompleto e não afirmar quota garantida. Respeitar limite 15min UTC e HALT forense. Sem reiniciar N50, alterar bancos, reusar release D306 para o novo incidente, emissão de ordens ou implantar automaticamente. Documentado em `docs/J1_N50_RATE_LIMIT_MITIGATION_D311.md`.
