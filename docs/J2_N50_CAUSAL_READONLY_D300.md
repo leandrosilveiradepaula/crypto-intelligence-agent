@@ -36,3 +36,7 @@ Status `descriptive_research_ready` exige BTC e os 50 históricos íntegros; `bt
 `tests/test_j2_n50_private_screen.py` executa SQLite owner-mode 0700/0600 com 50 contratos × 24 velas de fixtures, digests reais, scope/pointer e replay J1 verdadeiro, além de adulteração, BTC ausente, relógio velho, sem primeiro checkpoint, controle de acesso e causalidade. VPS executou **10 testes PASS** no worktree candidato `e77430033b5dfba5e3e9c44027e78d105d4ea2d8`; isso valida implementação offline, NÃO produção nem desempenho da estratégia.
 
 A primeira captura real N50 da VPS foi `epoch_started` às 04:13:28 UTC de 12/11/2026, com 372 GETs e **zero candles**; só após o primeiro writer efetivo a ponte pode retornar métricas reais. Monitor de continuidade D299 permanece independente. Gate final: CI Linux/Windows/PAPER HEAD SHA + revisão + merge sem deploy; chamar CLI owner somente leitura após o checkpoint comprovado.
+
+### Verificação numérica adicional de LONG/SHORT observacional
+
+Fixtures determinísticas com 23 barras de abertura/fechamento 100 e intervalo 95–105 e uma barra final conhecida comprovam **+10%/-10%** de variação descritiva, **2×** o turnover médio anterior, turnover total 2.500 USDT e true range de 14 barras = (13×10 + 12)/14, normalizado pelo último fechamento de 110 ou 90. O teste controla o contexto Decimal global e confere resultado exato com contexto local de 50 dígitos, sem simular posições, PnL ou acerto de sinais. No candidato D300 de QA atualizado os **11 testes** owner-POSIX passaram.
