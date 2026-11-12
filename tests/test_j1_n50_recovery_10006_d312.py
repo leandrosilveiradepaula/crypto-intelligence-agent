@@ -133,7 +133,8 @@ class OwnerCandidateTests(unittest.TestCase):
         for key, bad in invalids:
             report = forensic()
             report[key] = bad
-            with self.subTest(key=key, bad=bad), (
+            with (
+                self.subTest(key=key, bad=bad),
                 patch.object(owner, "_strict_owner"),
                 patch.object(owner, "_pointer_read", return_value={
                     "epoch_id":owner.EXPECTED_HALTED_EPOCH,
