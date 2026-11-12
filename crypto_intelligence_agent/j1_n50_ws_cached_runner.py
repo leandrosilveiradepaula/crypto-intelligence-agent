@@ -108,6 +108,11 @@ def run_cached_n50_ws_owner_window(
             or type(allow_create_ws_journal) is not bool):
         return out
     try:
+        # Reject symlinked ancestors as well as direct symlinks: textual
+        # path comparisons alone cannot protect the existing REST HALT root.
+        if (manifest_directory.resolve(strict=True) != manifest_directory
+                or ws_directory.resolve(strict=True) != ws_directory):
+            return out
         now = wall_ms()
         if type(now) is not int or now <= 0:
             return out
