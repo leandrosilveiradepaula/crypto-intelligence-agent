@@ -12,7 +12,7 @@ import time
 from typing import Any
 
 from crypto_intelligence_agent.j1_n50_supervision import plan_n50_supervision
-from crypto_intelligence_agent.j1_rest_incremental_owner import _DB_NAME
+from crypto_intelligence_agent.j1_rest_incremental_owner import _DB_NAME, _ALLOWED_FAILURES
 from crypto_intelligence_agent.j1_rest_resume_readiness import audit_existing_rest_resume
 from scripts.audit_bybit_marketwide_closed24h import _strict_owner
 from scripts.run_j1_current_ranked_epoch_once import (
@@ -29,6 +29,7 @@ def _report(status: str, reason: str = "") -> dict[str, Any]:
         "selected_research_contracts": 0,
         "new_closed_candles": 0,
         "requests_attempted": 0,
+        "failure_category": None,
         "manifest_modified": False,
         "other_journals_modified": False,
         "systemd_modified": False,
@@ -136,6 +137,13 @@ def run_supervised_n50_once(
             "selected_research_contracts", 0)
         out["new_closed_candles"] = result.get("new_closed_candles", 0)
         out["requests_attempted"] = result.get("requests_attempted", 0)
+        # M1 categories are fixed sanitized strings: do not expose provider
+        # bodies, URLs, selected contracts, arbitrary retMsg or credentials.
+        failure = result.get("failure_category")
+        out["failure_category"] = (
+            failure if type(failure) is str and failure in _ALLOWED_FAILURES
+            else None
+        )
         if (result.get("orders_sent") is not False
                 or result.get("marketwide_top50_verified") is not False
                 or result.get("live_trading_authorized") is not False
