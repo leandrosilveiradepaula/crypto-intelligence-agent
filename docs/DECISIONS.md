@@ -1543,3 +1543,8 @@ Decisão: implantar, apenas sob gate operacional, N50 gerenciado via worktree de
 ## D300 — observação J2 de N50 real sem promover dados a sinais (12/11/2026 UTC)
 
 Separar uma ponte **somente leitura e descritiva** para os 50 contratos do journal M1/D294 da matemática exclusivamente sintética de J2/PRE1–PRE5. Uma chamada owner-only precisa de manifesto e ponteiro D287/D294 válidos, replay integral D290/D292 de 50 membros, checkpoint real e mesmo último conjunto de 24 candles 1h; checar digests no próprio snapshot de leitura. Calcular retorno passado, true range, turnover, rompimento observado e força relativa BTC no mesmo fechamento, em Decimal. Sem BTC, dados não viram contexto de regime; sem checkpoint, não há análise. Toda saída continua `approved_for_signals=false` e sem negociação, pois dados privados de pesquisa não equivalem a autenticação de fonte ou Top50 elegível. Ver docs/J2_N50_CAUSAL_READONLY_D300.md, #3, #429.
+
+
+## D301 — relatório privado N50 no celular não é tela de trades (12/11/2026 UTC)
+
+A ponte J2/D300 fornece métricas **observacionais**, não sinais nem preços autenticados para negociação. J5/D301 renderiza esse contrato exclusivamente como HTML offline PT-BR, sem JavaScript/rede, com aviso de dados provisórios e zero ordens, ranking histórico descritivo e tabela responsiva dos 50 USDT perpétuos observados. Arquivo owner-only 0600 sob root 0700 só com três opt-ins; reexecução idêntica não sobrescreve, outputs de CLI nunca incluem símbolos. Exigir autenticação e gate separado antes de oferecer isso em acesso remoto. Não tocar em PAPER/ordens/live ou em deploy. Ver docs/J5_N50_PRIVATE_MOBILE_D301.md e #6.

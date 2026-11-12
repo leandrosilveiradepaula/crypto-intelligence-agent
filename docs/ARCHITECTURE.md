@@ -592,3 +592,8 @@ O coletor de pesquisa N50 D294 é chamado por um service oneshot e timer UTC ver
 ### J2/D300 — ponte observacional N50 com isolamento de signals/orders
 
 `j2_n50_private_screen` é um módulo separado do motor sintético PRE1–PRE5 e dos caminhos PAPER/J4. Sua dependência unidirecional D294(pointer/manifest) → D290(replay owner de SQLite) → snapshot read-only 24h → métricas descritivas evita confundir dados pessoais não autenticados com candles de fixtures. `scripts.observe_j2_n50_private_once` emite apenas contagens por default; símbolos exigem flag opt-in e proprietário. Não adiciona endpoint, API de trading, side effect de SQL, exchange GET ou risco de 50x.
+
+
+### J5/D301 — apresentação HTML privada e offline do observador N50
+
+Conexão unidirecional J1 owner/SQLite → D300 (métricas observadas sem sinais) → D301 renderer puro HTML → arquivo local 0600 opcional em pasta `reports/` 0700. A apresentação valida novamente versão, campos, limites Decimal, timestamp, 50 registros ordenados e todas as flags negativas de trading. Não há servidor, autenticação de contas, conectores, JavaScript, API, mutação do SQLite de mercado ou integração com o executor J4. Um futuro portal remoto exigirá autenticação/autorização próprias.
