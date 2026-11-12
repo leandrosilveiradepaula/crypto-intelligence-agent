@@ -116,7 +116,7 @@ class HaltedN50ForensicTests(unittest.TestCase):
         self.assertEqual(result["network_requests"],0)
 
     def test_without_optin_no_private_access(self):
-        with patch("crypto_intelligence_agent.j1_n50_halted_forensic.load_private_ranked_scope",
+        with patch("crypto_intelligence_agent.j1_n50_halted_forensic._decode_private_file",
                    side_effect=AssertionError("should not read")):
             report=self.audit(allow_private_readonly_audit=False)
         self.assertEqual(report["status"],"optin_required")
