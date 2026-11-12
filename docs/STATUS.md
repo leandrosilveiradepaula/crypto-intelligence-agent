@@ -1490,3 +1490,6 @@ A captura pública D314 retorna recibos privados de páginas/cursores/horários 
 
 ## J1/D318 — corrigido horário do agendamento WS N50 (12/11/2026 UTC)
 Novo timer WS `HH:59:30 UTC` (pré-fechamento) separado do timer REST N50 legado `HH:01:05`, com serviço owner chamando D317, preflight N2 e REST quiescidos, fallback N2 e renderer inerte. Expressão systemd confirmada diretamente na VPS com `systemd-analyze calendar`. Esta é alteração **de código/template**, não implantação: N2 continua ativo e N50 REST disabled; ainda é necessário manifesto D287 atual+cache D316, gate de instalação e habilitação do WS, depois prova real 24h/rotação. `docs/J1_N50_WS_PRECLOSE_TIMER_D318.md`.
+
+## J1/D320 — kit executável de instalação WS N50 em uma só execução (12/11/2026 UTC)
+Após D318 (timer HH:59:30), D320 acrescenta instalador owner/root para novos diretórios, checkout exato, censo D287 + metadata D314/D316, units WS e fallback N2. **Ainda não executado na VPS:** conexão MCP atual root restrita não consegue acessar `cia-probe` nem gravar em systemd; não confundir com aceite J1. Código de release OFF sem duas flags, root SSH independente após CI/revisão. N2 permanece ativo; N50 REST antigo desligado e preservado. `docs/J1_N50_WS_ROOT_RELEASE_D320.md`.
