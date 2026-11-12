@@ -65,9 +65,7 @@ class N50ManagedHealthTests(unittest.TestCase):
             d.mkdir(mode=0o700)
             d.chmod(0o700)
 
-    def make_epoch(self, decision=T, pubs=None, active=True):
-        if pubs is None:
-            pubs = [decision + HOUR_MS]
+    def make_epoch(self, decision=T, pubs=(T + HOUR_MS,), active=True):
         name=f"epoch-{decision:013d}"
         epoch=self.root / "epochs" / name
         epoch.mkdir(mode=0o700)
