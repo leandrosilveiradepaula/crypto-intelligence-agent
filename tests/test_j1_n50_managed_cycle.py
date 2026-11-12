@@ -230,7 +230,9 @@ class ManagedN50EpochTests(unittest.TestCase):
         self.assertEqual(result["status"],"blocked")
         self.assertEqual((self.root/ACTIVE_FILE).read_bytes(),before)
         self.assertFalse(result["pointer_updated"])
-        self.assertEqual(result["requests_attempted"],0)  # no false success report
+        self.assertEqual(result["requests_attempted"],3)  # preserve actual attempted GETs
+        self.assertTrue(result["network_accessed"])
+        self.assertFalse(result["pointer_updated"])
 
     def test_halt_explicit_optin_is_bool_and_does_not_override_default(self):
         with patch("crypto_intelligence_agent.j1_n50_managed_cycle.coordinated_n50_once",
