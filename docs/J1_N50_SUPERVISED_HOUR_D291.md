@@ -15,3 +15,8 @@ CLI: `python -m scripts.run_j1_n50_supervised_hour_once --manifest-directory /CA
 **Nenhuma unidade systemd, timer, instalação ou job VPS é criada por este código**. Automação/rotação, proteção global entre epoch e captura D286 e liberação operacional são próximas tarefas de #429. Coletor N2 existente deve permanecer intacto. Nenhuma ordem, credencial ou API privada.
 
 Testes `test_j1_n50_supervised_once.py`: seis opt-ins, POSIX owner, caminhos separados, journal adulterado, falha de digest, bootstrap vazio, lock abandonado, delegação ao M1, flags inseguras, número de GETs e negação de trading, offline.
+
+
+## D292 — retomada de uma rodada parcialmente gravada
+
+Como M1 persiste as velas completas por contrato antes do checkpoint horário único, falha de rede ou encerramento pode deixar subset de cursores avançado sem `published_hour`. O auditor owner ganha opt-in explícito N50 `allow_unpublished_partial_hour=True`, sem alterar o default N2, para validar integralmente esses estados apenas na **mesma janela HH:01..HH:15**. Permite (i) bootstrap incompleto, 24 velas apenas nos contratos concluídos, sem checkpoint inicial; (ii) fechamento incremental parcialmente gravado, um novo candle por contrato concluído, com checkpoint anterior íntegro. Em ambos os casos exige manifesto/digest idênticos, ausência de HALT, nenhum checkpoint retroativo, nenhum gap passado, todos os dados e cursores replayados. Supervisor D290 aceita apenas essas duas formas explicitamente auditadas e chama o MESMO M1, que continua a coleta dos cursores faltantes, sem duplicar as velas já salvas. Lote parcialmente gravado de hora anterior expira operacionalmente e bloqueia a retomada, sem falsificar PIT.
