@@ -1152,3 +1152,7 @@ Tests `tests/test_j1_n50_supervised_once.py` fake owner: seis opt-ins, recusa de
 ### J1/D292 — recuperar cursor parcial sem criar checkpoint
 
 Reexecutar `test_j1_n50_partial_resume.py` e suites D287/D290/D291/M1/readiness: SQLite N50 com 13×24 candles de bootstrap e nenhuma publicação, 17 candles incrementais acima de última publicação íntegra, nenhuma recuperação por default N2, impossibilidade de retomar após HH:15 ou na próxima hora, checksum adulterado, nenhuma vela/nenhum progresso, HALT por provedor, vínculo de scope, flags de trading falsas. CI Linux/docs + Windows/offline + Chrome/PAPER no SHA final. Merge sem deploy; produção permanece gate separado.
+
+### J1/D293 — lock global N50 entre captura e writer
+
+Rodar `test_j1_n50_global_lease.py` em Linux POSIX com tempfile owner 0700, flock no mesmo processo e arquivo claim 0600: captura bloqueia writer da mesma hora, writer bloqueia captura, retry do mesmo action/target preserva claim, lock concorrente falha fechado, adulteração/symlink/owner/path/clock/opt-in negados antes de GET. Reexecutar tests D287–D292, M1, readiness e CI Linux/docs, Windows/offline e Chrome/PAPER HEAD final; revisar diff, SHA e merge sem deploy. Nenhum teste sintético prova serviço N50 24/7 e nenhuma execução real ocorre sem gate.
