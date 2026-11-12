@@ -93,6 +93,7 @@ def run_supervised_n50_once(
             audit = audit_existing_rest_resume(
                 output_directory=output_directory, now_ms=now,
                 allow_private_readonly_audit=True, expected_members=50,
+                allow_unpublished_partial_hour=True,
                 owner_ok=owner,
             )
         else:
