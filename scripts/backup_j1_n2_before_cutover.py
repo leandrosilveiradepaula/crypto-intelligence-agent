@@ -6,6 +6,7 @@ Creates a new private, owner-only rollback copy through SQLite backup API.
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 from hashlib import sha256
 import json
 import os
@@ -16,7 +17,6 @@ import stat
 
 SRC = Path("/home/cia-probe/agent/j1-rest-m3-20261109/canary/j1-rest-hourly-research.sqlite")
 DEST = Path("/home/cia-probe/agent/j1-n50-managed-d296-private/n2-before-cutover.sqlite")
-STAGE = DEST.with_name(".n2-before-cutover.sqlite.pending")
 
 
 def _private(path: Path, *, directory: bool) -> None:
@@ -62,8 +62,8 @@ def backup_j1_n2_once(*, allow_owner_readonly_backup: bool = False,
                      getattr(os, "O_NOFOLLOW", 0), 0o600)
         os.close(fd)
         try:
-            with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True,
-                                 timeout=2) as reader:
+            with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True,
+                                             timeout=2)) as reader:
                 reader.execute("PRAGMA query_only=ON")
                 if reader.execute("PRAGMA integrity_check").fetchone() != ("ok",):
                     raise ValueError("source_integrity_invalid")
@@ -71,10 +71,10 @@ def backup_j1_n2_once(*, allow_owner_readonly_backup: bool = False,
                     reader.execute("SELECT COUNT(*) FROM candles").fetchone()[0],
                     reader.execute("SELECT COUNT(*) FROM published_hour").fetchone()[0],
                 )
-                with sqlite3.connect(pending, timeout=2) as copy:
+                with closing(sqlite3.connect(pending, timeout=2)) as copy:
                     reader.backup(copy, pages=16, sleep=0.05)
             _private(pending, directory=False)
-            with sqlite3.connect(pending.as_uri() + "?mode=ro", uri=True) as verify:
+            with closing(sqlite3.connect(pending.as_uri() + "?mode=ro", uri=True)) as verify:
                 verify.execute("PRAGMA query_only=ON")
                 after = (
                     verify.execute("SELECT COUNT(*) FROM candles").fetchone()[0],
@@ -91,7 +91,8 @@ def backup_j1_n2_once(*, allow_owner_readonly_backup: bool = False,
                 os.close(fd)
             # Backup is independent: source never opened with write permissions.
             digest = sha256(pending.read_bytes()).hexdigest()
-            os.rename(pending, destination)
+            # Atomic create-if-absent: never overwrite another rollback copy.
+            os.link(pending, destination, follow_symlinks=False)
             dfd = os.open(destination.parent, os.O_RDONLY)
             try:
                 os.fsync(dfd)
