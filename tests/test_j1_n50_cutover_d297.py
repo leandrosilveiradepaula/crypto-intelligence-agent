@@ -67,6 +67,7 @@ class D297CutoverTests(unittest.TestCase):
             "n2_published_hours": 39, "n2_stored_candles": 166,
             "service_text": "[Unit]\nDescription=offline service\n",
             "timer_text": "[Timer]\nOnCalendar=*-*-* *:01:05 UTC\n",
+            "fallback_text": "[Unit]\nDescription=offline failback\n",
         }
         from contextlib import ExitStack
         ctx = ExitStack()
@@ -121,6 +122,7 @@ class D297CutoverTests(unittest.TestCase):
         self.assertEqual(self.state[install.N2_TIMER][1:], ("active", "enabled"))
         self.assertFalse((self.units / install.N50_SERVICE).exists())
         self.assertFalse((self.units / install.N50_TIMER).exists())
+        self.assertFalse((self.units / install.FALLBACK_SERVICE).exists())
 
     def test_failure_before_first_unit_still_restores_n2(self):
         with self.mock_context(), patch.object(
