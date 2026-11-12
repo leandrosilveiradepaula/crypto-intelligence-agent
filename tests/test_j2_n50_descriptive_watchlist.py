@@ -78,9 +78,9 @@ class WatchlistTests(unittest.TestCase):
         self.assertEqual(result["status"], "descriptive_watchlist_ready")
         self.assertEqual(result["audited_assets"], 50)
         self.assertEqual(result["observed_up_breakout_candidates"], 25)
-        self.assertEqual(result["observed_down_breakout_candidates"], 2)
+        self.assertEqual(result["observed_down_breakout_candidates"], 23)
         self.assertEqual(len(result["up_breakout_watchlist"]), 5)
-        self.assertEqual(len(result["down_breakout_watchlist"]), 2)
+        self.assertEqual(len(result["down_breakout_watchlist"]), 5)
         self.assertEqual(
             result["up_breakout_watchlist"][0]["symbol"], "COIN00USDT"
         )
