@@ -12,7 +12,10 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
-import pwd
+try:
+    import pwd
+except ImportError:  # Windows/offline CI only
+    pwd = None
 import re
 import socket
 import stat
@@ -164,7 +167,7 @@ def _old_units_and_collectors_ok() -> bool:
 def preflight(*, source: Path, expected_sha: str,
               manifest: Path, ws_dir: Path) -> tuple[str, str, str]:
     """No side effects. Must pass before ANY systemd installation."""
-    if (os.name != "posix" or os.getuid() != 0 or os.geteuid() != 0
+    if (os.name != "posix" or pwd is None or os.getuid() != 0 or os.geteuid() != 0
             or socket.gethostname() != HOSTNAME
             or type(expected_sha) is not str
             or _SHA.fullmatch(expected_sha) is None):
@@ -269,8 +272,10 @@ def execute(
         # One last baseline check, before switching ANY active collector.
         if not _old_units_and_collectors_ok():
             raise RuntimeError("old_unit_drift_before_cutover")
-        _run(["/usr/bin/systemctl", "disable", "--now", N2_TIMER])
+        # Roll back N2 even if systemctl returns a failure after partially
+        # disabling the timer.
         n2_was_changed = True
+        _run(["/usr/bin/systemctl", "disable", "--now", N2_TIMER])
         _run(["/usr/bin/systemctl", "enable", "--now", WS_TIMER])
         if (_show(WS_TIMER) != {
                 "LoadState": "loaded", "ActiveState": "active",
