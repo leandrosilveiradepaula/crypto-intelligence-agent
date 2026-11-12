@@ -114,47 +114,59 @@ def plan_n50_supervision(
 
     if type(audit) is not dict:
         return _deny("audit_payload_invalid")
-    # Readiness is NOT an authorization token; enforce its complete safety
-    # invariants and crosscheck time, membership, counts, gaps and statuses.
     required_false = (
         "activation_authorized", "continuous_collector_verified",
         "marketwide_top50_verified", "source_authenticated",
         "signal_authorized", "live_trading_authorized", "orders_sent",
     )
+    state = audit.get("status")
+    first_partial = state == "unpublished_bootstrap_resume_ready"
+    later_partial = state == "unpublished_partial_hour_resume_ready"
+    partial = first_partial or later_partial
+    complete = audit.get("partial_contracts_at_target", 0)
     if (audit.get("schema_version") != "j1_rest_resume_readiness_v1"
             or audit.get("journal_integrity_verified") is not True
             or any(audit.get(k) is not False for k in required_false)
             or audit.get("network_requests") != 0
             or audit.get("database_mutation_statements") != 0
             or audit.get("reviewed_research_contracts") != 50
-            or audit.get("research_closed_24h_ranked_contracts") != 50
             or audit.get("rank_is_sample_only_not_marketwide") is not True
             or audit.get("historical_checkpoint_gaps_present") is not False
             or audit.get("historical_unpublished_hours") != 0
-            or audit.get("status") != "no_gap"):
+            or state not in ("no_gap", "unpublished_bootstrap_resume_ready",
+                             "unpublished_partial_hour_resume_ready")
+            or audit.get("partial_unpublished_hour", False) is not partial
+            or audit.get("bootstrap_partial_unpublished", False) is not first_partial
+            or type(complete) is not int
+            or (partial and not 1 <= complete <= 50)
+            or (not partial and complete != 0)
+            or audit.get("research_closed_24h_ranked_contracts") != (
+                0 if first_partial else 50)):
         return _deny("unverified_or_gap_affected_journal")
-    # NOTE: the audit API does not expose the journal's scope_digest.
-    # The digest must be independently obtained from the owner-controlled
-    # scope table, never inferred from a prior report or symbol list.
     if audit.get("journal_scope_digest_sha256") != digest:
         return _deny("journal_scope_binding_missing_or_drifted")
-
     last = audit.get("last_published_end_ms")
     published = audit.get("published_hours")
     candles = audit.get("stored_candles")
     remaining = audit.get("catchup_hours")
-    if (type(last) is not int or last % HOUR_MS or last > now_ms
-            or type(published) is not int or not 1 <= published <= _MAX_PUBLISHED
-            or type(candles) is not int
-            or candles < 1200 or candles % 50 != 0
+    if (type(published) is not int or type(candles) is not int
             or type(remaining) is not int or remaining not in (0, 1)
             or audit.get("catchup_within_worker_limit") is not True
             or audit.get("unobserved_closed_hours") != 0
-            or audit.get("next_eligible_end_ms") != target
-            or target - last != remaining * HOUR_MS
-            or candles != 50 * (24 + published - 1)):
+            or audit.get("next_eligible_end_ms") != target):
         return _deny("journal_timing_or_count_inconsistent")
-
+    if first_partial:
+        if (last is not None or published != 0
+                or remaining != 1 or audit.get("initial_end_ms") != target
+                or candles != 24 * complete):
+            return _deny("bootstrap_partial_state_inconsistent")
+    elif (type(last) is not int or last % HOUR_MS or last > now_ms
+            or not 1 <= published <= _MAX_PUBLISHED
+            or target - last != remaining * HOUR_MS
+            or (later_partial and remaining != 1)
+            or candles != 50 * (24 + published - 1)
+                          + (complete if later_partial else 0)):
+        return _deny("journal_timing_or_count_inconsistent")
     common.update(
         published_hours=published, stored_candles=candles,
         last_closed_end_ms=last,
