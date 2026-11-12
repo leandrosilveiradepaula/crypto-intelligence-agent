@@ -1538,3 +1538,8 @@ Ao verificar a VPS read-only, o timer N2 estava `loaded/active/enabled` e servic
 ## D297 — release N50 como cutover reversível, nunca coexistência ativa com N2 (12/11/2026 UTC)
 
 Decisão: implantar, apenas sob gate operacional, N50 gerenciado via worktree dedicado com SHA fixo e raiz privada separada; não alterar o checkout D287 de N2. O executor D297 requer auditoria owner-only do SQLite de N2, integridade e timestamp recente, unidades antigas com hashes pinados e N2 ativo antes do início. Gravar N50 units primeiro, desabilitar N2 somente após preflight; ativar N50 timer após D296 confirmar que N2 timer está também **disabled**, com rollback automático para N2 em falhas. Nenhuma ordem é habilitada. A prova de N50 contínuo requer dados reais posteriores, não é efeito do release. Ver `docs/J1_N50_CUTOVER_D297.md`.
+
+
+## D300 — observação J2 de N50 real sem promover dados a sinais (12/11/2026 UTC)
+
+Separar uma ponte **somente leitura e descritiva** para os 50 contratos do journal M1/D294 da matemática exclusivamente sintética de J2/PRE1–PRE5. Uma chamada owner-only precisa de manifesto e ponteiro D287/D294 válidos, replay integral D290/D292 de 50 membros, checkpoint real e mesmo último conjunto de 24 candles 1h; checar digests no próprio snapshot de leitura. Calcular retorno passado, true range, turnover, rompimento observado e força relativa BTC no mesmo fechamento, em Decimal. Sem BTC, dados não viram contexto de regime; sem checkpoint, não há análise. Toda saída continua `approved_for_signals=false` e sem negociação, pois dados privados de pesquisa não equivalem a autenticação de fonte ou Top50 elegível. Ver docs/J2_N50_CAUSAL_READONLY_D300.md, #3, #429.

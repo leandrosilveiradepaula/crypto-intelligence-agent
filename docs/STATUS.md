@@ -1413,3 +1413,10 @@ D297 PR #570 integrada, backup N2 SQLite owner 0600 verificado, 166 candles/39 p
 ## J1/D299 — coleta N50 agora agendada na VPS; observabilidade sem fabricar PIT (12/11/2026 UTC)
 
 D297/D298 realizaram cutover autorizado com rollback: N50 timer active/enabled, N2 timer inativo/disabled e backup íntegro preservado, zero ordens. D299 adiciona auditor read-only owner de epochs D294, scope D287 e journals M1/D290, retornando contagens reais, lacunas e cobertura dos 24 fechamentos. Código/testes offline não instalam nada. N50 24/7 e rotação continuam **não verificados** até observações reais; #429/#319 abertas.
+
+
+## J2/D300 — análise descritiva de dados privados N50 (12/11/2026 UTC)
+
+Criada ponte para a primeira observação de mercado real de 24 candles 1h por cada um dos 50 ativos N50, com replay integral da J1, last published checkpoint, manifest/provenance, digests por candle e métricas Decimal: retorno observado, volatilidade/true range, turnover, último rompimento e comparação BTC quando BTC estiver na coorte. Não gera sinais nem ordens, não reutiliza fixtures sintéticas para dados reais. Testes POSIX locais na VPS: 10 PASS no candidato D300; só executar CLI real após primeiro writer N50. Primeira captura automática N50 de 04:01–04:13 UTC consumiu 372 GETs e criou o epoch, sem candles ainda. Monitor de continuidade segue ativo; J1 não encerrada.
+
+D300 QA adicional: 11 testes de tela de pesquisa N50 PASS na VPS após adicionar fixtures numéricas determinísticas de alta/baixa; 2.509 testes completos PASS no worktree anterior sem mudanças de lógica além de testes. Fonte N50 real: 50 membros USDT, BTC referência presente, identidade externa ainda não certificada; primeira publicação horária futura precisa de evidência independente, sem trading.

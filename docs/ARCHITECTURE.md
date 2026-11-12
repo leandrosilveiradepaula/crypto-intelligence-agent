@@ -587,3 +587,8 @@ O M1 possui flock por SQLite; D293 envolve os pontos de entrada públicos N50 `c
 ### J1/D295 — separação deploy: N50 managed unit isolada de N2
 
 O coletor de pesquisa N50 D294 é chamado por um service oneshot e timer UTC versionados, mas **não instalados**. ExecStartPre valida de forma read-only que as duas unidades N2 estão inactive antes de permitir o N50; nenhuma claim D293 protege o coletor legado N2, portanto coexistência ativa de ambos é bloqueada para evitar exceder a quota agregada. Arquivos novos `deploy/systemd/cia-j1-n50-managed.*.template` e renderer seguro; serviço owner não-root, diretório root privado, file-system sandbox, sem restart. Release separado e soak real exigidos para status contínuo.
+
+
+### J2/D300 — ponte observacional N50 com isolamento de signals/orders
+
+`j2_n50_private_screen` é um módulo separado do motor sintético PRE1–PRE5 e dos caminhos PAPER/J4. Sua dependência unidirecional D294(pointer/manifest) → D290(replay owner de SQLite) → snapshot read-only 24h → métricas descritivas evita confundir dados pessoais não autenticados com candles de fixtures. `scripts.observe_j2_n50_private_once` emite apenas contagens por default; símbolos exigem flag opt-in e proprietário. Não adiciona endpoint, API de trading, side effect de SQL, exchange GET ou risco de 50x.
