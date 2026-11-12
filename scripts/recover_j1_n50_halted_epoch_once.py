@@ -9,6 +9,7 @@ import argparse
 from hashlib import sha256
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -134,6 +135,26 @@ def recover_halted_epoch_once(
         )
         if not out["old_epoch_preserved"]:
             out["reason"] = "old_epoch_modified"
+            return out
+        new = root_directory/"epochs"/current["epoch_id"]
+        from scripts.run_j1_current_ranked_epoch_once import load_private_ranked_scope
+        now = clock_ms() if clock_ms is not None else time.time_ns()//1_000_000
+        if type(now) is not int:
+            return _result("blocked")
+        for path in (new,new/"scope",new/"journal"):
+            if path.is_symlink():
+                return _result("blocked")
+            _strict_owner(path,directory=True)
+        new_scope = load_private_ranked_scope(new/"scope",now_ms=now)
+        if (new_scope.get("scope_digest_sha256") != current["scope_digest_sha256"]
+                or new_scope.get("catalog_post_observed_at_ms") !=
+                   current["catalog_post_observed_at_ms"]
+                or new_scope.get("closed_hour_end_ms") !=
+                   int(current["epoch_id"][6:])):
+            out["reason"] = "new_scope_binding_invalid"
+            return out
+        if next((new/"journal").iterdir(),None) is not None:
+            out["reason"] = "new_journal_not_empty"
             return out
         out["new_scope_created"] = True
         out["new_epoch_id"] = current["epoch_id"]
