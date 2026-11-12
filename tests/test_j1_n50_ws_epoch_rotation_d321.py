@@ -91,6 +91,10 @@ class N50WSEpochRotationTests(unittest.TestCase):
         )
 
     def test_active_pointer_replays_exact_50_and_does_not_expose_symbols(self):
+        # Fail with the exact offline fixture cause rather than a sanitized
+        # status when investigating a regression in pointer replay.
+        epoch._read_bytes(self.state)
+        epoch._resolve_current(self.state,OBS+1000)
         out=self.read(OBS+1000)
         self.assertEqual(out.status,"active_n50_ws_epoch_revalidated",out)
         self.assertEqual(out.manifest_directory,self.man1)
