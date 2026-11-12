@@ -10,9 +10,9 @@ D321 introduz um epoch manager independente para uma próxima versão do serviç
 
 - `j1_n50_ws_epoch_rotation.py`: arquivo privado `active-n50-ws-epoch.json` 0600, estado owner em diretório 0700, no prefixo específico `/home/cia-probe/agent/j1-n50-ws-epochs`. JSON canônico contém apenas caminhos locais, digest de scope, digest de metadata e UTC de ativação, autenticados com SHA-256. Nunca símbolo/vela/payload. Leitura verifica owner/inode/hardlink/symlink, JSON sem duplicados, digest e replay D287+D316 50/50 do **mesmo** epoch, relógio e validade. Escrita usa `flock` owner não bloqueante e `O_EXCL` de temporário 0600, `fsync`, `os.replace` atômico e `fsync` do diretório; nunca sobrepõe arquivos antigos.
 - Troca só depois de 36h da última ativação, com NOVOS diretórios owner de manifesto/cache/journal. Sem sobrescrever, reindexar ou migrar o journal WS anterior ou o SQLite REST HALT. Arquivo anterior permanece legível até a troca atômica. Não publica PIT retroativo.
-- `scripts.rotate_j1_n50_ws_epoch_once`: execução owner com cinco flags explícitas, cron UTC `HH:02:15`, cheque de idade **antes de qualquer GET**. Se ainda não venceu, retorna `not_due_no_get`. Se venceu, cria claim imutável por epoch **antes** do censo D287; no máximo uma tentativa completa nessa epoch. Captura escopo D287 causal e metadata D314→D316 em diretórios novos; `10006` ou erro de integridade encerra SEM retry e SEM troca de ponteiro, com histórico e N2/serviços intocados. Falha não transforma parcial em coorte ativa.
+- `scripts.rotate_j1_n50_ws_epoch_once`: execução owner com cinco flags explícitas, cron UTC `HH:01:15`, cheque de idade **antes de qualquer GET**. Se ainda não venceu, retorna `not_due_no_get`. Se venceu, cria claim imutável por epoch **antes** do censo D287; no máximo uma tentativa completa nessa epoch. Captura escopo D287 causal e metadata D314→D316 em diretórios novos; `10006` ou erro de integridade encerra SEM retry e SEM troca de ponteiro, com histórico e N2/serviços intocados. Falha não transforma parcial em coorte ativa.
 - `scripts.run_j1_n50_ws_owner_active_once`: nova entrada owner para o timer `HH:59:30`. Resolve e revalida o ponteiro ATIVO antes de abrir factory WS, então chama D317 no journal/escopo apontados. Mantém a API antiga do D320, sem alterar seu `ExecStart` ou seu SHA.
-- Templates OFF por padrão: `cia-j1-n50-ws-rotating.service.template` é possível substituto futuro da unit WS estática (mantém nome do serviço somente quando migrada por root gate), `cia-j1-n50-ws-rotate.timer.template` roda HH:02:15, `cia-j1-n50-ws-rotate.service.template` faz o refresh owner. Renderer inerte `render_j1_n50_ws_rotating_systemd.py` valida o prefixo isolado, flags e nomes. `ReadWritePaths` só admite root dedicado de epochs WS, não a raiz REST HALT.
+- Templates OFF por padrão: `cia-j1-n50-ws-rotating.service.template` é possível substituto futuro da unit WS estática (mantém nome do serviço somente quando migrada por root gate), `cia-j1-n50-ws-rotate.timer.template` roda HH:01:15, `cia-j1-n50-ws-rotate.service.template` faz o refresh owner. Renderer inerte `render_j1_n50_ws_rotating_systemd.py` valida o prefixo isolado, flags e nomes. `ReadWritePaths` só admite root dedicado de epochs WS, não a raiz REST HALT.
 
 ## Limites operacionais
 
@@ -24,8 +24,14 @@ A coorte D287 ainda requer o censo de 24h fechado e metadados públicos reais, q
 
 `tests/test_j1_n50_ws_epoch_rotation_d321.py`: arquivos reais 0700/0600, bootstrap ativo 50/50, troca atômica a 36h, recusa a 35h, histórico intacto e digest alterado somente após aprovação, cache adulterado, symlink/ponteiro adulterado, quota D287 sem retry e sem metadata GET, runner que escolhe nova coorte após troca, CLI opt-in ausente bloqueando antes de WS.
 
-`tests/test_j1_n50_ws_rotating_systemd_d321.py`: timer renovação HH:02:15, serviço coleta WS HH:59:30 preservado, nenhum install/systemctl implícito, sem REST antigo, root/path injetado proibido.
+`tests/test_j1_n50_ws_rotating_systemd_d321.py`: timer renovação HH:01:15, serviço coleta WS HH:59:30 preservado, nenhum install/systemctl implícito, sem REST antigo, root/path injetado proibido.
 
 Executar Linux/docs, Windows/offline e Chrome/PAPER no SHA final, revisar e integrar sem deploy se verde. Validação 24 fechamentos reais, mudança do universo após >=36h, gaps REST limitados, identidade #319 e primeiro root install D320 permanecem **pendentes e separados**.
 
 Custo adicional R$0,00. Ordens reais zero.
+
+## Correção obrigatória para o instalador inicial (D320)
+
+Auditoria do código D286 encontrou que `research_current_closed24h_once` só admite início do censo entre **HH:01:00 e HH:02:00 UTC** (60–120s após close); o instalador D320 publicado em `1089fe2c` agendava HH:02:15 e, portanto, abortaria invariavelmente no preflight causal. A nova versão `deploy/vps/prepare_install_j1_n50_ws_d321_once.sh` substitui o arquivo anterior, inicia em **HH:01:15–HH:01:30** e mantém o N2 habilitado até o corte final. **Não usar o comando anterior apontado para o SHA D320.** A renovação periódica D321 usa a MESMA janela HH:01:15. O timer N2 existente é HH:02:00; eventual concorrência de GETs será tratada como falha segura sem retry nem promoção de coorte.
+
+A correção do instalador inicial ainda usa o **serviço estático D320**, não aplica por si só o novo ponteiro rotativo; sua migração para os templates D321 exige release root posterior. Nunca declarar rotação habilitada só porque o código foi integrado.
