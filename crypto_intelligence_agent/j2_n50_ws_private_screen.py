@@ -186,6 +186,14 @@ def research_private_ws_n50_24closed(
             ).fetchall()
             if len(rows) != _ROWS:
                 raise DataGapError("24h research bars absent")
+            # Reject retrospective 'as_of' requests against future-collected
+            # data. A later observation must never silently contaminate a
+            # historical decision or its journal digest.
+            if db.execute(
+                "SELECT COUNT(*) FROM confirmed WHERE received_ms>?",
+                (observed_at_ms,),
+            ).fetchone()[0]:
+                raise DataGapError("future receipts contaminate earlier decision")
             for symbol, opened, received, registry, payload, digest in rows:
                 if (symbol not in by_member
                         or type(opened) is not int
