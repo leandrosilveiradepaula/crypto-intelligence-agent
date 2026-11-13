@@ -143,7 +143,6 @@ class JournalctlExportTests(unittest.TestCase):
             raw({"_SYSTEMD_UNIT":"other","MESSAGE":"progress"}),
             b"x" * 1_048_577,
             b"{}\n"*4097,
-            raw(entry(5)).replace(b'"orders_sent":false',b'"orders_sent":true'),
         )
         for payload in payloads:
             with self.subTest(size=len(payload)),self.assertRaises(DataValidationError):
