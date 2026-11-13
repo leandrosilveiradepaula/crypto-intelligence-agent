@@ -1766,3 +1766,8 @@ Fonte `main=c1fbd4cd46bba108be14859b9a04bb4184c3e91f` verificada, zero PR aberta
 ### D332 — gate adicional de hipótese observada
 
 `scripts.audit_j1_n50_ws_symbol_grammar_d332_once` exige 4 flags owner, retorna JSON de **contagens apenas** de 50 instrumentos do scope ativo D321/D316. O recovery root atualiza o checkout pinado e executa sete suítes, revalida o ponteiro e chama esse auditor **enquanto N2 ainda funciona**. Somente `single_letter_legacy_mismatch_in_scope` com `new_candle_parser_rejections=0` permite o cutover. Em ausência de mismatch ou impossibilidade de auditoria, **não** reativa WS, ainda que testes sintéticos estejam verdes. Isso não comprova o frame de D331, mas evita novo ciclo cego. Nenhuma execução na VPS ou 50/50 atestados por esta preparação.
+
+
+### D332 — resultado da primeira CI e reparo focal
+
+Primeiro HEAD D332 não aprovado: 2836 testes Linux, 1 erro e 1 falha, ambos ligados ao fixture 1-char persistido: `_validated_payload` ainda rejeitava `[A-Z0-9]{1}USDT` por regex 2..24 e supervisor halt. Branch corrigido `bybit_closed_stream_cache` para base 1..28 conforme ranking automático; teste extremo 28 adicionado. CI FINAL no SHA novo ainda a confirmar; não usar HEAD antigo nem instalar na VPS. N2 fallback continua ativo; nenhum corte adicional root.
