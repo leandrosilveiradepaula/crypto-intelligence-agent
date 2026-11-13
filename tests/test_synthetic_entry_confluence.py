@@ -24,7 +24,7 @@ from crypto_intelligence_agent.synthetic_trend_pullback import (
     TrendPullbackCandidate, TrendPullbackConfig, TrendPullbackResearch,
 )
 from test_synthetic_btc_breakout_screen import (
-    btc, long, short, config as btc_config, run as btc_screen,
+    btc, long, short, candles, config as btc_config, run as btc_screen,
 )
 
 
@@ -102,6 +102,44 @@ class SyntheticConfluenceTests(unittest.TestCase):
         self.assertEqual(report["network_requests"], 0)
         for secret in ("BTCUSDT", "ETHUSDT", "fixture_", "bybit", "100.00"):
             self.assertNotIn(secret, json.dumps(report))
+
+    def test_end_to_end_long_confluence_uses_closed_prior_pullback(self):
+        # Concrete causal bar pattern simultaneously triggers PRE2 breakout
+        # and the earlier-trend/pullback PRE1; no forged candidate needed.
+        series = candles("ETHUSDT", (
+            (100, 110, 90, 10),
+            (101, 111, 91, 10),
+            (103, 104, 102, 10),
+            (104, 105, 103, 10),
+            (102, 103, 101, 10),
+            (107, 108, 106, 50),
+        ))
+        result = research(assets=[series])
+        self.assertEqual(result.confluence_symbols, ("ETHUSDT",))
+        self.assertEqual(result.items[0].disposition,
+                         ConfluenceDisposition.CONFLUENT_RESEARCH_ONLY)
+        self.assertEqual(result.items[0].breakout_side, SyntheticSide.LONG)
+        self.assertEqual(result.items[0].pullback_side, SyntheticSide.LONG)
+        self.assertEqual(result.items[0].confluence_research_rank, 1)
+        self.assertFalse(result.approved_for_signals)
+
+    def test_end_to_end_short_confluence_only_in_btc_downtrend(self):
+        series = candles("ETHUSDT", (
+            (100, 110, 90, 10),
+            (99, 109, 89, 10),
+            (97, 98, 96, 10),
+            (96, 97, 95, 10),
+            (98, 99, 97, 10),
+            (93, 94, 92, 50),
+        ))
+        yes = research(b=btc(98), assets=[series])
+        self.assertEqual(yes.confluence_symbols, ("ETHUSDT",))
+        self.assertEqual(yes.items[0].breakout_side, SyntheticSide.SHORT)
+        self.assertEqual(yes.items[0].pullback_side, SyntheticSide.SHORT)
+        veto = research(b=btc(102), assets=[series])
+        self.assertEqual(veto.confluence_symbols, ())
+        self.assertEqual(veto.items[0].disposition,
+                         ConfluenceDisposition.BTC_OR_BREAKOUT_VETO)
 
     def test_two_agreeing_current_votes_keep_btc_rank_order_and_no_fixed_target(self):
         a = long("ETHUSDT", 105, 50)
