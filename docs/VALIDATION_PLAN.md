@@ -1290,3 +1290,7 @@ The executable itself is never invoked in CI or via the limited MCP.
 After a reviewed merge and root-executed recovery, confirm N2 disabled,
 WS and rotation timers enabled and first subsequent WS service result;
 verify there is no full ranking GET repeat or overwriting N50 REST HALT.
+
+## J1/D327 — rollover WS aberto nao impede candle confirmado
+
+Em testes offline, simular confirm=false com timestamp anterior ao start e posterior ao end (ambos inteiros), mantendo envelope, topico, intervalo e grade validos. Exigir zero insercao, contador sanitizado ignored_open_trade_clock e continuidade do supervisor. Em seguida receber 50 eventos confirm=true da coorte: registrar 50/50 no SQLite da hora, sem promover 24h. Os mesmos timestamps com confirm=true devem falhar. Rejeitar topico estranho, intervalo errado, grade nao alinhada, end inconsistente e OHLC proibido; auditoria so de candles confirmados e nenhum dado inventado. Verificar CLI owner propaga somente contagem sem precos/simbolos. Regressões D313/D315/D325/D326 e CI Linux/docs, Windows/offline, PAPER no SHA final. Recovery D327 tem testes estaticos Bash e exige preflight root, codigo fonte e coorte ativa intactos, testes locais VPS antes de desligar N2, retorno automatico se ocorrer falha. Gate 50x24 e rotacao 36h permanecem reais.

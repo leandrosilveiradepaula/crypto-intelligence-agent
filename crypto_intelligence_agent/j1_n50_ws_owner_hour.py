@@ -47,6 +47,7 @@ def _result(status: str) -> dict:
         "closed_events_appended_to_ws_journal": 0,
         "identical_replays": 0,
         "preack_frames_discarded": 0,
+        "ignored_open_trade_clock": 0,
         "rest_gap_reconciliation_required": False,
         "http_gets": 0,
         "rest_database_modified": False,
@@ -152,6 +153,7 @@ def run_n50_ws_owner_hour_once(
             out["closed_events_appended_to_ws_journal"] = run.closed_events_appended
             out["identical_replays"] = run.identical_replays
             out["preack_frames_discarded"] = run.preack_frames_discarded
+            out["ignored_open_trade_clock"] = run.ignored_open_trade_clock
 
             # A frame-cap or failed ACK may have saved partial legitimate rows,
             # but it cannot be promoted as a healthy complete hour.

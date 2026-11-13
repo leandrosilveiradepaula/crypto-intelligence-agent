@@ -116,6 +116,7 @@ class WSRunReport:
     heartbeat_pings: int
     heartbeat_pongs: int
     preack_frames_discarded: int = 0
+    ignored_open_trade_clock: int = 0
 
     def sanitized_report(self) -> dict:
         return {
@@ -128,6 +129,7 @@ class WSRunReport:
             "subscriptions_acknowledged": self.subscriptions_acknowledged,
             "frames_seen": self.frames_seen,
             "open_updates": self.open_updates,
+            "ignored_open_trade_clock": self.ignored_open_trade_clock,
             "closed_events_appended": self.closed_events_appended,
             "identical_replays": self.identical_replays,
             "early_frames_buffered": self.early_frames_buffered,
@@ -191,7 +193,7 @@ def supervise_ws_research(
         raise DataValidationError("injected WS research capabilities required")
     groups = _topic_batches(scope)
     all_topics = frozenset(topic for batch in groups for topic in batch)
-    frames = opened = appended = replayed = preack_discarded = 0
+    frames = opened = appended = replayed = preack_discarded = ignored_open = 0
     sessions = complete_sessions = sends = acks = pings = pongs = 0
     started = clock()
     if type(started) not in (int, float) or not math.isfinite(started):
@@ -201,7 +203,7 @@ def supervise_ws_research(
         return WSRunReport(status, failure, sessions, complete_sessions,
                            max(0, sessions - 1), sends, acks, frames, opened,
                            appended, replayed, 0, pings, pongs,
-                           preack_discarded)
+                           preack_discarded, ignored_open)
 
     for attempt in range(budget.max_sessions):
         if attempt:
@@ -233,13 +235,14 @@ def supervise_ws_research(
                     sends += 1
 
                 def ingest(frame: str | bytes, at_ms: int) -> None:
-                    nonlocal opened, appended, replayed
+                    nonlocal opened, appended, replayed, ignored_open
                     batch = ingest_offline_ws_batch(
                         frames=((frame, at_ms),), scope=scope,
                         journal=journal, require_ack=False,
                         allow_declared_gap=allow_declared_gaps,
                     )
                     opened += batch.open_updates
+                    ignored_open += batch.ignored_open_trade_clock
                     appended += batch.appended
                     replayed += batch.identical_replays
 

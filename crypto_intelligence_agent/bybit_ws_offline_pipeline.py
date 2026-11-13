@@ -25,12 +25,14 @@ class OfflineWSBatch:
     appended: int
     identical_replays: int
     acknowledged: bool
+    ignored_open_trade_clock: int = 0
 
     def sanitized_report(self) -> dict:
         return {
             "status": "offline_ws_batch_completed_not_top50",
             "frames_seen": self.frames,
             "open_updates": self.open_updates,
+            "ignored_open_trade_clock": self.ignored_open_trade_clock,
             "closed_events_appended": self.appended,
             "identical_replays": self.identical_replays,
             "subscription_acknowledged": self.acknowledged,
@@ -56,7 +58,7 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
             or type(require_ack) is not bool
             or type(allow_declared_gap) is not bool):
         raise DataValidationError("offline WS scope, journal or ACK policy invalid")
-    count = opened = appended = replayed = 0
+    count = opened = appended = replayed = ignored_open = 0
     ack = not require_ack
     subscribed = {"kline.60." + member.symbol for member in scope.contracts}
     for item in frames:
@@ -113,9 +115,15 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                         or any(type(row[key]) is not int
                                for key in ("start", "end", "timestamp"))
                         or row["start"] <= 0 or row["start"] % HOUR_MS
-                        or row["end"] != row["start"] + HOUR_MS - 1
-                        or not row["start"] <= row["timestamp"] <= row["end"]):
+                        or row["end"] != row["start"] + HOUR_MS - 1):
                     raise DataValidationError("offline WS open candle clock invalid")
+                # A non-final update is never evidence: the provider's last
+                # matched trade timestamp can lag behind the new candle at an
+                # UTC rollover. Drop only this untrusted *open* update, do not
+                # abort the owner lease or synthesize a matching candle.
+                if not row["start"] <= row["timestamp"] <= row["end"]:
+                    ignored_open += 1
+                    continue
                 values = {key: _strict_decimal(row[key], label=key, may_be_zero=False)
                           for key in ("open", "high", "low", "close")}
                 for key in ("volume", "turnover"):
@@ -138,4 +146,4 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
         opened += pending_open
     if not ack:
         raise DataValidationError("offline WS ACK missing")
-    return OfflineWSBatch(count, opened, appended, replayed, ack)
+    return OfflineWSBatch(count, opened, appended, replayed, ack, ignored_open)
