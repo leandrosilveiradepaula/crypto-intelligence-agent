@@ -1690,3 +1690,6 @@ O script D332 validava o N2 e o preflight owner antes do cutover, porém alterav
 
 
 **Detalhe D333:** permitir `cia-j1-n50-ws.service` em `failed` ou `inactive` no recovery, pois `reset-failed` durante cutover revertido pode limpá-lo; ambos exigem WS/rotação desligados e N2 habilitado. Nunca admitir `active`.
+
+
+**D333 — segurança entre coletores:** ao compensar falha após cutover, desabilitar timers WS não prova serviço inativo. Exigir `stop` da instância WS e confirmar `inactive|failed` antes de voltar o N2; se não, retornar status de compensação incerta, nunca atestar isolamento.
