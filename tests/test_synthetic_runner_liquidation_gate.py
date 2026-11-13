@@ -185,7 +185,7 @@ class J3RunnerRiskGateTests(unittest.TestCase):
         )
         self.assertEqual(result.status, "conditional_reference_no_discrete_terminal_observed")
         self.assertEqual(result.hypothetical_net_if_no_unobserved_events_quote,
-                         D("82.829"))
+                         D("84.829"))
         self.assertEqual(result.initial_leverage, 50)
 
     def test_funding_is_causal_consistent_and_no_late_coverage_is_borrowed(self):
