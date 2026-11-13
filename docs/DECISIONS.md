@@ -1711,3 +1711,7 @@ Decisão: comparar J2 BTC/rompimento e seu subconjunto com confluência de pullb
 
 ## J1/D335 — audit deadline slack para WS N50 (13/11/2026)
 Segunda hora real capturou e persistiu 50 candles, mas auditoria abstive e retornou 0/50 em 17:02:00 UTC; fallback N2 ativo. Hipótese focal: lease nominal até +119s deixa margem inadequada ao gate D313 estrito +120s. Limitar nominalmente a +105s sem afrouxar relógios, recibos, qualidade e identidade de candles. Testar atraso extra 10s com 50 writes, preservar falha segura e N2 até recovery root separado. Causa exata em produção ainda não atestada. #619, contrato `docs/J1_N50_WS_AUDIT_DEADLINE_D335.md`.
+
+
+## J1/D336 — recuperação transacional após D335, sem novo bootstrap (13/11/2026)
+D335 corrigiu folga de auditoria (+105s nominal vs limite D313 +120s), integrada em main mas ainda não implantada no checkout privado. Decisão: novo release one-shot D336 parte estritamente do pin D333 `76ba09735b46e19e1e0af718c420d6a60cdd0067` com trap de rollback pin+N2 antes do checkout, git ancestry de origin/main, testes locais owner, ponteiro D321 e veto perto do horário de coleta. A auditoria de gramática D332 já foi comprovada na recuperação anterior e não será repetida como se explicasse D335. Zero GET exchange, banco e ordens. Root recovery é gate posterior à PR/CI; 24h/36h/#319 independentes. Issue #619, contrato `docs/J1_N50_WS_D336_ROOT_RECOVERY.md`.

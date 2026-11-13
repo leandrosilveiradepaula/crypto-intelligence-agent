@@ -1580,3 +1580,7 @@ A J1 D333 teve primeira hora N50 50/50 após recuperação, mas aguardam-se 24h/
 
 ## J1/D335 — segunda janela D333 falhou por abstenção de auditoria (13/11/2026)
 Leitura real VPS: hora 16:59:30–17:02:00Z ACK1, 3500 frames, 50 closed WS append, mas `ws_owner_hour_audit_abstain`, `confirmed_contracts=0`, exit65. WS/rotate disabled e N2 REST enabled/active via OnFailure; primeira hora 50/50 válida, continuidade não. Issue #619 investiga margem insuficiente entre budget WS +119s e auditoria D313 +120s; candidato D335 limita lease a +105s e adiciona regressão de 10s de atraso. Hipótese ainda não atestada exclusivamente. Sem mudanças VPS nesta PR, sem reiniciar serviços. #585/#429/#319 abertas.
+
+
+## J1/D336 — recuperação root a partir de D333 (13/11/2026 UTC)
+Após PR #620 D335 merged `main=b20758c91fa94881ddcba9ec130d91bdf508076a`, VPS permaneceu N2 REST `active/enabled`, WS/rotate `inactive/disabled`; broker não acessa checkout privado para leitura do SHA. Frente issue #619 em branch `work/issue-619-j1-d336-transactional-recover` prepara script root pinado no D333 esperado, janela de corte segura, owner regression e rollback transacional. Candidato a CI, revisão, merge **sem deploy**; nenhuma reinicialização ou ordem realizada. Mesmo após D336, J1 exige 24h, rotação 36h e #319. Documento `docs/J1_N50_WS_D336_ROOT_RECOVERY.md`.
