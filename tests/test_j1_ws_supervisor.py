@@ -372,7 +372,7 @@ class SupervisorTests(unittest.TestCase):
         report = self.run_it(self.factory(session),budget=WSRunBudget(3,50,90))
         self.assertEqual(report.status,"ws_fail_closed_abstain")
         self.assertEqual(report.sessions_attempted,1)
-        self.assertEqual(report.failure_category,"invalid_or_gapped_market_data")
+        self.assertEqual(report.failure_category,"ws_journal_gap_limit")
         self.assertEqual(self.journal.audit(scope=self.scope,
             decision_at_ms=DECISION,as_of_ms=DECISION+4000).persisted_rows,1)
 
