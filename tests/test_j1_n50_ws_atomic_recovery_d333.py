@@ -47,6 +47,9 @@ class D333AtomicRecoveryTests(unittest.TestCase):
         self.assertNotIn("rotate_j1_n50_ws_epoch_once", s)
         self.assertNotIn("rm -rf", s)
         self.assertNotIn("api.bybit.com", s)
+        self.assertIn("failed|inactive) ;;", s)
+        self.assertEqual(s.count("failed|inactive) ;;"), 2)
+        self.assertIn("blocked: WS owner service not quiesced", s)
 
     def test_compensation_installed_before_checkout_and_success_commit_last(self):
         s = source()
