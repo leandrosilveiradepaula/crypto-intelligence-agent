@@ -44,6 +44,8 @@ test "$($SYSTEMCTL show "$OLD_REST" -p ActiveState --value)" = inactive
 test "$($SYSTEMCTL show "$OLD_REST" -p UnitFileState --value)" = disabled
 test "$($SYSTEMCTL show "$SERVICE" -p LoadState --value)" = loaded
 test "$($SYSTEMCTL show "$SERVICE" -p User --value)" = "$OWNER"
+test "$($SYSTEMCTL show "$SERVICE" -p UnitFileState --value)" = static
+test "$($SYSTEMCTL show "$SERVICE" -p FragmentPath --value)" = /etc/systemd/system/cia-j1-n50-ws.service
 test "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" = failed
 test "$($SYSTEMCTL show cia-j1-n50-ws-fallback.service -p Result --value)" = success
 test "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" = inactive
@@ -76,6 +78,9 @@ test -f "$CODE/crypto_intelligence_agent/bybit_closed_stream_cache.py"
 # Local-only regression on the deployed Python and dependency set.
 (cd "$CODE" && $RUNUSER -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1 \
   "$PY" -m unittest discover -s tests -p test_j1_n50_ws_confirm_boundary_d326.py -q)
+# Revalidate the actual private D321 pointer and D316 admission while N2
+# still runs, without printing or writing any symbol/market data.
+(cd "$CODE" && $RUNUSER -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1   "$PY" -c 'import time; from pathlib import Path; from crypto_intelligence_agent.j1_n50_ws_epoch_rotation import load_active_n50_ws_epoch; a=load_active_n50_ws_epoch(state_directory=Path("/home/cia-probe/agent/j1-n50-ws-epochs/active"), current_at_ms=time.time_ns()//1000000, allow_private_pointer_read=True); assert a.status=="active_n50_ws_epoch_revalidated", "owner pointer not eligible"')
 echo "D326_RECOVERY_STAGE_2_CODE_PINNED_AND_OFFLINE_TESTS_PASS"
 
 # Keep the N2 timer enabled until all code and owner safety gates pass.
@@ -86,6 +91,7 @@ test "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" = failed
 test "$($SYSTEMCTL show "$WS" -p ActiveState --value)" = inactive
 test "$($SYSTEMCTL show "$ROT" -p ActiveState --value)" = inactive
 
+CUTOVER_STARTED=0
 restore_n2() {
   $SYSTEMCTL disable --now "$ROT" >/dev/null 2>&1 || true
   $SYSTEMCTL disable --now "$WS" >/dev/null 2>&1 || true
@@ -97,6 +103,7 @@ restore_n2() {
 }
 rollback_exit() {
   if restore_n2; then
+    CUTOVER_STARTED=0
     echo "D326_RECOVERY_ROLLED_BACK_TO_N2" >&2
     exit 65
   fi
@@ -104,7 +111,22 @@ rollback_exit() {
   exit 75
 }
 
+rollback_on_exit() {
+  if test "$CUTOVER_STARTED" = 1; then
+    if restore_n2; then
+      echo "D326_RECOVERY_N2_RESTORED_ON_ABORT" >&2
+    else
+      echo "D326_RECOVERY_N2_FAILED_ON_ABORT_OPERATOR_REQUIRED" >&2
+    fi
+  fi
+}
+trap rollback_on_exit EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 echo "D326_RECOVERY_STAGE_3_CUTOVER"
+CUTOVER_STARTED=1
 $SYSTEMCTL reset-failed "$SERVICE"
 if ! $SYSTEMCTL disable --now "$N2"; then rollback_exit; fi
 if ! $SYSTEMCTL enable --now "$WS"; then rollback_exit; fi
@@ -116,4 +138,5 @@ for TIMER in "$WS" "$ROT"; do
   if ! test "$($SYSTEMCTL show "$TIMER" -p UnitFileState --value)" = enabled; then rollback_exit; fi
 done
 if ! test "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" = inactive; then rollback_exit; fi
+CUTOVER_STARTED=0
 echo "D326_RECOVERY_TIMERS_ENABLED_NO_ORDERS"
