@@ -1802,3 +1802,7 @@ VPS leitura read-only 13/11: N50 WS 16:59:30–17:02:00 exit65 após 50 appends 
 
 ## J1/D336 — próximo gate de recuperação N50 (13/11/2026 UTC)
 Baseline GitHub `main=b20758c91fa94881ddcba9ec130d91bdf508076a`; PR D335 #620 integrada, N2 ativo e timers WS/rotação desativados em VPS por OnFailure após 17:02Z. Broker `vps_exec git -C /home/cia-probe/agent/repo rev-parse HEAD` retornou permission denied; não supor checkout real via esse acesso. `work/issue-619-j1-d336-transactional-recover`: script root `deploy/vps/recover_j1_n50_ws_d336_once.sh` com OLD_SHA D333 esperado `76ba09735b46e19e1e0af718c420d6a60cdd0067`, testes de isolamento/mocks, sem deploy. Gate pendente: CI/revisão/merge no commit SHA final, depois execução root em VPS já existente com preflight e rollback, novo lease real de 50/50. Não reaplicar D333, não enviar ordens, não declarar 24h/36h; issue #619 fica aberta até evidência operacional.
+
+
+## J5/PROGRESS1 — progresso mobile sem afetar J1 (13/11/2026 UTC)
+Issue #622, branch `work/issue-622-j5-n50-hourly-progress`, base main `61aead8870166ddbc0b3a4c27d8924e320c477b1`. Arquivos: `crypto_intelligence_agent/j5_n50_ws_hour_progress.py`, `scripts/render_j5_n50_ws_log_progress_once.py`, `tests/test_j5_n50_ws_hour_progress.py`, `docs/J5_N50_WS_LOG_PROGRESS.md`. Testes/CI e review pendentes; sem deploy/ordem, só logs sanitizados injetados offline. Próxima ação: abrir PR, validar gates, merge sem deploy. Gate operativo N50 D336 não alterado; D323 de 24h e rotação 36h continuam soberanos, não inferir deles a partir de contagens de log.
