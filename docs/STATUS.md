@@ -1588,3 +1588,7 @@ Após PR #620 D335 merged `main=b20758c91fa94881ddcba9ec130d91bdf508076a`, VPS p
 
 ## J5/PROGRESS1 — UI de horas observadas independentemente da coleta N50 (13/11/2026 UTC)
 Para evitar painel 0/24 opaco durante D323, issue #622 cria projeção offline de cada hora 50/50 no log sanitizado (não evidência oficial), sequência recente, falhas, ausências e duplicatas, com HTML PT-BR responsivo e CLI stdin somente com opt-in. Uma sessão com 50 writes mas auditoria abstida é falha. Mesmo 24 logs favoráveis não fecham D323 nem rotação. Branch `work/issue-622-j5-n50-hourly-progress`; código/testes/docs dependem de gates CI e revisão, merge sem deploy. D336 segue instalado com timers WS/rotate ativos, N2 inativo; coleta nova 18UTC ainda sem relatório confirmado no momento da abertura da tarefa.
+
+
+## J2/WS-READ1 — ponte para journal N50 WS após D336 (13/11/2026 UTC)
+Incidente J1 D335 corrigido, primeira hora pós-D336 18:00 UTC 50/50 com digest e exit0; WS/rotação ativos, N2 standby. O pesquisador J2 D300 antigo depende de REST N50, agora HALT; issue #624, branch `work/issue-624-j2-ws-readonly-24h` implementam leitor descritivo independente e read-only sobre journal WS D313, com duas auditorias e janela 50×24, sem remapear REST/WS. A dependência temporal dos 24h reais permanece: código e fixtures não autorizam sinais nem homologação D323. Tests/CI/revisão/merge sem deploy. Contrato `docs/J2_N50_WS_PRIVATE_24H.md`.
