@@ -1693,3 +1693,8 @@ O script D332 validava o N2 e o preflight owner antes do cutover, porém alterav
 
 
 **D333 — segurança entre coletores:** ao compensar falha após cutover, desabilitar timers WS não prova serviço inativo. Exigir `stop` da instância WS e confirmar `inactive|failed` antes de voltar o N2; se não, retornar status de compensação incerta, nunca atestar isolamento.
+
+
+## J3/PRE29 — veta PnL hipotético se caminho de mark já indicava liquidação/stop (13/11/2026 UTC)
+
+A PR #608 (J4/RUNNER-COST1) calcula custo do fechamento sintético de 6 unidades de runner após parciais, mas não cruza trajetória de mark, liquidação, stop ou alvo. Para não apresentar apenas o resultado positivo hipotético ignorando um terminal de risco anterior, decidiu-se criar **composição pura e opt-in** de `synthetic_runner_costed_close` (J4) com `replay_synthetic_mark_path` (J3/PRE16). Vincular lado, quantidade inicial, horário/preço de entrada, margem/leverage, custo e cada trade tick de fills parciais e runner, exigir funding causal e gaps limitados. Se J3 observar LIQUIDATION_CONDITION, STOP ou TARGET antes do último recibo, omitir o net no relatório do gate; caso contrário, publicar apenas referência condicional, sem certificação de sobrevivência intrabar ou PnL. O caminho J3 mantém notional INICIAL integral mesmo após parciais: proxy conservador, não gestão de posição reduzida. Todas as flags financeiras, venue, intrabar e ordens false. Issue #613; doc `docs/J3_RUNNER_CONDITIONAL_RISK_GATE.md`. Sem VPS, mercado, LIVE ou alterações na J1.

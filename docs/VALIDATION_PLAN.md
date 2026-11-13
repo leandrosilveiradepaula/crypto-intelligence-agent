@@ -1347,3 +1347,8 @@ Testar novo `deploy/vps/recover_j1_n50_ws_d333_once.sh` pinado em D331: sete reg
 
 
 **D333 — nenhum serviço WS em paralelo ao N2:** rollback pós-cutover deve desativar timers, parar o serviço WS eventualmente já iniciado, exigir estado `inactive|failed` e somente depois habilitar N2. Caso o serviço permaneça ativo/indeterminado, compensação falha (75). Teste estático garante essa ordem; mocks garantem o tratamento do retorno, sem alteração real de unidades em CI.
+
+
+## J3/PRE29 — gate condicional do runner com trajetória de mark
+
+`tests/test_synthetic_runner_liquidation_gate.py`: combinação do J3/PRE16 com custo terminal J4/RUNNER-COST1, com 100=50+30+14+6, entrada @100 e leverage50, margem sintética200. Exigir net condicional 82.829 com custo/fee/funding explícitos e `OPEN_UNRESOLVED` em todos os 4 ticks. Inserir tick anterior mark97 e trade100: `LIQUIDATION_CONDITION` a 50x deve **suprimir PnL**, mesmo que os fills futuros sejam ficticiamente lucrativos; mesma trilha com 10x/margem1000 não deve alcançar o limiar. Stop/target anterior sempre suprime net (não implica fill). SHORT reversão do funding/custos; negativa de plano/outro lado, qty/leverage/margem, fees/slip, preço/hora de parcial ou runner, as_of desalinhado, gap de tick, funding futuro/repetido e tipos inválidos. Teste de independência do contexto Decimal e bloqueio de rede. Contrato usa proxy de notional integral e não prova risco reduzido após parciais, intrabar, venue PnL ou financiamento real. CI Linux/docs, Windows/offline, PAPER/mobile no HEAD e merge sem deploy. Issue #613, `docs/J3_RUNNER_CONDITIONAL_RISK_GATE.md`.
