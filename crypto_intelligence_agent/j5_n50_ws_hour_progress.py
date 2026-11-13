@@ -51,7 +51,8 @@ def _entry(item: object, now_ms: int) -> tuple[int, bool]:
     if (type(finished) is not int or not _MIN_MS <= finished <= now_ms
             or type(report) is not dict
             or report.get("schema_version") != "j1-n50-ws-cached-owner-window-v1"
-            or report.get("status") not in (_FAILED | {_OK})
+            or type(report.get("status")) is not str
+            or report["status"] not in (_FAILED | {_OK})
             or type(report.get("expected_contracts")) is not int
             or report["expected_contracts"] != 50
             or type(report.get("confirmed_contracts")) is not int
