@@ -1369,3 +1369,7 @@ Reproduzir 50/50 com sessão que consome todo budget, acrescentar atraso simulad
 
 ## J1/D336 — release root focal para folga D335
 Testar `tests/test_j1_n50_ws_root_recovery_d336.py`: `bash -n` sintético, SHA D333 pinado, exclusão da janela UTC 00–02min/58–59min (rechecagem após testes), margem +105s presente e ancestralidade origin/main, trap antes de checkout, cutover após preflight, mock Bash de rollback de pin/N2 e falhas de compensação. Rodar regressões D313/D315/D317, D326–D332 e suite completa Linux/docs, Windows/offline e PAPER/mobile no HEAD exato. Merge somente após revisão sem deploy; operação root/owner privado é separada e exige verificaçao do SHA efetivamente instalado. Provar nova hora 50/50 pós-release, sem confundir 50 rows com 50 auditados. Sem D322 bootstrap, GET, ordens ou SQLite mutation. #619/#585.
+
+
+## J5/PROGRESS1 — verificações de progresso log-derived (#622)
+Executar `python -m unittest discover -s tests -p test_j5_n50_ws_hour_progress.py -v`, compileall e suite Linux/docs+Windows/offline+PAPER/mobile no SHA exato. Falsificar 50 appends com status audit-abstain, duplicatas, gaps, UTC prematuro +2min, SHA ausente, tipos bool/int, JSON com chave duplicada, registros futuros e status malicioso; nenhum caso deve promover 24h formal ou renderizar símbolos, preços, SHA ou HTML arbitrário. Conferir CLI sem optin não lê stdin; com JSON <=1MiB produz só contagens ou HTML CSP no stdout. Sem deploy, banco, ordens ou chamadas REST. Referência #622 e D323.
