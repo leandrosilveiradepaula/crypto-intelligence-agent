@@ -1385,3 +1385,7 @@ Testes `tests/test_j5_product_app_mvp.py` e `scripts.audit_j5_product_app_browse
 
 ## J5/APP-DATA1 — fluxo real de importação N50 offline (#628)
 `python -m unittest discover -s tests -p test_j5_n50_ws_journald_export.py -v`: NDJSON journald sintético da unidade esperada, 50/50 de duas horas, abstenção com 50 appends, duplicata, hora futura/+2min, timestamp microsegundos boolean/inválido, mensagem malformada, JSON duplicado, 1MiB/4096, opt-in não consome stdin, saída sem símbolos/preços/paths/digests e flags D323/live false; zero network/db/systemd. CI Linux/docs, Windows/offline e Chrome/PAPER no head exato; review e merge sem deploy. `docs/J5_N50_JOURNALD_IMPORT_BRIDGE.md`.
+
+
+## J5/APP-SYNC1 — refresh automático restrito a loopback (#630)
+`tests/test_j5_local_readonly_server.py`: validar `journalctl` argv/timeout/bounds e read-only, Host/Origin DNS rebinding, CSP, 405 em escrita, 404 em paths externos, HTTP503 sanitizado, 24 slots count-only sem símbolo/digest, nenhuma concessão D323. `tests/test_j5_product_app_mvp.py` exige `connect-src 'self'` e origem loopback explícita no JS; a abertura `file://` não faz GET. `scripts.audit_j5_product_app_browser` exercita Chrome 320/390/768/1280, auto GET local sem importar JSON, refresh após erro descartando stale e requisições externas 0. CI Linux/docs, Windows/offline e Chrome/PAPER no SHA revisado; squash merge sem deploy. Acesso remoto, HTTPS e release de VPS dependem de gate próprio. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
