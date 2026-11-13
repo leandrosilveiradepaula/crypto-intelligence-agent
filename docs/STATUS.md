@@ -1552,3 +1552,8 @@ D331/VPS 14:59:31–15:00:03Z: ACK1, 677 frames, 42 CLOSED confirmados postclose
 ### D332 — preflight anti-recovery repetitivo
 
 Preparado auditor owner-only count-only de gramática da coorte real N50. O recovery só fará cutover se detectar na coorte um caso de base USDT com 1 caractere que o parser D331 rejeitava e o novo aceita, após revalidar 50 membros, ranked scope e cache. Se não detectar, aborta antes de desabilitar REST N2: evita repetir a falha 42/50 por suposição. Testes sintéticos novos e 7 suítes offline no instalador; root release ainda separado.
+
+
+### D332 — compatibilidade completa de persistência
+
+Primeira CI do D332 encontrou bloqueio adicional no journal imutável: regex de símbolo do payload 2..24 rejeitava base de 1 caractere mesmo quando parser WS já aceitava. Corrigido para 1..28 alinhado ao ranking auto; testes exigem persistência e auditoria 50/50, mais extremo de 28 caracteres. Nenhuma migração ou modificação do banco real.
