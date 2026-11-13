@@ -1719,3 +1719,7 @@ D335 corrigiu folga de auditoria (+105s nominal vs limite D313 +120s), integrada
 
 ## J5/PROGRESS1 — D337: progresso preliminar por log, sem promover D323 (13/11/2026)
 Decisão: exibir em HTML mobile PT-BR as 24 horas UTC observadas nos relatórios sanitizados do serviço N50 WS (success com 50/50 e digest, fail, missing, duplicate), distinguindo contagem e streak de *homologação* D323. 50 appends sem auditoria não contam; timer não confirma candle; duplicata não pode atestar sucesso. Última hora só elegível após +3min, nenhum dado privado ou acesso ao journal. Mesmo 24 logs positivos mantêm flags de 24h D323, 36h e crypto-only falsas. Issue #622, contrato `docs/J5_N50_WS_LOG_PROGRESS.md`.
+
+
+## J2/WS-READ1 — D338: ler 24 barras WS auditadas sem reutilizar journal REST (13/11/2026 UTC)
+Decisão: disponibilizar pesquisa DESCRITIVA de candles WS N50 sob mesma origem D313 (WS SQLite privado, 50×24, D287/D316 vinculados), reutilizando `_metrics` J2/D300 e dois replays de `journal.audit` em torno de query readonly com controle de digests. Não criar execução, rank marketwide, fonte crypto-only ou prova de continuidade D323 só porque localmente existem 1.200 candles. Sem operação de rede, schema migration ou deploy. Issue #624, contrato `docs/J2_N50_WS_PRIVATE_24H.md`.
