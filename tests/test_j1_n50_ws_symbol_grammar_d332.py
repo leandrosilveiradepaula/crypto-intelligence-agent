@@ -5,6 +5,7 @@ from dataclasses import replace
 from io import StringIO
 from contextlib import redirect_stdout
 import json
+import os
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -80,6 +81,7 @@ class D332OwnerSymbolGrammarTests(unittest.TestCase):
                     allow_private_manifest_read=True,
                     allow_private_ws_scope_read=True)["status"], "owner_optin_required")
 
+    @unittest.skipUnless(os.name == "posix", "owner DAC scope only on POSIX")
     def test_owner_read_mocked_scope_passes_only_after_full_revalidation(self):
         import crypto_intelligence_agent.j1_n50_ws_symbol_grammar_d332 as mod
         ranked = {"test": "fixture_only"}
@@ -129,6 +131,7 @@ class D332OwnerSymbolGrammarTests(unittest.TestCase):
                 no = observe_n50_ws_symbol_grammar_owner(**flags)
                 self.assertEqual(no["status"], "owner_ws_scope_integrity_abstain")
 
+    @unittest.skipUnless(os.name == "posix", "owner DAC scope only on POSIX")
     def test_root_owner_rejection_and_default_cli_are_safe(self):
         with patch(
             "crypto_intelligence_agent.j1_n50_ws_symbol_grammar_d332.os.getuid",
