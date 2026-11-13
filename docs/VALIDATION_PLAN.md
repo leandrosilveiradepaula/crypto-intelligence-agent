@@ -1344,3 +1344,6 @@ Testar novo `deploy/vps/recover_j1_n50_ws_d333_once.sh` pinado em D331: sete reg
 ### D333 — serviço após rollback parcial
 
 `systemctl reset-failed` pode deixar `cia-j1-n50-ws.service` em `inactive` depois do fallback. O preflight do D333 aceita apenas `failed|inactive` (nunca `active`, estado de execução ou serviço desconhecido) sob N2 active/enabled e WS/rotação disabled. Verificação estática cobre ambos checkpoints antes/depois dos testes, sem acessar systemd real.
+
+
+**D333 — nenhum serviço WS em paralelo ao N2:** rollback pós-cutover deve desativar timers, parar o serviço WS eventualmente já iniciado, exigir estado `inactive|failed` e somente depois habilitar N2. Caso o serviço permaneça ativo/indeterminado, compensação falha (75). Teste estático garante essa ordem; mocks garantem o tratamento do retorno, sem alteração real de unidades em CI.
