@@ -1334,3 +1334,8 @@ Teste `test_j1_n50_ws_halt_taxonomy_d331.py` insere 42 eventos pósclose reais e
 ### D332 — regressão transversa do payload SQLite
 
 A CI inicial encontrou `DataGapError: offline candle record structure invalid` ao tentar persistir o ticker fixture de base de 1 caractere. Corrigido o regex de payload de 2..24 para 1..28 conforme gramática auto, sem alterar dados existentes; provas requerem append+audit do mesmo símbolo sintético (1 e 28 caracteres), todos 50 e negativas de escopo, clock, OHLC e idempotência. Não encerrar tarefa somente por `parse_offline_confirmed_kline` aceitar.
+
+
+## J1/D333 — compensação transacional D332 antes de ativar WS
+
+Testar novo `deploy/vps/recover_j1_n50_ws_d333_once.sh` pinado em D331: sete regressões offline + preflight owner da coorte antes de alterar timers. Teste estático exige trap registrado antes de `checkout NEW_SHA`, `PIN_CHANGED=1` antes da tentativa, rollback de código OLD_SHA verificando `rev-parse HEAD` e `status --porcelain`, `RECOVERY_FINALIZED=1` apenas no fim. `test_j1_n50_ws_atomic_recovery_d333.py` executa **somente trechos de funções com mocks** de git/N2 em subprocesso Bash: preflight abortando (return65 e pin restaurado); cutover incompleto (N2 e pin restaurados); sucesso (sem rollback); falha na compensação de N2 ou código (return75); falha antes de checkout (não alterar pin). Sem executar root, GET, SQLite, testes live ou systemctl real. CI Linux/docs, Windows/offline e PAPER/mobile no SHA revisado; merge sem deploy. Contrato `docs/J1_N50_WS_ATOMIC_RECOVERY_D333.md`. Ref #611.
