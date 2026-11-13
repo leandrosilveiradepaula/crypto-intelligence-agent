@@ -1687,3 +1687,6 @@ A primeira CI expôs segundo bloqueio de base 1: `bybit_closed_stream_cache._val
 ## D333 — rollback do código antes de concluir o recovery N50 (13/11/2026)
 
 O script D332 validava o N2 e o preflight owner antes do cutover, porém alterava o checkout para NEW_SHA sem restaurá-lo se o auditor de gramática abstivesse. Isso criava estado híbrido (N2 seguro, código novo e OLD_SHA exigido na próxima tentativa). Decidido aplicar compensação do pin em `recover_j1_n50_ws_d333_once.sh`: trap EXIT instalado antes do checkout; em erro de leitura privada, testes, git ou cutover restaura o SHA D331 antigo e verifica Git clean; se cutover iniciou também restaura N2 e desabilita WS/rotação; se compensação falhar, retorna 75 e requer intervenção, sem declarar sucesso. Sucesso final mantém novo SHA. Tests com Bash mocks cobrem estados. Não altera D332 do parser nem autoriza negociação. Ref #611 e `docs/J1_N50_WS_ATOMIC_RECOVERY_D333.md`.
+
+
+**Detalhe D333:** permitir `cia-j1-n50-ws.service` em `failed` ou `inactive` no recovery, pois `reset-failed` durante cutover revertido pode limpá-lo; ambos exigem WS/rotação desligados e N2 habilitado. Nunca admitir `active`.
