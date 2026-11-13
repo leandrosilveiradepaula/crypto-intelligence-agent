@@ -1723,3 +1723,7 @@ Decisão: exibir em HTML mobile PT-BR as 24 horas UTC observadas nos relatórios
 
 ## J2/WS-READ1 — D338: ler 24 barras WS auditadas sem reutilizar journal REST (13/11/2026 UTC)
 Decisão: disponibilizar pesquisa DESCRITIVA de candles WS N50 sob mesma origem D313 (WS SQLite privado, 50×24, D287/D316 vinculados), reutilizando `_metrics` J2/D300 e dois replays de `journal.audit` em torno de query readonly com controle de digests. Não criar execução, rank marketwide, fonte crypto-only ou prova de continuidade D323 só porque localmente existem 1.200 candles. Sem operação de rede, schema migration ou deploy. Issue #624, contrato `docs/J2_N50_WS_PRIVATE_24H.md`.
+
+
+## J5/MVP1 — D339: priorizar console mobile utilizável antes da publicação live (13/11/2026)
+Diante de repetidas entregas restritas a auditoria e HTML desconectado, priorizar um **vertical slice de produto**: tela única, navegação real, estado de N50 importável, observações J2, cenários PAPER interativos com margem, 50x inicial, parciais e runner, armazenamento local. Nenhuma dependência paga; não habilitar ordens nem fingir backend online. Versionar na issue #626 com gate CI/browser e merge sem deploy. A abertura do aplicativo não concede acesso a private SQLite ou rede; backend autenticado/read-only e live são etapas distintas. `docs/J5_PRODUCT_APP_MVP.md`.
