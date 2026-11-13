@@ -17,6 +17,7 @@ class D332RecoveryTests(unittest.TestCase):
             "OLD_SHA=c1fbd4cd46bba108be14859b9a04bb4184c3e91f", script)
         self.assertIn('NEW_SHA="$1"', script)
         for suite in (
+            "test_j1_n50_ws_symbol_grammar_d332.py",
             "test_j1_n50_ws_single_letter_usdt_d332.py",
             "test_j1_n50_ws_halt_taxonomy_d331.py",
             "test_j1_n50_ws_server_bounded_trade_clock_d329.py",
