@@ -79,3 +79,7 @@ Uma tela em português pode apresentar várias posições PAPER provenientes de 
 ### J5/D301 — exibição de pesquisa, distinta do robô de ordens
 
 A tela privada opcional de mercado N50 mostra exclusivamente métricas já observadas (retorno anterior, true range, volume, contexto BTC e rompimento da última barra) em PT-BR no celular. Nunca converter variação histórica em sinal/ordem ou misturar com posições PAPER. HTML sem rede/script e com aviso explícito de dados provisórios e 0 ordens. A futura interface do robô com contas/posições/execução continua exigindo J4/J6, autenticação e gate de produção separado.
+
+
+## Entrega J5/MVP1 — console interativo local
+Primeiro produto navegável real em `web/app/index.html`, responsivo e PT-BR: dashboard com estado de fonte explícito (offline até importação sanitizada), histórico N50 count-only, pesquisa J2 descritiva e gestão de posições PAPER hipotéticas em BigInt. Margem e leverage global inicial 50x afetam somente novos cenários; percentuais de saída podem tomar base inicial/saldo e runner reservado. Histórico PAPER local exportável e trava local não constituem ordens, stop nativo, liquidação provada nem kill-switch de produção. O produto final D77 continua automático; J5/MVP1 é laboratório/configuração, sem rede e sem deploy. `docs/J5_PRODUCT_APP_MVP.md`.
