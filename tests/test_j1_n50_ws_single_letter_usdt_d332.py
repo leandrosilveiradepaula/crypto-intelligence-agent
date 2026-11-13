@@ -99,6 +99,27 @@ class D332SingleBaseUSDTTests(unittest.TestCase):
                 with self.assertRaises(DataValidationError):
                     stage_bybit_linear_kline(payload, **bad)
 
+    def test_longest_auto_eligible_base_matches_immutable_journal_bounds(self):
+        # D332 CI revealed that the journal was even narrower than the WS
+        # converter (legacy 2..24), so verify the N50 auto-scope max 28.
+        base = "Q" * 28
+        symbol = base + "USDT"
+        contracts = list(self.scope.contracts)
+        contracts[42] = replace(contracts[42], symbol=symbol, base_coin=base)
+        scope = replace(self.scope, contracts=tuple(contracts))
+        event = parse_offline_confirmed_kline(
+            postclose(symbol), scope=scope,
+            received_at_ms=DECISION + 2000,
+            allow_server_bounded_trade_clock=True,
+        )
+        self.assertEqual(self.journal.append(event), "appended")
+        audited = self.journal.audit(
+            scope=scope, decision_at_ms=DECISION,
+            as_of_ms=DECISION + 4000,
+            hour_evidence_symbols=tuple(sorted(m.symbol for m in scope.contracts)),
+        )
+        self.assertEqual(audited.hour_evidence_confirmed, 1)
+
     def test_full_50_cohort_after_member_43_closes_without_exemption(self):
         clock = FakeTime()
         session = FakeSession(
