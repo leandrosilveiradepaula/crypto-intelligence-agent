@@ -1731,3 +1731,7 @@ Diante de repetidas entregas restritas a auditoria e HTML desconectado, prioriza
 
 ## J5/APP-DATA1 — D340: bridge sem rede do journald para o aplicativo (13/11/2026 UTC)
 Decisão: reutilizar o projetor J5/PROGRESS1 de horas N50, com exportador stdin-only de mensagens **sanitizadas** do journalctl JSON da unidade WS em vez de criar outro coletor ou uma API pública. Opt-in explícito, limites 1MiB/4096 linhas, timestamps UTC µs, erro fechado, 50 appends sem auditoria não pontuam, sem divulgar símbolo/preço/JSON bruto. Não instalar automaticamente na VPS nem declarar 24h D323; issue #628, contrato `docs/J5_N50_JOURNALD_IMPORT_BRIDGE.md`.
+
+
+## J5/APP-SYNC1 — D341: atualização automática sem abrir acesso público (13/11/2026 UTC)
+Entrega prioritária do produto: `GET /api/n50-progress` somente na mesma origem loopback `127.0.0.1:8765`, reusando a exportação journalctl→JSON do #628, com refresh automático de 60s, feedback de ausência e modo `file://` intacto. Evitar publicar relatório privado em GitHub Pages ou criar API HTTP 0.0.0.0 sem autenticação. O servidor deve operar apenas com opt-in e em foreground, sem instalar nada na VPS; acesso remoto e release operacional exigem gate distinto. Issue #630; contrato `docs/J5_LOOPBACK_AUTO_STATUS.md`.
