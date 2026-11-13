@@ -39,3 +39,8 @@ O script segue exigindo root somente na VPS `srv1319424`, Git limpo e pinado, N2
 ### Estado de serviço depois da compensação
 
 O `reset-failed cia-j1-n50-ws.service` durante um cutover que precise ser revertido pode deixar o unit como `inactive`, mesmo que a falha anterior fosse `failed`. Para permitir um recovery subsequente sem trabalho manual, o D333 admite **somente `failed` ou `inactive`** no preflight, sempre exigindo N2 `active/enabled`, os dois timers WS/rotação `inactive/disabled`, serviço owner confiável, checkout no SHA antigo e demais gates. `active` ou estados inesperados são recusados. Isso mantém a regra de nenhum serviço WS em execução durante recuperação e remove o bloqueio acidental após `reset-failed`.
+
+
+### Serviço WS em andamento durante rollback
+
+Desabilitar um timer não garante que uma instância já disparada do serviço WS tenha terminado. No caminho de falha após início do cutover, a compensação D333 agora **desativa os dois timers WS**, em seguida executa `systemctl stop cia-j1-n50-ws.service`, exige estado `inactive|failed`, e **só então** reabilita o N2; essa ordem evita a coleta simultânea N2/WS. O stop não apaga registros já persistidos no journal WS. Se não puder comprovar que a instância WS cessou, retorna falha de compensação (75) e não alega N2/WS isolados. O mock de trap mantém os cenários de rollback, e o teste estático exige o stop anterior à reativação N2.
