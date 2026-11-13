@@ -191,9 +191,26 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                 "owner_d323_24h_audit_verified": False,
                 "orders_sent": False,
             }
+            j2_fixture = {
+                "schema_version": "j2-ws-n50-descriptive-24closed-v1",
+                "status": "ws_n50_descriptive_24h_ready",
+                "ws_journal_integrity_replayed": True,
+                "audited_assets": 50, "eligible_closed_bars_per_asset": 24,
+                "descriptive_up_breakouts": 12,
+                "descriptive_down_breakouts": 5,
+                "descriptive_inside_bars": 33,
+                "formal_d323_24h_verified": False,
+                "marketwide_top50_verified": False,
+                "approved_for_signals": False,
+                "orders_sent": False,
+                "window_digest_sha256": "a" * 64,
+                "research_rows": [],
+            }
             external = []
             local_errors = []
-            with patch.object(local, "read_n50_progress", return_value=fixture) as source:
+            with patch.object(local, "read_n50_progress", return_value=fixture) as source, patch.object(
+                local, "read_j2_descriptive", return_value=j2_fixture
+            ) as j2_source:
                 server = HTTPServer((local.HOST, local.PORT), local.LoopbackPanelHandler)
                 worker = Thread(target=server.serve_forever, daemon=True)
                 worker.start()
@@ -225,6 +242,27 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         local_errors.append("read-only local refresh button is missing")
                     if page.locator("#metric-open").inner_text() != "0":
                         local_errors.append("auto-load created an invalid PAPER position")
+                    page.wait_for_function(
+                        "() => document.querySelector('#research-count').textContent === '50'",
+                        timeout=5000,
+                    )
+                    if j2_source.call_count < 1:
+                        local_errors.append("loopback J2 GET did not read research summary")
+                    if page.locator("#research-status").inner_text() != "Descritivo · fonte local":
+                        local_errors.append("J2 count-only auto-report not labeled as local")
+                    if page.locator("#research-rows .research-item").count():
+                        local_errors.append("loopback J2 leaked private symbol rows")
+                    with patch.object(
+                        local, "read_j2_descriptive",
+                        side_effect=local.SourceNotReady("private journal not ready"),
+                    ):
+                        page.locator("#refresh-research-local").click()
+                        page.wait_for_function(
+                            "() => document.querySelector('#research-status').textContent === 'J2 ainda indisponível'",
+                            timeout=5000,
+                        )
+                        if not page.locator("#research-loaded").is_hidden():
+                            local_errors.append("old J2 breakout still visible after source failure")
                     with patch.object(
                         local, "read_n50_progress",
                         side_effect=local.SourceNotReady("sensitive info hidden")
