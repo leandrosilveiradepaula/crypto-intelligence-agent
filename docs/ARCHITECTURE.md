@@ -638,3 +638,7 @@ A arquitetura anterior J2/D300 lê um jornal N50 REST com checkpoints publicados
 
 ## J5/MVP1 — shell de aplicativo local, sem acoplamento à coleta
 O caminho `web/app/index.html` agrega visão geral, pesquisa (snapshot sanitizado `j2-ws-n50-descriptive-24closed-v1`), observação do coletor (`j5-n50-ws-log-progress-v1`), cenários PAPER e configurações. `web/app/engine.js` provê aritmética BigInt e conservação do ledger abstrato; `app.js` liga DOM, storage local e importação. JS nunca abre sockets, APIs ou sqlite; CSP bloqueia conexão e scripts externos; mercado importado permanece apenas em memória, e somente simulações PAPER vão para localStorage. O backend J1 e J2 não precisam parar. A futura API de leitura autenticada é uma integração separada e somente após gate. Contrato `docs/J5_PRODUCT_APP_MVP.md`.
+
+
+## J5/APP-SYNC1 — caminho de leitura local, não rede pública
+`web/app/app.js` consulta `GET /api/n50-progress` a cada 60s somente quando `location.protocol=http`, porta `8765` e host loopback. `scripts/serve_j5_local_readonly.py` serve quatro assets públicos e o JSON N50 com `HTTPServer` vinculado a `127.0.0.1`, checagem de `Host`/`Origin`, CSP sem credenciais e nenhum método de escrita. O backend executa `journalctl` argv fixo com limites e projeta por `export_n50_journald_progress`/J5 PROGRESS1; não consulta SQLite, mercado ou corretora. `file://` não executa fetch. Nada foi deployado nem exposto a rede na entrega. Contrato `docs/J5_LOOPBACK_AUTO_STATUS.md`.
