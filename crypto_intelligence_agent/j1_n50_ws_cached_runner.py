@@ -75,6 +75,7 @@ def run_cached_n50_ws_owner_window(
     allow_injected_public_ws: bool = False,
     allow_create_ws_journal: bool = False,
     allow_declared_ws_gap: bool = False,
+    allow_temporal_discard: bool = False,
     budget: WSRunBudget = WSRunBudget(max_sessions=2, max_frames=16_000, max_seconds=150),
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
@@ -114,7 +115,8 @@ def run_cached_n50_ws_owner_window(
             or not callable(clock) or not callable(wall_ms)
             or not callable(sleeper)
             or type(allow_create_ws_journal) is not bool
-            or type(allow_declared_ws_gap) is not bool):
+            or type(allow_declared_ws_gap) is not bool
+            or type(allow_temporal_discard) is not bool):
         return out
     try:
         # Reject symlinked ancestors as well as direct symlinks: textual
@@ -182,6 +184,7 @@ def run_cached_n50_ws_owner_window(
             allow_private_ws_writer=True, allow_injected_public_ws=True,
             budget=bounded, clock=clock, wall_ms=wall_ms, sleeper=sleeper,
             allow_declared_ws_gap=allow_declared_ws_gap,
+            allow_temporal_discard=allow_temporal_discard,
         )
         out["status"] = detail["status"]
         out["declared_ws_gap_append_enabled"] = allow_declared_ws_gap

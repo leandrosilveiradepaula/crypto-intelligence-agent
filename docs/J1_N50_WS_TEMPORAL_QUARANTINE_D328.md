@@ -50,3 +50,7 @@ Root recovery D328 somente DEPOIS de CI/revisao/merge; atualiza checkout
 ja instalado do SHA D327 para SHA novo revisado, nao repete D322 ou
 os 372 GETs, nao mexe em epoch/REST HALT e preserva N2 em falha.
 Aprovar timer NAO certifica 50x24h, rotacao real 36h, trading ou Top50.
+
+## Opt-in restrito ao owner ativo
+
+O novo comportamento de descarte de CLOSED e **OFF por padrao** em `ingest_offline_ws_batch`, `supervise_ws_research`, `run_n50_ws_owner_hour_once` e `run_cached_n50_ws_owner_window`. Apenas `scripts/run_j1_n50_ws_owner_active_once.py`, servico supervisionado com lock e fallback N2, passa `allow_temporal_discard=True` explicitamente. Assim, fixtures e chamadas offline legadas continuam rejeitando temporal invalido imediatamente. Esta separacao foi adicionada apos CI inicial detectar duas regressoes legadas, preservando a seguranca nos consumidores antigos.

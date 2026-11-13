@@ -52,7 +52,8 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                             scope: OfflineReviewedStreamScope,
                             journal: SQLiteOfflineClosedStreamJournal,
                             require_ack: bool = True,
-                            allow_declared_gap: bool = False) -> OfflineWSBatch:
+                            allow_declared_gap: bool = False,
+                            allow_temporal_discard: bool = False) -> OfflineWSBatch:
     """Consume a bounded pre-recorded batch, never making network calls.
 
     Each item carries its explicit receive timestamp, not process wall time.
@@ -61,7 +62,8 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
     if (type(scope) is not OfflineReviewedStreamScope
             or type(journal) is not SQLiteOfflineClosedStreamJournal
             or type(require_ack) is not bool
-            or type(allow_declared_gap) is not bool):
+            or type(allow_declared_gap) is not bool
+            or type(allow_temporal_discard) is not bool):
         raise DataValidationError("offline WS scope, journal or ACK policy invalid")
     count = opened = appended = replayed = ignored_open = 0
     temporal_discards = [0, 0, 0]
@@ -116,9 +118,9 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                 # envelope with an out-of-window temporal candidate, however,
                 # carries NO evidence and must not kill 49 other topics.
                 # All such candidates are discarded, NOT written or backfilled.
-                reason = classify_non_evidence_closed_frame(
+                reason = (classify_non_evidence_closed_frame(
                     one, scope=scope, received_at_ms=item[1],
-                )
+                ) if allow_temporal_discard else None)
                 if reason is not None:
                     temporal_discards[reason] += 1
                     continue

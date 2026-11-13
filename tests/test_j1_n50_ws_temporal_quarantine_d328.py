@@ -18,7 +18,7 @@ from crypto_intelligence_agent.bybit_closed_stream_cache import (
     HOUR_MS, SQLiteOfflineClosedStreamJournal, parse_offline_confirmed_kline,
 )
 from crypto_intelligence_agent.bybit_ws_offline_pipeline import ingest_offline_ws_batch
-from crypto_intelligence_agent.bybit_ws_temporal_quarantine import (
+from crypto_intelligence_agent.j1_n50_ws_temporal_quarantine import (
     TRADE_OUT_OF_HOUR, PREMATURE_CLOSE, STALE_PREVIOUS_CLOSE,
     classify_non_evidence_closed_frame,
 )
@@ -66,6 +66,7 @@ class TemporalClosedQuarantineTests(unittest.TestCase):
         return ingest_offline_ws_batch(
             frames=frames(*msgs,at=at),scope=self.scope,
             journal=self.journal,require_ack=False,
+            allow_temporal_discard=True,
         )
 
     def audit(self):
@@ -159,7 +160,8 @@ class TemporalClosedQuarantineTests(unittest.TestCase):
                 session_factory=lambda:session,
                 scope=self.scope,journal=self.journal,
                 budget=WSRunBudget(max_sessions=1,max_frames=120,max_seconds=65),
-                clock=clock.clock,wall_ms=clock.wall_ms,sleeper=clock.sleep)
+                clock=clock.clock,wall_ms=clock.wall_ms,sleeper=clock.sleep,
+                allow_temporal_discard=True)
         self.assertEqual(result.status,"ws_budget_ended_research_only")
         self.assertEqual(result.failure_category,None)
         self.assertEqual(result.closed_events_appended,50)
@@ -168,6 +170,15 @@ class TemporalClosedQuarantineTests(unittest.TestCase):
         self.assertEqual(self.audit().hour_evidence_confirmed,50)
         self.assertTrue(session.closed)
         self.assertFalse(result.sanitized_report()["orders_sent"])
+
+    def test_unapproved_offline_ingest_stays_strict(self):
+        with self.assertRaises(DataValidationError):
+            ingest_offline_ws_batch(
+                frames=frames(trade_clock_invalid(MEMBERS[0])),
+                scope=self.scope,journal=self.journal,
+                require_ack=False,
+            )
+        self.assertEqual(self.audit().persisted_rows,0)
 
     def test_untouched_closed_clock_unchanged(self):
         good=candle(MEMBERS[0])
