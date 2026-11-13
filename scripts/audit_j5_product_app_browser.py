@@ -167,6 +167,92 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                                 "outbound_requests":len(outbound),"errors":errors})
                 problems.extend(f"{width}px: {s}" for s in errors)
                 context.close()
+            # Exercise actual GET refresh without importing JSON manually. The
+            # local server is synthetic and loopback-only, never an exchange.
+            from http.server import HTTPServer
+            from threading import Thread
+            from unittest.mock import patch
+            from scripts import serve_j5_local_readonly as local
+            now = int(time.time() * 1000)
+            latest = (now // 3600000) * 3600000
+            slots = [
+                {"closed_end_ms": latest - (23 - i) * 3600000,
+                 "state": "ok" if i >= 22 else "missing"}
+                for i in range(24)
+            ]
+            fixture = {
+                "schema_version": "j5-n50-ws-log-progress-v1",
+                "quality": "sanitized_service_log_observation_only",
+                "as_of_ms": now, "hours_in_window": 24,
+                "slots": slots, "observed_50_of_50_hours": 2,
+                "consecutive_recent_observed_hours": 2,
+                "failed_hours": 0, "missing_hours": 22,
+                "duplicate_hours": 0, "source_authenticated": False,
+                "owner_d323_24h_audit_verified": False,
+                "orders_sent": False,
+            }
+            external = []
+            local_errors = []
+            with patch.object(local, "read_n50_progress", return_value=fixture) as source:
+                server = HTTPServer((local.HOST, local.PORT), local.LoopbackPanelHandler)
+                worker = Thread(target=server.serve_forever, daemon=True)
+                worker.start()
+                try:
+                    context = browser.new_context(
+                        viewport={"width": 390, "height": 844},
+                        color_scheme="dark", reduced_motion="reduce",
+                    )
+                    page = context.new_page()
+                    page.on("pageerror", lambda error: local_errors.append(str(error)))
+                    def route_local_only(route):
+                        url = route.request.url
+                        if url.startswith("http://127.0.0.1:8765/"):
+                            route.continue_()
+                        else:
+                            external.append(url)
+                            route.abort()
+                    page.route("**/*", route_local_only)
+                    page.goto("http://127.0.0.1:8765/", wait_until="load")
+                    page.wait_for_function(
+                        "() => document.querySelector('#n50-ok').textContent === '2 / 24'",
+                        timeout=5000,
+                    )
+                    if source.call_count < 1:
+                        local_errors.append("loopback GET did not read sanitized N50")
+                    if page.locator("#feed-status").inner_text() != "Fonte local automática":
+                        local_errors.append("auto-loaded report not labeled as local source")
+                    if page.locator("#refresh-local").is_hidden():
+                        local_errors.append("read-only local refresh button is missing")
+                    if page.locator("#metric-open").inner_text() != "0":
+                        local_errors.append("auto-load created an invalid PAPER position")
+                    with patch.object(
+                        local, "read_n50_progress",
+                        side_effect=local.SourceNotReady("sensitive info hidden")
+                    ):
+                        page.locator("#refresh-local").click()
+                        page.wait_for_function(
+                            "() => document.querySelector('#feed-status').textContent === 'Fonte local indisponível'",
+                            timeout=5000,
+                        )
+                        if page.locator("#metric-n50").inner_text() != "— / 24":
+                            local_errors.append("stale N50 remained visible after backend error")
+                    if external:
+                        local_errors.append("browser attempted non-loopback network access")
+                    if out_dir is not None:
+                        page.screenshot(
+                            path=str(out_dir / "app-loopback-390px.png"),
+                            full_page=True,
+                        )
+                    context.close()
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    worker.join(timeout=3)
+            problems.extend("loopback: " + x for x in local_errors)
+            records.append({
+                "width": 390, "mode": "loopback_auto_status",
+                "outbound_requests": len(external), "errors": local_errors,
+            })
         finally:
             browser.close()
     result = {
