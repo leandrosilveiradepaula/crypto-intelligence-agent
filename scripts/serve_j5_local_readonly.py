@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -117,7 +118,11 @@ def read_j2_descriptive() -> dict[str, Any]:
             or type(source.get("research_rows")) is not list
             or source["research_rows"] != []
             or type(source.get("window_digest_sha256")) is not str
-            or len(source["window_digest_sha256"]) != 64
+            or re.fullmatch(r"[0-9a-f]{64}", source["window_digest_sha256"]) is None
+            or source.get("quality") != "private_ws_24h_descriptive_research_only"
+            or type(source.get("latest_closed_end_ms")) is not int
+            or not 1_600_000_000_000 <= source["latest_closed_end_ms"] <= 4_102_444_800_000
+            or source["latest_closed_end_ms"] % 3_600_000 != 0
             or any(source.get(key) is not False for key in (
                 "formal_d323_24h_verified", "continuous_collector_verified",
                 "rotation_36h_live_verified", "marketwide_top50_verified",
@@ -137,7 +142,7 @@ def read_j2_descriptive() -> dict[str, Any]:
                 "descriptive_up_breakouts", "descriptive_down_breakouts",
                 "descriptive_inside_bars"
             )) != 50
-            or not _RESEARCH_OUTPUT_KEYS <= source.keys()):
+            or not _RESEARCH_OUTPUT_KEYS.issubset(source)):
         raise SourceNotReady("unsafe J2 projection rejected")
     # Exact allowlist: no owner paths, symbols, registry hashes or extra fields
     # survive from future producer versions. Existing browser validation reused.
