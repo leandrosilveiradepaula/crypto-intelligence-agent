@@ -20,7 +20,7 @@ from crypto_intelligence_agent.bybit_ws_supervisor import (
 )
 from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
 from test_j1_n50_ws_hourly_attestation_d313 import (
-    DECISION, MEMBERS, reviewed_scope,
+    DECISION, MEMBERS, candle, reviewed_scope,
 )
 from test_j1_n50_ws_server_bounded_trade_clock_d329 import postclose
 from test_j1_n50_ws_owner_hour_d315 import FakeSession, FakeTime
