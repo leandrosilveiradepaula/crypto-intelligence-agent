@@ -34,3 +34,8 @@ O trap `EXIT` é instalado **antes** do primeiro comando de `git fetch/checkout`
 O script segue exigindo root somente na VPS `srv1319424`, Git limpo e pinado, N2 active/enabled, WS/rotação disabled, NTP sincronizado, auditor privado com opt-ins, **zero novo bootstrap D322/372 GET**, nenhuma migration SQLite, ordem real, preço ou derivativo enviado a exchange. O rollback de pin não remove linhas dos journals WS, que permanecem intactas.
 
 **Gates:** CI Linux/docs e Windows/offline, Chrome/PAPER no HEAD exato, revisão e merge sem deploy. Só depois execução root em gate operacional específico, sem driblar a restrição do broker remoto. Em caso de `legacy_mismatch_not_established_abstain`, parar com N2 e pin antigo restaurados: a hipótese sobre o frame privado não foi provada. Em caso de preflight verdadeiro e sucesso de cutover, acompanhar primeiro lease para 50/50; J1 D323 24h, rotação 36h, identidade #319 e J1 #2 permanecem pendentes. R$ 0,00 adicional.
+
+
+### Estado de serviço depois da compensação
+
+O `reset-failed cia-j1-n50-ws.service` durante um cutover que precise ser revertido pode deixar o unit como `inactive`, mesmo que a falha anterior fosse `failed`. Para permitir um recovery subsequente sem trabalho manual, o D333 admite **somente `failed` ou `inactive`** no preflight, sempre exigindo N2 `active/enabled`, os dois timers WS/rotação `inactive/disabled`, serviço owner confiável, checkout no SHA antigo e demais gates. `active` ou estados inesperados são recusados. Isso mantém a regra de nenhum serviço WS em execução durante recuperação e remove o bloqueio acidental após `reset-failed`.
