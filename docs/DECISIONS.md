@@ -1677,3 +1677,8 @@ O primeiro lease real após D331 retornou `ws_scope_member_invalid` com 42 candl
 ### Adendo D332 — evitar novo lease inútil
 
 O script D332 só pode rearmar WS se um auditor owner-only, com ponteiro e metadata revistos, **contar** na coorte real pelo menos um símbolo USDT de base de 1 caractere rejeitado pelo regex anterior, e nenhum membro recusado pelo novo parser. Se não houver, tratar a hipótese como não comprovada, retornar exit65 ANTES de desligar N2, registrar counts sanitizados e investigar outra causa. O teste sintético 50/50 não autoriza reativação sem esse gate. Implementado em `j1_n50_ws_symbol_grammar_d332.py` e CLI owner com 4 opt-ins. Sete suítes offline, sem GET/ordens.
+
+
+### D332 — coerência da gramática de símbolos em **todos** os validadores
+
+A primeira CI expôs segundo bloqueio de base 1: `bybit_closed_stream_cache._validated_payload` restringia o payload SQLite a 2..24 caracteres antes de USDT, mesmo após o parser externo aceitar 1. Ajuste para 1..28 (limite do ranking automático); digest, escrow/journal schema, causalidade, OHLC e pertinência a scope preservados. Teste de 28 caracteres verifica o caminho completo. Não atribuir falha live D331 ao novo bloqueio sem execução real.
