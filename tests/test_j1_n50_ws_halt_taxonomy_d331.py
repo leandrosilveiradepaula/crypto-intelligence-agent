@@ -88,7 +88,7 @@ class D331FailureTaxonomyTests(unittest.TestCase):
 
     def test_42_prefix_then_ohlc_conflict_is_distinct_and_stops(self):
         earlier = [postclose(member) for member in MEMBERS[:42]]
-        invalid = postclose(MEMBERS[42])
+        invalid = candle(MEMBERS[42])
         invalid["data"][0]["high"] = "1"
         report = self.run_session([*earlier, invalid])
         self.assertEqual(report.status, "ws_fail_closed_abstain")
