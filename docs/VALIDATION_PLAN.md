@@ -1381,3 +1381,7 @@ Executar `python -m unittest discover -s tests -p test_j2_n50_ws_private_screen.
 
 ## J5/MVP1 — critérios funcionais de app (#626)
 Testes `tests/test_j5_product_app_mvp.py` e `scripts.audit_j5_product_app_browser` devem confirmar HTML aberto no Chromium real, 320/390/768/1280 sem overflow, CSP sem requests, navegação, cenário inicial 3 USD × 50x, 50/60/70% sobre saldo restante com runner 6%, mudança do leverage global preservando posições prévias, pausa local, persistência/reload, importações count-only N50/J2, recusa JSON inválido e nenhuma ordem. Testes de segurança de export/entrada local, sem credenciais nem internet. CI Linux/docs, Windows/offline e Chrome/PAPER no HEAD revisado; merge sem deploy, sem afirmar produção/live aprovada. `docs/J5_PRODUCT_APP_MVP.md`.
+
+
+## J5/APP-DATA1 — fluxo real de importação N50 offline (#628)
+`python -m unittest discover -s tests -p test_j5_n50_ws_journald_export.py -v`: NDJSON journald sintético da unidade esperada, 50/50 de duas horas, abstenção com 50 appends, duplicata, hora futura/+2min, timestamp microsegundos boolean/inválido, mensagem malformada, JSON duplicado, 1MiB/4096, opt-in não consome stdin, saída sem símbolos/preços/paths/digests e flags D323/live false; zero network/db/systemd. CI Linux/docs, Windows/offline e Chrome/PAPER no head exato; review e merge sem deploy. `docs/J5_N50_JOURNALD_IMPORT_BRIDGE.md`.
