@@ -1592,3 +1592,7 @@ Para evitar painel 0/24 opaco durante D323, issue #622 cria projeção offline d
 
 ## J2/WS-READ1 — ponte para journal N50 WS após D336 (13/11/2026 UTC)
 Incidente J1 D335 corrigido, primeira hora pós-D336 18:00 UTC 50/50 com digest e exit0; WS/rotação ativos, N2 standby. O pesquisador J2 D300 antigo depende de REST N50, agora HALT; issue #624, branch `work/issue-624-j2-ws-readonly-24h` implementam leitor descritivo independente e read-only sobre journal WS D313, com duas auditorias e janela 50×24, sem remapear REST/WS. A dependência temporal dos 24h reais permanece: código e fixtures não autorizam sinais nem homologação D323. Tests/CI/revisão/merge sem deploy. Contrato `docs/J2_N50_WS_PRIVATE_24H.md`.
+
+
+## J5/MVP1 — produto mobile interativo, não mais só relatórios HTML (13/11/2026 UTC)
+Issue #626 e branch `work/issue-626-j5-functional-mobile-paper-mvp` partem de `main=df81860a21580c2843d87f2ff509d1efc71aeccc`. Implementados `web/app/index.html`, `style.css`, `engine.js`, `app.js` como console PAPER local com navegação, posições persistidas, partial/runner, importação de snapshots sanitizados N50/J2, status de fontes ausentes e travas exclusivas de simulação. QA de navegador e matemática offline e docs acompanham mudança; aguarda CI/PR/merge seguro sem deploy. A VPS D336 segue coletando autonomamente e nada aqui garante entrada/ordem real. Contrato `docs/J5_PRODUCT_APP_MVP.md`.

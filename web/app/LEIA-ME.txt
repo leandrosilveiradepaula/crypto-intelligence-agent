@@ -1,0 +1,26 @@
+CRYPTO INTELLIGENCE AGENT — APLICATIVO PAPER (PT-BR)
+==================================================
+
+1) Extraia a pasta inteira preservando index.html, app.js, engine.js e style.css.
+2) Abra index.html no Chrome, Edge, Firefox ou navegador moderno.
+3) Em "Posições PAPER", crie um cenário hipotético. Abra "Parciais, runner
+   e histórico" para registrar saídas fictícias 50%, 60%, 70%.
+4) Em "Configurações", altere a alavancagem para novos cenários, guarde ou
+   exporte seu laboratório local. Nenhuma conta ou API é necessária.
+5) Opcional: em "Mercado N50", importe relatórios JSON sanitizados já obtidos
+   localmente dos módulos J5/J2. Sem arquivo, o painel indica desconectado.
+
+IMPORTANTE
+- Simulação offline e local. Não executa trading automático, ordens reais,
+  stops de corretora, cálculos de liquidação nem conecta à VPS.
+- Não há dados de preço atual nem autenticação; relatórios importados não
+  são transmitidos nem persistidos pelo aplicativo.
+- Os cenários PAPER ficam no armazenamento local do navegador. Exporte
+  seus cenários antes de limpar dados do navegador.
+- 50x é um parâmetro de pesquisa com risco elevado, não certificação.
+- A plataforma automatizada final continua em desenvolvimento.
+
+Contrato: docs/J5_PRODUCT_APP_MVP.md no repositório oficial
+https://github.com/leandrosilveiradepaula/crypto-intelligence-agent
+
+Custo adicional: R$ 0,00.
