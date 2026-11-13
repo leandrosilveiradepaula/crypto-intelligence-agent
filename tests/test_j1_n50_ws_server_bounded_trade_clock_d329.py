@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 from crypto_intelligence_agent.bybit_closed_stream_cache import SQLiteOfflineClosedStreamJournal, parse_offline_confirmed_kline
 from crypto_intelligence_agent.bybit_ws_offline_pipeline import ingest_offline_ws_batch
+from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget, supervise_ws_research
+from test_j1_n50_ws_owner_hour_d315 import FakeTime, FakeSession
 from crypto_intelligence_agent.market_data import DataValidationError
 from test_j1_n50_ws_hourly_attestation_d313 import MEMBERS, DECISION, T, candle, reviewed_scope
 
@@ -54,6 +57,32 @@ class D329ServerBoundedTradeMetadataTests(unittest.TestCase):
             allow_server_bounded_trade_clock=True)
         self.assertEqual(json.loads(event.payload)["trade_ms"],DECISION+500)
         self.assertEqual(self.journal.append(event),"idempotent")
+
+    def test_full_owner_style_one_session_with_50_postclose_receipts(self):
+        clock=FakeTime()
+        session=FakeSession(clock,market=tuple(postclose(s) for s in MEMBERS))
+        with patch("socket.create_connection",
+                   side_effect=AssertionError("real socket not allowed")),patch(
+            "crypto_intelligence_agent.bybit_public_j1_transport.BoundedBybitPublicClient.get",
+            side_effect=AssertionError("REST GET not allowed"),
+        ):
+            result=supervise_ws_research(
+                session_factory=lambda:session,scope=self.scope,journal=self.journal,
+                budget=WSRunBudget(max_sessions=1,max_frames=120,max_seconds=65),
+                clock=clock.clock,wall_ms=clock.wall_ms,sleeper=clock.sleep,
+                allow_temporal_discard=True,
+                allow_server_bounded_trade_clock=True,
+            )
+        self.assertEqual(result.status,"ws_budget_ended_research_only")
+        self.assertIsNone(result.failure_category)
+        self.assertEqual(result.subscriptions_acknowledged,1)
+        self.assertEqual(result.closed_events_appended,50)
+        self.assertEqual(result.accepted_postclose_trade_clock,50)
+        self.assertEqual(result.discarded_closed_temporal,(0,0,0))
+        self.assertEqual(self.audit().hour_evidence_confirmed,50)
+        self.assertEqual(self.audit().persisted_rows,50)
+        self.assertTrue(session.closed)
+        self.assertFalse(result.sanitized_report()["orders_sent"])
 
     def test_legacy_parser_and_batch_stay_strict(self):
         msg=postclose(MEMBERS[0])
