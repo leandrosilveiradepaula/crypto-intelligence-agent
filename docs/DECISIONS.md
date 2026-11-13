@@ -1715,3 +1715,7 @@ Segunda hora real capturou e persistiu 50 candles, mas auditoria abstive e retor
 
 ## J1/D336 — recuperação transacional após D335, sem novo bootstrap (13/11/2026)
 D335 corrigiu folga de auditoria (+105s nominal vs limite D313 +120s), integrada em main mas ainda não implantada no checkout privado. Decisão: novo release one-shot D336 parte estritamente do pin D333 `76ba09735b46e19e1e0af718c420d6a60cdd0067` com trap de rollback pin+N2 antes do checkout, git ancestry de origin/main, testes locais owner, ponteiro D321 e veto perto do horário de coleta. A auditoria de gramática D332 já foi comprovada na recuperação anterior e não será repetida como se explicasse D335. Zero GET exchange, banco e ordens. Root recovery é gate posterior à PR/CI; 24h/36h/#319 independentes. Issue #619, contrato `docs/J1_N50_WS_D336_ROOT_RECOVERY.md`.
+
+
+## J5/PROGRESS1 — D337: progresso preliminar por log, sem promover D323 (13/11/2026)
+Decisão: exibir em HTML mobile PT-BR as 24 horas UTC observadas nos relatórios sanitizados do serviço N50 WS (success com 50/50 e digest, fail, missing, duplicate), distinguindo contagem e streak de *homologação* D323. 50 appends sem auditoria não contam; timer não confirma candle; duplicata não pode atestar sucesso. Última hora só elegível após +3min, nenhum dado privado ou acesso ao journal. Mesmo 24 logs positivos mantêm flags de 24h D323, 36h e crypto-only falsas. Issue #622, contrato `docs/J5_N50_WS_LOG_PROGRESS.md`.
