@@ -1557,3 +1557,8 @@ Preparado auditor owner-only count-only de gramática da coorte real N50. O reco
 ### D332 — compatibilidade completa de persistência
 
 Primeira CI do D332 encontrou bloqueio adicional no journal imutável: regex de símbolo do payload 2..24 rejeitava base de 1 caractere mesmo quando parser WS já aceitava. Corrigido para 1..28 alinhado ao ranking auto; testes exigem persistência e auditoria 50/50, mais extremo de 28 caracteres. Nenhuma migração ou modificação do banco real.
+
+
+## J1/D333 — recuperação transacional robusta (13/11/2026 UTC)
+
+VPS conferida read-only: WS/rotação inactive/disabled após D331 exit65 15:00:03 UTC, N2 active/enabled e último serviço N2 success 15:02:04 UTC. D332 entrou na main `de26e3afb43fe4813ca66cc6dbf08c541e19526d`, mas não foi instalada. Novo bloco #611 corrige risco operacional: um preflight owner D332 que abstivesse após checkout deixaria o código em SHA novo apesar de N2 seguro. `recover_j1_n50_ws_d333_once.sh` registra trap antes do checkout e retorna old SHA em falha, junto com N2 se necessário; testes com mocks validam preflight, cutover, falhas de rollback e sucesso. Não há prova de 50/50, 24h, 36h ou identidade marketwide. CI/PR/revisão e root gate são separados, sem ordens.
