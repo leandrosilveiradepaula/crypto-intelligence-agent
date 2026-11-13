@@ -329,3 +329,8 @@ O ranking de retorno anterior de 24h (métricas J2 D300) pode ser testado retros
 ## J4/D307 — apuração de gestão de vencedores sem falsa execução
 
 A aritmética 50/60/70 da posição **restante** continua a deixar 6% residual. Para avaliar hipótese com preços fornecidos (não OHLC inferido), `synthetic_partial_costed_replay.py` soma marcas de referência LONG/SHORT, cobra custos de entrada sobre todas as unidades, custos de saída somente em fills fictícios confirmados, e funding assinado sobre o saldo anterior ao evento com notional sintético ao preço de entrada. Não calcula retorno sobre margem de moeda não certificada, liquidação, tax tier real ou execução; `leverage_at_open` permanece imutável. Nenhum saldo residual deve ser implicitamente vendido.
+
+
+## J2/CONFLUENCE1 — combinação de hipóteses (research-only)
+
+Integrar somente resultados do **mesmo candle UTC fechado**, obtidos das mesmas séries sintéticas pelo motor PRE4 (compressão/rompimento + regime BTC + força relativa) e pelo motor de retomada de tendência após correção. Shortlist condicional somente se os dois identificarem a **mesma direção** no mesmo fechamento e BTC não vetar; abstinências de breakout sem pullback atual, veto BTC e conflito são explícitas. Não traduzir concordância em probabilidade de acerto nem aumentar risco por consenso. Ranking segue o PRE4, sem duplicar fórmulas ou impor quantidade fixa de posições. Qualquer ingestão WS real requer antes provenance e gates J1, validação J3 e autorização do produto; nenhuma ordem real liberada pela pesquisa. Contrato em `docs/J2_SYNTHETIC_CONFLUENCE_RESEARCH.md`, issue #615.
