@@ -122,6 +122,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "name":"n50-sanitized.json","mimeType":"application/json",
                         "buffer":json.dumps(feed).encode(),
                     })
+                    page.locator("#n50-ok").wait_for(state="visible", timeout=5000)
                     if page.locator("#n50-ok").inner_text() != "2 / 24":
                         errors.append("count-only N50 import not rendered")
                     research = {
@@ -141,6 +142,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "name":"j2-count-only.json","mimeType":"application/json",
                         "buffer":json.dumps(research).encode(),
                     })
+                    page.locator("#research-count").wait_for(state="visible", timeout=5000)
                     if page.locator("#research-count").inner_text() != "50":
                         errors.append("research count-only import not rendered")
                     malicious = dict(research, status="<img src=x onerror=alert(1)>")
@@ -148,6 +150,10 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "name":"invalid.json","mimeType":"application/json",
                         "buffer":json.dumps(malicious).encode(),
                     })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        timeout=5000,
+                    )
                     if "Importação recusada" not in page.locator("#notice").inner_text():
                         errors.append("untrusted market file not rejected")
                     if page.locator("img").count() or page.locator("script").count() != 2:
