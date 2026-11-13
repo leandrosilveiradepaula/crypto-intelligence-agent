@@ -39,6 +39,12 @@ class D332RecoveryTests(unittest.TestCase):
             script.index('$SYSTEMCTL disable --now "$N2"'),
         )
         self.assertIn("load_active_n50_ws_epoch", script)
+        self.assertIn("scripts.audit_j1_n50_ws_symbol_grammar_d332_once", script)
+        self.assertIn("--allow-owner-symbol-grammar-audit", script)
+        self.assertLess(
+            script.index("scripts.audit_j1_n50_ws_symbol_grammar_d332_once"),
+            script.index("D332_RECOVERY_STAGE_2_CODE_PINNED_AND_OFFLINE_TESTS_PASS"),
+        )
         self.assertIn("current_at_ms=time.time_ns()//1000000", script)
         self.assertIn("D332_RECOVERY_ROLLED_BACK_TO_N2", script)
         self.assertIn("trap rollback_on_exit EXIT", script)
