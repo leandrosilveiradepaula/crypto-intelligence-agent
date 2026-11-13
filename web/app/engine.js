@@ -98,6 +98,7 @@
     requireValid(before - exit >= reserve,
       "Parcial ultrapassa a reserva do runner. Ajuste o percentual.");
     position.remainingUnits = (before - exit).toString();
+    if (before === exit) position.status = "CLOSED";
     position.events.push({
       kind: "PARTIAL_PAPER", basis, percentBps: p, units: exit.toString(),
       at: now || new Date().toISOString()
