@@ -120,7 +120,7 @@ assert.equal(c.remainingUnits,"0");
 assert.equal(E.validateState(JSON.parse(JSON.stringify(s))).positions.length,3);
 const corrupted=JSON.parse(JSON.stringify(s));
 corrupted.positions[0].remainingUnits="1";
-assert.throws(()=>E.validateState(corrupted),/inconsistente/);
+assert.throws(()=>E.validateState(corrupted),/não conservado|inconsistente/);
 console.log("J5_MVP1_BIGINT_PAPER_PASS");
 """
         result = subprocess.run(
