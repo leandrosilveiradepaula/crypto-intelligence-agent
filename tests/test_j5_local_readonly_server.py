@@ -174,8 +174,11 @@ class LoopbackHTTPTests(unittest.TestCase):
             self.get("GET", "/api/n50-progress", origin="https://evil.example")[0],
             403,
         )
-        self.assertEqual(self.get("GET", "/api/n50-progress", "localhost:8765")[0],
-                         503)  # no journal in test: fail closed
+        with patch.object(panel, "read_n50_progress",
+                          side_effect=panel.SourceNotReady("not available")):
+            self.assertEqual(
+                self.get("GET", "/api/n50-progress", "localhost:8765")[0], 503
+            )
 
     def test_source_failure_never_includes_raw_exception(self):
         with patch.object(panel,"read_n50_progress",
