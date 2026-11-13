@@ -202,5 +202,68 @@ class SummaryTests(unittest.TestCase):
         self.assertEqual(a, b)
 
 
+class CliTests(unittest.TestCase):
+    def _call(self, data, *flags):
+        import io
+        from scripts.render_j5_n50_ws_log_progress_once import main
+        stream = io.TextIOWrapper(io.BytesIO(data))
+        output = io.StringIO()
+        with patch("sys.stdin", stream), patch("sys.stdout", output):
+            rc = main(list(flags))
+        return rc, output.getvalue()
+
+    def _payload(self, entries=None):
+        return json.dumps({
+            "schema_version": "j5-n50-ws-count-only-input-v1",
+            "now_ms": T+5*HOUR_MS+4*M,
+            "events": [row(5), failing(4)] if entries is None else entries,
+        }).encode("utf-8")
+
+    def test_optin_is_explicit_and_no_data_is_read_without_it(self):
+        import io
+        from scripts.render_j5_n50_ws_log_progress_once import main
+        class ForbiddenInput:
+            @property
+            def buffer(self):
+                raise AssertionError("no stdin read without optin")
+        output = io.StringIO()
+        with patch("sys.stdin", ForbiddenInput()), patch("sys.stdout", output):
+            self.assertEqual(main([]), 65)
+        self.assertIn("optin_required", output.getvalue())
+
+    def test_json_and_mobile_html_are_count_only(self):
+        rc, output = self._call(self._payload(), "--allow-sanitized-stdin-read")
+        self.assertEqual(rc, 0)
+        parsed = json.loads(output)
+        self.assertEqual(parsed["observed_50_of_50_hours"], 1)
+        self.assertEqual(parsed["failed_hours"], 1)
+        self.assertFalse(parsed["owner_d323_24h_audit_verified"])
+        rc, html = self._call(
+            self._payload(), "--allow-sanitized-stdin-read", "--format", "html",
+        )
+        self.assertEqual(rc, 0)
+        self.assertIn("<!doctype html>", html)
+        self.assertIn("1 / 24", html)
+        self.assertNotIn(SHA, html)
+
+    def test_bad_duplicate_nonfinite_or_oversized_stdin_fail_closed(self):
+        payload = self._payload().decode()
+        for bad in (
+            b"",
+            b"{broken",
+            b"{" + b"x"*1_048_577 + b"}",
+            payload.replace('"now_ms":', '"now_ms": NaN, "now_ms":').encode(),
+            payload.replace('"now_ms":', '"now_ms": 0, "now_ms":').encode(),
+            payload.replace("j5-n50-ws-count-only-input-v1", "unknown").encode(),
+        ):
+            with self.subTest(size=len(bad)):
+                rc, output = self._call(
+                    bad, "--allow-sanitized-stdin-read", "--format", "html",
+                )
+                self.assertEqual(rc, 65)
+                self.assertIn("input_invalid_abstain", output)
+                self.assertNotIn("<html", output)
+
+
 if __name__ == "__main__":
     unittest.main()
