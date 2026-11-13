@@ -187,7 +187,7 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
         self._json(405, {"status": "read_only_get_only"})
 
     def do_HEAD(self) -> None:
-        self._json(405, {"status": "read_only_get_only"})
+        self._response(405, b"", "application/json; charset=utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
