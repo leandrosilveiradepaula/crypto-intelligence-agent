@@ -209,9 +209,7 @@ class ReadOnlyWSN50ResearchTests(unittest.TestCase):
     def test_no_network_no_order_sender_and_no_mutations(self):
         with patch("socket.create_connection",side_effect=AssertionError("network")), patch(
             "urllib.request.urlopen",side_effect=AssertionError("http")
-        ), patch("sqlite3.Connection.execute",new=None) if False else patch(
-            "urllib.request.Request",side_effect=AssertionError("http")
-        ):
+        ), patch("urllib.request.Request",side_effect=AssertionError("http")):
             self.assertEqual(self.run_it()["audited_assets"],50)
         count=sqlite3.connect(self.path).execute(
             "SELECT count(*) FROM confirmed"
