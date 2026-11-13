@@ -30,7 +30,7 @@ def partials(p):
     )
 
 
-def runner(p, *, receipt="runner_terminal", qty="6", price="130", at=5_000):
+def runner(p, *, receipt="receiptXYZ171", qty="6", price="130", at=5_000):
     return SyntheticRunnerCloseMarkFill(
         fixture_position_id=p.fixture_position_id, event_id=receipt,
         filled_units=D(qty), reference_exit_price_quote=D(price),
@@ -74,7 +74,7 @@ class SyntheticRunnerCostedCloseTests(unittest.TestCase):
         report = closed.sanitized_report()
         self.assertEqual(report["status"], "synthetic_runner_terminal_close_reference_only")
         self.assertEqual(report["hypothetical_net_closed_reference_quote"], "1107.29")
-        for secret in ("fixture_j4_costed", "runner_terminal", "close50", "BTCUSDT"):
+        for secret in ("fixture_j4_costed", "receiptXYZ171", "close50", "BTCUSDT"):
             self.assertNotIn(secret, json.dumps(report))
         for key in (
             "realized_pnl_verified", "liquidation_risk_verified",
