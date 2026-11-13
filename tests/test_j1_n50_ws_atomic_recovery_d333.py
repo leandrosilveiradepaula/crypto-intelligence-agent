@@ -101,6 +101,7 @@ restore_n2() {
             "preflight_aborts": (1, 0, 0, 0, 0, 65, True, False),
             "cutover_aborts": (1, 1, 0, 0, 0, 65, True, True),
             "successful_release": (1, 0, 1, 0, 0, 0, False, False),
+            "release_finalized_during_flag_clear": (1, 1, 1, 0, 0, 0, False, False),
             "old_pin_restore_fails": (1, 0, 0, 1, 0, 75, False, False),
             "n2_restore_fails": (1, 1, 0, 0, 1, 75, True, True),
             "no_pin_touched": (0, 0, 0, 0, 0, 65, False, False),
