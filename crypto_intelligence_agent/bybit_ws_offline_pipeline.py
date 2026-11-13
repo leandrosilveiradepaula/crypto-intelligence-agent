@@ -14,6 +14,7 @@ from .bybit_closed_stream_cache import (
 )
 from .bybit_public_ws_once import _bounded_json, _subscription_ack, _is_public_pong
 from .market_data import DataValidationError
+from .j1_n50_ws_temporal_quarantine import classify_non_evidence_closed_frame
 
 MAX_BATCH_FRAMES = 4096
 
@@ -26,6 +27,7 @@ class OfflineWSBatch:
     identical_replays: int
     acknowledged: bool
     ignored_open_trade_clock: int = 0
+    discarded_closed_temporal: tuple[int, int, int] = (0, 0, 0)
 
     def sanitized_report(self) -> dict:
         return {
@@ -33,6 +35,9 @@ class OfflineWSBatch:
             "frames_seen": self.frames,
             "open_updates": self.open_updates,
             "ignored_open_trade_clock": self.ignored_open_trade_clock,
+            "discarded_closed_trade_clock": self.discarded_closed_temporal[0],
+            "discarded_closed_preclose": self.discarded_closed_temporal[1],
+            "discarded_closed_stale": self.discarded_closed_temporal[2],
             "closed_events_appended": self.appended,
             "identical_replays": self.identical_replays,
             "subscription_acknowledged": self.acknowledged,
@@ -59,6 +64,7 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
             or type(allow_declared_gap) is not bool):
         raise DataValidationError("offline WS scope, journal or ACK policy invalid")
     count = opened = appended = replayed = ignored_open = 0
+    temporal_discards = [0, 0, 0]
     ack = not require_ack
     subscribed = {"kline.60." + member.symbol for member in scope.contracts}
     for item in frames:
@@ -106,6 +112,16 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                     # Multiple closed candles require atomic journal batch support.
                     raise DataValidationError("offline WS multiple closed rows require atomic batch")
                 one = dict(payload, data=[row])
+                # Never accept a mismatched closed candle. A *validated*
+                # envelope with an out-of-window temporal candidate, however,
+                # carries NO evidence and must not kill 49 other topics.
+                # All such candidates are discarded, NOT written or backfilled.
+                reason = classify_non_evidence_closed_frame(
+                    one, scope=scope, received_at_ms=item[1],
+                )
+                if reason is not None:
+                    temporal_discards[reason] += 1
+                    continue
                 pending_closed.append(parse_offline_confirmed_kline(
                     one, scope=scope, received_at_ms=item[1]))
             elif row["confirm"] is False:
@@ -146,4 +162,5 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
         opened += pending_open
     if not ack:
         raise DataValidationError("offline WS ACK missing")
-    return OfflineWSBatch(count, opened, appended, replayed, ack, ignored_open)
+    return OfflineWSBatch(count, opened, appended, replayed, ack, ignored_open,
+                          tuple(temporal_discards))
