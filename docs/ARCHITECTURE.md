@@ -642,3 +642,7 @@ O caminho `web/app/index.html` agrega visão geral, pesquisa (snapshot sanitizad
 
 ## J5/APP-SYNC1 — caminho de leitura local, não rede pública
 `web/app/app.js` consulta `GET /api/n50-progress` a cada 60s somente quando `location.protocol=http`, porta `8765` e host loopback. `scripts/serve_j5_local_readonly.py` serve quatro assets públicos e o JSON N50 com `HTTPServer` vinculado a `127.0.0.1`, checagem de `Host`/`Origin`, CSP sem credenciais e nenhum método de escrita. O backend executa `journalctl` argv fixo com limites e projeta por `export_n50_journald_progress`/J5 PROGRESS1; não consulta SQLite, mercado ou corretora. `file://` não executa fetch. Nada foi deployado nem exposto a rede na entrega. Contrato `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+
+## J5/APP-SYNC2 — complemento do backend loopback para J2
+O HTTP local `scripts/serve_j5_local_readonly.py` possui agora `GET /api/j2-research`, além de `GET /api/n50-progress`. Em vez de nova implementação de candle/indicador, chama `observe_active_private_ws_n50_24closed` diretamente com opt-in e `include_private_symbols=False`, valida status e 50×24 por contrato e projeta somente allowlist de agregados. `web/app/app.js` consulta J2 em localhost:8765 a cada 5min, status clear-on-failure, importação manual preservada, 100% offline em `file://`; não toca corretora, chaves ou execução. A principal interface segue PAPER, sem backtest homologado ou sinais. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
