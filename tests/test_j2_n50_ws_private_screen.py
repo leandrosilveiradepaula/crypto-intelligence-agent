@@ -217,5 +217,67 @@ class ReadOnlyWSN50ResearchTests(unittest.TestCase):
         self.assertEqual(count,1200)
 
 
+class OwnerWrapperAndCLITests(unittest.TestCase):
+    def test_owner_wrapper_denies_absent_optin_before_pointer_read(self):
+        from crypto_intelligence_agent.j2_n50_ws_private_screen import (
+            observe_active_private_ws_n50_24closed,
+        )
+        with patch(
+            "crypto_intelligence_agent.j2_n50_ws_private_screen.load_active_n50_ws_epoch",
+            side_effect=AssertionError("private pointer must not be read"),
+        ):
+            x=observe_active_private_ws_n50_24closed()
+            self.assertEqual(x["status"],"owner_optin_required")
+            self.assertEqual(x["research_rows"],[])
+
+    def test_owner_wrapper_rejects_other_state_directory(self):
+        from crypto_intelligence_agent.j2_n50_ws_private_screen import (
+            observe_active_private_ws_n50_24closed,
+        )
+        with patch(
+            "crypto_intelligence_agent.j2_n50_ws_private_screen.load_active_n50_ws_epoch",
+            side_effect=AssertionError("wrong path must not be read"),
+        ):
+            x=observe_active_private_ws_n50_24closed(
+                state_directory=Path("/tmp/not-active"),
+                allow_private_readonly_research=True,
+            )
+            self.assertEqual(x["status"],"owner_environment_abstain")
+
+    def test_owner_cli_never_requests_private_symbols(self):
+        import io
+        from crypto_intelligence_agent.j2_n50_ws_private_screen import _blank
+        from scripts.research_j2_n50_ws_24closed_once import main
+        payload=_blank("ws_n50_descriptive_24h_ready")
+        payload.update(
+            audited_assets=50,eligible_closed_bars_per_asset=24,
+            ws_journal_integrity_replayed=True,
+        )
+        with patch(
+            "scripts.research_j2_n50_ws_24closed_once.observe_active_private_ws_n50_24closed",
+            return_value=payload,
+        ) as fn,patch("sys.stdout",new_callable=io.StringIO) as stdout:
+            self.assertEqual(main(["--allow-private-readonly-research"]),0)
+        fn.assert_called_once_with(
+            allow_private_readonly_research=True,
+            include_private_symbols=False,
+        )
+        report=json.loads(stdout.getvalue())
+        self.assertEqual(report["audited_assets"],50)
+        self.assertFalse(report["formal_d323_24h_verified"])
+        self.assertEqual(report["research_rows"],[])
+        self.assertNotIn("BTCUSDT",stdout.getvalue())
+
+    def test_cli_fail_closed_without_owner_gate(self):
+        import io
+        from scripts.research_j2_n50_ws_24closed_once import main
+        with patch("sys.stdout",new_callable=io.StringIO) as stdout:
+            self.assertEqual(main([]),65)
+        doc=json.loads(stdout.getvalue())
+        self.assertEqual(doc["status"],"owner_optin_required")
+        self.assertEqual(doc["network_requests"],0)
+        self.assertFalse(doc["orders_sent"])
+
+
 if __name__=="__main__":
     unittest.main()
