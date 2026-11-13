@@ -128,6 +128,12 @@ class D331FailureTaxonomyTests(unittest.TestCase):
              "ws_closed_ohlcv_type_invalid"),
             (DataValidationError("offline WS open candle clock invalid"),
              "ws_open_candle_clock_invalid"),
+            (DataValidationError("malformed public market JSON"),
+             "ws_json_format_invalid"),
+            (DataValidationError("WS malformed or extra subscription ACK"),
+             "ws_ack_invalid"),
+            (DataValidationError("Bybit high must be positive"),
+             "ws_open_ohlcv_invalid"),
             (DataValidationError("WS confirmation, UTC clock or scope chronology invalid"),
              "ws_closed_temporal_invalid"),
         )
