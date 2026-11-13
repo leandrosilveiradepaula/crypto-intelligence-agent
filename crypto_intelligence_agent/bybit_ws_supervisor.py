@@ -28,6 +28,37 @@ from .bybit_public_ws_once import (
 from .bybit_ws_offline_pipeline import ingest_offline_ws_batch
 from .market_data import DataGapError, DataValidationError
 
+
+# Exact literals from our own validators only: never echo an exception's
+# provider-supplied values, symbols, URLs, paths, or raw frame to journalctl.
+_SAFE_REJECTION_CLASSES = {
+    "offline WS unsubscribed or malformed topic": "ws_envelope_invalid",
+    "offline WS batch row count or type invalid": "ws_row_count_or_type_invalid",
+    "offline WS batch server clock invalid": "ws_server_clock_invalid",
+    "offline WS batch row fields invalid": "ws_row_fields_invalid",
+    "offline WS duplicate or malformed hour": "ws_row_duplicate_hour_invalid",
+    "offline WS multiple closed rows require atomic batch": "ws_multiple_closed_rows_invalid",
+    "offline WS open candle clock invalid": "ws_open_candle_clock_invalid",
+    "offline WS open candle OHLC invalid": "ws_open_candle_ohlc_invalid",
+    "offline WS confirm must be boolean": "ws_confirm_flag_invalid",
+    "unsupported WS snapshot envelope": "ws_closed_envelope_invalid",
+    "WS confirmation, UTC clock or scope chronology invalid": "ws_closed_temporal_invalid",
+    "WS values must be exact decimal strings": "ws_closed_value_type_invalid",
+    "Bybit latest candle was not confirmed closed": "ws_closed_staging_clock_invalid",
+    "offline journal write failed closed": "ws_journal_write_invalid",
+    "unexpected WS market topic": "ws_unexpected_topic_invalid",
+    "invalid pre-ACK WS envelope": "ws_preack_envelope_invalid",
+}
+
+
+def _safe_ws_failure_class(error: BaseException) -> str:
+    """Whitelist reasons for owner ops; never serialize raw exception text."""
+    if isinstance(error, (DataGapError, DataValidationError)):
+        return _SAFE_REJECTION_CLASSES.get(
+            str(error), "invalid_or_gapped_market_data",
+        )
+    return "invalid_or_gapped_market_data"
+
 # Bybit's public LINEAR connection supports multiple subscribed topics, with
 # an args JSON budget of 21,000 characters. A SINGLE request is intentional:
 # the documented linear ACK may omit req_id or return req_id="" even when
@@ -296,8 +327,8 @@ def supervise_ws_research(
                             raise DataValidationError("WS pre-ACK frame budget exceeded")
                         continue
                     ingest(raw, at_ms)
-        except (DataGapError, DataValidationError, ValueError, TypeError):
-            return report("ws_fail_closed_abstain", "invalid_or_gapped_market_data")
+        except (DataGapError, DataValidationError, ValueError, TypeError) as error:
+            return report("ws_fail_closed_abstain", _safe_ws_failure_class(error))
         except (OSError, RuntimeError):
             # No special 10006 recovery: this path only handles WS connection
             # disruption. Missing CLOSED hours remain missing in the journal.
