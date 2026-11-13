@@ -22,3 +22,15 @@ Sem opt-in de símbolos, o relatório `j2-ws-n50-descriptive-24closed-v1` retorn
 `tests/test_j2_n50_ws_private_screen.py` cria 1.200 linhas WS inteiramente sintéticas em journal SQLite privado 0600. Comprova 50×24, BTC e as métricas D300, privacy-by-default, ausência de sinais/ordens, 49/50, adulteração hash, data futura, UTC, time drift, path symlink/nome REST, fonte inválida e desvio entre auditorias. CI Linux/docs, Windows/offline e PAPER/mobile no SHA final; merge seguro sem deploy. A **VPS D336 continua intocada**. Instalação/uso owner real requer gate posterior e esperar 24 horas de candles WS; a primeira hora pós-D336 em 13/11/2026 18:00 UTC foi auditada 50/50, mas o ciclo de 24h ainda não foi comprovado. Custo adicional R$0,00.
 
 O leitor J2 é um adaptador de pesquisa; conectar watchlist D308 ou estratégias automáticas requer contratos adicionais, validação prospectiva e os gates J1/J3/J4/J6. Não se publica nenhuma recomendação financeira nem ordem real.
+
+
+## Owner entrypoint read-only (sem deployment)
+O wrapper `observe_active_private_ws_n50_24closed` resolve o ponteiro D321 de `/home/cia-probe/agent/j1-n50-ws-epochs/active` **somente** quando chamado pelo próprio `cia-probe` com opt-in. Confere ponteiro/manifesto/cache D316, lê via o adaptador acima e relê o ponteiro após o snapshot; troca de epoch durante a leitura bloqueia a saída. Se não houver 24h completas, abstenção com contagens zero (sem sinal). Nenhuma conta root, outro diretório, rede ou escrita é admitida.
+
+CLI somente contagens, sem opção de despejar tickers privados:
+
+```bash
+python -m scripts.research_j2_n50_ws_24closed_once --allow-private-readonly-research
+```
+
+Esse comando **não deve ser instalado nem executado na VPS durante a homologação J1 atual**. Quando houver 24h, sua eventual execução exige o código aprovado já implantado no checkout owner por um gate separado; código GitHub sozinho não concede acesso às pastas privadas. A flag opt-in não autoriza contas, sinais nem ordens. Testes adicionais cobrem bloqueio antes de ler pointer e argumento CLI sem símbolos.
