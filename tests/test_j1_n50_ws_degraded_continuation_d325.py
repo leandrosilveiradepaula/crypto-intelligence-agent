@@ -207,7 +207,7 @@ class N50WSThreeHourGapTests(unittest.TestCase):
                     session_factory=lambda:session,
                     allow_private_ws_writer=True,allow_injected_public_ws=True,
                     allow_declared_ws_gap=True,
-                    budget=WSRunBudget(max_sessions=1,max_frames=100,max_seconds=70),
+                    budget=WSRunBudget(max_sessions=1,max_frames=100,max_seconds=60),
                     clock=clock.clock,wall_ms=clock.wall_ms,
                     sleeper=clock.sleep,
                 )
