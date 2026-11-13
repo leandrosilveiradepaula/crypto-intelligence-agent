@@ -73,6 +73,8 @@ $RUNUSER -u "$OWNER" -- "$GIT" -C "$CODE" checkout --quiet --detach "$NEW_SHA"
 test "$($RUNUSER -u "$OWNER" -- "$GIT" -C "$CODE" rev-parse HEAD)" = "$NEW_SHA"
 test -z "$($RUNUSER -u "$OWNER" -- "$GIT" -C "$CODE" status --porcelain)"
 test -f "$CODE/tests/test_j1_n50_ws_single_letter_usdt_d332.py"
+test -f "$CODE/scripts/audit_j1_n50_ws_symbol_grammar_d332_once.py"
+test -f "$CODE/crypto_intelligence_agent/j1_n50_ws_symbol_grammar_d332.py"
 test -f "$CODE/tests/test_j1_n50_ws_halt_taxonomy_d331.py"
 test -f "$CODE/tests/test_j1_n50_ws_server_bounded_trade_clock_d329.py"
 test -f "$CODE/tests/test_j1_n50_ws_temporal_quarantine_d328.py"
@@ -96,6 +98,15 @@ test -f "$CODE/crypto_intelligence_agent/bybit_closed_stream_cache.py"
 # Revalidate the actual private D321 pointer and D316 admission while N2
 # still runs, without printing or writing any symbol/market data.
 (cd "$CODE" && $RUNUSER -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1   "$PY" -c 'import time; from pathlib import Path; from crypto_intelligence_agent.j1_n50_ws_epoch_rotation import load_active_n50_ws_epoch; a=load_active_n50_ws_epoch(state_directory=Path("/home/cia-probe/agent/j1-n50-ws-epochs/active"), current_at_ms=time.time_ns()//1000000, allow_private_pointer_read=True); assert a.status=="active_n50_ws_epoch_revalidated", "owner pointer not eligible"')
+# D332: distinguish a REAL single-character legacy parser mismatch from
+# an unrelated ws_scope_member_invalid before touching N2. Count-only owner
+# audit; if the hypothesised mismatch is absent, abort with N2 still running.
+(cd "$CODE" && $RUNUSER -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1 \
+  "$PY" -m scripts.audit_j1_n50_ws_symbol_grammar_d332_once \
+  --allow-private-pointer-read \
+  --allow-private-manifest-read \
+  --allow-private-ws-scope-read \
+  --allow-owner-symbol-grammar-audit)
 echo "D332_RECOVERY_STAGE_2_CODE_PINNED_AND_OFFLINE_TESTS_PASS"
 
 # Keep the N2 timer enabled until all code and owner safety gates pass.
