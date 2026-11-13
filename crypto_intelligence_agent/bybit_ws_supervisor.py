@@ -116,8 +116,8 @@ _SAFE_REJECTION_CLASSES = {
 }
 
 
-# Only these six fixed WS -> REST-fixture numeric labels are constructed
-# by the existing Bybit validator. No prefix/wildcard from untrusted data.
+# Only fixed open/confirmed WS numeric labels are constructed by the
+# existing Bybit validator. No prefix/wildcard from untrusted data.
 for _label, _nonnegative in (
     ("openPrice", False), ("highPrice", False), ("lowPrice", False),
     ("closePrice", False), ("base-volume", True),
