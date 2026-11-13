@@ -210,6 +210,6 @@ for TIMER in "$WS" "$ROT"; do
   if ! test "$($SYSTEMCTL show "$TIMER" -p UnitFileState --value)" = enabled; then rollback_exit; fi
 done
 if ! test "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" = inactive; then rollback_exit; fi
-CUTOVER_STARTED=0
 RECOVERY_FINALIZED=1
+CUTOVER_STARTED=0
 echo "D333_RECOVERY_TIMERS_ENABLED_NO_ORDERS"
