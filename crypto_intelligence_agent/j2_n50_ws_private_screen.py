@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import sqlite3
 import stat
+import time
 from typing import Any
 from urllib.parse import quote
 
@@ -22,6 +23,11 @@ from .bybit_closed_stream_cache import (
     SQLiteOfflineClosedStreamJournal, _validated_payload,
 )
 from .j1_auto_research_epoch import validate_ranked_research_scope
+from .j1_n50_ws_epoch_rotation import (
+    _OWNER_ROOT, load_active_n50_ws_epoch,
+)
+from .j1_n50_ws_private_cache import load_n50_ws_dynamic_admission
+from scripts.run_j1_current_ranked_epoch_once import load_private_ranked_scope
 from .j2_n50_private_screen import (
     BARS, MATH, _metrics, _read_decimal, _text,
 )
@@ -281,3 +287,78 @@ def research_private_ws_n50_24closed(
     except (OSError, ValueError, TypeError, OverflowError, UnicodeError,
             sqlite3.Error, DataValidationError, DataGapError):
         return _blank("ws_24h_readonly_integrity_abstain")
+
+
+ACTIVE_DIRECTORY = _OWNER_ROOT / "active"
+
+
+def observe_active_private_ws_n50_24closed(
+    *, state_directory: Path = ACTIVE_DIRECTORY,
+    allow_private_readonly_research: bool = False,
+    include_private_symbols: bool = False,
+    now_ms: int | None = None,
+) -> dict[str, Any]:
+    """Resolve exactly the current D321 owner epoch before a WS-only read.
+
+    This caller is intentionally fixed to the existing private active pointer,
+    not an arbitrary data path. No runtime scheduler, GET or write is created.
+    A second active-pointer read fails closed if rotation crosses the research
+    snapshot. The journal's own two read-only audits protect the SQL window.
+    """
+    if allow_private_readonly_research is not True:
+        return _blank("owner_optin_required")
+    if (os.name != "posix" or os.getuid() != os.geteuid()
+            or os.geteuid() == 0 or type(include_private_symbols) is not bool
+            or type(state_directory) is not Path
+            or state_directory != ACTIVE_DIRECTORY
+            or (now_ms is not None and type(now_ms) is not int)):
+        return _blank("owner_environment_abstain")
+    now = time.time_ns()//1_000_000 if now_ms is None else now_ms
+    try:
+        before = load_active_n50_ws_epoch(
+            state_directory=state_directory, current_at_ms=now,
+            allow_private_pointer_read=True,
+        )
+        if (before.status != "active_n50_ws_epoch_revalidated"
+                or before.manifest_directory is None
+                or before.ws_directory is None
+                or before.ranked_scope_sha256 is None
+                or before.ws_metadata_sha256 is None):
+            return _blank("owner_active_ws_epoch_unavailable")
+        ranked = load_private_ranked_scope(
+            before.manifest_directory, now_ms=now,
+        )
+        members, digest = validate_ranked_research_scope(
+            ranked, now_ms=now, max_assets=_COUNT,
+        )
+        private = load_n50_ws_dynamic_admission(
+            directory=before.ws_directory,
+            current_at_ms=now,
+            expected_ranked_scope_sha256=digest,
+            allow_private_scope_read=True,
+        )
+        if (len(members) != _COUNT or digest != before.ranked_scope_sha256
+                or private.status != "private_n50_ws_admission_loaded_revalidated"
+                or private.admission is None or private.ranked_scope != ranked
+                or private.admission.selected_contracts != _COUNT
+                or private.admission.metadata_sha256 != before.ws_metadata_sha256):
+            return _blank("owner_ws_scope_integrity_abstain")
+        end = now - now%HOUR_MS
+        result = research_private_ws_n50_24closed(
+            ranked_scope=ranked, ws_scope=private.admission.ws_scope,
+            journal=SQLiteOfflineClosedStreamJournal(
+                before.ws_directory/"ws-confirmed.sqlite"
+            ), decision_at_ms=end, observed_at_ms=now,
+            allow_private_readonly_research=True,
+            include_private_symbols=include_private_symbols,
+        )
+        after = load_active_n50_ws_epoch(
+            state_directory=state_directory, current_at_ms=now,
+            allow_private_pointer_read=True,
+        )
+        if after != before:
+            return _blank("owner_active_ws_epoch_changed_abstain")
+        return result
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError,
+            OverflowError, UnicodeError, DataValidationError, DataGapError):
+        return _blank("owner_ws_readonly_research_abstain")
