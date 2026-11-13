@@ -1576,3 +1576,7 @@ Após PR #614 da J3 merge em `main=37a78ef9040944195ccdeecbc532267bc8b2402c`, fr
 
 ## J3/CONFLUENCE-OOS1 — ablação pareada sem dados reais (13/11/2026 UTC)
 A J1 D333 teve primeira hora N50 50/50 após recuperação, mas aguardam-se 24h/36h e identidade #319 (ver #585); não interromper timers. Em paralelo, issue #617, branch `work/issue-617-j3-confluence-costed-oos`: composição de confluência J2 #616 com fold purgado J3 e custos do motor AB existente, sem reimplementar indicadores. O braço confluente é subconjunto do screen BTC/rompimento, com denominador de oportunidades idêntico; scores são apenas marks sintéticos ex-post, sem sinal, backtest financeiro aprovado ou ordens. Implementação e testes sujeitos CI/review/merge, sem deploy. Contrato `docs/J3_CONFLUENCE_COSTED_OOS_RESEARCH.md`.
+
+
+## J1/D335 — segunda janela D333 falhou por abstenção de auditoria (13/11/2026)
+Leitura real VPS: hora 16:59:30–17:02:00Z ACK1, 3500 frames, 50 closed WS append, mas `ws_owner_hour_audit_abstain`, `confirmed_contracts=0`, exit65. WS/rotate disabled e N2 REST enabled/active via OnFailure; primeira hora 50/50 válida, continuidade não. Issue #619 investiga margem insuficiente entre budget WS +119s e auditoria D313 +120s; candidato D335 limita lease a +105s e adiciona regressão de 10s de atraso. Hipótese ainda não atestada exclusivamente. Sem mudanças VPS nesta PR, sem reiniciar serviços. #585/#429/#319 abertas.

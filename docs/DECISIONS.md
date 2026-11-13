@@ -1707,3 +1707,7 @@ PRE2/PRE4 (compressão, rompimento, BTC, força relativa) e J2 trend/pullback j�
 
 ## J3/CONFLUENCE-OOS1 — D334 (13/11/2026)
 Decisão: comparar J2 BTC/rompimento e seu subconjunto com confluência de pullback no MESMO calendário purgado OOS sintético, com custos iguais e marcação ex-post. Reutilizar J2 CONFLUENCE1 (#615/#616) e J3 AB/custos, sem inventar score, probabilidade, sinal ou preço de execução. O braço confluente nunca cria posição adicional: é só filtro das oportunidades baseline. Sem alegação de retorno líquido real, sem rede, sem ordens, sem release. Contrato `docs/J3_CONFLUENCE_COSTED_OOS_RESEARCH.md`, issue #617.
+
+
+## J1/D335 — audit deadline slack para WS N50 (13/11/2026)
+Segunda hora real capturou e persistiu 50 candles, mas auditoria abstive e retornou 0/50 em 17:02:00 UTC; fallback N2 ativo. Hipótese focal: lease nominal até +119s deixa margem inadequada ao gate D313 estrito +120s. Limitar nominalmente a +105s sem afrouxar relógios, recibos, qualidade e identidade de candles. Testar atraso extra 10s com 50 writes, preservar falha segura e N2 até recovery root separado. Causa exata em produção ainda não atestada. #619, contrato `docs/J1_N50_WS_AUDIT_DEADLINE_D335.md`.

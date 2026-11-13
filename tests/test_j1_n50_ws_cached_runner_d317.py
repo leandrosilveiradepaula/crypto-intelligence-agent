@@ -133,6 +133,37 @@ class CachedOwnerN50WSRunnerTests(unittest.TestCase):
         self.assertLessEqual(self.time.utc,DECISION+120_000)
         self.check_sanitized(report)
 
+    def test_postclose_audit_has_slack_for_ten_second_finalize_delay(self):
+        # Real 16:59-17:02 failure: 50 closed events persisted but a late
+        # D313 audit abstained. The one-second D317 buffer is insufficient
+        # if cleanup or audit start costs more than ~1s after WS expiry.
+        from crypto_intelligence_agent.j1_n50_ws_hourly_attestation import (
+            attest_n50_ws_hour_once as actual_attest,
+        )
+        self.time.utc = DECISION - 11_000
+        called = []
+        def delayed_attest(**kwargs):
+            self.time.advance(10)
+            called.append(self.time.utc)
+            kwargs["observed_at_ms"] = self.time.utc
+            return actual_attest(**kwargs)
+        with patch(
+            "crypto_intelligence_agent.j1_n50_ws_owner_hour.attest_n50_ws_hour_once",
+            side_effect=delayed_attest,
+        ):
+            report, _ = self.run_it(
+                [candle(s) for s in SYMS],
+                budget=WSRunBudget(max_sessions=1,max_frames=250,max_seconds=150),
+                send_pongs=True,
+            )
+        self.assertEqual(len(called), 1)
+        self.assertLessEqual(called[0], DECISION + 120_000)
+        self.assertEqual(report["status"], "ws_owner_hour_50_observed_local_only", report)
+        self.assertEqual(report["confirmed_contracts"], 50)
+        self.assertEqual(report["closed_events_appended_to_ws_journal"], 50)
+        self.assertEqual(report["missing_contracts"], 0)
+        self.check_sanitized(report)
+
     def test_49_of_50_keeps_partial_rows_and_abstains(self):
         r,_=self.run_it([candle(s) for s in SYMS[:-1]])
         self.assertEqual(r["status"],"ws_owner_hour_incomplete_no_pit")
