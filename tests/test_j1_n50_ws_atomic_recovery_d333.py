@@ -50,6 +50,10 @@ class D333AtomicRecoveryTests(unittest.TestCase):
         self.assertIn("failed|inactive) ;;", s)
         self.assertEqual(s.count("failed|inactive) ;;"), 2)
         self.assertIn("blocked: WS owner service not quiesced", s)
+        self.assertIn('$SYSTEMCTL stop "$SERVICE"', s)
+        self.assertIn("inactive|failed) ;;", s)
+        self.assertLess(s.index('$SYSTEMCTL stop "$SERVICE"'),
+                        s.index('$SYSTEMCTL enable --now "$N2"'))
 
     def test_compensation_installed_before_checkout_and_success_commit_last(self):
         s = source()
