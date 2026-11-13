@@ -1596,3 +1596,7 @@ Incidente J1 D335 corrigido, primeira hora pós-D336 18:00 UTC 50/50 com digest 
 
 ## J5/MVP1 — produto mobile interativo, não mais só relatórios HTML (13/11/2026 UTC)
 Issue #626 e branch `work/issue-626-j5-functional-mobile-paper-mvp` partem de `main=df81860a21580c2843d87f2ff509d1efc71aeccc`. Implementados `web/app/index.html`, `style.css`, `engine.js`, `app.js` como console PAPER local com navegação, posições persistidas, partial/runner, importação de snapshots sanitizados N50/J2, status de fontes ausentes e travas exclusivas de simulação. QA de navegador e matemática offline e docs acompanham mudança; aguarda CI/PR/merge seguro sem deploy. A VPS D336 segue coletando autonomamente e nada aqui garante entrada/ordem real. Contrato `docs/J5_PRODUCT_APP_MVP.md`.
+
+
+## J5/APP-DATA1 — exportador N50 count-only para console (13/11/2026 UTC)
+Após J5/MVP1 #626/PR #627 integrada na main `d5c697efe0c617474ca15b798607390355965b4e`, issue #628 e branch `work/issue-628-j5-n50-journald-countonly-exporter` integram `scripts/export_j5_n50_ws_journald_once.py` para converter journalctl JSON da unidade WS no schema importável do app. Não há consumo automático da VPS, API, símbolos, ordens, deploy ou alteração de timers; só execução futura owner-gated. Testes/CI/review pendentes ao criar a branch, contrato `docs/J5_N50_JOURNALD_IMPORT_BRIDGE.md`.
