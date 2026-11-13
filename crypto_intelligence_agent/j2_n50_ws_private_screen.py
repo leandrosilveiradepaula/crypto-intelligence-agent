@@ -309,7 +309,7 @@ def observe_active_private_ws_n50_24closed(
         return _blank("owner_optin_required")
     if (os.name != "posix" or os.getuid() != os.geteuid()
             or os.geteuid() == 0 or type(include_private_symbols) is not bool
-            or type(state_directory) is not Path
+            or not isinstance(state_directory, Path)
             or state_directory != ACTIVE_DIRECTORY
             or (now_ms is not None and type(now_ms) is not int)):
         return _blank("owner_environment_abstain")
