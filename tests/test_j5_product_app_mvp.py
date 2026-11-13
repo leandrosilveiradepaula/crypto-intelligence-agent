@@ -80,7 +80,7 @@ assert.equal(a.initialUnits,"150000000");
 assert.equal(E.grossEntryExposureCents(a),15000n);
 for (const [p,quantity] of [["50",75000000n],["60",45000000n],["70",21000000n]]) {
   assert.equal(E.partialExit(a,{basis:"REMAINING_BALANCE",percent:p}),quantity);
-  assert.equal(E.validateState(JSON.parse(JSON.stringify(s))),s);
+  assert.deepEqual(E.validateState(JSON.parse(JSON.stringify(s))),s);
 }
 assert.equal(a.remainingUnits,"9000000");
 assert.equal(a.leverageAtOpen,50);
