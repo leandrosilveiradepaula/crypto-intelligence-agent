@@ -1365,3 +1365,7 @@ Executar `python -m unittest discover -s tests -p test_synthetic_confluence_cost
 
 ## J1/D335 — margem de auditoria WS N50
 Reproduzir 50/50 com sessão que consome todo budget, acrescentar atraso simulado de 10s entre fim de lease e D313: não exceder +120s e auditar 50 SQLite fixtures; 49/50 não pode virar sucesso. Regressões D313/D315/D317/D323/D325/D333 e Python compileall, CI Linux/docs + Windows/offline + PAPER/mobile no HEAD. Auditoria timestamp não relaxada. Não rodar na VPS sem root gate pinado e rollback N2; nenhuma limpeza nem REST GET. #619.
+
+
+## J1/D336 — release root focal para folga D335
+Testar `tests/test_j1_n50_ws_root_recovery_d336.py`: `bash -n` sintético, SHA D333 pinado, exclusão da janela UTC 00–02min/58–59min (rechecagem após testes), margem +105s presente e ancestralidade origin/main, trap antes de checkout, cutover após preflight, mock Bash de rollback de pin/N2 e falhas de compensação. Rodar regressões D313/D315/D317, D326–D332 e suite completa Linux/docs, Windows/offline e PAPER/mobile no HEAD exato. Merge somente após revisão sem deploy; operação root/owner privado é separada e exige verificaçao do SHA efetivamente instalado. Provar nova hora 50/50 pós-release, sem confundir 50 rows com 50 auditados. Sem D322 bootstrap, GET, ordens ou SQLite mutation. #619/#585.
