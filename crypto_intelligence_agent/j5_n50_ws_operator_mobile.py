@@ -232,7 +232,7 @@ def write_n50_ws_operator_html_once(
     out["status"] = "blocked"
     permitted = ((os.name == "posix" and os.getuid() == os.geteuid()
                   and os.geteuid() != 0) if owner_ok is None else owner_ok)
-    if (permitted is not True or type(root_directory) is not Path
+    if (permitted is not True or not isinstance(root_directory, Path)
             or not root_directory.is_absolute() or root_directory.is_symlink()):
         return out
     try:
