@@ -46,7 +46,10 @@ test "$($SYSTEMCTL show "$SERVICE" -p LoadState --value)" = loaded
 test "$($SYSTEMCTL show "$SERVICE" -p User --value)" = "$OWNER"
 test "$($SYSTEMCTL show "$SERVICE" -p UnitFileState --value)" = static
 test "$($SYSTEMCTL show "$SERVICE" -p FragmentPath --value)" = /etc/systemd/system/cia-j1-n50-ws.service
-test "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" = failed
+case "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" in
+  failed|inactive) ;;
+  *) echo "blocked: WS owner service not quiesced" >&2; exit 77 ;;
+esac
 test "$($SYSTEMCTL show cia-j1-n50-ws-fallback.service -p Result --value)" = success
 test "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" = inactive
 
@@ -161,7 +164,10 @@ echo "D333_RECOVERY_STAGE_2_CODE_PINNED_AND_OFFLINE_TESTS_PASS"
 test "$($SYSTEMCTL show "$N2" -p ActiveState --value)" = active
 test "$($SYSTEMCTL show "$N2" -p UnitFileState --value)" = enabled
 test "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" = inactive
-test "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" = failed
+case "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" in
+  failed|inactive) ;;
+  *) echo "blocked: WS owner service not quiesced" >&2; exit 77 ;;
+esac
 test "$($SYSTEMCTL show "$WS" -p ActiveState --value)" = inactive
 test "$($SYSTEMCTL show "$ROT" -p ActiveState --value)" = inactive
 
