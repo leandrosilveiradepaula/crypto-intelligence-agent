@@ -174,6 +174,13 @@ test "$($SYSTEMCTL show "$ROT" -p ActiveState --value)" = inactive
 restore_n2() {
   $SYSTEMCTL disable --now "$ROT" >/dev/null 2>&1 || true
   $SYSTEMCTL disable --now "$WS" >/dev/null 2>&1 || true
+  # A timer can have started a WS service before we disable its next run.
+  # Stop any in-flight WS collector BEFORE restoring N2, so both never run.
+  $SYSTEMCTL stop "$SERVICE" >/dev/null 2>&1 || true
+  case "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" in
+    inactive|failed) ;;
+    *) return 1 ;;
+  esac
   $SYSTEMCTL enable --now "$N2" >/dev/null 2>&1 || true
   test "$($SYSTEMCTL show "$N2" -p ActiveState --value)" = active &&
   test "$($SYSTEMCTL show "$N2" -p UnitFileState --value)" = enabled &&
