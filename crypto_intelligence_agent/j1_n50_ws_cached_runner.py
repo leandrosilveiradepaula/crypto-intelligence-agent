@@ -171,11 +171,13 @@ def run_cached_n50_ws_owner_window(
             journal = SQLiteOfflineClosedStreamJournal.create(journal_path)
             _safe_stat(journal_path, directory=False)
             out["private_ws_journal_created"] = True
-        # D313 accepts receipt no later than 120s after close. Clamp the
-        # finite WS lease to <=119s post-close, even when started only 10s
-        # before the boundary. Otherwise a healthy 50/50 could become stale
-        # solely because the default 150-second budget ran too long.
-        max_safe_seconds = (remaining + 119_000) // 1000
+        # D313 audits only through close+120s. A 119s session leaves
+        # ~1s for closing the transport, releasing resources and running the
+        # SQLite audit; on a real VPS the wall clock can cross that limit.
+        # Reserve 15s of post-close audit time BEFORE starting any socket.
+        # This does not change receipt validity, persist extra candles or
+        # convert an incomplete hour to a complete one.
+        max_safe_seconds = (remaining + 105_000) // 1000
         bounded = WSRunBudget(
             max_sessions=budget.max_sessions, max_frames=budget.max_frames,
             max_seconds=min(budget.max_seconds, max_safe_seconds),
