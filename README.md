@@ -278,3 +278,7 @@ O módulo `crypto_intelligence_agent.bybit_local_json_audit` e a CLI `python3 -m
 
 ## Aplicativo interativo PAPER (J5/MVP1)
 O primeiro console mobile utilizável está em **[`web/app/index.html`](web/app/index.html)**. Abrir localmente com os arquivos `app.js`, `engine.js` e `style.css` na mesma pasta. Sem servidor, conta ou dependências externas: mostra visão geral, permite importar relatórios N50/J2 já sanitizados, criar e acompanhar cenários fictícios PAPER, alterar margem/alavancagem para novas posições, simular parciais 50/60/70 e runner, pausar novas simulações localmente, persistir/exportar e reiniciar o ledger simulado. **Nunca envia ordens, não consulta a VPS, não mostra dados atualizados automaticamente e não substitui o motor J2–J6.** Para publicação, a autenticação/conexão de dados privados e o gate de produção continuam pendentes. Contrato em [`docs/J5_PRODUCT_APP_MVP.md`](docs/J5_PRODUCT_APP_MVP.md).
+
+
+## J5 — atualização automática N50 exclusivamente local
+O console em `web/app/index.html` continua abrindo offline (`file://`, sem nenhuma conexão). No modo autorizado **loopback**, o novo `scripts.serve_j5_local_readonly` pode servir a página em `http://127.0.0.1:8765/` e alimentar a saúde N50 automaticamente do journalctl por GET a cada 60 segundos, sem importar arquivos manualmente. Não há deploy, listener público, senha/conta ou acesso ao celular pela Internet autorizado nesta etapa; execução na VPS e disponibilidade remota exigem gate separado. Veja `docs/J5_LOOPBACK_AUTO_STATUS.md`. Simulação PAPER jamais envia ordens.
