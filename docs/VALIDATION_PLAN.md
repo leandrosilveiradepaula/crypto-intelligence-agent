@@ -1319,3 +1319,18 @@ Teste `test_j1_n50_ws_halt_taxonomy_d331.py` insere 42 eventos pósclose reais e
 ## J4/RUNNER-COST1 — encerramento do runner, custo e segurança sintéticos
 
 `tests/test_synthetic_runner_costed_close.py`: plano de 100 unidades com 50%,60%,70% do saldo (50,30,14) e fechamento integral do runner (6): LONG bruto=1140, entry=15, exits parciais=15.54, runner exit=1.17, funding=1, líquido hipotético=1107.29; SHORT bruto=-1140, funding=-1, líquido=-1170.71. Regressão custo J3/PRE2, J4/PRE4, Decimal context, alavancagem 50x imutável. Negativas: runner parcial/maior que saldo, planos incompletos, runner nulo, IDs colidentes, duplicata não idêntica (inclusive escala Decimal), funding no/após fechamento, horários/símbolos/posição de fixture inválidos, entradas reais, precisão. Repetição exata conta custo uma vez sem alegar idempotência persistente. Exigir CI Linux/docs, Windows/offline e PAPER/mobile no mesmo HEAD, revisão e merge sem deploy; vedado promover PAPER/venue fills/sinais. Documento `docs/J4_RUNNER_COSTED_CLOSE_RESEARCH.md`. Issue #607.
+
+
+## J1/D332 — parser Bybit one-character USDT versus coorte técnica
+
+`test_j1_n50_ws_single_letter_usdt_d332.py`: em coorte sintética com 50 contratos, substituir o 43º por símbolo alfanumérico em maiúscula com base de 1 caráter e quote USDT, mantendo registro e recepção causal; exigir 50 novos CLOSED no SQLite fixture após ACK, hash/auditoria 50/50, sem rede, ordens ou autenticação. `parse_offline_confirmed_kline` e `stage_bybit_linear_kline` aceitam apenas se contrato, formato, quote, escopo, relógio e OHLC forem válidos. Negativas: membro externo, base longa, minúscula, sufixo/settlement errado, PreLaunch, LinearFutures, open confirm e candle com relógio/price inválido. Separar `ws_closed_symbol_format_invalid` de `ws_scope_member_invalid` sem texto de erro bruto. `test_j1_n50_ws_recovery_release_d332.py` fixa OLD_SHA D331 e roda seis suítes no Python owner antes do cutover com rollback N2, sem D322/372 GET/ordens. CI Linux/docs + Windows/offline + PAPER/Chrome no HEAD exato; merge sem deployment, gate root separado. A hora real 50/50/24h/rotação não está demonstrada por testes.
+
+
+### Gate D332 owner de coorte (não duplicar coleta)
+
+`tests/test_j1_n50_ws_symbol_grammar_d332.py` distingue caso sintético 50/50 com um único membro de base de 1 caractere (legacy_rejections=1,new_rejections=0,status `single_letter_legacy_mismatch_in_scope`) do escopo 50 normal (legacy_rejections=0,status `legacy_mismatch_not_established_abstain`), recusa duplicatas, quote não USDT e estruturas adulteradas; sem 4 flags, sem leitura privada. Mock da admissão owner comprova hash/50 membros, nenhum identificador na saída. CLI sucesso somente na hipótese corroborada; recusa em outro estado. Recovery root executa 7 suítes antes desse gate, e o CLI owner **antes** do marco `D332_RECOVERY_STAGE_2_...` e do desligamento de N2. Se absent, N2 continua ativo sem nova coleta WS.
+
+
+### D332 — regressão transversa do payload SQLite
+
+A CI inicial encontrou `DataGapError: offline candle record structure invalid` ao tentar persistir o ticker fixture de base de 1 caractere. Corrigido o regex de payload de 2..24 para 1..28 conforme gramática auto, sem alterar dados existentes; provas requerem append+audit do mesmo símbolo sintético (1 e 28 caracteres), todos 50 e negativas de escopo, clock, OHLC e idempotência. Não encerrar tarefa somente por `parse_offline_confirmed_kline` aceitar.

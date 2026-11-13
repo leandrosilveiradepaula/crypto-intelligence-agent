@@ -232,7 +232,10 @@ def _validated_payload(raw: str, digest: str) -> dict:
     if (type(value) is not dict or set(value) != _PAYLOAD_FIELDS
             or _json(value) != raw or value["schema"] != _VERSION
             or type(value["symbol"]) is not str
-            or not re.fullmatch(r"[A-Z0-9]{2,24}USDT", value["symbol"])
+            # Sealed automatic N50 members allow 1..28 uppercase/base ASCII
+            # chars before USDT. Journal bytes MUST not reject that same
+            # already-reviewed scope after its WS parser accepted a candle.
+            or not re.fullmatch(r"[A-Z0-9]{1,28}USDT", value["symbol"])
             or type(value["registry_sha256"]) is not str
             or _DIGEST.fullmatch(value["registry_sha256"]) is None):
         raise DataGapError("offline candle record structure invalid")

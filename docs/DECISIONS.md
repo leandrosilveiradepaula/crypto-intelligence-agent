@@ -1667,3 +1667,18 @@ Primeiro lease real após D329 (13:59:31–14:00:01Z): 673 frames/ACK1, 42 fecha
 ## J4/RUNNER-COST1 — fechamento financeiro **apenas sintético** do residual (13/11/2026)
 
 O replay J4/PRE4 computa parciais preenchidas em fixtures (50,30,14/100) e deixa residual 6 **marcado**, não liquidado, enquanto RUNNER3 AUTO4 é reserva/reconciliação PAPER, não preço confirmado. Decidido compor PRE4 com J3/PRE2 para **um** recibo hipotético final do residual: só após tranches integralmente preenchidas, `runner_floor>0`, quantidade exatamente igual ao saldo, relógio posterior, sem funding simultâneo, IDs idempotentes apenas dentro do replay. Cobrar uma vez a entrada integral no PRE4 e adicionar ao encerramento somente fee e slippage de saída; zerar saldo, preservar alavancagem da abertura e sinais LONG/SHORT de bruto/funding. Relatórios não afirmam PnL/fees/funding/ordens de corretora, liquidação ou lucro garantido. Issue #607 e `docs/J4_RUNNER_COSTED_CLOSE_RESEARCH.md`. Nenhuma mudança em J1, AUTO4, VPS ou live.
+
+
+## D332 — compatibilidade da gramática USDT no parser WS (13/11/2026 UTC)
+
+O primeiro lease real após D331 retornou `ws_scope_member_invalid` com 42 candles de `confirm=true` escritos, 677 frames, ACK1 e fallback N2 success 15:00:05 UTC. A categoria D331 agrupava `WS symbol not present in reviewed scan` e `Bybit symbol and quote currency mismatch`. O supervisor já exige topic da própria coorte `scope.contracts`; entretanto `j1_auto_usdt_perp.py` admite base USDT de 1..28 caracteres, e `bybit_linear_candle_research.py` rejeitava base de um caractere (2..30). **Decidido** alinhar o mínimo para 1, preservando máximo 30, maiúsculas ASCII, sufixo USDT/USDC, checagens de instrumento, escopo, relógio, OHLC e ausência de ordens; distinguir formato inválido de membro externo na taxonomia. Fixture de `AUSDT` sintético não comprova que essa seja a identidade do frame privado nem que a Bybit liste esse contrato. Não há relaxamento da pertinência ao universo selecionado. Issue #609; testes de coorte 50/50 e rollback N2 pinado na D331. **Correção de possível causa**, não prova live até próximo lease. Docs `docs/J1_N50_WS_SINGLE_BASE_COMPAT_D332.md`.
+
+
+### Adendo D332 — evitar novo lease inútil
+
+O script D332 só pode rearmar WS se um auditor owner-only, com ponteiro e metadata revistos, **contar** na coorte real pelo menos um símbolo USDT de base de 1 caractere rejeitado pelo regex anterior, e nenhum membro recusado pelo novo parser. Se não houver, tratar a hipótese como não comprovada, retornar exit65 ANTES de desligar N2, registrar counts sanitizados e investigar outra causa. O teste sintético 50/50 não autoriza reativação sem esse gate. Implementado em `j1_n50_ws_symbol_grammar_d332.py` e CLI owner com 4 opt-ins. Sete suítes offline, sem GET/ordens.
+
+
+### D332 — coerência da gramática de símbolos em **todos** os validadores
+
+A primeira CI expôs segundo bloqueio de base 1: `bybit_closed_stream_cache._validated_payload` restringia o payload SQLite a 2..24 caracteres antes de USDT, mesmo após o parser externo aceitar 1. Ajuste para 1..28 (limite do ranking automático); digest, escrow/journal schema, causalidade, OHLC e pertinência a scope preservados. Teste de 28 caracteres verifica o caminho completo. Não atribuir falha live D331 ao novo bloqueio sem execução real.

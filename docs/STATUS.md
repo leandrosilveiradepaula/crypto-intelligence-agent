@@ -1542,3 +1542,18 @@ Evidência VPS após D329: WS 13:59:31–14:00:01 UTC exit65, ACK1, 673 frames, 
 ## J4/RUNNER-COST1 — fechamento residual sintético com custo (13/11/2026 UTC)
 
 Enquanto a J1 D331 WS permanece agendada em VPS para 14:59:30 UTC, task independente J4 #607 usa PRE4 e J3/PRE2 existentes para apurar liquidação hipotética do runner residual após três parciais completas, sem duplicar abertura/funding/fees nem inferir fills de trailing. Exemplo 100=50+30+14+6 e saída final líquido de referência LONG 1107.29 com hipóteses documentadas; flags de negociação/resultado real/liquidação continuam false. Código `synthetic_runner_costed_close.py`, testes e contrato `docs/J4_RUNNER_COSTED_CLOSE_RESEARCH.md` candidatos para CI/PR/merge. Nenhum deploy, conta, posição real ou mudança da J1; épica J4 #5 permanece aberta.
+
+
+## J1/D332 — hipótese de incompatibilidade do símbolo N50 (13/11/2026 UTC)
+
+D331/VPS 14:59:31–15:00:03Z: ACK1, 677 frames, 42 CLOSED confirmados postclose persistidos, falha `ws_scope_member_invalid` exit65 e fallback N2 success, WS disabled e N2 enabled. Código identifica possível quebra entre `j1_auto_usdt_perp` (base de 1 caractere permitida) e `bybit_linear_candle_research` (exigia 2). Issue #609 prepara correção limitada, teste de coorte 50 com base sintética de 1 caráter e recovery D332 a partir do SHA D331 realmente instalado; não inferir identidade do símbolo privado nem afirmar causa provada. Em paralelo J4 #607/PR #608 integrada sem deploy em `main=86fba0fdf38cc88109c8f4fe3bb5d62bd51d8723`, testes 2.821 Linux + Windows/PAPER verdes. A J1 e #319 continuam abertas; 50x24h e 36h não aprovados.
+
+
+### D332 — preflight anti-recovery repetitivo
+
+Preparado auditor owner-only count-only de gramática da coorte real N50. O recovery só fará cutover se detectar na coorte um caso de base USDT com 1 caractere que o parser D331 rejeitava e o novo aceita, após revalidar 50 membros, ranked scope e cache. Se não detectar, aborta antes de desabilitar REST N2: evita repetir a falha 42/50 por suposição. Testes sintéticos novos e 7 suítes offline no instalador; root release ainda separado.
+
+
+### D332 — compatibilidade completa de persistência
+
+Primeira CI do D332 encontrou bloqueio adicional no journal imutável: regex de símbolo do payload 2..24 rejeitava base de 1 caractere mesmo quando parser WS já aceitava. Corrigido para 1..28 alinhado ao ranking auto; testes exigem persistência e auditoria 50/50, mais extremo de 28 caracteres. Nenhuma migração ou modificação do banco real.

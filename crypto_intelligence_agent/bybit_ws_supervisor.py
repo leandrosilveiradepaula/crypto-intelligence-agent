@@ -81,7 +81,7 @@ _SAFE_REJECTION_CLASSES = {
     "Bybit kline timestamps are not a contiguous descending UTC window": "ws_closed_source_page_invalid",
     "Bybit contract metadata is stale at chart capture": "ws_scope_metadata_stale",
     "Bybit contract observation is absent or from the future": "ws_scope_metadata_invalid",
-    "Bybit symbol and quote currency mismatch": "ws_scope_member_invalid",
+    "Bybit symbol and quote currency mismatch": "ws_closed_symbol_format_invalid",
     "Bybit contract is not a trading linear perpetual": "ws_scope_member_invalid",
     "Bybit chart window must be ascending and UTC grid aligned": "ws_closed_window_invalid",
     "Bybit UTC millisecond timestamp must be decimal string": "ws_closed_window_invalid",
