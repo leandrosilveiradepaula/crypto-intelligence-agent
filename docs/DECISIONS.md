@@ -1735,3 +1735,7 @@ Decisão: reutilizar o projetor J5/PROGRESS1 de horas N50, com exportador stdin-
 
 ## J5/APP-SYNC1 — D341: atualização automática sem abrir acesso público (13/11/2026 UTC)
 Entrega prioritária do produto: `GET /api/n50-progress` somente na mesma origem loopback `127.0.0.1:8765`, reusando a exportação journalctl→JSON do #628, com refresh automático de 60s, feedback de ausência e modo `file://` intacto. Evitar publicar relatório privado em GitHub Pages ou criar API HTTP 0.0.0.0 sem autenticação. O servidor deve operar apenas com opt-in e em foreground, sem instalar nada na VPS; acesso remoto e release operacional exigem gate distinto. Issue #630; contrato `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+
+## J5/APP-SYNC2 — D342: pesquisa descritiva J2 com sincronização local somente agregada (13/11/2026 UTC)
+Reutilizar o wrapper owner J2/WS-READ1 D338, **não** calcular um ranking novo nem ler SQLite diretamente no app: adicionar somente `GET /api/j2-research` ao servidor loopback e consulta client a cada 5 minutos. Falta de 24h, acesso, dados ou integridade = indisponível sem valor artificial. Expor zero símbolos ou linhas privadas, zero sinais/ordens. Não depender de publicação remota; deploy, auth e celular via Internet ficam sob gate distinto. Issue #632, `docs/J5_LOOPBACK_AUTO_STATUS.md`.
