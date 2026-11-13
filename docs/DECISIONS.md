@@ -1727,3 +1727,7 @@ Decisão: disponibilizar pesquisa DESCRITIVA de candles WS N50 sob mesma origem 
 
 ## J5/MVP1 — D339: priorizar console mobile utilizável antes da publicação live (13/11/2026)
 Diante de repetidas entregas restritas a auditoria e HTML desconectado, priorizar um **vertical slice de produto**: tela única, navegação real, estado de N50 importável, observações J2, cenários PAPER interativos com margem, 50x inicial, parciais e runner, armazenamento local. Nenhuma dependência paga; não habilitar ordens nem fingir backend online. Versionar na issue #626 com gate CI/browser e merge sem deploy. A abertura do aplicativo não concede acesso a private SQLite ou rede; backend autenticado/read-only e live são etapas distintas. `docs/J5_PRODUCT_APP_MVP.md`.
+
+
+## J5/APP-DATA1 — D340: bridge sem rede do journald para o aplicativo (13/11/2026 UTC)
+Decisão: reutilizar o projetor J5/PROGRESS1 de horas N50, com exportador stdin-only de mensagens **sanitizadas** do journalctl JSON da unidade WS em vez de criar outro coletor ou uma API pública. Opt-in explícito, limites 1MiB/4096 linhas, timestamps UTC µs, erro fechado, 50 appends sem auditoria não pontuam, sem divulgar símbolo/preço/JSON bruto. Não instalar automaticamente na VPS nem declarar 24h D323; issue #628, contrato `docs/J5_N50_JOURNALD_IMPORT_BRIDGE.md`.
