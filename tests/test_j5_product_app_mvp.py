@@ -35,7 +35,7 @@ class AppLayoutContractTests(unittest.TestCase):
         csp = [a["content"] for t,a in tags
                if t=="meta" and a.get("http-equiv")=="Content-Security-Policy"]
         self.assertEqual(len(csp), 1)
-        for rule in ("default-src 'none'", "connect-src 'none'",
+        for rule in ("default-src 'none'", "connect-src 'self'",
                      "script-src 'self'", "form-action 'none'", "base-uri 'none'"):
             self.assertIn(rule, csp[0])
         scripts = [a.get("src") for t,a in tags if t=="script"]
@@ -57,12 +57,19 @@ class AppLayoutContractTests(unittest.TestCase):
         for filename in ("engine.js", "app.js"):
             data=(APP / filename).read_text(encoding="utf-8")
             for dangerous in (
-                "fetch(", "XMLHttpRequest(", "WebSocket(", "sendBeacon(",
+                "XMLHttpRequest(", "WebSocket(", "sendBeacon(",
                 "eval(", "new Function(", ".innerHTML", "localStorage.clear()",
                 "sessionStorage.clear()",
             ):
                 self.assertNotIn(dangerous, data, f"{filename}: {dangerous}")
             self.assertNotIn("api.bybit.com", data)
+        js = (APP / "app.js").read_text(encoding="utf-8")
+        self.assertEqual(js.count('window.fetch("/api/n50-progress"'), 1)
+        self.assertIn('loc.protocol === "http:"', js)
+        self.assertIn('loc.port === "8765"', js)
+        self.assertIn('loc.hostname === "127.0.0.1"', js)
+        self.assertIn('loc.hostname === "localhost"', js)
+        self.assertIn('feedOrigin === "manual"', js)
         self.assertLess((APP / "app.js").stat().st_size, 50_000)
         self.assertLess((APP / "style.css").stat().st_size, 40_000)
 

@@ -1600,3 +1600,7 @@ Issue #626 e branch `work/issue-626-j5-functional-mobile-paper-mvp` partem de `m
 
 ## J5/APP-DATA1 — exportador N50 count-only para console (13/11/2026 UTC)
 Após J5/MVP1 #626/PR #627 integrada na main `d5c697efe0c617474ca15b798607390355965b4e`, issue #628 e branch `work/issue-628-j5-n50-journald-countonly-exporter` integram `scripts/export_j5_n50_ws_journald_once.py` para converter journalctl JSON da unidade WS no schema importável do app. Não há consumo automático da VPS, API, símbolos, ordens, deploy ou alteração de timers; só execução futura owner-gated. Testes/CI/review pendentes ao criar a branch, contrato `docs/J5_N50_JOURNALD_IMPORT_BRIDGE.md`.
+
+
+## J5/APP-SYNC1 — atualização N50 de 60s no browser local (13/11/2026 UTC)
+Issue #630, branch `work/issue-630-j5-loopback-n50-live-status`, base `main=32c4df74e47c7b08780573b9d59dc70289668545` (J5/MVP1 #626 e APP-DATA1 #628 integradas). Novo servidor `scripts/serve_j5_local_readonly.py` lê journalctl sanitizado em loopback 127.0.0.1:8765 e fornece `GET /api/n50-progress` para auto-refresh local da página existente; importação manual e simulações continuam. Testes e docs acompanham. Não há deploy, publicação HTTP, alteração na VPS nem ordem real. Último checkpoint read-only N50 em 13/11 23:01 UTC: 21/22/23 UTC 50/50, completando seis horas seguidas 18–23 UTC após D336, sem D323 24h. `docs/J5_LOOPBACK_AUTO_STATUS.md`.

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="description" content="Console mobile e local de pesquisa N50 e simulação PAPER do Crypto Intelligence Agent. Sem ordens reais.">
   <title>Crypto Intelligence — Console PAPER</title>
   <link rel="stylesheet" href="./style.css">
@@ -39,7 +39,7 @@
           <p class="subtitle">Pesquisa de perpétuos e simulações PAPER em um só lugar.</p>
         </div>
         <div class="top-actions">
-          <span class="mode-pill">PAPER · OFFLINE</span>
+          <span id="mode-pill" class="mode-pill">PAPER · OFFLINE</span>
           <span id="updated-time" class="clock">Dados não conectados</span>
         </div>
       </header>
@@ -50,7 +50,7 @@
         <div>
           <p class="eyebrow">Estado do aplicativo</p>
           <h2 id="hero-title">Pesquisa, risco e posições. Sem operar dinheiro real.</h2>
-          <p>O WebSocket da VPS não é acessado por esta página. Importe um relatório sanitizado para consultar o estado observado, ou use o laboratório PAPER abaixo.</p>
+          <p>O aplicativo não transmite ordens nem se conecta à corretora. A coleta N50 pode ser visualizada por importação ou, quando servido exclusivamente em localhost, por atualização automática de relatórios sanitizados.</p>
           <a class="hero-link" href="#posicoes">Abrir laboratório PAPER <span aria-hidden="true">→</span></a>
         </div>
         <div class="hero-status">
@@ -80,10 +80,11 @@
               <h3>Saúde da coleta</h3>
               <span id="feed-status" class="status-label">Não conectado</span>
             </div>
+            <div class="actions"><button id="refresh-local" class="secondary" type="button" hidden>Atualizar dados locais</button></div>
             <div id="feed-empty" class="empty">
               <span class="empty-icon" aria-hidden="true">◌</span>
               <strong>Sem relatório N50 carregado</strong>
-              <p>Os dados não são buscados automaticamente nem inventados.</p>
+              <p>Sem servidor privado local, importe o JSON. A página nunca inventa dados nem conecta à corretora.</p>
             </div>
             <div id="feed-loaded" hidden>
               <div class="inline-metrics">

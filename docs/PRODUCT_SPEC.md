@@ -83,3 +83,7 @@ A tela privada opcional de mercado N50 mostra exclusivamente métricas já obser
 
 ## Entrega J5/MVP1 — console interativo local
 Primeiro produto navegável real em `web/app/index.html`, responsivo e PT-BR: dashboard com estado de fonte explícito (offline até importação sanitizada), histórico N50 count-only, pesquisa J2 descritiva e gestão de posições PAPER hipotéticas em BigInt. Margem e leverage global inicial 50x afetam somente novos cenários; percentuais de saída podem tomar base inicial/saldo e runner reservado. Histórico PAPER local exportável e trava local não constituem ordens, stop nativo, liquidação provada nem kill-switch de produção. O produto final D77 continua automático; J5/MVP1 é laboratório/configuração, sem rede e sem deploy. `docs/J5_PRODUCT_APP_MVP.md`.
+
+
+## J5/APP-SYNC1 — status de coleta com refresh local
+O aplicativo PAPER já oferece atualização N50 em loopback (`127.0.0.1:8765`), somente se o servidor local read-only for iniciado explicitamente. A consulta usa o exportador sanitizado do journalctl e 24 slots; feedback de falha desconecta o indicador sem fingir sincronização. A abertura local `file://` permanece offline. Isto não equivale a aplicativo publicado, acesso autenticado pelo celular fora da VPS, sinal ou execução real; esses próximos passos exigem release e controle de acesso. `docs/J5_LOOPBACK_AUTO_STATUS.md`.

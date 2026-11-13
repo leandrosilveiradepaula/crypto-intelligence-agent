@@ -9,6 +9,7 @@
   const $ = id => document.getElementById(id);
   let state = E.emptyState();
   let feed = null;
+  let feedOrigin = "none"; // local-auto, manual, or none
   let research = null;
   let storageAvailable = true;
 
@@ -279,9 +280,14 @@
     $("feed-loaded").hidden = !feed;
     if (!feed) {
       set("feed-status", "Não conectado");
+      set("updated-time", "Dados não conectados");
+      set("mode-pill", "PAPER · OFFLINE");
       return;
     }
-    set("feed-status", "Relatório importado");
+    set("feed-status", feedOrigin === "local-auto" ?
+      "Fonte local automática" : "Relatório importado");
+    set("mode-pill", feedOrigin === "local-auto" ?
+      "PAPER · FONTE LOCAL" : "PAPER · OFFLINE");
     set("updated-time", "N50: " + utc(feed.as_of_ms));
     set("n50-ok", feed.observed_50_of_50_hours + " / 24");
     set("n50-streak", feed.consecutive_recent_observed_hours);
@@ -299,6 +305,40 @@
       timeline.append(li);
     });
   }
+  function isLocalReadOnlyOrigin() {
+    const loc = window.location;
+    return loc.protocol === "http:" && loc.port === "8765" &&
+      (loc.hostname === "127.0.0.1" || loc.hostname === "localhost");
+  }
+
+  async function refreshLocalFeed() {
+    // file:// previews and ANY external host have no runtime transport.
+    // A manually selected N50 snapshot stays in control for this session.
+    if (!isLocalReadOnlyOrigin() || feedOrigin === "manual") return;
+    try {
+      const response = await window.fetch("/api/n50-progress", {
+        method: "GET", credentials: "omit",
+        cache: "no-store", redirect: "error"
+      });
+      check(response.ok && response.status === 200 &&
+        (response.headers.get("content-type") || "").startsWith("application/json"),
+        "Fonte de leitura local indisponível");
+      const raw = await response.text();
+      check(raw.length > 0 && raw.length < MAX_SNAPSHOT,
+        "Relatório da fonte local fora do limite");
+      const candidate = validateFeed(JSON.parse(raw));
+      feed = candidate;
+      feedOrigin = "local-auto";
+      render();
+    } catch (_) {
+      // Never display a stale 50/50 as if the server still responded.
+      feed = null;
+      feedOrigin = "none";
+      render();
+      set("feed-status", "Fonte local indisponível");
+    }
+  }
+
   function renderResearch() {
     $("research-empty").hidden = !!research;
     $("research-loaded").hidden = !research;
@@ -340,6 +380,13 @@
     renderResearch();
   }
   function bind() {
+    $("refresh-local").addEventListener("click", () => {
+      if (feedOrigin === "manual") {
+        warn("O JSON N50 importado manualmente tem prioridade nesta sessão. Recarregue a página para reativar a fonte local.", false);
+      } else {
+        void refreshLocalFeed();
+      }
+    });
     $("margin").addEventListener("input", () => { $("open-form").dataset.edited = "true"; });
     $("open-form").addEventListener("submit", event => {
       event.preventDefault();
@@ -396,7 +443,8 @@
         const payload = JSON.parse(raw);
         if (payload.schema_version === "j5-n50-ws-log-progress-v1") {
           feed = validateFeed(payload);
-          warn("Relatório N50 carregado localmente, sem sincronização de rede.", false);
+          feedOrigin = "manual";
+          warn("Relatório N50 carregado localmente. Substitui a atualização automática nesta sessão.", false);
         } else if (payload.schema_version === "j2-ws-n50-descriptive-24closed-v1") {
           research = validateResearch(payload);
           warn("Pesquisa descritiva J2 carregada. Isso não é recomendação de entrada.", false);
@@ -436,4 +484,9 @@
   load();
   bind();
   render();
+  if (isLocalReadOnlyOrigin()) {
+    $("refresh-local").hidden = false;
+    void refreshLocalFeed();
+    window.setInterval(() => { void refreshLocalFeed(); }, 60_000);
+  }
 })();
