@@ -1537,3 +1537,8 @@ Issue #603, branch `work/issue-603-j5-d330-n50-ws-ops-mobile`. Implementacao ind
 ## J1/D331 — diagnóstico após 42 eventos persistidos (13/11/2026 UTC)
 
 Evidência VPS após D329: WS 13:59:31–14:00:01 UTC exit65, ACK1, 673 frames, 42 `accepted_postclose_trade_clock` e 42 `closed_events_appended_to_ws_journal`, mas falha `invalid_or_gapped_market_data` antes de D313. N2 fallback success 14:00:04 e N2 REST success 14:02:04, WS/rotation disabled. Não presumir oito membros específicos ausentes nem causa exata. Issue #605 D331 classifica os literais internos de erro no supervisor para distinguir replay conflitante, gap/backfill, erro SQLite, OHLC e escopo, sem alterar o tratamento de dados. Testes sintéticos 42+falha e 50/50, recovery root in-place a partir da D329, documentação D331; candidatos à CI/revisão/merge. NENHUMA mudança VPS nesta implementação, nenhuma prova real 50/50/24h/36h ou ordem. J1 #2, #585, #429, #319 abertas.
+
+
+## J4/RUNNER-COST1 — fechamento residual sintético com custo (13/11/2026 UTC)
+
+Enquanto a J1 D331 WS permanece agendada em VPS para 14:59:30 UTC, task independente J4 #607 usa PRE4 e J3/PRE2 existentes para apurar liquidação hipotética do runner residual após três parciais completas, sem duplicar abertura/funding/fees nem inferir fills de trailing. Exemplo 100=50+30+14+6 e saída final líquido de referência LONG 1107.29 com hipóteses documentadas; flags de negociação/resultado real/liquidação continuam false. Código `synthetic_runner_costed_close.py`, testes e contrato `docs/J4_RUNNER_COSTED_CLOSE_RESEARCH.md` candidatos para CI/PR/merge. Nenhum deploy, conta, posição real ou mudança da J1; épica J4 #5 permanece aberta.
