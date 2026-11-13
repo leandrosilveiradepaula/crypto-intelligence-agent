@@ -184,8 +184,10 @@ class J3RunnerRiskGateTests(unittest.TestCase):
             mark_plan=make_plan(p), mark_ticks=marks(p),
         )
         self.assertEqual(result.status, "conditional_reference_no_discrete_terminal_observed")
+        # SHORT exit notionals are lower: 4_950+2_940+1_414+582.
+        # Exit costs 13.956+0.873, entry 15; -1 signed funding is a credit.
         self.assertEqual(result.hypothetical_net_if_no_unobserved_events_quote,
-                         D("84.829"))
+                         D("85.171"))
         self.assertEqual(result.initial_leverage, 50)
 
     def test_funding_is_causal_consistent_and_no_late_coverage_is_borrowed(self):
@@ -206,7 +208,9 @@ class J3RunnerRiskGateTests(unittest.TestCase):
             dict(mark_plan=replace(self.plan, direction=ResearchDirection.SHORT,
                                    stop_price=D(105), target_price=D(90))),
             dict(mark_plan=replace(self.plan, entry_at_ms=900)),
-            dict(mark_plan=replace(self.plan, entry_price=D(101))),
+            dict(mark_plan=replace(self.plan, entry_price=D(101),
+                                   margin=SyntheticMarginBasis(
+                                       D(202), 50, D(10100), "SYNTHETIC_USDT"))),
             dict(mark_plan=replace(self.plan, exit_fee_bps=D(11))),
             dict(mark_plan=replace(self.plan, maintenance_rate_bps=D(0)),
                  position=p10, partial_fills=make_partials(p10),
