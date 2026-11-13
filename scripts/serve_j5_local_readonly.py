@@ -18,6 +18,9 @@ import time
 from typing import Any
 
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.j2_n50_ws_private_screen import (
+    observe_active_private_ws_n50_24closed,
+)
 from scripts.export_j5_n50_ws_journald_once import export_n50_journald_progress
 
 HOST = "127.0.0.1"
@@ -71,6 +74,74 @@ def read_n50_progress(*, now_ms: int) -> dict[str, Any]:
             or report.get("source_authenticated") is not False):
         raise SourceNotReady("unsafe projection blocked")
     return report
+
+
+
+_RESEARCH_OUTPUT_KEYS = frozenset((
+    "schema_version", "status", "quality", "latest_closed_end_ms",
+    "audited_assets", "eligible_closed_bars_per_asset",
+    "btc_context_available", "descriptive_up_breakouts",
+    "descriptive_down_breakouts", "descriptive_inside_bars", "research_rows",
+    "ws_journal_integrity_replayed", "window_digest_sha256",
+    "formal_d323_24h_verified", "continuous_collector_verified",
+    "rotation_36h_live_verified", "marketwide_top50_verified",
+    "crypto_identity_independently_verified", "source_authenticated",
+    "approved_for_signals", "approved_for_live_use",
+    "financial_backtest_approved", "orders_sent",
+    "network_requests", "database_mutation_statements", "systemd_modified",
+))
+
+
+def read_j2_descriptive() -> dict[str, Any]:
+    """Revalidate current owner D321/24h and expose count-only J2 research.
+
+    No new journal reader, imports, REST, websocket, ticker export or orders.
+    The existing owner gate makes missing 24h or invalid DAC an abstention.
+    """
+    try:
+        source = observe_active_private_ws_n50_24closed(
+            allow_private_readonly_research=True,
+            include_private_symbols=False,
+        )
+    except (DataValidationError, OSError, ValueError, TypeError,
+            RuntimeError, OverflowError, UnicodeError):
+        raise SourceNotReady("J2 private window not ready") from None
+    if (type(source) is not dict
+            or source.get("schema_version") != "j2-ws-n50-descriptive-24closed-v1"
+            or source.get("status") not in (
+                "ws_n50_descriptive_24h_ready", "ws_n50_btc_context_missing"
+            )
+            or source.get("audited_assets") != 50
+            or source.get("eligible_closed_bars_per_asset") != 24
+            or source.get("ws_journal_integrity_replayed") is not True
+            or type(source.get("research_rows")) is not list
+            or source["research_rows"] != []
+            or type(source.get("window_digest_sha256")) is not str
+            or len(source["window_digest_sha256"]) != 64
+            or any(source.get(key) is not False for key in (
+                "formal_d323_24h_verified", "continuous_collector_verified",
+                "rotation_36h_live_verified", "marketwide_top50_verified",
+                "crypto_identity_independently_verified",
+                "source_authenticated", "approved_for_signals",
+                "approved_for_live_use", "financial_backtest_approved",
+                "orders_sent", "systemd_modified"
+            ))
+            or source.get("network_requests") != 0
+            or source.get("database_mutation_statements") != 0
+            or any(type(source.get(key)) is not int
+                   or source[key] < 0 or source[key] > 50
+                   for key in ("descriptive_up_breakouts",
+                               "descriptive_down_breakouts",
+                               "descriptive_inside_bars"))
+            or sum(source[key] for key in (
+                "descriptive_up_breakouts", "descriptive_down_breakouts",
+                "descriptive_inside_bars"
+            )) != 50
+            or not _RESEARCH_OUTPUT_KEYS <= source.keys()):
+        raise SourceNotReady("unsafe J2 projection rejected")
+    # Exact allowlist: no owner paths, symbols, registry hashes or extra fields
+    # survive from future producer versions. Existing browser validation reused.
+    return {key: source[key] for key in sorted(_RESEARCH_OUTPUT_KEYS)}
 
 
 def _static_file(path: str) -> tuple[bytes, str] | None:
@@ -154,6 +225,19 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if not self._request_allowed():
             self._json(403, {"status": "loopback_host_required"})
+            return
+        if self.path == "/api/j2-research":
+            try:
+                report = read_j2_descriptive()
+            except SourceNotReady:
+                self._json(503, {
+                    "schema_version": "j5-local-research-unavailable-v1",
+                    "status": "research_not_available",
+                    "approved_for_signals": False,
+                    "orders_sent": False,
+                })
+                return
+            self._json(200, report)
             return
         if self.path == "/api/n50-progress":
             try:
