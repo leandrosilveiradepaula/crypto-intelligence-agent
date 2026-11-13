@@ -1329,3 +1329,8 @@ Teste `test_j1_n50_ws_halt_taxonomy_d331.py` insere 42 eventos pósclose reais e
 ### Gate D332 owner de coorte (não duplicar coleta)
 
 `tests/test_j1_n50_ws_symbol_grammar_d332.py` distingue caso sintético 50/50 com um único membro de base de 1 caractere (legacy_rejections=1,new_rejections=0,status `single_letter_legacy_mismatch_in_scope`) do escopo 50 normal (legacy_rejections=0,status `legacy_mismatch_not_established_abstain`), recusa duplicatas, quote não USDT e estruturas adulteradas; sem 4 flags, sem leitura privada. Mock da admissão owner comprova hash/50 membros, nenhum identificador na saída. CLI sucesso somente na hipótese corroborada; recusa em outro estado. Recovery root executa 7 suítes antes desse gate, e o CLI owner **antes** do marco `D332_RECOVERY_STAGE_2_...` e do desligamento de N2. Se absent, N2 continua ativo sem nova coleta WS.
+
+
+### D332 — regressão transversa do payload SQLite
+
+A CI inicial encontrou `DataGapError: offline candle record structure invalid` ao tentar persistir o ticker fixture de base de 1 caractere. Corrigido o regex de payload de 2..24 para 1..28 conforme gramática auto, sem alterar dados existentes; provas requerem append+audit do mesmo símbolo sintético (1 e 28 caracteres), todos 50 e negativas de escopo, clock, OHLC e idempotência. Não encerrar tarefa somente por `parse_offline_confirmed_kline` aceitar.
