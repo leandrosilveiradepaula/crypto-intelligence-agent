@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="Console mobile e local de pesquisa N50 e simulação PAPER do Crypto Intelligence Agent. Sem ordens reais.">
+  <title>Crypto Intelligence — Console PAPER</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./engine.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body data-mode="offline_paper" data-live-orders="disabled">
+  <a class="skip" href="#conteudo">Ir ao conteúdo principal</a>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navegação do produto">
+      <a class="identity" href="#resumo" aria-label="Crypto Intelligence — início">
+        <span class="logo" aria-hidden="true">CI</span>
+        <span class="brand-title">CRYPTO<span class="brand-sub">INTELLIGENCE</span></span>
+      </a>
+      <div class="side-label">CONSOLE DE PESQUISA</div>
+      <nav class="navigation" aria-label="Seções">
+        <a href="#resumo"><span aria-hidden="true">◫</span> Visão geral</a>
+        <a href="#mercado"><span aria-hidden="true">⌁</span> Mercado N50</a>
+        <a href="#posicoes"><span aria-hidden="true">▤</span> Posições PAPER</a>
+        <a href="#configuracoes"><span aria-hidden="true">⚙</span> Configurações</a>
+      </nav>
+      <div class="side-footer"><span class="status-dot"></span> 100% local e offline
+        <p>Nenhuma conexão com corretora. Sem ordens reais.</p>
+      </div>
+    </aside>
+
+    <main id="conteudo" tabindex="-1">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Painel de operação</p>
+          <h1>Seu centro de controle</h1>
+          <p class="subtitle">Pesquisa de perpétuos e simulações PAPER em um só lugar.</p>
+        </div>
+        <div class="top-actions">
+          <span class="mode-pill">PAPER · OFFLINE</span>
+          <span id="updated-time" class="clock">Dados não conectados</span>
+        </div>
+      </header>
+
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+      <section class="hero" id="resumo" aria-labelledby="hero-title">
+        <div>
+          <p class="eyebrow">Estado do aplicativo</p>
+          <h2 id="hero-title">Pesquisa, risco e posições. Sem operar dinheiro real.</h2>
+          <p>O WebSocket da VPS não é acessado por esta página. Importe um relatório sanitizado para consultar o estado observado, ou use o laboratório PAPER abaixo.</p>
+          <a class="hero-link" href="#posicoes">Abrir laboratório PAPER <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="hero-status">
+          <span class="hero-kicker">MODO DE EXECUÇÃO</span>
+          <strong>Bloqueado</strong>
+          <small>Ordens reais e testnet desativadas</small>
+          <span class="outline-chip">Sem APIs privadas</span>
+        </div>
+      </section>
+
+      <div class="stats" aria-label="Resumo do laboratório">
+        <div class="metric"><span>Posições PAPER abertas</span><strong id="metric-open">0</strong><small>Somente simulações locais</small></div>
+        <div class="metric"><span>Exposição nominal simulada</span><strong id="metric-exposure">US$ 0</strong><small>Ao preço hipotético de entrada</small></div>
+        <div class="metric"><span>Margem PAPER alocada</span><strong id="metric-margin">US$ 0</strong><small>Não representa saldo real</small></div>
+        <div class="metric"><span>Observações N50 recebidas</span><strong id="metric-n50">— / 24</strong><small id="metric-n50-label">Nenhum relatório importado</small></div>
+      </div>
+
+      <section class="group" id="mercado" aria-labelledby="market-title">
+        <div class="section-head">
+          <div><p class="eyebrow">01 / Inteligência de mercado</p><h2 id="market-title">Mercado N50</h2></div>
+          <span class="soft-chip">Observação · não é sinal</span>
+        </div>
+        <p class="section-desc">Visualize os relatórios já produzidos pela pesquisa. Os contratos terminados em USDT não são, por si só, prova de identidade crypto-only.</p>
+        <div class="two-column">
+          <div class="panel">
+            <div class="panel-heading">
+              <h3>Saúde da coleta</h3>
+              <span id="feed-status" class="status-label">Não conectado</span>
+            </div>
+            <div id="feed-empty" class="empty">
+              <span class="empty-icon" aria-hidden="true">◌</span>
+              <strong>Sem relatório N50 carregado</strong>
+              <p>Os dados não são buscados automaticamente nem inventados.</p>
+            </div>
+            <div id="feed-loaded" hidden>
+              <div class="inline-metrics">
+                <div><strong id="n50-ok">—</strong><span>Horas 50/50 observadas</span></div>
+                <div><strong id="n50-streak">—</strong><span>Sequência recente</span></div>
+                <div><strong id="n50-failed">—</strong><span>Falhas / duplicatas</span></div>
+              </div>
+              <ol id="timeline" class="timeline" aria-label="24 últimos fechamentos auditados nos relatórios"></ol>
+              <p class="muted fine">Somente relatórios de log. A auditoria formal D323 de 24h e a rotação de 36h são verificações separadas.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><h3>Pesquisa de oportunidades</h3><span id="research-status" class="status-label">Aguardando 24h</span></div>
+            <div id="research-empty" class="empty">
+              <span class="empty-icon" aria-hidden="true">⌁</span>
+              <strong>Sem ranking de pesquisa</strong>
+              <p>A lista só aparece quando houver um snapshot J2 válido importado. Não há palpites ou sinais artificiais.</p>
+            </div>
+            <div id="research-loaded" hidden>
+              <div class="inline-metrics">
+                <div><strong id="research-count">—</strong><span>Contratos analisados</span></div>
+                <div><strong id="research-breakout">—</strong><span>Rompimentos de alta</span></div>
+                <div><strong id="research-down">—</strong><span>Rompimentos de baixa</span></div>
+              </div>
+              <div id="research-rows" class="research-list"></div>
+              <p class="muted fine">Retorno retrospectivo descritivo, não probabilidade de lucro. Dados importados ficam somente nesta sessão.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="group" id="posicoes" aria-labelledby="position-title">
+        <div class="section-head">
+          <div><p class="eyebrow">02 / Laboratório</p><h2 id="position-title">Posições PAPER</h2></div>
+          <span id="paper-gate" class="soft-chip">Novos cenários permitidos</span>
+        </div>
+        <p class="section-desc">Crie cenários fictícios com margem, alavancagem e parciais. O sistema final terá entradas e saídas automáticas; esta ferramenta serve para experimentar os parâmetros enquanto a estratégia é validada.</p>
+        <div class="paper-layout">
+          <div class="panel">
+            <div class="panel-heading"><h3>Novo cenário</h3><span class="status-label">FILL fictício</span></div>
+            <form id="open-form" novalidate>
+              <div class="form-grid">
+                <label class="field">Contrato USDT
+                  <input id="symbol" name="symbol" value="BTCUSDT" maxlength="32" required autocomplete="off" spellcheck="false">
+                </label>
+                <label class="field">Direção
+                  <select id="side" name="side"><option value="LONG">LONG · Compra</option><option value="SHORT">SHORT · Venda</option></select>
+                </label>
+                <label class="field">Preço hipotético (US$)
+                  <input id="entry" name="entry" inputmode="decimal" value="100" required autocomplete="off">
+                </label>
+                <label class="field">Margem (US$)
+                  <input id="margin" name="margin" inputmode="decimal" value="3" required autocomplete="off">
+                </label>
+              </div>
+              <div class="form-summary">
+                <span>Alavancagem atual: <strong id="form-leverage">50x</strong></span>
+                <span>Runner mínimo: <strong id="form-runner">6%</strong></span>
+              </div>
+              <button id="open-submit" class="primary" type="submit">Criar cenário PAPER</button>
+              <p class="muted fine">Sem ordem, fill de corretora, taxa, funding, liquidação ou preço ao vivo. Todos os números são hipóteses.</p>
+            </form>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><h3>Seu laboratório</h3><span class="status-label" id="position-count">0 cenários</span></div>
+            <div id="position-empty" class="empty">
+              <span class="empty-icon" aria-hidden="true">▤</span>
+              <strong>Nenhuma posição PAPER</strong>
+              <p>Crie um cenário fictício para visualizar quantidade, exposição e saídas parciais.</p>
+            </div>
+            <div id="position-list" class="position-list" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="group" id="configuracoes" aria-labelledby="settings-title">
+        <div class="section-head"><div><p class="eyebrow">03 / Controle e dados</p><h2 id="settings-title">Configurações</h2></div></div>
+        <div class="two-column">
+          <div class="panel">
+            <div class="panel-heading"><h3>Parâmetros de novas posições</h3><span class="status-label">Somente PAPER</span></div>
+            <form id="settings-form" novalidate>
+              <div class="form-grid">
+                <label class="field">Alavancagem global (1–100x)
+                  <input id="leverage" name="leverage" type="number" min="1" max="100" step="1" value="50" required>
+                </label>
+                <label class="field">Margem padrão (US$)
+                  <input id="default-margin" name="default-margin" inputmode="decimal" value="3" required>
+                </label>
+                <label class="field full">Reserva de runner (% da posição inicial)
+                  <input id="runner" name="runner" inputmode="decimal" value="6" required>
+                </label>
+              </div>
+              <button class="secondary" type="submit">Salvar parâmetros locais</button>
+            </form>
+            <p class="muted fine">Alterar alavancagem ou runner afeta apenas novas posições. 50x implica risco elevado e não demonstra segurança.</p>
+            <label class="switchline"><input id="pause" type="checkbox"> Bloquear criação de novos cenários PAPER</label>
+            <p class="muted fine">A trava é exclusivamente local. Não pausa o WebSocket na VPS, não cancela ordens e não funciona como kill-switch real.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><h3>Importar evidência sanitizada</h3><span class="status-label">Sem upload</span></div>
+            <label class="file-drop" for="import-file">
+              <span aria-hidden="true" class="upload-icon">↓</span>
+              <strong>Selecionar arquivo JSON local</strong>
+              <span>Relatório `j5-n50-ws-log-progress-v1` ou `j2-ws-n50-descriptive-24closed-v1`</span>
+              <input type="file" id="import-file" accept=".json,application/json">
+            </label>
+            <p class="muted fine">O arquivo é lido pelo navegador, limitado a 1 MiB e nunca enviado pela rede. Importações não persistem após recarregar.</p>
+            <div class="actions">
+              <button id="export-paper" class="secondary" type="button">Exportar cenários PAPER</button>
+              <button id="reset-paper" class="danger" type="button">Apagar cenários locais</button>
+            </div>
+            <p class="muted fine" id="storage-status">As simulações são guardadas apenas neste navegador.</p>
+          </div>
+        </div>
+      </section>
+      <footer>Crypto Intelligence Agent · Interface de pesquisa e PAPER · Nenhuma conexão com exchange · R$ 0,00 de serviços adicionais · <a href="#resumo">Voltar ao início</a></footer>
+    </main>
+  </div>
+</body>
+</html>
