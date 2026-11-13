@@ -64,7 +64,7 @@ class D333AtomicRecoveryTests(unittest.TestCase):
         self.assertIn("D333_RECOVERY_COMPENSATION_REQUIRES_OPERATOR", s)
         self.assertIn('if test "$PIN_CHANGED" = 1; then', s)
         self.assertIn('if test "$CUTOVER_STARTED" = 1; then', s)
-        self.assertIn("CUTOVER_STARTED=0\nRECOVERY_FINALIZED=1", s)
+        self.assertIn("RECOVERY_FINALIZED=1\nCUTOVER_STARTED=0", s)
         self.assertEqual(s.count("trap recovery_exit_cleanup EXIT"), 1)
         self.assertNotIn("trap rollback_on_exit EXIT", s)
 
