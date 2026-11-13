@@ -49,7 +49,60 @@ _SAFE_REJECTION_CLASSES = {
     "unexpected WS market topic": "ws_unexpected_topic_invalid",
     "invalid pre-ACK WS envelope": "ws_preack_envelope_invalid",
     "WS temporal discard budget exceeded": "ws_closed_temporal_discard_limit",
+
+    # D331: exact LOCAL validator literals, never raw exception text. The
+    # actual 42-row D329 halt is still unknown until a new sanitized run.
+    # This taxonomy does NOT change which frames/journal writes are accepted.
+    "conflicting replay of closed hour": "ws_journal_closed_replay_conflict",
+    "offline kline backfill or registry drift: abstain": "ws_journal_backfill_or_registry_drift",
+    "offline kline gap exceeds declared budget: abstain": "ws_journal_gap_limit",
+    "offline predecessor was corrupted": "ws_journal_predecessor_corrupt",
+    "offline journal row budget exhausted": "ws_journal_row_limit",
+    "offline event metadata mismatch": "ws_journal_event_metadata_mismatch",
+    "offline journal schema mismatch": "ws_journal_schema_invalid",
+    "offline journal schema unreadable": "ws_journal_schema_invalid",
+    "offline journal file not present or not regular": "ws_journal_file_invalid",
+    "offline candle record digest invalid": "ws_journal_payload_integrity_invalid",
+    "offline candle record JSON invalid": "ws_journal_payload_integrity_invalid",
+    "offline candle record structure invalid": "ws_journal_payload_integrity_invalid",
+    "offline candle record clock invalid": "ws_journal_payload_integrity_invalid",
+    "offline candle record temporal tamper": "ws_journal_payload_integrity_invalid",
+    "offline candle record decimals invalid": "ws_journal_payload_integrity_invalid",
+    "offline candle record price range invalid": "ws_journal_payload_integrity_invalid",
+    "only parsed confirmed offline kline may be appended": "ws_journal_event_type_invalid",
+    "WS symbol not present in reviewed scan": "ws_scope_member_invalid",
+    "offline WS frame too large": "ws_frame_size_invalid",
+    "offline WS frame is not bounded JSON": "ws_frame_json_invalid",
+    "only 1h Bybit public kline stream is supported": "ws_interval_invalid",
+    "unexpected Bybit WS kline fields": "ws_closed_fields_invalid",
+    "Bybit kline OHLC extrema are inconsistent": "ws_closed_ohlcv_invalid",
+    "Bybit kline row must contain exactly seven strings": "ws_closed_ohlcv_type_invalid",
+    "Bybit research page is incomplete or has extra candles": "ws_closed_source_page_invalid",
+    "Bybit kline timestamps are not a contiguous descending UTC window": "ws_closed_source_page_invalid",
+    "Bybit contract metadata is stale at chart capture": "ws_scope_metadata_stale",
+    "Bybit contract observation is absent or from the future": "ws_scope_metadata_invalid",
+    "Bybit symbol and quote currency mismatch": "ws_scope_member_invalid",
+    "Bybit contract is not a trading linear perpetual": "ws_scope_member_invalid",
+    "Bybit chart window must be ascending and UTC grid aligned": "ws_closed_window_invalid",
+    "Bybit UTC millisecond timestamp must be decimal string": "ws_closed_window_invalid",
+    "Bybit kline category, symbol or list invalid": "ws_closed_source_page_invalid",
 }
+
+
+# Only these six fixed WS -> REST-fixture numeric labels are constructed
+# by the existing Bybit validator. No prefix/wildcard from untrusted data.
+for _label, _nonnegative in (
+    ("openPrice", False), ("highPrice", False), ("lowPrice", False),
+    ("closePrice", False), ("base-volume", True),
+    ("quote-turnover", True),
+):
+    _SAFE_REJECTION_CLASSES[
+        f"Bybit {_label} must be bounded exact decimal string"
+    ] = "ws_closed_ohlcv_type_invalid"
+    _SAFE_REJECTION_CLASSES[
+        f"Bybit {_label} must be {'nonnegative' if _nonnegative else 'positive'}"
+    ] = "ws_closed_ohlcv_invalid"
+del _label, _nonnegative
 
 
 def _safe_ws_failure_class(error: BaseException) -> str:
