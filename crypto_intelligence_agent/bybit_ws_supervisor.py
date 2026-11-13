@@ -45,7 +45,6 @@ _SAFE_REJECTION_CLASSES = {
     "WS confirmation, UTC clock or scope chronology invalid": "ws_closed_temporal_invalid",
     "WS values must be exact decimal strings": "ws_closed_value_type_invalid",
     "Bybit latest candle was not confirmed closed": "ws_closed_staging_clock_invalid",
-    "offline kline gap exceeds declared budget: abstain": "ws_journal_declared_gap_invalid",
     "offline journal write failed closed": "ws_journal_write_invalid",
     "unexpected WS market topic": "ws_unexpected_topic_invalid",
     "invalid pre-ACK WS envelope": "ws_preack_envelope_invalid",
