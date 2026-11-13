@@ -85,6 +85,8 @@ test -f "$CODE/crypto_intelligence_agent/bybit_closed_stream_cache.py"
 
 # Local-only regression on the deployed Python and dependency set.
 (cd "$CODE" && $RUNUSER -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1 \
+  "$PY" -m unittest discover -s tests -p test_j1_n50_ws_symbol_grammar_d332.py -q)
+(cd "$CODE" && $RUNUSER -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1 \
   "$PY" -m unittest discover -s tests -p test_j1_n50_ws_single_letter_usdt_d332.py -q)
 (cd "$CODE" && $RUNUSER -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1 \
   "$PY" -m unittest discover -s tests -p test_j1_n50_ws_halt_taxonomy_d331.py -q)
