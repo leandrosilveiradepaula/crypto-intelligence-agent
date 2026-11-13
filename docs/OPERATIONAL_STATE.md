@@ -1771,3 +1771,10 @@ Fonte `main=c1fbd4cd46bba108be14859b9a04bb4184c3e91f` verificada, zero PR aberta
 ### D332 — resultado da primeira CI e reparo focal
 
 Primeiro HEAD D332 não aprovado: 2836 testes Linux, 1 erro e 1 falha, ambos ligados ao fixture 1-char persistido: `_validated_payload` ainda rejeitava `[A-Z0-9]{1}USDT` por regex 2..24 e supervisor halt. Branch corrigido `bybit_closed_stream_cache` para base 1..28 conforme ranking automático; teste extremo 28 adicionado. CI FINAL no SHA novo ainda a confirmar; não usar HEAD antigo nem instalar na VPS. N2 fallback continua ativo; nenhum corte adicional root.
+
+
+## J1/D333 — checkout atômico junto do cutover (13/11/2026 UTC)
+
+Base ao iniciar `main=de26e3afb43fe4813ca66cc6dbf08c541e19526d` PR #610 merged; sem PRs abertas. Estado VPS via broker read-only: `cia-j1-n50-ws.timer` e `rotate.timer` inactive/disabled, serviço WS failed/exit65 desde 15:00:03Z com `ws_scope_member_invalid`, N2 timer active/enabled, último serviço N2 success às 15:02:04Z. Instalado em VPS ainda D331 SHA `c1fbd4cd46bba108be14859b9a04bb4184c3e91f`, não assumir D332 aplicada.
+
+Issue #611; branch `work/issue-611-j1-d333-atomic-root-recovery`. New root entrypoint `deploy/vps/recover_j1_n50_ws_d333_once.sh` com OLD_SHA D331, tests offline e preflight D332 já validados; novo rollback do código sob trap EXIT **antes** de mutar checkout. Em abort de hipótese sem 1-character base, restaura D331 e deixa N2 ativo; em cutover parcial, reverte N2 e SHA; se compensação incerta, exit75 operador. Fixture Bash com mocks em `tests/test_j1_n50_ws_atomic_recovery_d333.py`; contrato `docs/J1_N50_WS_ATOMIC_RECOVERY_D333.md`. **Antes de CI e PR não inferir implementação validada**; sem deploy/ordens/GET. Próximo passo: CI final, revisão, merge seguro sem produção; root gate posterior se autorizado; só o lease futuro dirá 50/50.
