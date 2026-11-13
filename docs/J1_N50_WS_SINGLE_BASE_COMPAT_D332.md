@@ -20,3 +20,12 @@ Em 13/11/2026, a D331 operacional (SHA `c1fbd4cd46bba108be14859b9a04bb4184c3e91f
 `deploy/vps/recover_j1_n50_ws_d332_once.sh` adapta recovery D331 com `OLD_SHA=c1fbd4cd46bba108be14859b9a04bb4184c3e91f`, checkout clean no mesmo caminho owner, preflight NTP/systemd/epoch, **6 suítes offline** no Python da VPS antes de desligar N2, rollback N2 em falha e zero novo bootstrap/rank/372 GET/SQL/ordens. Teste estático `test_j1_n50_ws_recovery_release_d332.py`. CI Linux/docs + Windows/offline + PAPER no head final; merge revisado sem deploy. **Gate root separado**, não assumir que timer ativo prova candle.
 
 No próximo lease após gate root: se 50/50, manter coletor para J1/D323 24 horas e rotação >=36h; se falhar, usar classe sanitizada específica, preservar N2, não improvisar. #319 identidade/Top50 global é gate separado. R$0.
+
+
+## Preflight adicional: confirmar a hipótese na própria coorte antes de reativar o serviço
+
+`crypto_intelligence_agent/j1_n50_ws_symbol_grammar_d332.py` oferece auditoria **somente contagem** de um escopo privado ativo. O CLI `python -m scripts.audit_j1_n50_ws_symbol_grammar_d332_once` exige quatro opt-ins owner. Sem privilégios root, revalida o ponteiro D321, ranking e admissão D316 em memória, sem REST, WebSocket, SQLite writes, timers ou logs de símbolos. Devolve apenas `reviewed_contracts` (50), `one_character_usdt_bases`, `legacy_candle_parser_rejections` e `new_candle_parser_rejections`, com todas as flags financeiras falsas.
+
+**Gate essencial:** se a coorte **não** contiver o caso exato do parser antigo (ou se o novo ainda rejeitar algum membro, o scope falhar ou a auditoria owner não estiver permitida), o CLI retorna 65 **ANTES** do cutover. O N2 permanece ativo e não se tenta novamente um lease supostamente corrigido. Quando um ou mais membros de base de 1 caráter forem identificados, todos os contratos da coorte ainda precisam passar pelo parser novo, e só então se autoriza retomar o WS. A presença não demonstra que era o frame causador, mas confirma que a mudança resolve uma incompatibilidade real da coorte.
+
+O recovery D332 executa agora **sete suites offline** (incluindo `test_j1_n50_ws_symbol_grammar_d332.py`) e esse preflight owner adicional, antes de desabilitar N2. Se abortar após trocar checkout mas antes do cutover, preserve código e logs sanitizados; uma futura revisão deve conferir o SHA instalado antes de preparar nova recuperação. Nenhum caminho usa root para ler/alterar dados privados indiscriminadamente.
