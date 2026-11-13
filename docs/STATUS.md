@@ -1584,3 +1584,7 @@ Leitura real VPS: hora 16:59:30–17:02:00Z ACK1, 3500 frames, 50 closed WS appe
 
 ## J1/D336 — recuperação root a partir de D333 (13/11/2026 UTC)
 Após PR #620 D335 merged `main=b20758c91fa94881ddcba9ec130d91bdf508076a`, VPS permaneceu N2 REST `active/enabled`, WS/rotate `inactive/disabled`; broker não acessa checkout privado para leitura do SHA. Frente issue #619 em branch `work/issue-619-j1-d336-transactional-recover` prepara script root pinado no D333 esperado, janela de corte segura, owner regression e rollback transacional. Candidato a CI, revisão, merge **sem deploy**; nenhuma reinicialização ou ordem realizada. Mesmo após D336, J1 exige 24h, rotação 36h e #319. Documento `docs/J1_N50_WS_D336_ROOT_RECOVERY.md`.
+
+
+## J5/PROGRESS1 — UI de horas observadas independentemente da coleta N50 (13/11/2026 UTC)
+Para evitar painel 0/24 opaco durante D323, issue #622 cria projeção offline de cada hora 50/50 no log sanitizado (não evidência oficial), sequência recente, falhas, ausências e duplicatas, com HTML PT-BR responsivo e CLI stdin somente com opt-in. Uma sessão com 50 writes mas auditoria abstida é falha. Mesmo 24 logs favoráveis não fecham D323 nem rotação. Branch `work/issue-622-j5-n50-hourly-progress`; código/testes/docs dependem de gates CI e revisão, merge sem deploy. D336 segue instalado com timers WS/rotate ativos, N2 inativo; coleta nova 18UTC ainda sem relatório confirmado no momento da abertura da tarefa.
