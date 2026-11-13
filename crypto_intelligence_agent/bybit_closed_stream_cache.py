@@ -126,6 +126,7 @@ class OfflineConfirmedKline:
 def parse_offline_confirmed_kline(
     message: Mapping, *, scope: OfflineReviewedStreamScope,
     received_at_ms: int,
+    allow_server_bounded_trade_clock: bool = False,
 ) -> OfflineConfirmedKline:
     """Strict Bybit public linear kline.60 snapshot -> existing REST parser.
 
@@ -134,6 +135,7 @@ def parse_offline_confirmed_kline(
     """
     if (type(scope) is not OfflineReviewedStreamScope
             or type(received_at_ms) is not int or not 0 < received_at_ms < MAX_UTC_MS
+            or type(allow_server_bounded_trade_clock) is not bool
             or type(message) is not dict):
         raise DataValidationError("bounded offline WS frame and receipt required")
     if (set(message) != {"topic", "type", "ts", "data"}
@@ -162,7 +164,14 @@ def parse_offline_confirmed_kline(
             or any(type(x) is not int for x in (start, end, trade_ms))
             or start <= 0 or start % HOUR_MS or end != start + HOUR_MS - 1
             or end >= MAX_UTC_MS
-            or not start <= trade_ms <= end
+            or not (
+                start <= trade_ms <= end
+                or (allow_server_bounded_trade_clock
+                    and type(server_ms) is int
+                    and end < trade_ms <= server_ms
+                    and server_ms >= end + 1
+                    and 0 <= received_at_ms - (end + 1) <= MAX_WS_LAG_MS)
+            )
             or type(server_ms) is not int or server_ms < end + 1
             or server_ms > received_at_ms
             or received_at_ms - server_ms > MAX_SERVER_SKEW_MS
@@ -236,7 +245,10 @@ def _validated_payload(raw: str, digest: str) -> dict:
             or value["launch_ms"] > start
             or not 0 < value["scope_observed_ms"] <= value["server_ms"]
             or value["server_ms"] - value["scope_observed_ms"] > MAX_SCOPE_AGE_MS
-            or not start <= value["trade_ms"] <= end
+            or not (
+                start <= value["trade_ms"] <= end
+                or end < value["trade_ms"] <= value["server_ms"]
+            )
             or not end + 1 <= value["server_ms"] <= value["received_ms"]
             or not 0 <= value["received_ms"] - (end + 1) <= MAX_WS_LAG_MS
             or value["received_ms"] - value["server_ms"] > MAX_SERVER_SKEW_MS):

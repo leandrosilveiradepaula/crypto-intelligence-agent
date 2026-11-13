@@ -48,6 +48,9 @@ def _report(status: str) -> dict[str, Any]:
         "discarded_closed_trade_clock": 0,
         "discarded_closed_preclose": 0,
         "discarded_closed_stale": 0,
+        "accepted_postclose_trade_clock": 0,
+        "discarded_trade_before_start": 0,
+        "discarded_trade_after_end_unbounded": 0,
         "subscription_acks": 0,
         "owner_lock_acquired": False,
         "rest_gap_reconciliation_required": False,
@@ -76,6 +79,7 @@ def run_cached_n50_ws_owner_window(
     allow_create_ws_journal: bool = False,
     allow_declared_ws_gap: bool = False,
     allow_temporal_discard: bool = False,
+    allow_server_bounded_trade_clock: bool = False,
     budget: WSRunBudget = WSRunBudget(max_sessions=2, max_frames=16_000, max_seconds=150),
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
@@ -116,7 +120,9 @@ def run_cached_n50_ws_owner_window(
             or not callable(sleeper)
             or type(allow_create_ws_journal) is not bool
             or type(allow_declared_ws_gap) is not bool
-            or type(allow_temporal_discard) is not bool):
+            or type(allow_temporal_discard) is not bool
+            or type(allow_server_bounded_trade_clock) is not bool
+            or (allow_server_bounded_trade_clock and not allow_temporal_discard)):
         return out
     try:
         # Reject symlinked ancestors as well as direct symlinks: textual
@@ -185,6 +191,7 @@ def run_cached_n50_ws_owner_window(
             budget=bounded, clock=clock, wall_ms=wall_ms, sleeper=sleeper,
             allow_declared_ws_gap=allow_declared_ws_gap,
             allow_temporal_discard=allow_temporal_discard,
+            allow_server_bounded_trade_clock=allow_server_bounded_trade_clock,
         )
         out["status"] = detail["status"]
         out["declared_ws_gap_append_enabled"] = allow_declared_ws_gap
@@ -205,6 +212,9 @@ def run_cached_n50_ws_owner_window(
         out["discarded_closed_trade_clock"] = detail["discarded_closed_trade_clock"]
         out["discarded_closed_preclose"] = detail["discarded_closed_preclose"]
         out["discarded_closed_stale"] = detail["discarded_closed_stale"]
+        out["accepted_postclose_trade_clock"] = detail["accepted_postclose_trade_clock"]
+        out["discarded_trade_before_start"] = detail["discarded_trade_before_start"]
+        out["discarded_trade_after_end_unbounded"] = detail["discarded_trade_after_end_unbounded"]
         out["subscription_acks"] = detail["subscriptions_acknowledged"]
         out["owner_lock_acquired"] = detail["owner_lock_acquired"]
         out["rest_gap_reconciliation_required"] = detail[
