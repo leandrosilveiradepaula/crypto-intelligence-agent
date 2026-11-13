@@ -1798,3 +1798,7 @@ Issue #617 em branch `work/issue-617-j3-confluence-costed-oos` sobre main `76daf
 
 ## J1/D335 — status operacional após janela 17 UTC
 VPS leitura read-only 13/11: N50 WS 16:59:30–17:02:00 exit65 após 50 appends mas auditoria 0/50; WS/rotate inactive/disabled e N2 timer active/enabled, next 18:02 UTC. Não repetir D333 root script; código owner instalado no SHA D333 `76ba09735b46e19e1e0af718c420d6a60cdd0067` deve ser rechecado antes de novo recovery. Issue #619, branch `work/issue-619-j1-n50-ws-audit-deadline-margin`, teste de buffer D313. Próximo: CI/revisão/merge sem deploy, depois preparar gate root específico que preserve N2. 24h/36h e crypto-only #319 não comprovadas.
+
+
+## J1/D336 — próximo gate de recuperação N50 (13/11/2026 UTC)
+Baseline GitHub `main=b20758c91fa94881ddcba9ec130d91bdf508076a`; PR D335 #620 integrada, N2 ativo e timers WS/rotação desativados em VPS por OnFailure após 17:02Z. Broker `vps_exec git -C /home/cia-probe/agent/repo rev-parse HEAD` retornou permission denied; não supor checkout real via esse acesso. `work/issue-619-j1-d336-transactional-recover`: script root `deploy/vps/recover_j1_n50_ws_d336_once.sh` com OLD_SHA D333 esperado `76ba09735b46e19e1e0af718c420d6a60cdd0067`, testes de isolamento/mocks, sem deploy. Gate pendente: CI/revisão/merge no commit SHA final, depois execução root em VPS já existente com preflight e rollback, novo lease real de 50/50. Não reaplicar D333, não enviar ordens, não declarar 24h/36h; issue #619 fica aberta até evidência operacional.
