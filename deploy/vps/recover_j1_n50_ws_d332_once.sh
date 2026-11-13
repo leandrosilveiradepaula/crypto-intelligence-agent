@@ -72,6 +72,7 @@ test "$($RUNUSER -u "$OWNER" -- "$GIT" -C "$CODE" rev-parse FETCH_HEAD)" = "$NEW
 $RUNUSER -u "$OWNER" -- "$GIT" -C "$CODE" checkout --quiet --detach "$NEW_SHA"
 test "$($RUNUSER -u "$OWNER" -- "$GIT" -C "$CODE" rev-parse HEAD)" = "$NEW_SHA"
 test -z "$($RUNUSER -u "$OWNER" -- "$GIT" -C "$CODE" status --porcelain)"
+test -f "$CODE/tests/test_j1_n50_ws_symbol_grammar_d332.py"
 test -f "$CODE/tests/test_j1_n50_ws_single_letter_usdt_d332.py"
 test -f "$CODE/scripts/audit_j1_n50_ws_symbol_grammar_d332_once.py"
 test -f "$CODE/crypto_intelligence_agent/j1_n50_ws_symbol_grammar_d332.py"
