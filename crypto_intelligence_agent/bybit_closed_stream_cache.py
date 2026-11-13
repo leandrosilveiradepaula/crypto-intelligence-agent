@@ -166,7 +166,7 @@ def parse_offline_confirmed_kline(
             or type(server_ms) is not int or server_ms < end + 1
             or server_ms > received_at_ms
             or received_at_ms - server_ms > MAX_SERVER_SKEW_MS
-            or received_at_ms - (end + 1) < 1000
+            or received_at_ms - (end + 1) < 0
             or received_at_ms - (end + 1) > MAX_WS_LAG_MS
             or scope.observed_at_ms > server_ms
             or server_ms - scope.observed_at_ms > MAX_SCOPE_AGE_MS
@@ -178,6 +178,8 @@ def parse_offline_confirmed_kline(
     # Reuse the already strict Bybit linear OHLC/BASE/QUOTE research validator.
     # Adapt WS fields to a *synthetic* single-row REST-shaped fixture; do not
     # mislabel the result as a raw REST response or authenticated provider data.
+    # Only WS confirm=true with server_ms >= end+1 and real receipt >= server_ms
+    # authorizes a sub-1s close. REST retains its independent 1s buffer.
     rest_shaped = {"retCode": 0, "result": {"category": "linear", "symbol": symbol, "list": [[
         str(start), row["open"], row["high"], row["low"], row["close"],
         row["volume"], row["turnover"],
@@ -188,7 +190,7 @@ def parse_offline_confirmed_kline(
         contract_observed_at_ms=member.observed_at_ms,
         observed_at_ms=received_at_ms, max_contract_age_ms=MAX_SCOPE_AGE_MS,
         interval="1h", start_open_ms=start, end_open_ms=start + HOUR_MS,
-        close_safety_ms=1000, max_candles=1,
+        close_safety_ms=0, max_candles=1,
     ).candles[0]
     payload = _json({
         "schema": _VERSION, "symbol": symbol,
@@ -236,7 +238,7 @@ def _validated_payload(raw: str, digest: str) -> dict:
             or value["server_ms"] - value["scope_observed_ms"] > MAX_SCOPE_AGE_MS
             or not start <= value["trade_ms"] <= end
             or not end + 1 <= value["server_ms"] <= value["received_ms"]
-            or not 1000 <= value["received_ms"] - (end + 1) <= MAX_WS_LAG_MS
+            or not 0 <= value["received_ms"] - (end + 1) <= MAX_WS_LAG_MS
             or value["received_ms"] - value["server_ms"] > MAX_SERVER_SKEW_MS):
         raise DataGapError("offline candle record temporal tamper")
     try:

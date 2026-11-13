@@ -42,6 +42,8 @@ def _report(status: str) -> dict[str, Any]:
         "private_ws_journal_created": False,
         "closed_events_appended_to_ws_journal": 0,
         "ws_sessions_attempted": 0,
+        "frames_seen": 0,
+        "preack_frames_discarded": 0,
         "subscription_acks": 0,
         "owner_lock_acquired": False,
         "rest_gap_reconciliation_required": False,
@@ -190,6 +192,8 @@ def run_cached_n50_ws_owner_window(
         out["closed_events_appended_to_ws_journal"] = detail[
             "closed_events_appended_to_ws_journal"]
         out["ws_sessions_attempted"] = detail["websocket_sessions_attempted"]
+        out["frames_seen"] = detail["frames_seen"]
+        out["preack_frames_discarded"] = detail["preack_frames_discarded"]
         out["subscription_acks"] = detail["subscriptions_acknowledged"]
         out["owner_lock_acquired"] = detail["owner_lock_acquired"]
         out["rest_gap_reconciliation_required"] = detail[

@@ -1275,3 +1275,7 @@ Em fixtures offline D313, confirmar que 50/50 WS gera zero URLs REST; 49/50 gera
 ## J1/D325 — degradacao limitada com continuidade WS/N2
 
 Verificar via tests/test_j1_n50_ws_degraded_continuation_d325.py: servico owner ativo com 47, 48 ou 49 fechamentos, lock e ACK preservados, gap marker permitido e nenhuma aprovacao PIT deve retornar exit 0, permitindo a hora seguinte; 46/50, tipo invalido, falta de opt-in, erro de rede, ACK incorreto, latencia que invalida a hora, codigo 10006 ou integrity drift devem retornar exit 65 ao systemd para restaurar N2. Provar percurso 3 horas 50 -> 49 -> 50, exatamente 149 velas confirmadas, 1 marcador de gap e ultima hora 50/50, sem inventar a hora ausente para o testemunho 24h. Regredir D313, D315, D317, D322, D324; CI Linux/docs, Windows/offline e Chrome/PAPER no HEAD final e merge sem VPS. Nao homologar 24h/36h com fixtures.
+
+## J1/D326 — WS confirm no limite UTC sem clock artificial
+
+Verificar offline que confirm=true com server_ms=received_ms=end_ms+1 e com +40/+90ms permite entrada e replay SQLite; confirm=false, server preclose, received preclose/futuro, atraso >120s e adulteracao permanecem rejeitados. Confirmar que auditoria fechada so permite >=+1000ms, Top50/24h nao ficam true e fonte nao e assinada. Testar classificacao generica para mensagens desconhecidas e especifica para erro interno de candle aberto apos ACK, sem valores/URL/simbolos. Regressoes D313, D315, D317, D323, D324, D325; Linux/docs, Windows/offline e PAPER no SHA revisado. Sem rede real, sem deploy, sem ordens.
