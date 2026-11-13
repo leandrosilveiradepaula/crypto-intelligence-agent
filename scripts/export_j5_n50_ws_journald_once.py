@@ -43,8 +43,11 @@ def _nonfinite(_: str) -> None:
 
 
 def _load(raw: str) -> Any:
-    return json.loads(raw, object_pairs_hook=_pairs_unique,
-                      parse_constant=_nonfinite)
+    try:
+        return json.loads(raw, object_pairs_hook=_pairs_unique,
+                          parse_constant=_nonfinite)
+    except (ValueError, json.JSONDecodeError):
+        raise DataValidationError("invalid bounded journalctl JSON") from None
 
 
 def export_n50_journald_progress(raw: bytes, *, now_ms: int) -> dict[str, Any]:
