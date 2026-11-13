@@ -1709,3 +1709,16 @@ Fonte GitHub: main 76a8d5731a2bd13c0a296cae92ac2e5428266658, PR #597/D324 merge 
 ## Incidente J1/D326 — D322 instalado, primeiro lease WS falhou e N2 restaurado (13/11/2026 UTC)
 
 Evidencia do operador: bootstrap D322 rank_network_requests=372, metadata_network_requests=1, n50_ws_epoch_rotation_complete, root release n50_ws_with_36h_rotation_enabled com preflight true. Gateway read-only 04:16Z: cia-j1-n50-ws.service Result=exit-code/ExecMainStatus=65 (start 02:59:31Z, end 03:00:00Z); journal: status=ws_owner_lease_degraded_abstain, failure_category=invalid_or_gapped_market_data, ACK=1, 0 candles, owner lock acquired=true, journal created=true, nenhum GET/ordem. Fallback 03:00:01–02Z sucesso, desabilitou ambos WS timers e reabilitou N2. WS/rot timer loaded/inactive/disabled; N2 loaded/active/enabled; N50 REST antigo disabled. Dados REST HALT preservados (1203 rows). Causa exata nao identificada porque logs nao guardam payload, e nao repetir bootstrap 372 GET nem ativar WS antes de corrigir. Branch work/issue-585-j1-d326-ws-confirm-boundary-recovery: remove buffer minimo de 1s APENAS para WS confirm=true apos close UTC; mantem servidor/receipt causal e replay, e fornece fail categories allowlisted e counters. CI/revisao/merge e release root com rollback N2 ainda pendentes nesta anotacao. A nova prova de 24h D323 e de 36h rotacao nao existe; #585/#429 abertas, sem ordens reais.
+
+## J1/D326 recovery runner added (13/11/2026 UTC, pre-CI)
+
+Existing D322 service WorkingDirectory confirmed read-only by
+systemctl: /home/cia-probe/agent/j1-n50-ws-70dec97d0a39-code-20261113T014549Z
+(owned by cia-probe). Recovery script is integrated into the D326 PR,
+but **not deployed**: operates only on exact old pinned source
+70dec97d0a3974ca15ead1dd3d3095532b9c6803, clean owner
+checkout, valid D321 pointer and saved N2 fallback. Updates code to
+new reviewed SHA in place; reuses installed systemd units with rollback.
+Actual host currently has WS/rotation disabled and N2 active.
+Never rerun D322 initial bootstrap. Next requires CI/review/merge and
+a root-gated deployment, with first real close observed afterwards.

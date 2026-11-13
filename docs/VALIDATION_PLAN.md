@@ -1279,3 +1279,14 @@ Verificar via tests/test_j1_n50_ws_degraded_continuation_d325.py: servico owner 
 ## J1/D326 — WS confirm no limite UTC sem clock artificial
 
 Verificar offline que confirm=true com server_ms=received_ms=end_ms+1 e com +40/+90ms permite entrada e replay SQLite; confirm=false, server preclose, received preclose/futuro, atraso >120s e adulteracao permanecem rejeitados. Confirmar que auditoria fechada so permite >=+1000ms, Top50/24h nao ficam true e fonte nao e assinada. Testar classificacao generica para mensagens desconhecidas e especifica para erro interno de candle aberto apos ACK, sem valores/URL/simbolos. Regressoes D313, D315, D317, D323, D324, D325; Linux/docs, Windows/offline e PAPER no SHA revisado. Sem rede real, sem deploy, sem ordens.
+
+## J1/D326 controlled root recovery verification
+
+Static/offline test tests/test_j1_n50_ws_recovery_release_d326.py
+validates bash -n, old source SHA pin, no D322 bootstrap calls,
+revalidation of clean owner code before checkout, no systemd mutation
+before offline tests, explicit fallback N2 and no destructive cleanup.
+The executable itself is never invoked in CI or via the limited MCP.
+After a reviewed merge and root-executed recovery, confirm N2 disabled,
+WS and rotation timers enabled and first subsequent WS service result;
+verify there is no full ranking GET repeat or overwriting N50 REST HALT.
