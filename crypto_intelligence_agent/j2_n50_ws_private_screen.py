@@ -71,7 +71,7 @@ def _blank(status: str) -> dict[str, Any]:
 def _private_journal_file(journal: SQLiteOfflineClosedStreamJournal) -> Path:
     """Require the isolated owner WS journal, never the halted REST one."""
     path = journal.path
-    if (type(path) is not Path or not path.is_absolute()
+    if (not isinstance(path, Path) or not path.is_absolute()
             or path.name != "ws-confirmed.sqlite"
             or path.is_symlink()
             or path.resolve(strict=True) != path):
