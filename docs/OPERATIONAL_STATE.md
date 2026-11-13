@@ -1806,3 +1806,7 @@ Baseline GitHub `main=b20758c91fa94881ddcba9ec130d91bdf508076a`; PR D335 #620 in
 
 ## J5/PROGRESS1 — progresso mobile sem afetar J1 (13/11/2026 UTC)
 Issue #622, branch `work/issue-622-j5-n50-hourly-progress`, base main `61aead8870166ddbc0b3a4c27d8924e320c477b1`. Arquivos: `crypto_intelligence_agent/j5_n50_ws_hour_progress.py`, `scripts/render_j5_n50_ws_log_progress_once.py`, `tests/test_j5_n50_ws_hour_progress.py`, `docs/J5_N50_WS_LOG_PROGRESS.md`. Testes/CI e review pendentes; sem deploy/ordem, só logs sanitizados injetados offline. Próxima ação: abrir PR, validar gates, merge sem deploy. Gate operativo N50 D336 não alterado; D323 de 24h e rotação 36h continuam soberanos, não inferir deles a partir de contagens de log.
+
+
+## J2/WS-READ1 — adaptador privado WS, nenhum deploy (13/11/2026 UTC)
+Base main confirmada `d90bfd844e9dcba3e89510dcf4e7f48ebbe85beb`, issue #624, branch `work/issue-624-j2-ws-readonly-24h`. Módulo `crypto_intelligence_agent/j2_n50_ws_private_screen.py`, tests `tests/test_j2_n50_ws_private_screen.py`, contrato `docs/J2_N50_WS_PRIVATE_24H.md` e documentação versionada. Gate pendente: CI Linux/docs, Windows/offline, PAPER/mobile no head revisado, merge sem deploy. J1 serviço WS real 18:00 UTC 50/50 confirmado; próxima validação 19:00 UTC após timer, homologação D323 24h + rotação >=36h e #319 ainda abertas. A ponte J2 não lê dados reais sem chamada owner separada, não consulta API nem emite ordens.
