@@ -1373,3 +1373,7 @@ Testar `tests/test_j1_n50_ws_root_recovery_d336.py`: `bash -n` sintético, SHA D
 
 ## J5/PROGRESS1 — verificações de progresso log-derived (#622)
 Executar `python -m unittest discover -s tests -p test_j5_n50_ws_hour_progress.py -v`, compileall e suite Linux/docs+Windows/offline+PAPER/mobile no SHA exato. Falsificar 50 appends com status audit-abstain, duplicatas, gaps, UTC prematuro +2min, SHA ausente, tipos bool/int, JSON com chave duplicada, registros futuros e status malicioso; nenhum caso deve promover 24h formal ou renderizar símbolos, preços, SHA ou HTML arbitrário. Conferir CLI sem optin não lê stdin; com JSON <=1MiB produz só contagens ou HTML CSP no stdout. Sem deploy, banco, ordens ou chamadas REST. Referência #622 e D323.
+
+
+## J2/WS-READ1 — integridade do journal WS 50×24 (#624)
+Executar `python -m unittest discover -s tests -p test_j2_n50_ws_private_screen.py -v`, regressões D313/D323 e J2 D300, compileall e suíte offline (Linux/docs, Windows/offline, PAPER/mobile). Criar journal WS privado 0600 de 1.200 candles (50 contratos×24 candles), comprovar métrica BTC, rompimento, ATR e turnover reutilizando D300; negar sem opt-in, 49/50, digest adulterado, data futura, janela após +59min, escopo/registry mismatch, symlink/nome REST, diferença entre snapshots e valores privados no relatório default. Confirmar `formal_d323_24h_verified=false`, `approved_for_signals=false`, `orders_sent=false` e nenhuma conexão de rede. Verificar SHA, diff, CI e merge sem deploy. Pesquisa ao vivo só depois de 24h real + gate owner explícito. #624.
