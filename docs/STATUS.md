@@ -1562,3 +1562,8 @@ Primeira CI do D332 encontrou bloqueio adicional no journal imutável: regex de 
 ## J1/D333 — recuperação transacional robusta (13/11/2026 UTC)
 
 VPS conferida read-only: WS/rotação inactive/disabled após D331 exit65 15:00:03 UTC, N2 active/enabled e último serviço N2 success 15:02:04 UTC. D332 entrou na main `de26e3afb43fe4813ca66cc6dbf08c541e19526d`, mas não foi instalada. Novo bloco #611 corrige risco operacional: um preflight owner D332 que abstivesse após checkout deixaria o código em SHA novo apesar de N2 seguro. `recover_j1_n50_ws_d333_once.sh` registra trap antes do checkout e retorna old SHA em falha, junto com N2 se necessário; testes com mocks validam preflight, cutover, falhas de rollback e sucesso. Não há prova de 50/50, 24h, 36h ou identidade marketwide. CI/PR/revisão e root gate são separados, sem ordens.
+
+
+## J3/PRE29 — composição de risco do runner residual (13/11/2026 UTC)
+
+Frente paralela à J1 D333: issue #613, branch `work/issue-613-j3-pre29-runner-liquidation-gate`, módulo `synthetic_runner_liquidation_gate.py` e teste de trajetórias sintéticas. J4 #607 já calcula a saída residual com custos, mas não verifica se mark path J3 poderia ter indicado liquidação, stop ou target ANTES do encerramento declarado. J3/PRE29 vincula fixtures financeiros e ticks, permite net apenas como referência condicional no caminho discreto sem terminal; omite o net quando terminal de mark/stop/target surge, preservando todas as flags de trading/liquidação real falsas. Proxy mantém notional inicial e não modela redução após parcial. Doc `docs/J3_RUNNER_CONDITIONAL_RISK_GATE.md`; PR/CI/merge ainda candidatos neste registro. J1 D333 timers já armados pelo operador, auditoria futura independente. Sem deploy, dados reais, ordens nem custo extra.
