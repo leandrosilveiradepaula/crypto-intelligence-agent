@@ -10,11 +10,13 @@ from typing import Iterable
 
 from .bybit_closed_stream_cache import (
     OfflineReviewedStreamScope, SQLiteOfflineClosedStreamJournal,
-    parse_offline_confirmed_kline,
+    MAX_WS_LAG_MS, parse_offline_confirmed_kline,
 )
 from .bybit_public_ws_once import _bounded_json, _subscription_ack, _is_public_pong
 from .market_data import DataValidationError
-from .j1_n50_ws_temporal_quarantine import classify_non_evidence_closed_frame
+from .j1_n50_ws_temporal_quarantine import (
+    TRADE_OUT_OF_HOUR, classify_non_evidence_closed_frame,
+)
 
 MAX_BATCH_FRAMES = 4096
 
@@ -28,6 +30,9 @@ class OfflineWSBatch:
     acknowledged: bool
     ignored_open_trade_clock: int = 0
     discarded_closed_temporal: tuple[int, int, int] = (0, 0, 0)
+    accepted_postclose_trade_clock: int = 0
+    discarded_trade_before_start: int = 0
+    discarded_trade_after_end_unbounded: int = 0
 
     def sanitized_report(self) -> dict:
         return {
@@ -38,6 +43,9 @@ class OfflineWSBatch:
             "discarded_closed_trade_clock": self.discarded_closed_temporal[0],
             "discarded_closed_preclose": self.discarded_closed_temporal[1],
             "discarded_closed_stale": self.discarded_closed_temporal[2],
+            "accepted_postclose_trade_clock": self.accepted_postclose_trade_clock,
+            "discarded_trade_before_start": self.discarded_trade_before_start,
+            "discarded_trade_after_end_unbounded": self.discarded_trade_after_end_unbounded,
             "closed_events_appended": self.appended,
             "identical_replays": self.identical_replays,
             "subscription_acknowledged": self.acknowledged,
@@ -53,7 +61,8 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                             journal: SQLiteOfflineClosedStreamJournal,
                             require_ack: bool = True,
                             allow_declared_gap: bool = False,
-                            allow_temporal_discard: bool = False) -> OfflineWSBatch:
+                            allow_temporal_discard: bool = False,
+                            allow_server_bounded_trade_clock: bool = False) -> OfflineWSBatch:
     """Consume a bounded pre-recorded batch, never making network calls.
 
     Each item carries its explicit receive timestamp, not process wall time.
@@ -63,10 +72,13 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
             or type(journal) is not SQLiteOfflineClosedStreamJournal
             or type(require_ack) is not bool
             or type(allow_declared_gap) is not bool
-            or type(allow_temporal_discard) is not bool):
+            or type(allow_temporal_discard) is not bool
+            or type(allow_server_bounded_trade_clock) is not bool
+            or (allow_server_bounded_trade_clock and not allow_temporal_discard)):
         raise DataValidationError("offline WS scope, journal or ACK policy invalid")
     count = opened = appended = replayed = ignored_open = 0
     temporal_discards = [0, 0, 0]
+    postclose_accepted = before_start = after_end_unbounded = 0
     ack = not require_ack
     subscribed = {"kline.60." + member.symbol for member in scope.contracts}
     for item in frames:
@@ -121,11 +133,27 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
                 reason = (classify_non_evidence_closed_frame(
                     one, scope=scope, received_at_ms=item[1],
                 ) if allow_temporal_discard else None)
-                if reason is not None:
+                postclose = (
+                    allow_server_bounded_trade_clock
+                    and reason == TRADE_OUT_OF_HOUR
+                    and row["end"] < row["timestamp"] <= payload["ts"]
+                    and payload["ts"] >= row["end"] + 1
+                    and 0 <= item[1] - (row["end"] + 1) <= MAX_WS_LAG_MS
+                )
+                if reason is not None and not postclose:
                     temporal_discards[reason] += 1
+                    if reason == TRADE_OUT_OF_HOUR:
+                        if row["timestamp"] < row["start"]:
+                            before_start += 1
+                        else:
+                            after_end_unbounded += 1
                     continue
                 pending_closed.append(parse_offline_confirmed_kline(
-                    one, scope=scope, received_at_ms=item[1]))
+                    one, scope=scope, received_at_ms=item[1],
+                    allow_server_bounded_trade_clock=postclose,
+                ))
+                if postclose:
+                    postclose_accepted += 1
             elif row["confirm"] is False:
                 # An open update must be fully checked, but cannot be stored.
                 from .bybit_linear_candle_research import _strict_decimal
@@ -165,4 +193,5 @@ def ingest_offline_ws_batch(*, frames: Iterable[tuple[str | bytes, int]],
     if not ack:
         raise DataValidationError("offline WS ACK missing")
     return OfflineWSBatch(count, opened, appended, replayed, ack, ignored_open,
-                          tuple(temporal_discards))
+                          tuple(temporal_discards), postclose_accepted,
+                          before_start, after_end_unbounded)

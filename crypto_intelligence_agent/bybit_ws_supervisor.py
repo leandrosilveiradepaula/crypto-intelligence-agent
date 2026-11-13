@@ -119,6 +119,9 @@ class WSRunReport:
     preack_frames_discarded: int = 0
     ignored_open_trade_clock: int = 0
     discarded_closed_temporal: tuple[int, int, int] = (0, 0, 0)
+    accepted_postclose_trade_clock: int = 0
+    discarded_trade_before_start: int = 0
+    discarded_trade_after_end_unbounded: int = 0
 
     def sanitized_report(self) -> dict:
         return {
@@ -135,6 +138,9 @@ class WSRunReport:
             "discarded_closed_trade_clock": self.discarded_closed_temporal[0],
             "discarded_closed_preclose": self.discarded_closed_temporal[1],
             "discarded_closed_stale": self.discarded_closed_temporal[2],
+            "accepted_postclose_trade_clock": self.accepted_postclose_trade_clock,
+            "discarded_trade_before_start": self.discarded_trade_before_start,
+            "discarded_trade_after_end_unbounded": self.discarded_trade_after_end_unbounded,
             "closed_events_appended": self.closed_events_appended,
             "identical_replays": self.identical_replays,
             "early_frames_buffered": self.early_frames_buffered,
@@ -179,6 +185,7 @@ def supervise_ws_research(
     sleeper: Callable[[float], None] = time.sleep,
     allow_declared_gaps: bool = False,
     allow_temporal_discard: bool = False,
+    allow_server_bounded_trade_clock: bool = False,
 ) -> WSRunReport:
     """Collect confirmed hourly WS events for a finite, *injected* lease.
 
@@ -196,12 +203,15 @@ def supervise_ws_research(
             or type(journal) is not SQLiteOfflineClosedStreamJournal
             or type(budget) is not WSRunBudget
             or type(allow_declared_gaps) is not bool
-            or type(allow_temporal_discard) is not bool):
+            or type(allow_temporal_discard) is not bool
+            or type(allow_server_bounded_trade_clock) is not bool
+            or (allow_server_bounded_trade_clock and not allow_temporal_discard)):
         raise DataValidationError("injected WS research capabilities required")
     groups = _topic_batches(scope)
     all_topics = frozenset(topic for batch in groups for topic in batch)
     frames = opened = appended = replayed = preack_discarded = ignored_open = 0
     discarded_closed = [0, 0, 0]
+    accepted_postclose = discarded_before = discarded_after = 0
     sessions = complete_sessions = sends = acks = pings = pongs = 0
     started = clock()
     if type(started) not in (int, float) or not math.isfinite(started):
@@ -212,7 +222,8 @@ def supervise_ws_research(
                            max(0, sessions - 1), sends, acks, frames, opened,
                            appended, replayed, 0, pings, pongs,
                            preack_discarded, ignored_open,
-                           tuple(discarded_closed))
+                           tuple(discarded_closed), accepted_postclose,
+                           discarded_before, discarded_after)
 
     for attempt in range(budget.max_sessions):
         if attempt:
@@ -245,14 +256,19 @@ def supervise_ws_research(
 
                 def ingest(frame: str | bytes, at_ms: int) -> None:
                     nonlocal opened, appended, replayed, ignored_open
+                    nonlocal accepted_postclose, discarded_before, discarded_after
                     batch = ingest_offline_ws_batch(
                         frames=((frame, at_ms),), scope=scope,
                         journal=journal, require_ack=False,
                         allow_declared_gap=allow_declared_gaps,
                         allow_temporal_discard=allow_temporal_discard,
+                        allow_server_bounded_trade_clock=allow_server_bounded_trade_clock,
                     )
                     opened += batch.open_updates
                     ignored_open += batch.ignored_open_trade_clock
+                    accepted_postclose += batch.accepted_postclose_trade_clock
+                    discarded_before += batch.discarded_trade_before_start
+                    discarded_after += batch.discarded_trade_after_end_unbounded
                     for i, n in enumerate(batch.discarded_closed_temporal):
                         discarded_closed[i] += n
                     # At most three discarded closed candidates per member

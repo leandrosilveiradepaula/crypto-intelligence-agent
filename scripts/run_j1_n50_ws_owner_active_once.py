@@ -99,6 +99,7 @@ def main(argv:list[str]|None=None)->int:
             allow_create_ws_journal=a.allow_create_ws_journal,
             allow_declared_ws_gap=True,
             allow_temporal_discard=True,
+            allow_server_bounded_trade_clock=True,
         )
     except (OSError,ValueError,RuntimeError,TypeError,ImportError,
             OverflowError,KeyError,UnicodeError):

@@ -51,6 +51,9 @@ def _result(status: str) -> dict:
         "discarded_closed_trade_clock": 0,
         "discarded_closed_preclose": 0,
         "discarded_closed_stale": 0,
+        "accepted_postclose_trade_clock": 0,
+        "discarded_trade_before_start": 0,
+        "discarded_trade_after_end_unbounded": 0,
         "rest_gap_reconciliation_required": False,
         "http_gets": 0,
         "rest_database_modified": False,
@@ -75,6 +78,7 @@ def run_n50_ws_owner_hour_once(
     allow_injected_public_ws: bool = False,
     allow_declared_ws_gap: bool = False,
     allow_temporal_discard: bool = False,
+    allow_server_bounded_trade_clock: bool = False,
     budget: WSRunBudget = WSRunBudget(max_sessions=1, max_frames=4096, max_seconds=60),
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
@@ -100,6 +104,8 @@ def run_n50_ws_owner_hour_once(
             or type(budget) is not WSRunBudget
             or type(allow_declared_ws_gap) is not bool
             or type(allow_temporal_discard) is not bool
+            or type(allow_server_bounded_trade_clock) is not bool
+            or (allow_server_bounded_trade_clock and not allow_temporal_discard)
             or not callable(session_factory)
             or not callable(clock) or not callable(wall_ms)
             or not callable(sleeper)
@@ -152,6 +158,7 @@ def run_n50_ws_owner_hour_once(
                 budget=budget, clock=clock, wall_ms=wall_ms, sleeper=sleeper,
                 allow_declared_gaps=allow_declared_ws_gap,
                 allow_temporal_discard=allow_temporal_discard,
+                allow_server_bounded_trade_clock=allow_server_bounded_trade_clock,
             )
             out["websocket_sessions_attempted"] = run.sessions_attempted
             out["subscriptions_acknowledged"] = run.subscriptions_acknowledged
@@ -163,6 +170,9 @@ def run_n50_ws_owner_hour_once(
             out["discarded_closed_trade_clock"] = run.discarded_closed_temporal[0]
             out["discarded_closed_preclose"] = run.discarded_closed_temporal[1]
             out["discarded_closed_stale"] = run.discarded_closed_temporal[2]
+            out["accepted_postclose_trade_clock"] = run.accepted_postclose_trade_clock
+            out["discarded_trade_before_start"] = run.discarded_trade_before_start
+            out["discarded_trade_after_end_unbounded"] = run.discarded_trade_after_end_unbounded
 
             # A frame-cap or failed ACK may have saved partial legitimate rows,
             # but it cannot be promoted as a healthy complete hour.
