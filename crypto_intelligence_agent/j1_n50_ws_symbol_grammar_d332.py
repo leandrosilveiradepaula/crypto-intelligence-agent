@@ -13,6 +13,7 @@ import time
 from typing import Any
 
 from .bybit_closed_stream_cache import OfflineReviewedStreamScope
+from .bybit_instrument_volume_contract import BybitLinearInstrumentResearch
 from .bybit_linear_candle_research import _SYMBOL as _CANDLE_SYMBOL
 from .j1_auto_usdt_perp import _SYMBOL as _AUTO_SYMBOL
 from .j1_auto_research_epoch import validate_ranked_research_scope
@@ -55,7 +56,8 @@ def evaluate_n50_ws_symbol_grammar(scope: object) -> dict[str, Any]:
     for member in scope.contracts:
         symbol = getattr(member, "symbol", None)
         base = getattr(member, "base_coin", None)
-        if (type(symbol) is not str or type(base) is not str
+        if (type(member) is not BybitLinearInstrumentResearch
+                or type(symbol) is not str or type(base) is not str
                 or symbol in symbols or not _AUTO_SYMBOL.fullmatch(symbol)
                 or symbol != base + "USDT"
                 or getattr(member, "quote_coin", None) != "USDT"
