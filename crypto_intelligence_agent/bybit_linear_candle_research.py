@@ -30,7 +30,10 @@ _INTERVALS = frozenset({
 })
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?")
 _TIMESTAMP = re.compile(r"(?:0|[1-9][0-9]{0,15})")
-_SYMBOL = re.compile(r"^[A-Z0-9]{2,30}(?:USDT|USDC)$")
+# A reviewed one-character base can be admitted by J1 auto USDT ranking.
+# Preserve the existing max length and uppercase/alphanumeric + quote suffix;
+# candle acceptance still requires complete scope, clock and OHLC checks.
+_SYMBOL = re.compile(r"^[A-Z0-9]{1,30}(?:USDT|USDC)$")
 
 
 @dataclass(frozen=True)
