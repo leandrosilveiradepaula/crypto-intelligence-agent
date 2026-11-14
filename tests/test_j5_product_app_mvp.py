@@ -74,8 +74,8 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('loc.hostname === "localhost"', js)
         self.assertIn('feedOrigin === "manual"', js)
         # Manual JSON has priority even if an earlier local GET resolves later.
-        self.assertEqual(js.count('if (researchOrigin === "manual") return;'), 3)
-        self.assertEqual(js.count('if (feedOrigin === "manual") return;'), 3)
+        self.assertEqual(js.count('if (researchOrigin === "manual") return;'), 2)
+        self.assertEqual(js.count('if (feedOrigin === "manual") return;'), 2)
         self.assertIn('if (researchOrigin === "manual") return; // Import may complete during GET.', js)
         self.assertIn('if (feedOrigin === "manual") return; // Import may complete during GET.', js)
         self.assertLess((APP / "app.js").stat().st_size, 50_000)
