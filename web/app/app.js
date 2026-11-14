@@ -328,10 +328,12 @@
       check(raw.length > 0 && raw.length < MAX_SNAPSHOT,
         "Relatório da fonte local fora do limite");
       const candidate = validateFeed(JSON.parse(raw));
+      if (feedOrigin === "manual") return; // Import may complete during GET.
       feed = candidate;
       feedOrigin = "local-auto";
       render();
     } catch (_) {
+      if (feedOrigin === "manual") return;
       // Never display a stale 50/50 as if the server still responded.
       feed = null;
       feedOrigin = "none";
@@ -358,10 +360,12 @@
       const candidate = validateResearch(JSON.parse(raw));
       check(candidate.research_rows.length === 0,
         "Servidor local J2 deve retornar apenas agregados");
+      if (researchOrigin === "manual") return; // Import may complete during GET.
       research = candidate;
       researchOrigin = "local-auto";
       renderResearch();
     } catch (_) {
+      if (researchOrigin === "manual") return;
       // Do not retain a once-valid breakout as a current observation.
       research = null;
       researchOrigin = "none";
