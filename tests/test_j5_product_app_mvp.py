@@ -51,6 +51,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('PAPER · OFFLINE', html)
         self.assertIn('Não conectado', html)
         self.assertIn("50x", html)
+        self.assertIn('id="quality-n50"', html)
+        self.assertIn('id="quality-j2"', html)
+        self.assertIn("Qualidade dos dados", html)
         self.assertNotIn("api.bybit.com", html)
 
     def test_browser_code_has_no_transport_or_dynamic_html_execution(self):
@@ -73,6 +76,10 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('loc.hostname === "127.0.0.1"', js)
         self.assertIn('loc.hostname === "localhost"', js)
         self.assertIn('feedOrigin === "manual"', js)
+        self.assertIn("function renderQuality()", js)
+        self.assertIn("relatório obsoleto", js)
+        self.assertIn("janela privada íntegra", js)
+        self.assertIn("pesquisa agregada disponível", js)
         # Manual JSON has priority even if an earlier local GET resolves later.
         self.assertEqual(js.count('if (researchOrigin === "manual") return;'), 2)
         self.assertEqual(js.count('if (feedOrigin === "manual") return;'), 2)
