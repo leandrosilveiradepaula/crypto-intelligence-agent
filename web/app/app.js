@@ -364,12 +364,14 @@
       research = candidate;
       researchOrigin = "local-auto";
       renderResearch();
+      renderQuality();
     } catch (_) {
       if (researchOrigin === "manual") return;
       // Do not retain a once-valid breakout as a current observation.
       research = null;
       researchOrigin = "none";
       renderResearch();
+      renderQuality();
       set("research-status", "J2 ainda indisponível");
     }
   }
@@ -408,12 +410,26 @@
       });
     }
   }
+  function renderQuality() {
+    const recent = feed && feed.slots[23].closed_end_ms >= Date.now() - 2 * HOUR;
+    const n50 = !feed ? "N50: fonte indisponível ou sem relatório." :
+      !recent ? "N50: relatório obsoleto; atualização necessária." :
+      "N50: " + feed.observed_50_of_50_hours + "/24 horas 50/50 observadas em logs" +
+      (feedOrigin === "manual" ? " (importação manual)." : " (fonte local).");
+    const j2 = !research ? "J2: aguardando janela privada íntegra de 50 × 24h." :
+      researchOrigin === "manual" ? "J2: pesquisa descritiva importada manualmente; sem sinais." :
+      !recent ? "J2: fonte N50 ausente ou obsoleta; prontidão não comprovada." :
+      "J2: pesquisa agregada disponível; não equivale à homologação J1 nem a sinal.";
+    set("quality-n50", n50);
+    set("quality-j2", j2);
+  }
   function render() {
     updateSummary();
     updateSettings();
     renderPositions();
     renderFeed();
     renderResearch();
+    renderQuality();
   }
   function bind() {
     $("refresh-research-local").addEventListener("click", () => {
