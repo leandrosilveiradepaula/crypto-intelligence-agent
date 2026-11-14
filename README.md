@@ -282,3 +282,6 @@ O primeiro console mobile utilizável está em **[`web/app/index.html`](web/app/
 
 ## J5 — atualização automática N50 exclusivamente local
 O console em `web/app/index.html` continua abrindo offline (`file://`, sem nenhuma conexão). No modo autorizado **loopback**, o novo `scripts.serve_j5_local_readonly` pode servir a página em `http://127.0.0.1:8765/` e alimentar a saúde N50 automaticamente do journalctl por GET a cada 60 segundos, sem importar arquivos manualmente. Não há deploy, listener público, senha/conta ou acesso ao celular pela Internet autorizado nesta etapa; execução na VPS e disponibilidade remota exigem gate separado. Veja `docs/J5_LOOPBACK_AUTO_STATUS.md`. Simulação PAPER jamais envia ordens.
+
+
+**Pesquisa descritiva J2 no painel local:** com a integração J5/APP-SYNC2 (#632), o mesmo servidor loopback terá `GET /api/j2-research`, validando o journal owner 50×24 via wrapper J2 já existente e atualizando agregados a cada 5 minutos. Sem as 24 horas reais a seção permanece indisponível; nenhum contrato é apresentado como oportunidade validada. Nenhum dado privado é publicado nem a VPS é alterada pelo merge. `docs/J5_LOOPBACK_AUTO_STATUS.md`.

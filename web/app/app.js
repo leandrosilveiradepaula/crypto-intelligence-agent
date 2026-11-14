@@ -11,6 +11,7 @@
   let feed = null;
   let feedOrigin = "none"; // local-auto, manual, or none
   let research = null;
+  let researchOrigin = "none";
   let storageAvailable = true;
 
   function el(tag, className, content) {
@@ -327,15 +328,49 @@
       check(raw.length > 0 && raw.length < MAX_SNAPSHOT,
         "Relatório da fonte local fora do limite");
       const candidate = validateFeed(JSON.parse(raw));
+      if (feedOrigin === "manual") return; // Import may complete during GET.
       feed = candidate;
       feedOrigin = "local-auto";
       render();
     } catch (_) {
+      if (feedOrigin === "manual") return;
       // Never display a stale 50/50 as if the server still responded.
       feed = null;
       feedOrigin = "none";
       render();
       set("feed-status", "Fonte local indisponível");
+    }
+  }
+
+  async function refreshLocalResearch() {
+    // Reuse the exact private J2 50×24 readonly schema, never a trading signal.
+    // No request occurs for file://, remote hosts or manual J2 imports.
+    if (!isLocalReadOnlyOrigin() || researchOrigin === "manual") return;
+    try {
+      const response = await window.fetch("/api/j2-research", {
+        method: "GET", credentials: "omit",
+        cache: "no-store", redirect: "error"
+      });
+      check(response.ok && response.status === 200 &&
+        (response.headers.get("content-type") || "").startsWith("application/json"),
+        "Pesquisa J2 não disponível");
+      const raw = await response.text();
+      check(raw.length > 0 && raw.length < MAX_SNAPSHOT,
+        "Pesquisa J2 local fora do limite");
+      const candidate = validateResearch(JSON.parse(raw));
+      check(candidate.research_rows.length === 0,
+        "Servidor local J2 deve retornar apenas agregados");
+      if (researchOrigin === "manual") return; // Import may complete during GET.
+      research = candidate;
+      researchOrigin = "local-auto";
+      renderResearch();
+    } catch (_) {
+      if (researchOrigin === "manual") return;
+      // Do not retain a once-valid breakout as a current observation.
+      research = null;
+      researchOrigin = "none";
+      renderResearch();
+      set("research-status", "J2 ainda indisponível");
     }
   }
 
@@ -346,7 +381,8 @@
       set("research-status", "Aguardando 24h");
       return;
     }
-    set("research-status", "Descritivo · local");
+    set("research-status", researchOrigin === "local-auto" ?
+      "Descritivo · fonte local" : "Descritivo · importado");
     set("research-count", research.audited_assets);
     set("research-breakout", research.descriptive_up_breakouts);
     set("research-down", research.descriptive_down_breakouts);
@@ -380,6 +416,13 @@
     renderResearch();
   }
   function bind() {
+    $("refresh-research-local").addEventListener("click", () => {
+      if (researchOrigin === "manual") {
+        warn("O JSON J2 importado tem prioridade nesta sessão. Recarregue a página para voltar à pesquisa local.", false);
+      } else {
+        void refreshLocalResearch();
+      }
+    });
     $("refresh-local").addEventListener("click", () => {
       if (feedOrigin === "manual") {
         warn("O JSON N50 importado manualmente tem prioridade nesta sessão. Recarregue a página para reativar a fonte local.", false);
@@ -447,7 +490,8 @@
           warn("Relatório N50 carregado localmente. Substitui a atualização automática nesta sessão.", false);
         } else if (payload.schema_version === "j2-ws-n50-descriptive-24closed-v1") {
           research = validateResearch(payload);
-          warn("Pesquisa descritiva J2 carregada. Isso não é recomendação de entrada.", false);
+          researchOrigin = "manual";
+          warn("Pesquisa J2 importada; ela terá prioridade nesta sessão. Não é recomendação de entrada.", false);
         } else throw new Error("Schema JSON desconhecido. Importe somente relatórios sanitizados N50/J2.");
         render();
       } catch (err) {
@@ -486,7 +530,10 @@
   render();
   if (isLocalReadOnlyOrigin()) {
     $("refresh-local").hidden = false;
+    $("refresh-research-local").hidden = false;
     void refreshLocalFeed();
+    void refreshLocalResearch();
     window.setInterval(() => { void refreshLocalFeed(); }, 60_000);
+    window.setInterval(() => { void refreshLocalResearch(); }, 300_000);
   }
 })();

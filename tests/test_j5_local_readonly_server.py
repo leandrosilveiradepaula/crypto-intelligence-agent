@@ -106,6 +106,73 @@ class SourceProjectionTests(unittest.TestCase):
         self.assertFalse(result["network_public"])
 
 
+class ResearchProjectionTests(unittest.TestCase):
+    def synthetic_ready(self):
+        from crypto_intelligence_agent.j2_n50_ws_private_screen import _blank
+        result = _blank("ws_n50_descriptive_24h_ready")
+        result.update(
+            audited_assets=50, eligible_closed_bars_per_asset=24,
+            ws_journal_integrity_replayed=True,
+            window_digest_sha256="a" * 64,
+            descriptive_up_breakouts=12,
+            descriptive_down_breakouts=5,
+            descriptive_inside_bars=33,
+            latest_closed_end_ms=NOW-NOW%HOUR_MS,
+        )
+        return result
+
+    def test_exact_owner_readonly_gates_and_allowlisted_50_24(self):
+        value = self.synthetic_ready()
+        value["private_symbol"] = "BTCUSDT"
+        value["private_directory"] = "/home/cia-probe/private"
+        with patch.object(
+            panel, "observe_active_private_ws_n50_24closed",
+            return_value=value,
+        ) as observe:
+            result = panel.read_j2_descriptive()
+        observe.assert_called_once_with(
+            allow_private_readonly_research=True,
+            include_private_symbols=False,
+        )
+        self.assertEqual(result["audited_assets"], 50)
+        self.assertEqual(result["descriptive_up_breakouts"], 12)
+        self.assertEqual(result["research_rows"], [])
+        self.assertFalse(result["formal_d323_24h_verified"])
+        self.assertFalse(result["approved_for_signals"])
+        output = json.dumps(result)
+        for hidden in ("BTCUSDT", "private_directory", "/home/"):
+            self.assertNotIn(hidden, output)
+        self.assertNotIn("ranked_scope_sha256", output)
+        self.assertNotIn("ws_metadata_sha256", output)
+
+    def test_no_24h_no_crypto_approval_no_symbols_and_no_order(self):
+        from crypto_intelligence_agent.j2_n50_ws_private_screen import _blank
+        bads = (
+            _blank("owner_ws_readonly_research_abstain"),
+            {**self.synthetic_ready(), "research_rows":[{"symbol":"BTCUSDT"}]},
+            {**self.synthetic_ready(), "approved_for_signals":True},
+            {**self.synthetic_ready(), "orders_sent":True},
+            {**self.synthetic_ready(), "audited_assets":49},
+            {**self.synthetic_ready(), "descriptive_up_breakouts":11},
+            {**self.synthetic_ready(), "network_requests":1},
+            {**self.synthetic_ready(), "window_digest_sha256":None},
+        )
+        for bad in bads:
+            with self.subTest(status=bad.get("status")), patch.object(
+                panel, "observe_active_private_ws_n50_24closed",
+                return_value=bad,
+            ), self.assertRaises(panel.SourceNotReady):
+                panel.read_j2_descriptive()
+
+    def test_owner_read_error_is_sanitized(self):
+        with patch.object(
+            panel, "observe_active_private_ws_n50_24closed",
+            side_effect=OSError("private path and secret"),
+        ), self.assertRaises(panel.SourceNotReady) as error:
+            panel.read_j2_descriptive()
+        self.assertNotIn("private path", str(error.exception))
+
+
 class LoopbackHTTPTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -148,6 +215,31 @@ class LoopbackHTTPTests(unittest.TestCase):
                        "/%2e%2e/docs/STATUS.md", "/api/orders", "/api/n50-progress?x=1"):
             with self.subTest(path=denied):
                 self.assertEqual(self.get("GET", denied)[0], 404)
+
+    def test_private_j2_endpoint_returns_only_sanitized_counts(self):
+        payload = ResearchProjectionTests().synthetic_ready()
+        with patch.object(panel, "read_j2_descriptive", return_value=payload):
+            code, headers, body = self.get("GET", "/api/j2-research")
+        self.assertEqual(code, 200)
+        self.assertEqual(headers["Cache-Control"], "no-store, max-age=0")
+        result = json.loads(body)
+        self.assertEqual(result["audited_assets"], 50)
+        self.assertEqual(result["research_rows"], [])
+        self.assertFalse(result["approved_for_signals"])
+        self.assertEqual(self.get("POST", "/api/j2-research")[0], 405)
+        self.assertEqual(
+            self.get("GET", "/api/j2-research", "evil.example:8765")[0],
+            403,
+        )
+
+    def test_private_j2_pending_never_leaks_information(self):
+        with patch.object(panel, "read_j2_descriptive",
+                          side_effect=panel.SourceNotReady("/secret/owner")):
+            code, headers, body = self.get("GET", "/api/j2-research")
+        self.assertEqual(code, 503)
+        self.assertEqual(json.loads(body)["status"],"research_not_available")
+        self.assertNotIn(b"secret", body)
+        self.assertNotIn("Access-Control-Allow-Origin", headers)
 
     def test_api_count_only_and_no_order_methods(self):
         synthetic = project_n50_ws_log_progress([], now_ms=NOW)

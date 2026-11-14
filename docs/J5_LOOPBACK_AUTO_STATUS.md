@@ -28,3 +28,11 @@ A URL local é `http://127.0.0.1:8765/`. No computador do operador, isso é util
 - CI Linux/docs, Windows/offline e PAPER/mobile, SHA exato, PR/merge sem deploy. J1 D323 24h, rotação 36h e identidade crypto-only permanecem gates independentes.
 
 **Status de produto:** desenvolvimento de integração local, não entrega de aplicativo móvel remoto/hospedado, não habilita entradas ou saídas reais. Custo adicional R$ 0,00. Issue #630, parent J5 #6.
+
+
+## J5/APP-SYNC2 — J2 sem importação manual (#632)
+No mesmo servidor loopback, `GET /api/j2-research` consulta apenas o **wrapper já aprovado de pesquisa WS J2** `observe_active_private_ws_n50_24closed`, sob owner não-root e `allow_private_readonly_research=True` com `include_private_symbols=False`. O wrapper da J2 exige manifestos D287/D321 e 50×24 bars auditados no mesmo journal SQLite privado, recusando window incompleta. O servidor limita o retorno a contagens e ao digest da janela, **exclui** símbolos, linhas de pesquisa privadas, caminhos, hashes de registry e qualquer campo não allowlisted. `formal_d323_24h_verified=false`, `approved_for_signals=false`, `orders_sent=false` por contrato. Sem posição PAPER nova e sem ordem de corretora.
+
+A seção de pesquisa do aplicativo consulta esse endpoint no carregamento e a cada **5 minutos** somente se aberta em localhost:8765. Uma leitura J2 válida mostra as três contagens (rompimento alta, baixa, dentro da faixa), sempre como observações descritivas, nunca recomendações. Falta de 24h, ausência de acesso owner ou dado adulterado resulta em `503 research_not_available` e interface sem dados atuais; o painel N50 pode continuar funcionando de forma independente. O botão **Atualizar pesquisa local** faz o GET explicitamente. Importação manual de J2 tem prioridade até reload; no modo `file://` ambas as chamadas continuam desativadas.
+
+Não basta o merge: execução em VPS e disponibilização para celular fora da VPS exigem gate de release e um canal privado autenticado, não implementado aqui. Testes Python com wrapper mockado + Chrome localhost mockado e CI 3/3 no head do PR, sem tocar dados reais. Documento operacional permanece `docs/J5_LOOPBACK_AUTO_STATUS.md`.

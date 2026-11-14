@@ -1604,3 +1604,7 @@ Após J5/MVP1 #626/PR #627 integrada na main `d5c697efe0c617474ca15b798607390355
 
 ## J5/APP-SYNC1 — atualização N50 de 60s no browser local (13/11/2026 UTC)
 Issue #630, branch `work/issue-630-j5-loopback-n50-live-status`, base `main=32c4df74e47c7b08780573b9d59dc70289668545` (J5/MVP1 #626 e APP-DATA1 #628 integradas). Novo servidor `scripts/serve_j5_local_readonly.py` lê journalctl sanitizado em loopback 127.0.0.1:8765 e fornece `GET /api/n50-progress` para auto-refresh local da página existente; importação manual e simulações continuam. Testes e docs acompanham. Não há deploy, publicação HTTP, alteração na VPS nem ordem real. Último checkpoint read-only N50 em 13/11 23:01 UTC: 21/22/23 UTC 50/50, completando seis horas seguidas 18–23 UTC após D336, sem D323 24h. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+
+## J5/APP-SYNC2 — pesquisa J2 automática no painel local (13/11/2026 UTC)
+Após #630/PR #631 integrados à `main=f003784a4f66cee0eeb46827d8009a3ce7b86dea`, issue #632 e branch `work/issue-632-j5-loopback-j2-readonly` adicionam segundo endpoint privado localhost `/api/j2-research`. Reporta apenas 50×24 métricas descritivas agregadas após wrapper owner J2 existente, nenhuma linha de símbolo ou aprovação. UI consulta a cada 5min e recusa data stale. Sem acesso root, nenhuma alteração VPS, deploy ou ordens. A prova real J1 D323 ainda depende da janela 24h, a pesquisa poderá ficar vazia até lá. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
