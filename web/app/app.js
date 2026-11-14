@@ -418,7 +418,7 @@
       (feedOrigin === "manual" ? " (importação manual)." : " (fonte local).");
     const j2 = !research ? "J2: aguardando janela privada íntegra de 50 × 24h." :
       researchOrigin === "manual" ? "J2: pesquisa descritiva importada manualmente; sem sinais." :
-      !recent ? "J2: fonte N50 ausente ou obsoleta; prontidão não comprovada." :
+      !recent ? "J2: pesquisa agregada recebida, mas fonte N50 ausente ou obsoleta; prontidão não comprovada." :
       "J2: pesquisa agregada disponível; não equivale à homologação J1 nem a sinal.";
     set("quality-n50", n50);
     set("quality-j2", j2);
