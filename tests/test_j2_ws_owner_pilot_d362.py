@@ -87,5 +87,53 @@ class OwnerPilotD362ContractTests(unittest.TestCase):
         self.assertEqual(p.stdout.strip(), "D362_BLOCKED_MODE")
 
 
+    def test_sanitizer_keeps_only_aggregates_and_rejects_duplicate_keys(self):
+        import json
+        import sys
+
+        source = SCRIPT.read_text(encoding="utf-8")
+        code = source.split("<<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
+        fixture = {
+            "schema_version": "j3-ws-watchlist-forward-reference-v1",
+            "status": "ex_post_reference_marks_scored_not_a_backtest",
+            "horizon_bars": 1,
+            "selected_observations": 2,
+            "matured_observations": 2,
+            "gross_reference_bps_sum": "15.25",
+            "net_reference_after_assumed_costs_bps_sum": "-10.5",
+            "same_side_btc_excess_reference_bps_sum": "7.125",
+            "assumed_total_cost_quote_units": "0.12",
+            "prospective_registration_independently_verified": False,
+            "financial_backtest_approved": False,
+            "out_of_sample_results_validated": False,
+            "approved_for_signals": False,
+            "live_trading_authorized": False,
+            "orders_sent": False,
+            "network_requests": 0,
+            "database_mutation_statements": 0,
+            "systemd_modified": False,
+            "private_symbol": "BTCUSDT",
+        }
+        def run(raw):
+            return subprocess.run(
+                [sys.executable, "-B", "-", "score"], input=code,
+                capture_output=True, text=True, timeout=5,
+                env={**os.environ, "PILOT_JSON": raw},
+            )
+        ok = run(json.dumps(fixture))
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        self.assertIn("D362_NET_REFERENCE_COSTED_BPS_SUM=-10.5", ok.stdout)
+        self.assertIn("D362_GROSS_REFERENCE_BPS_SUM=15.25", ok.stdout)
+        self.assertNotIn("BTCUSDT", ok.stdout)
+        bad = dict(fixture, net_reference_after_assumed_costs_bps_sum="NaN")
+        refused = run(json.dumps(bad))
+        self.assertEqual(refused.returncode, 77)
+        self.assertEqual(refused.stdout.strip(), "D362_REPORT_REJECTED")
+        duplicated = '{"orders_sent":true,' + json.dumps(fixture)[1:]
+        rejected = run(duplicated)
+        self.assertEqual(rejected.returncode, 77)
+        self.assertEqual(rejected.stdout.strip(), "D362_REPORT_REJECTED")
+
+
 if __name__ == "__main__":
     unittest.main()

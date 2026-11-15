@@ -113,6 +113,7 @@ try:
             or data.get("network_requests") != 0
             or data.get("systemd_modified") is not False):
         raise ValueError()
+    out_lines = []
     if kind == "preflight":
         ok = (data.get("schema_version") == "j2-ws-owner-preflight-v1"
               and status == "owner_preflight_ready_no_capture"
@@ -136,8 +137,8 @@ try:
               and data.get("prospective_registration_independently_verified") is False
               and data.get("financial_backtest_approved") is False)
         if ok:
-            print("D362_DECISION_CLOSED_END_MS=" + str(end))
-            print("D362_CANDIDATES_CAPTURED=" + str(candidates))
+            out_lines.append("D362_DECISION_CLOSED_END_MS=" + str(end))
+            out_lines.append("D362_CANDIDATES_CAPTURED=" + str(candidates))
     elif kind == "score":
         selected = data.get("selected_observations")
         matured = data.get("matured_observations")
@@ -153,9 +154,9 @@ try:
               and data.get("financial_backtest_approved") is False
               and data.get("out_of_sample_results_validated") is False)
         if ok:
-            print("D362_SCORE_HORIZON_HOURS=" + str(horizon))
-            print("D362_SELECTED_OBSERVATIONS=" + str(selected))
-            print("D362_MATURED_OBSERVATIONS=" + str(matured))
+            out_lines.append("D362_SCORE_HORIZON_HOURS=" + str(horizon))
+            out_lines.append("D362_SELECTED_OBSERVATIONS=" + str(selected))
+            out_lines.append("D362_MATURED_OBSERVATIONS=" + str(matured))
             if status == "ex_post_reference_marks_scored_not_a_backtest":
                 # Only aggregate sums, never symbols, prices or per-asset rows.
                 aggregate = {
@@ -167,15 +168,18 @@ try:
                 for source_key, output_key in aggregate.items():
                     amount = data.get(source_key)
                     if (type(amount) is not str or len(amount) > 600
-                            or not re.fullmatch(r"-?[0-9]{1,300}(?:\\.[0-9]{1,300})?", amount)):
+                            or not re.fullmatch(r"-?[0-9]{1,300}(?:[.][0-9]{1,300})?", amount)):
                         raise ValueError()
-                    print(output_key + "=" + amount)
-            print("D362_REFERENCE_ONLY_NOT_FILLS=true")
+                    out_lines.append(output_key + "=" + amount)
+            out_lines.append("D362_REFERENCE_ONLY_NOT_FILLS=true")
     else:
         raise ValueError()
-    print("D362_OWNER_" + kind.upper() + "_STATUS=" + status)
     if not ok:
+        print("D362_OWNER_" + kind.upper() + "_STATUS=" + status)
         sys.exit(76)
+    for line in out_lines:
+        print(line)
+    print("D362_OWNER_" + kind.upper() + "_STATUS=" + status)
 except (ValueError, TypeError, KeyError, OverflowError):
     print("D362_REPORT_REJECTED")
     sys.exit(77)

@@ -17,7 +17,7 @@ Script versionado: `deploy/vps/j2_ws_prospective_owner_pilot_d362_once.sh`. Rece
 Cada operação emite somente linhas `D362_...` após validação de um JSON privado com allowlist; o corpo original nunca é ecoado. Abstenções não provocam retry automático ou novo GET. A execução de `--score-once` na janela errada **não recupera outro horizonte retrospectivamente**: o motor associa a decisão exatamente ao fechamento `end-atual - H` para não procurar oportunisticamente um acerto favorável.
 
 
-As linhas de score exibem também **somas agregadas** em bps brutos, após custos *assumidos* e relativo ao BTC, além do total hipotético de custos em quote. Essas somas não são médias por posição nem retornos realizados; só devem ser interpretadas junto do número de observações e da posterior avaliação OOS. O parser rejeita chaves duplicadas e constantes JSON não finitas antes de emitir qualquer resultado.
+As linhas de score exibem também **somas agregadas** em bps brutos, após custos *assumidos* e relativo ao BTC, além do total hipotético de custos em quote. Essas somas não são médias por posição nem retornos realizados; só devem ser interpretadas junto do número de observações e da posterior avaliação OOS. O parser rejeita chaves duplicadas e constantes JSON não finitas; valida todas as métricas antes de emitir qualquer resultado agregado.
 
 **Sem autoagendamento nesta entrega**. Após o primeiro piloto e sua avaliação, uma decisão separada poderá autorizar agendamento owner idempotente para coleta recorrente; não criar um segundo coletor nem alterar o WS atual.
 
