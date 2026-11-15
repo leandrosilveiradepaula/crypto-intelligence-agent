@@ -12,6 +12,7 @@
   let feedOrigin = "none"; // local-auto, manual, or none
   let research = null;
   let researchOrigin = "none";
+  let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
   let storageAvailable = true;
 
   function el(tag, className, content) {
@@ -293,6 +294,100 @@
     });
     return snapshot;
   }
+
+  function exactJ2Metric(raw) {
+    // Decimal-string ordering without rounding any financial quantity to float.
+    check(typeof raw === "string" &&
+      /^-?(?:0|[1-9][0-9]{0,39})(?:\.[0-9]{1,90})?$/.test(raw),
+      "Indicador privado J2 fora dos limites");
+    const neg = raw.startsWith("-");
+    const [integer, frac = ""] = (neg ? raw.slice(1) : raw).split(".");
+    return (neg ? -1n : 1n) * BigInt(integer + frac.padEnd(90, "0"));
+  }
+  function compareJ2Keys(left, right) {
+    for (let i = 0; i < 4; i++) {
+      if (left[i] < right[i]) return -1;
+      if (left[i] > right[i]) return 1;
+    }
+    return 0;
+  }
+  function validateWatchlist(snapshot) {
+    // Private file ONLY: no credentials, URLs, raw OHLC or order authority.
+    check(snapshot && snapshot.schema_version === "j2-n50-ws-descriptive-watchlist-v1" &&
+      snapshot.status === "ws_descriptive_watchlist_ready" &&
+      snapshot.quality === "private_ws_observations_not_trading_signals" &&
+      snapshot.ws_journal_integrity_replayed === true &&
+      snapshot.audited_assets === 50 &&
+      snapshot.eligible_closed_bars_per_asset === 24 &&
+      snapshot.btc_context_available === true &&
+      /^[0-9a-f]{64}$/.test(snapshot.window_digest_sha256) &&
+      Number.isSafeInteger(snapshot.latest_closed_end_ms) &&
+      snapshot.latest_closed_end_ms > 1600000000000 &&
+      snapshot.latest_closed_end_ms % HOUR === 0 &&
+      snapshot.latest_closed_end_ms <= Date.now() + 300000 &&
+      snapshot.execution_intents_created === 0 &&
+      snapshot.network_requests === 0 &&
+      snapshot.database_mutation_statements === 0 &&
+      !Object.hasOwn(snapshot, "research_rows"),
+      "Watchlist J2 sem origem ou relógio íntegros");
+    const protectedFalse = [
+      "formal_d323_24h_verified", "continuous_collector_verified",
+      "rotation_36h_live_verified", "marketwide_top50_verified",
+      "crypto_identity_independently_verified", "source_authenticated",
+      "approved_for_signals", "approved_for_live_use",
+      "financial_backtest_approved", "orders_sent", "systemd_modified"
+    ];
+    check(protectedFalse.every(key => snapshot[key] === false),
+      "Watchlist J2 não autoriza sinais ou ordens");
+    const up = snapshot.observed_up_breakout_candidates;
+    const down = snapshot.observed_down_breakout_candidates;
+    const volumeMissing = snapshot.unclassified_volume_assets;
+    check([up,down,volumeMissing].every(n => Number.isSafeInteger(n) &&
+      n >= 0 && n <= 50) && up + down <= 50,
+      "Contagens da watchlist J2 inválidas");
+    const scale = 10n ** 90n;
+    const seen = new Set();
+    const lists = [["up","above_prior_23h_high",up],
+      ["down","below_prior_23h_low",down]];
+    let hasPrivate = false;
+    for (const [direction, breakout, count] of lists) {
+      const items = snapshot[direction + "_breakout_watchlist"];
+      check(Array.isArray(items) && (items.length === 0 ||
+        items.length === Math.min(5, count)),
+        "Watchlist J2 incompleta ou excedeu limite");
+      hasPrivate = hasPrivate || items.length > 0;
+      let previous = null;
+      for (const item of items) {
+        check(item && typeof item.symbol === "string" &&
+          /^[A-Z0-9]{1,28}USDT$/.test(item.symbol) &&
+          !seen.has(item.symbol) &&
+          item.breakout === breakout &&
+          item.approved_for_signals === false && item.orders_sent === false,
+          "Símbolo ou direção de watchlist não autorizado");
+        seen.add(item.symbol);
+        const relative = exactJ2Metric(item.relative_vs_btc_pct_points);
+        exactJ2Metric(item.return_24bars_pct);
+        const atr = exactJ2Metric(item.mean_true_range_14_pct);
+        const turnover = exactJ2Metric(item.quote_turnover_24bars_usdt);
+        const ratio = exactJ2Metric(item.last_quote_turnover_vs_prior23_mean);
+        check((direction === "up" ? relative > 0n : relative < 0n) &&
+          turnover > 0n && atr >= 0n && ratio >= scale,
+          "Critérios quantitativos da watchlist inconsistentes");
+        const key = [direction === "up" ? -relative : relative,
+          -ratio, -turnover, item.symbol];
+        check(previous === null || compareJ2Keys(previous, key) <= 0,
+          "Ranking da watchlist fora de ordem");
+        previous = key;
+      }
+    }
+    if (hasPrivate) {
+      check(lists.every(([direction,,count]) =>
+        snapshot[direction + "_breakout_watchlist"].length === Math.min(count,5)),
+        "Símbolos privados parcialmente omitidos");
+    }
+    return snapshot;
+  }
+
   function renderFeed() {
     $("feed-empty").hidden = !!feed;
     $("feed-loaded").hidden = !feed;
@@ -434,6 +529,46 @@
       });
     }
   }
+  function renderWatchlist() {
+    $("watchlist-empty").hidden = !!watchlist;
+    $("watchlist-loaded").hidden = !watchlist;
+    if (!watchlist) {
+      set("watchlist-status", "Sem watchlist importada");
+      return;
+    }
+    const recent = watchlist.latest_closed_end_ms >= Date.now() - 2 * HOUR;
+    set("watchlist-status", recent ? "Observação J2 importada" : "Histórico · não atual");
+    set("watchlist-up-count", watchlist.observed_up_breakout_candidates);
+    set("watchlist-down-count", watchlist.observed_down_breakout_candidates);
+    set("watchlist-unclassified-count", watchlist.unclassified_volume_assets);
+    set("watchlist-closed-end", utc(watchlist.latest_closed_end_ms));
+    for (const [side, direction] of [["up","LONG"], ["down","SHORT"]]) {
+      const list = $("watchlist-" + side + "-rows");
+      list.replaceChildren();
+      const rows = watchlist[side + "_breakout_watchlist"];
+      if (!rows.length) {
+        list.append(el("p", "muted fine",
+          "Sem símbolos privados: não há candidatos exibíveis neste relatório."));
+        continue;
+      }
+      rows.forEach((row, i) => {
+        const card = el("div", "research-item");
+        const left = el("div");
+        left.append(el("strong", null, (i + 1) + ". " + row.symbol),
+          el("span", null, direction + " · observação, não sinal"));
+        const right = el("div", "score");
+        right.append(el("strong", null, row.relative_vs_btc_pct_points + " pp"),
+          el("span", null, "Força vs BTC · razão volume " +
+            row.last_quote_turnover_vs_prior23_mean));
+        card.append(left, right);
+        list.append(card);
+      });
+    }
+    set("watchlist-note", recent ?
+      "Pesquisa fechada e somente leitura. Nenhuma posição foi aberta; J3 ainda avalia risco e resultados." :
+      "Snapshot histórico: não interpretar como oportunidade atual. Nenhuma posição foi aberta.");
+  }
+
   function renderQuality() {
     const recent = feed && feed.slots[23].closed_end_ms >= Date.now() - 2 * HOUR;
     const n50 = !feed ? "N50: fonte indisponível ou sem relatório." :
@@ -443,7 +578,8 @@
         "; mesma coorte observada: " + feed.same_scope_recent_50_of_50_hours + "/24" :
         "; coorte não comprovada nos logs") +
       (feedOrigin === "manual" ? " (importação manual)." : " (fonte local).");
-    const j2 = !research ? "J2: aguardando janela privada íntegra de 50 × 24h." :
+    const j2 = watchlist ? "J2: watchlist observacional importada localmente; não é sinal." :
+      !research ? "J2: aguardando janela privada íntegra de 50 × 24h." :
       researchOrigin === "manual" ? "J2: pesquisa descritiva importada manualmente; sem sinais." :
       !recent ? "J2: pesquisa agregada recebida, mas fonte N50 ausente ou obsoleta; prontidão não comprovada." :
       "J2: pesquisa agregada disponível; não equivale à homologação J1 nem a sinal.";
@@ -456,6 +592,7 @@
     renderPositions();
     renderFeed();
     renderResearch();
+    renderWatchlist();
     renderQuality();
   }
   function bind() {
@@ -535,6 +672,9 @@
           research = validateResearch(payload);
           researchOrigin = "manual";
           warn("Pesquisa J2 importada; ela terá prioridade nesta sessão. Não é recomendação de entrada.", false);
+        } else if (payload.schema_version === "j2-n50-ws-descriptive-watchlist-v1") {
+          watchlist = validateWatchlist(payload);
+          warn("Watchlist J2 importada somente nesta sessão; observações não são sinais nem ordens.", false);
         } else throw new Error("Schema JSON desconhecido. Importe somente relatórios sanitizados N50/J2.");
         render();
       } catch (err) {
