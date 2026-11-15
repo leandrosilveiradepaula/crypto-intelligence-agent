@@ -253,6 +253,14 @@ def _private_source(now_ms: int) -> tuple[dict[str, Any], dict[str, str]]:
             or snapshot.get("audited_assets") != 50
             or snapshot.get("eligible_closed_bars_per_asset") != 24):
         raise DataValidationError("owner WS 50x24 not ready")
+    end = snapshot.get("latest_closed_end_ms")
+    if (type(end) is not int or end != now_ms-now_ms%HOUR_MS
+            or not 180_000 <= now_ms-end < HOUR_MS-60_000
+            or any(_digest(snapshot.get(name)) != snapshot[name] for name in (
+                "ranked_scope_sha256", "ws_metadata_sha256",
+                "window_digest_sha256",
+            ))):
+        raise DataValidationError("WS snapshot clock or provenance mismatch")
     closes = snapshot.get("private_last_closes")
     rows = snapshot.get("research_rows")
     if (type(closes) is not dict or type(rows) is not list
