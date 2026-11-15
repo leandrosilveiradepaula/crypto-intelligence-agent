@@ -93,6 +93,62 @@ class SummaryTests(unittest.TestCase):
         self.assertFalse(report["owner_d323_24h_audit_verified"])
         self.assertFalse(report["continuous_collector_verified"])
 
+    def test_realistic_22_old_plus_2_new_scope_is_not_24_new_hours(self):
+        events = [row(i) for i in range(1, 25)]
+        for index, event in enumerate(events):
+            report = event["report"]
+            report["ranked_scope_sha256"] = ("c" if index < 22 else "d") * 64
+            report["ws_metadata_sha256"] = ("e" if index < 22 else "f") * 64
+        projected = project(events, now=T+24*HOUR_MS+4*M)
+        self.assertEqual(projected["observed_50_of_50_hours"], 24)
+        self.assertEqual(projected["consecutive_recent_observed_hours"], 24)
+        self.assertEqual(projected["same_scope_recent_50_of_50_hours"], 2)
+        self.assertTrue(projected["scope_changed_in_window"])
+        self.assertTrue(projected["scope_evidence_available"])
+        self.assertFalse(projected["owner_d323_24h_audit_verified"])
+        self.assertNotIn("c"*64, json.dumps(projected))
+        self.assertNotIn("d"*64, json.dumps(projected))
+        self.assertNotIn("e"*64, json.dumps(projected))
+        self.assertNotIn("f"*64, json.dumps(projected))
+        html = render_n50_ws_log_progress_html(
+            events, now_ms=T+24*HOUR_MS+4*M
+        )
+        self.assertIn("Sequência da mesma coorte", html)
+        self.assertIn("2 / 24", html)
+        self.assertIn("Mudança de coorte", html)
+        self.assertNotIn("c"*64, html)
+        self.assertNotIn("BTCUSDT", html)
+        for event in events:
+            event["report"]["ranked_scope_sha256"] = "d" * 64
+            event["report"]["ws_metadata_sha256"] = "f" * 64
+        same_scope = project(events, now=T+24*HOUR_MS+4*M)
+        self.assertEqual(same_scope["same_scope_recent_50_of_50_hours"], 24)
+        self.assertFalse(same_scope["scope_changed_in_window"])
+
+    def test_missing_or_invalid_cohort_digest_cannot_be_promoted(self):
+        legacy = project([row(5)])
+        self.assertEqual(legacy["same_scope_recent_50_of_50_hours"], 0)
+        self.assertFalse(legacy["scope_evidence_available"])
+        self.assertFalse(legacy["scope_changed_in_window"])
+        for ranked, metadata in (
+            ("a"*64, None), (None, "b"*64),
+            ("not-a-hash", "b"*64), ("a"*64, "NOT64"),
+            (True, "b"*64), ("a"*64, True),
+        ):
+            event = row(5)
+            event["report"]["ranked_scope_sha256"] = ranked
+            event["report"]["ws_metadata_sha256"] = metadata
+            with self.subTest(ranked=str(ranked)[:14], metadata=str(metadata)[:14]):
+                with self.assertRaises(DataValidationError):
+                    project([event])
+        event = row(5)
+        event["report"]["ranked_scope_sha256"] = "a"*64
+        event["report"]["ws_metadata_sha256"] = "b"*64
+        success = project([event])
+        self.assertEqual(success["same_scope_recent_50_of_50_hours"], 1)
+        self.assertTrue(success["scope_evidence_available"])
+        self.assertFalse(success["owner_d323_24h_audit_verified"])
+
     def test_missing_hour_resets_streak_and_duplicate_abstains(self):
         report = project([row(3),row(5)])
         self.assertEqual(report["consecutive_recent_observed_hours"], 1)
