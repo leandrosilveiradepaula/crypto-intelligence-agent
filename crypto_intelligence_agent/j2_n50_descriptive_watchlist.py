@@ -79,7 +79,8 @@ def _validated_descriptive_rows(
     """Reuse strict Decimal, BTC and ordering rules for REST and WS readers."""
     if type(source) is not list or len(source) != 50:
         raise ValueError("incomplete_research_universe")
-    btc_return = _parse_decimal(snapshot.get("btc_return_24bar_pct"))
+    if type(btc_return) is not Decimal or not btc_return.is_finite():
+        raise ValueError("invalid_btc_return")
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for rank, original in enumerate(source, 1):
