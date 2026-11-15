@@ -130,6 +130,7 @@ def research_private_ws_n50_24closed(
     observed_at_ms: int,
     allow_private_readonly_research: bool = False,
     include_private_symbols: bool = False,
+    include_private_last_closes: bool = False,
     owner_ok: bool | None = None,
 ) -> dict[str, Any]:
     """One 24h descriptive snapshot. Never a signal, live rank or approved PIT.
@@ -151,6 +152,8 @@ def research_private_ws_n50_24closed(
     if (allowed_owner is not True
             or type(owner_ok) not in (bool, type(None))
             or type(include_private_symbols) is not bool
+            or type(include_private_last_closes) is not bool
+            or (include_private_last_closes and not include_private_symbols)
             or type(ranked_scope) is not dict
             or type(ws_scope) is not OfflineReviewedStreamScope
             or type(journal) is not SQLiteOfflineClosedStreamJournal
@@ -283,6 +286,13 @@ def research_private_ws_n50_24closed(
                 "approved_for_signals": False,
                 "orders_sent": False,
             } for i, row in enumerate(research, 1)]
+            if include_private_last_closes and btc is not None:
+                # Extract from the ALREADY double-audited SQLite snapshot;
+                # never query a second journal or expose closes by default.
+                out["private_last_closes"] = {
+                    symbol: _text(by_member[symbol][-1][1][3])
+                    for symbol in sorted(by_member)
+                }
         return out
     except (OSError, ValueError, TypeError, OverflowError, UnicodeError,
             sqlite3.Error, DataValidationError, DataGapError):
@@ -296,6 +306,7 @@ def observe_active_private_ws_n50_24closed(
     *, state_directory: Path = ACTIVE_DIRECTORY,
     allow_private_readonly_research: bool = False,
     include_private_symbols: bool = False,
+    include_private_last_closes: bool = False,
     now_ms: int | None = None,
 ) -> dict[str, Any]:
     """Resolve exactly the current D321 owner epoch before a WS-only read.
@@ -309,6 +320,8 @@ def observe_active_private_ws_n50_24closed(
         return _blank("owner_optin_required")
     if (os.name != "posix" or os.getuid() != os.geteuid()
             or os.geteuid() == 0 or type(include_private_symbols) is not bool
+            or type(include_private_last_closes) is not bool
+            or (include_private_last_closes and not include_private_symbols)
             or not isinstance(state_directory, Path)
             or state_directory != ACTIVE_DIRECTORY
             or (now_ms is not None and type(now_ms) is not int)):
@@ -344,6 +357,10 @@ def observe_active_private_ws_n50_24closed(
                 or private.admission.metadata_sha256 != before.ws_metadata_sha256):
             return _blank("owner_ws_scope_integrity_abstain")
         end = now - now%HOUR_MS
+        private_kwargs = (
+            {"include_private_last_closes": True}
+            if include_private_last_closes else {}
+        )
         result = research_private_ws_n50_24closed(
             ranked_scope=ranked, ws_scope=private.admission.ws_scope,
             journal=SQLiteOfflineClosedStreamJournal(
@@ -351,6 +368,7 @@ def observe_active_private_ws_n50_24closed(
             ), decision_at_ms=end, observed_at_ms=now,
             allow_private_readonly_research=True,
             include_private_symbols=include_private_symbols,
+            **private_kwargs,
         )
         after = load_active_n50_ws_epoch(
             state_directory=state_directory, current_at_ms=now,
