@@ -1875,3 +1875,11 @@ Base main conferida `94c78554f8531d258626df7f8781f7b82e9f4c82`, issue #648, bran
 ## J4/J5 #650 — próxima fatia funcional do software PAPER (15/11/2026 UTC)
 
 Fonte de verdade GitHub: `main=d1afead1dbbab8bf2ab3fc608e110c84320f99f3` verificada, PR #649/#648 já merged/fechada no commit. Issue atual #650; branch `work/issue-650-j4-j5-paper-auto-exits` criada a partir da main. Alterações isoladas: `web/app/engine.js`, `app.js`, `index.html`, `style.css`, `tests/test_j5_product_app_mvp.py`, `scripts/audit_j5_product_app_browser.py`, `docs/J4_J5_PAPER_AUTOMATIC_EXIT_SIM.md`, decisões/estado/validação. Gatilhos 2 alvos+STOP somente para posições novas e preços hipotéticos digitados; não alimentados por N50/J2. Contrato D351; sem ordens, feed de mercado, regra de liquidação, gasto, deploy, credenciais ou mudança na VPS. **Próxima ação autorizada:** PR, verificar SHA final/diff/testes, CI Linux+Windows+PAPER no SHA, corrigir falhas e merge seguro sem release. J1 #585 D323 continua independente para sua janela de 24h, Top50 #319 separado; não inferir PASS aqui.
+
+## J4/J5 #650 — integrada no GitHub, sem publicação (15/11/2026 UTC)
+
+PR #651 MERGED SHA `e90dd7ceed2a2d559d664f48df527e282a38adbc`, HEAD revisado `0068e06446a9f66f5ead6fe6e10cfc5e74e940f8`, CI 43722912182 (PAPER/Chrome), 43722912259 (Linux/docs + Windows/offline) SUCCESS. Issue #650 fechada. Regras opt-in por posição de dois targets + STOP hipotéticos no app PAPER, replay/backup locais; sem feed real nem ordens. Não é J4 execution engine real nem release.
+
+## J5/J6 #652 — replay transacional de cenário fictício em lote (15/11/2026 UTC)
+
+Base conferida `main=e90dd7ceed2a2d559d664f48df527e282a38adbc`; issue #652, branch `work/issue-652-j5-paper-batch-marks`; fontes `web/app/{engine.js,app.js,style.css}`, `tests/test_j5_product_app_mvp.py`, `scripts/audit_j5_product_app_browser.py` e `docs/J5_PAPER_BATCH_MARK_REPLAY.md`. 1..24 fechamentos fictícios por linha, execução em cópia, atomicidade local e relatório sem mark real ou API. **Próxima ação:** PR, revisão, CI docs/Windows/PAPER no head e merge seguro sem produção após gates verdes. Não alterar J1 D323, Top50, owner DB, VPS, ordem, credencial ou custos. Próxima etapa produto após esta: contrato de ponte J2/J4 read-only e RiskGate, bloqueado para dados reais até prova de integridade e segurança de acesso.
