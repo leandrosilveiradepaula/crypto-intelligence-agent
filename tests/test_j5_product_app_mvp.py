@@ -57,6 +57,12 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('id="n50-scope"', html)
         self.assertIn('id="n50-scope-note"', html)
         self.assertIn("Horas da mesma coorte", html)
+        for item in ("watchlist-title", "watchlist-status", "watchlist-up-count",
+                     "watchlist-down-count", "watchlist-up-rows",
+                     "watchlist-down-rows", "watchlist-note"):
+            self.assertIn(f'id="{item}"', html)
+        self.assertIn("Observações selecionadas J2", html)
+        self.assertIn("não é previsão, sinal ou ordem", html)
         self.assertNotIn("api.bybit.com", html)
 
     def test_browser_code_has_no_transport_or_dynamic_html_execution(self):
@@ -80,6 +86,12 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('loc.hostname === "localhost"', js)
         self.assertIn('feedOrigin === "manual"', js)
         self.assertIn("function renderQuality()", js)
+        self.assertIn('function validateWatchlist(snapshot)', js)
+        self.assertIn('function renderWatchlist()', js)
+        self.assertIn('function exactJ2Metric(raw)', js)
+        self.assertIn('compareJ2Keys(previous, key)', js)
+        self.assertIn('"j2-n50-ws-descriptive-watchlist-v1"', js)
+        self.assertIn('watchlist = validateWatchlist(payload)', js)
         self.assertIn("same_scope_recent_50_of_50_hours", js)
         self.assertIn("scope_evidence_available", js)
         self.assertIn("scope_changed_in_window", js)
