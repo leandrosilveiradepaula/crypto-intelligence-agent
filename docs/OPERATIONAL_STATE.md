@@ -1830,3 +1830,8 @@ Base confirmada `main=f003784a4f66cee0eeb46827d8009a3ce7b86dea`, #630/PR #631 me
 
 ## J5/APP-QUALITY #634 — prontidão N50/J2 (14/11/2026 UTC)
 Branch `work/issue-634-j5-quality-readiness` criada após merge #633 `094ff83193c54571ea3e52dfa971c7a6a9d33202`. Área `Qualidade dos dados` no console PAPER: distingue N50 ausente, obsoleto, observado em log e manual; J2 aguardando 50×24h, importação manual ou agregado recebido sem promover prontidão se N50 obsoleto. Sem endpoint novo, ordem, deploy ou leitura privada. Teste de contrato atualizado. **PR/CI ainda a verificar; não declarar entregue ou homologado**. J1 #585: 21/24 logs horários 50/50 verificados até 14:00 UTC; D323/24h owner, rotação 36h e universo dinâmico ainda pendentes. Próximo: CI Linux/Windows/Chrome e revisão SHA exato; corrigir regressões, merge sem produção se gates verdes.
+
+
+## J2/#638 — ponte descritiva para WebSocket N50 (15/11/2026)
+
+**Jornada:** J2 Entradas; issue #638; branch `work/issue-638-j2-ws-n50-watchlist`; PR/CI/SHA conclusivos a registrar após criação. O objetivo imediato é expor pesquisa por rom­pimento atual/força relativa/turnover da epoch N50 WS, consumindo somente o auditor privado existente D624 e reutilizando a watchlist D308, sem rede/ordens. Teste offline, contrato público de contagens e documentação D345 implementados como candidato; nenhum deploy. **Dependências para dados reais:** WS 50x24 por mesma coorte no SQLite (gate D323) e leitura owner autorizada; #319 marketwide separada. Não solicitar `prossiga`, seguir com revisão+CI+merge seguro sem produção.
