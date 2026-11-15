@@ -147,6 +147,24 @@ class Closed24hCurrentAutoTests(unittest.TestCase):
         self.assertEqual(out["failure_category"], "current_rank_rejected")
         self.assertEqual(c.klines, 50)
 
+    def test_fifty_complete_and_one_short_is_subset_only_not_full_pool(self):
+        # Selection can still serve provisional N50 research, but must
+        # never be described as the top 50 of the FULL candidate pool.
+        more = tuple(SYMS) + ("NEWTOKENUSDT",)
+        result, client = call(client=FakeClient(symbols=more, short=True))
+        self.assertEqual(
+            result["status"], "current_closed24h_provisional_perpetual_rank_research_only",
+            result)
+        self.assertEqual(result["current_catalog_provisional_candidates"], 51)
+        self.assertEqual(result["complete_closed24h_candidates"], 50)
+        self.assertEqual(result["insufficient_closed24h_candidates"], 1)
+        self.assertEqual(result["zero_closed24h_turnover_candidates"], 0)
+        self.assertFalse(result["all_provisional_candidates_have_complete24h"])
+        self.assertEqual(result["ranked_research_candidates"], 50)
+        self.assertEqual(client.requests_attempted, 53)
+        self.assertFalse(result["marketwide_top50_verified"])
+        self.assertFalse(result["orders_sent"])
+
     def test_catalog_churn_blocks_result_after_50_gets(self):
         out, c = call(client=FakeClient(changed=True))
         self.assertEqual(out["status"], "abstain")
