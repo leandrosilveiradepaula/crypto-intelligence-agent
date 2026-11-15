@@ -202,6 +202,35 @@
           } catch (err) { warn(err.message, true); }
         });
         rules.append(trigger);
+        const batchLabel = el("label", "field auto-batch",
+          "Reproduzir de 1 a 24 fechamentos fictícios (um preço por linha)");
+        const batchInput = el("textarea", "auto-batch-input");
+        batchInput.rows = 3;
+        batchInput.maxLength = 512;
+        batchInput.placeholder = "101.00\n102.00\n99.00";
+        batchInput.setAttribute("aria-label",
+          "Sequência de fechamentos hipotéticos de " + position.id);
+        batchLabel.append(batchInput);
+        const batchButton = el("button", "secondary auto-batch-button",
+          "Reproduzir cenário PAPER");
+        batchButton.type = "button";
+        batchButton.addEventListener("click", () => {
+          try {
+            const raw = batchInput.value.trim();
+            check(raw.length > 0 && raw.length <= 512,
+              "Informe de 1 a 24 fechamentos fictícios");
+            const marks = raw.split(/\r?\n/).map(decimal);
+            const report = E.replayAutoPaperMarks(position, marks);
+            save();
+            render();
+            warn("Cenário PAPER: " + report.processedSteps + " passos, " +
+              report.targetEvents + " parciais, stop " +
+              (report.stopTriggered ? "sim" : "não") + ", " +
+              report.skippedAfterClose + " ignorados após encerramento. " +
+              "Nenhuma ordem enviada.", false);
+          } catch (err) { warn("Cenário recusado: " + err.message, true); }
+        });
+        rules.append(batchLabel, batchButton);
         mark.append(rules);
       }
       card.append(mark);

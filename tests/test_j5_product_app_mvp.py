@@ -96,6 +96,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('function renderWatchlist()', js)
         self.assertIn("mark-reference", js)
         self.assertIn("E.applyAutoPaperStep(position,", js)
+        self.assertIn("E.replayAutoPaperMarks(position, marks)", js)
+        self.assertIn("auto-batch-input", js)
+        self.assertIn("Reproduzir cenário PAPER", js)
         self.assertIn('$("auto-enabled").checked', js)
         self.assertIn('keys.push("autoStep", "autoAction")', js)
         self.assertIn("E.grossMarkPnlCents(position, decimal(markInput.value))", js)
@@ -274,6 +277,56 @@ console.log("J4_J5_AUTO_EXIT_BIGINT_PAPER_PASS");
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("J4_J5_AUTO_EXIT_BIGINT_PAPER_PASS", result.stdout)
+
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js bounded PAPER scenario replay")
+    def test_j5_replay_auto_marks_is_all_or_nothing_and_no_exchange(self):
+        script=r"""
+const assert=require("node:assert/strict");
+const E=require("./web/app/engine.js");
+const s=E.emptyState();
+const auto={target1:"1",target2:"2",stop:"1",partial:"50"};
+const p=E.openPosition(s,{symbol:"BTCUSDT",side:"LONG",entry:"100",
+  margin:"3",leverage:50,runner:"6",auto});
+const before=JSON.stringify(p);
+assert.throws(()=>E.replayAutoPaperMarks(p,["101","102","NaN"]),/Fechamento/);
+assert.throws(()=>E.replayAutoPaperMarks(p,[]),/1 a 24/);
+assert.throws(()=>E.replayAutoPaperMarks(p,Array(25).fill("100")),/1 a 24/);
+assert.equal(JSON.stringify(p),before);
+const out=E.replayAutoPaperMarks(p,["101","102","99","98"]);
+assert.deepEqual(out,{processedSteps:3,skippedAfterClose:1,
+  targetEvents:2,stopTriggered:true,ordersSent:false});
+assert.equal(p.status,"CLOSED");
+assert.equal(p.auto.lastStep,3);
+assert.equal(p.remainingUnits,"0");
+assert.equal(p.events.map(x=>x.autoAction).join(","),"TARGET_1,TARGET_2,STOP");
+assert.deepEqual(E.validateState(JSON.parse(JSON.stringify(s))),s);
+assert.throws(()=>E.replayAutoPaperMarks(p,["100"]),/posição PAPER aberta/);
+const q=E.openPosition(s,{symbol:"ETHUSDT",side:"SHORT",entry:"100",
+  margin:"2",leverage:20,runner:"6",auto});
+const short=E.replayAutoPaperMarks(q,["99","98","101"]);
+assert.equal(short.stopTriggered,true);
+assert.equal(q.status,"CLOSED");
+
+const conflict=E.openPosition(s,{symbol:"XRPUSDT",side:"LONG",entry:"100",
+  margin:"3",leverage:50,runner:"30",
+  auto:{target1:"1",target2:"2",stop:"1",partial:"25"}});
+E.partialExit(conflict,{basis:"REMAINING_BALANCE",percent:"50"});
+const conflictBefore=JSON.stringify(conflict);
+assert.throws(()=>E.replayAutoPaperMarks(conflict,["101","102"]),/runner/);
+assert.equal(JSON.stringify(conflict),conflictBefore);
+const manual=E.openPosition(s,{symbol:"SOLUSDT",side:"LONG",entry:"100",
+  margin:"1",leverage:10,runner:"6"});
+assert.throws(()=>E.replayAutoPaperMarks(manual,["101"]),/gatilhos/);
+assert.deepEqual(E.validateState(JSON.parse(JSON.stringify(s))),s);
+console.log("J5_PAPER_BATCH_ATOMIC_PASS");
+"""
+        result=subprocess.run(
+            [shutil.which("node"), "-e", script],cwd=ROOT,
+            text=True,capture_output=True,timeout=15,check=False,
+        )
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("J5_PAPER_BATCH_ATOMIC_PASS",result.stdout)
 
 
 if __name__ == "__main__":
