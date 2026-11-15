@@ -49,6 +49,60 @@ def _binding(scope: Mapping[str, Any]) -> str:
     ])
 
 
+def sanitized_rank_coverage_receipt(report: Mapping[str, Any]) -> dict[str, Any]:
+    """Verify sanitized full-catalog 24h accounting, without exposing symbols.
+
+    This is a research-coverage diagnostic, NOT identity, source provenance,
+    marketwide crypto approval, or permission to trade. A new listing with
+    fewer than 24 hourly bars remains explicitly incomplete. Do not silently
+    promote the Top50 of the complete subset to a complete-pool claim.
+    """
+    if (type(report) is not dict
+            or report.get("status") !=
+                "current_closed24h_provisional_perpetual_rank_research_only"
+            or report.get("catalog_census_matches_before_after") is not True
+            or report.get("ranked_research_candidates") != 50):
+        raise ValueError("rank_coverage_report_invalid")
+    keys = (
+        "current_catalog_provisional_candidates",
+        "complete_closed24h_candidates",
+        "insufficient_closed24h_candidates",
+        "zero_closed24h_turnover_candidates",
+    )
+    if any(type(report.get(key)) is not int for key in keys):
+        raise ValueError("rank_coverage_counts_invalid")
+    total, positive, incomplete, zero = (report[key] for key in keys)
+    if (not 50 <= total <= 400 or not 50 <= positive <= total
+            or incomplete < 0 or zero < 0
+            or positive + incomplete + zero != total
+            or report.get("all_provisional_candidates_have_complete24h")
+               is not (incomplete == 0)):
+        raise ValueError("rank_coverage_incomplete_or_forged_counts")
+    closed = report.get("decision_closed_hour_end_ms")
+    before = report.get("catalog_pre_observed_at_ms")
+    after = report.get("catalog_post_observed_at_ms")
+    if (type(closed) is not int or closed < HOUR_MS or closed % HOUR_MS
+            or type(before) is not int or type(after) is not int
+            or not closed + 60_000 <= before <= after <= closed + 900_000
+            or any(type(report.get(key)) is not str
+                   or _SHA.fullmatch(report[key]) is None
+                   for key in ("catalog_provisional_pool_digest_sha256",
+                               "rank_digest_sha256"))):
+        raise ValueError("rank_coverage_pit_or_digest_invalid")
+    return {
+        "rank_closed_hour_end_ms": closed,
+        "rank_candidate_pool_count": total,
+        "rank_complete_positive_24h_candidates": positive,
+        "rank_incomplete_24h_candidates": incomplete,
+        "rank_complete_zero_turnover_candidates": zero,
+        "rank_all_candidate_windows_complete24h": incomplete == 0,
+        "rank_catalog_census_matches_before_after": True,
+        "rank_candidate_pool_digest_sha256":
+            report["catalog_provisional_pool_digest_sha256"],
+        "rank_digest_sha256": report["rank_digest_sha256"],
+    }
+
+
 def build_ranked_research_scope(report: Mapping[str, Any], *, now_ms: int) -> dict:
     """Convert a successful D286 owner report with public symbol opt-in."""
     if (type(report) is not dict
