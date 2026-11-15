@@ -190,6 +190,18 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     )
                     if page.locator("#metric-open").inner_text() != "2":
                         errors.append("PAPER extra-field backup replaced state")
+                    recycled = json.loads(backup_bytes)
+                    recycled["state"]["nextId"] = 1
+                    page.locator("#import-file").set_input_files({
+                        "name":"paper-reused-id.json", "mimeType":"application/json",
+                        "buffer":json.dumps(recycled).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('contador de IDs inconsistente')",
+                        timeout=5000,
+                    )
+                    if page.locator("#metric-open").inner_text() != "2":
+                        errors.append("reused PAPER ID backup replaced valid state")
                     page.reload(wait_until="load")
                     if page.locator("#metric-open").inner_text() != "2":
                         errors.append("restored PAPER scenarios did not survive reload")
