@@ -285,8 +285,8 @@ def evaluate_ws_watchlist_forward_marks(
     """
     if (type(frozen) is not FrozenWSWatchlistReference
             or type(costs) is not ForwardCostAssumptions
-            or type(horizon_bars) is not int or horizon_bars not in (1, 4, 24)):
-        raise DataValidationError("frozen J2 decision and declared 1/4/24h J3 cost plan required")
+            or type(horizon_bars) is not int or horizon_bars not in (1, 4, 8, 24)):
+        raise DataValidationError("frozen J2 decision and declared 1/4/8/24h J3 cost plan required")
     if (_commitment(frozen) != frozen.decision_commitment_sha256
             or _digest(frozen.scope_sha256) != frozen.scope_sha256
             or _digest(frozen.window_sha256) != frozen.window_sha256
@@ -326,7 +326,7 @@ def evaluate_ws_watchlist_forward_marks(
         out["status"] = "future_observations_unavailable"
         return out
     funding = {} if hypothetical_funding_events is None else hypothetical_funding_events
-    if type(funding) is not dict or not set(funding) <= expected:
+    if type(funding) is not dict or not set(funding) <= {c.symbol for c in frozen.candidates}:
         raise DataValidationError("unapproved funding event scope")
     if not frozen.candidates:
         out["status"] = "no_observations_selected"
