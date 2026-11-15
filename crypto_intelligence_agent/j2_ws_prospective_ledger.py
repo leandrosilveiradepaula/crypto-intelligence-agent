@@ -10,6 +10,7 @@ from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import time
@@ -115,8 +116,8 @@ def _decode_record(raw: bytes) -> tuple[FrozenWSWatchlistReference, str]:
             raise DataValidationError("owner ledger candidate shape invalid")
         sym = item["symbol"]
         if (type(sym) is not str or not sym.endswith("USDT")
-                or len(sym) > 32 or not sym[:-4].isalnum()
-                or not sym[:-4].isupper() or sym in seen):
+                or re.fullmatch(r"[A-Z0-9]{1,28}USDT", sym) is None
+                or sym in seen):
             raise DataValidationError("owner ledger symbols invalid")
         seen.add(sym)
         try:
