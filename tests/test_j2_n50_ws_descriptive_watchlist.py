@@ -305,5 +305,67 @@ class OwnerCompositionTests(unittest.TestCase):
         self.assertFalse(out["ws_journal_integrity_replayed"])
 
 
+class CLIContractTests(unittest.TestCase):
+    def test_command_line_count_only_default_and_explicit_symbol_optin(self):
+        import io
+        from scripts.research_j2_n50_ws_watchlist_once import main
+        from crypto_intelligence_agent import j2_n50_ws_descriptive_watchlist as mod
+        private = run(private=True)
+        count_only = run()
+        import sys
+        with patch("scripts.research_j2_n50_ws_watchlist_once.observe_active_ws_n50_descriptive_watchlist",
+                   return_value=count_only) as run_owner, \
+             patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            self.assertEqual(main([
+                "--allow-private-readonly-research",
+                "--enable-descriptive-watchlist",
+            ]), 0)
+        run_owner.assert_called_once_with(
+            allow_private_readonly_research=True,
+            enable_descriptive_watchlist=True,
+            include_private_symbols=False,
+            confirm_private_symbol_output=False,
+        )
+        body = json.loads(stdout.getvalue())
+        self.assertEqual(body["up_breakout_watchlist"], [])
+        self.assertNotIn("BTCUSDT", stdout.getvalue())
+        with patch("scripts.research_j2_n50_ws_watchlist_once.observe_active_ws_n50_descriptive_watchlist",
+                   return_value=private) as run_owner, \
+             patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            self.assertEqual(main([
+                "--allow-private-readonly-research",
+                "--enable-descriptive-watchlist",
+                "--include-private-symbols",
+                "--confirm-private-symbol-output",
+            ]), 0)
+        run_owner.assert_called_once_with(
+            allow_private_readonly_research=True,
+            enable_descriptive_watchlist=True,
+            include_private_symbols=True,
+            confirm_private_symbol_output=True,
+        )
+        self.assertIn("TST", stdout.getvalue())
+
+    def test_command_line_still_fails_closed_without_eligible_owner_witness(self):
+        import io
+        from scripts.research_j2_n50_ws_watchlist_once import main
+        from crypto_intelligence_agent.j2_n50_ws_descriptive_watchlist import _empty
+        with patch("scripts.research_j2_n50_ws_watchlist_once.observe_active_ws_n50_descriptive_watchlist",
+                   return_value=_empty("owner_optin_required")) as reader, \
+             patch("sys.stdout", new_callable=io.StringIO) as stdout:
+            self.assertEqual(main([]), 65)
+        reader.assert_called_once_with(
+            allow_private_readonly_research=False,
+            enable_descriptive_watchlist=False,
+            include_private_symbols=False,
+            confirm_private_symbol_output=False,
+        )
+        report = json.loads(stdout.getvalue())
+        self.assertFalse(report["approved_for_signals"])
+        self.assertEqual(report["execution_intents_created"], 0)
+        self.assertFalse(report["orders_sent"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
