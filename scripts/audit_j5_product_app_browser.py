@@ -130,6 +130,84 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     if not page.locator("#open-submit").is_disabled():
                         errors.append("local PAPER pause did not survive reload")
                     page.locator("#pause").uncheck()
+                    # Real browser roundtrip: the exported JSON must be
+                    # restorable, with explicit destructive confirmation.
+                    with page.expect_download(timeout=5000) as exported:
+                        page.locator("#export-paper").click()
+                    backup_bytes = Path(exported.value.path()).read_bytes()
+                    backup = json.loads(backup_bytes)
+                    if (backup["schema_version"] != "cia-j5-paper-local-export-v1"
+                            or backup["simulation_only"] is not True
+                            or backup["orders_sent"] is not False
+                            or len(backup["state"]["positions"]) != 2):
+                        errors.append("PAPER export schema was not suitable for restore")
+                    page.once("dialog", lambda dialog: dialog.accept())
+                    page.locator("#reset-paper").click()
+                    if page.locator("#metric-open").inner_text() != "0":
+                        errors.append("PAPER local reset did not clear scenarios")
+                    page.once("dialog", lambda dialog: dialog.dismiss())
+                    page.locator("#import-file").set_input_files({
+                        "name":"paper-restore.json", "mimeType":"application/json",
+                        "buffer":backup_bytes,
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Restauração cancelada')",
+                        timeout=5000,
+                    )
+                    if page.locator("#metric-open").inner_text() != "0":
+                        errors.append("cancelled PAPER restore still modified state")
+                    page.once("dialog", lambda dialog: dialog.accept())
+                    page.locator("#import-file").set_input_files({
+                        "name":"paper-restore.json", "mimeType":"application/json",
+                        "buffer":backup_bytes,
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#metric-open').textContent === '2'",
+                        timeout=5000,
+                    )
+                    if len(page.locator(".position-card").all_inner_texts()) != 2:
+                        errors.append("PAPER restore lost simulated positions")
+                    bad_order = dict(backup, orders_sent=True)
+                    page.locator("#import-file").set_input_files({
+                        "name":"paper-order-forgery.json", "mimeType":"application/json",
+                        "buffer":json.dumps(bad_order).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        timeout=5000,
+                    )
+                    if page.locator("#metric-open").inner_text() != "2":
+                        errors.append("PAPER order-forgery backup replaced state")
+                    poisoned = json.loads(backup_bytes)
+                    poisoned["state"]["positions"][0]["unexpected_credentials"] = "reject"
+                    page.locator("#import-file").set_input_files({
+                        "name":"paper-extra-fields.json", "mimeType":"application/json",
+                        "buffer":json.dumps(poisoned).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('campos desconhecidos')",
+                        timeout=5000,
+                    )
+                    if page.locator("#metric-open").inner_text() != "2":
+                        errors.append("PAPER extra-field backup replaced state")
+                    recycled = json.loads(backup_bytes)
+                    recycled["state"]["nextId"] = 1
+                    page.locator("#import-file").set_input_files({
+                        "name":"paper-reused-id.json", "mimeType":"application/json",
+                        "buffer":json.dumps(recycled).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('contador de IDs inconsistente')",
+                        timeout=5000,
+                    )
+                    if page.locator("#metric-open").inner_text() != "2":
+                        errors.append("reused PAPER ID backup replaced valid state")
+                    page.reload(wait_until="load")
+                    if page.locator("#metric-open").inner_text() != "2":
+                        errors.append("restored PAPER scenarios did not survive reload")
+                    if not all("US$ 0" in value for value in
+                               page.locator(".position-card .mark-output").all_inner_texts()):
+                        errors.append("manual hypothetical marks must not persist in PAPER backup")
                     now = int(time.time() * 1000)
                     last = (now // 3600000) * 3600000
                     slots = [{"closed_end_ms": last - (23-i)*3600000,

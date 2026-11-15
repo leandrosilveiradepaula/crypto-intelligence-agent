@@ -62,6 +62,8 @@ class AppLayoutContractTests(unittest.TestCase):
                      "watchlist-down-rows", "watchlist-note"):
             self.assertIn(f'id="{item}"', html)
         self.assertIn("Observações selecionadas J2", html)
+        self.assertIn("Importar relatórios ou restaurar PAPER", html)
+        self.assertIn("substitui cenários locais somente após sua confirmação", html)
         self.assertIn("não é previsão, sinal ou ordem", html)
         self.assertNotIn("api.bybit.com", html)
 
@@ -90,6 +92,12 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('function renderWatchlist()', js)
         self.assertIn("mark-reference", js)
         self.assertIn("E.grossMarkPnlCents(position, decimal(markInput.value))", js)
+        self.assertIn("function validatePaperBackup(backup)", js)
+        self.assertIn("exactBackupKeys(restored.config", js)
+        self.assertIn("E.validateState(backup.state)", js)
+        self.assertIn('window.confirm("Restaurar este backup PAPER?', js)
+        self.assertIn("Restauração cancelada", js)
+        self.assertIn("state = restored;", js)
         self.assertIn('output.dataset.valid = "false"', js)
         self.assertIn('function exactJ2Metric(raw)', js)
         self.assertIn('compareJ2Keys(previous, key)', js)
