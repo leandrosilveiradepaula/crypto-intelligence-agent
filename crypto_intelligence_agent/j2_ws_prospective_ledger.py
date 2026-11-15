@@ -42,6 +42,7 @@ def _report(status: str) -> dict[str, Any]:
         "status": status,
         "capture_records_created": 0,
         "candidates_captured": 0,
+        "owner_ws_sqlite_readonly_replayed": False,
         "local_decision_record_consistency_verified": False,
         "prospective_registration_independently_verified": False,
         "marketwide_top50_verified": False,
@@ -303,6 +304,7 @@ def capture_owner_ws_decision_once(*, allow_private_readonly_research: bool = Fa
             status="owner_local_decision_captured_not_independent_attestation",
             capture_records_created=1,
             candidates_captured=len(ref.candidates),
+            owner_ws_sqlite_readonly_replayed=True,
             local_decision_record_consistency_verified=True,
         )
         return out
@@ -348,6 +350,10 @@ def score_owner_ws_decision_once(*, horizon_bars: int,
         )
         # The pure J3 evaluator already forces false auth/trading/OOS flags.
         result["owner_local_decision_file_verified"] = True
+        result["owner_ws_sqlite_readonly_replayed"] = True
+        # The pure grader itself does not access SQL, but the owner wrapper
+        # DID replay SQLite read-only to source the current closed marks.
+        result["database_accessed"] = True
         result["prospective_registration_independently_verified"] = False
         return result
     except (OSError, ValueError, KeyError, TypeError, OverflowError, UnicodeError,
