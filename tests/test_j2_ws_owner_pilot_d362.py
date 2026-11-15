@@ -15,7 +15,7 @@ SHA = "a"*40
 class OwnerPilotD362ContractTests(unittest.TestCase):
     def test_script_is_syntactically_valid(self):
         self.assertTrue(SCRIPT.is_file())
-        if shutil.which("bash") is None:
+        if os.name != "posix" or shutil.which("bash") is None:
             self.skipTest("bash is unavailable on this runner")
         done = subprocess.run(["bash", "-n", str(SCRIPT)], capture_output=True, text=True)
         self.assertEqual(done.returncode, 0, done.stderr)
@@ -71,16 +71,16 @@ class OwnerPilotD362ContractTests(unittest.TestCase):
                 self.assertNotIn("github.com", p.stdout + p.stderr)
 
     def test_invalid_sha_fails_before_host_or_code_access(self):
-        if shutil.which("bash") is None:
-            self.skipTest("bash unavailable")
+        if os.name != "posix" or shutil.which("bash") is None:
+            self.skipTest("POSIX bash unavailable")
         p = subprocess.run(["bash", str(SCRIPT), "--confirm-owner-capture", "not-a-sha"],
                            capture_output=True, text=True, timeout=5)
         self.assertEqual(p.returncode, 77)
         self.assertEqual(p.stdout.strip(), "D362_BLOCKED_SHA40_REQUIRED")
 
     def test_unknown_mode_fails_without_side_effects(self):
-        if shutil.which("bash") is None:
-            self.skipTest("bash unavailable")
+        if os.name != "posix" or shutil.which("bash") is None:
+            self.skipTest("POSIX bash unavailable")
         p = subprocess.run(["bash", str(SCRIPT), "--deploy-all", SHA],
                            capture_output=True, text=True, timeout=5)
         self.assertEqual(p.returncode, 77)
