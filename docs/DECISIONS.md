@@ -1744,3 +1744,8 @@ Reutilizar o wrapper owner J2/WS-READ1 D338, **não** calcular um ranking novo n
 ## D345 — usar regras J2 observacionais existentes no journal WebSocket N50 (#638; 15/11/2026)
 
 Decisão técnica: evitar reproduzir indicadores de entrada ou coletar outra janela REST. O módulo J2/WS-WATCH1 primeiro valida a origem local `j2-ws-n50-descriptive-24closed-v1` (50 × 24 candles por ativo no mesmo epoch, BTC, digests e relógio causal) e **reutiliza** as funções já versionadas de validação e ranking da watchlist D308. A saída de quantidades é apropriada ao futuro app; símbolos privados são apenas opt-in owner. As regras são hipóteses fixas não calibradas, sem validação OOS/alpha. D323 e Top50 global #319 permanecem gates separados. Código/CI não equivalem à execução do owner na VPS. Não gerar ordens reais, testnet, PnL ou novas permissões, sem custo adicional.
+
+
+## D347 — cards J2 WS locais no painel PAPER, sem ordens (#642, 15/11/2026)
+
+Decisão de produto: reaproveitar o importador JSON local existente do J5 para exibir **contagens e até 5 observações LONG/SHORT** da watchlist J2/WS-WATCH1 já integrada. Dados privados de símbolo só aparecem após arquivo privado opt-in, nunca no endpoint agregado, rede externa ou `localStorage`. Validar o contrato WS 50×24 e ordenar indicadores decimais no navegador com BigInt; não transformar candidatos retrospectivos em sinal, execução ou sugestão automática. Nenhum botão que abra posições a partir desses cards. Feed N50/loopback e funções PAPER permanecem separados. `docs/J5_WS_WATCHLIST_MOBILE.md`.
