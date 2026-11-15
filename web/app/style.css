@@ -94,6 +94,13 @@ main { min-width: 0; max-width: 1600px; width: 100%; padding: 31px clamp(16px, 4
 .timeline li.failed, .timeline li.duplicate { border-color: #df979a; background: #994c58; }
 .timeline li.missing { background: #344459; }
 .research-list { display: grid; gap: 8px; margin-top: 16px; }
+.watchlist-panel { margin-top: 16px; }
+.watchlist-columns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin-top: 12px; }
+.watchlist-columns > div { min-width: 0; }
+.watchlist-columns h4 { font-size: .85rem; margin: 15px 0 0; }
+.watchlist-columns .research-item { min-width: 0; }
+.watchlist-columns .research-item .score { max-width: 52%; overflow-wrap: anywhere; }
+
 .research-item { display: flex; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-hi); }
 .research-item strong { font-size: .9rem; overflow-wrap: anywhere; }
 .research-item span { color: var(--muted); font-size: .75rem; }
@@ -170,6 +177,7 @@ footer { border-top: 1px solid var(--border); color: #8ea4bc; font-size: .73rem;
   .group { margin-bottom: 32px; }
   .panel { padding: 16px; }
   .inline-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .watchlist-columns { grid-template-columns: 1fr; gap: 9px; }
 }
 @media(max-width: 390px) {
   .stats { grid-template-columns: 1fr 1fr; }
