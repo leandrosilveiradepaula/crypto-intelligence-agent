@@ -38,6 +38,15 @@ def _report(status:str)->dict[str,Any]:
         "status":status,"rotation_due":False,
         "attempt_claimed":False,
         "rank_network_requests":0,
+        "rank_closed_hour_end_ms":None,
+        "rank_candidate_pool_count":None,
+        "rank_complete_positive_24h_candidates":None,
+        "rank_incomplete_24h_candidates":None,
+        "rank_complete_zero_turnover_candidates":None,
+        "rank_all_candidate_windows_complete24h":False,
+        "rank_catalog_census_matches_before_after":False,
+        "rank_candidate_pool_digest_sha256":None,
+        "rank_digest_sha256":None,
         "metadata_network_requests":0,
         "new_epoch_activated":False,
         "ranked_scope_sha256":None,
@@ -161,6 +170,20 @@ def rotate_n50_ws_owner_epoch_once(
             if rank.get("status")!="sealed_current_auto_rank_research_scope_only":
                 out["status"]="n50_ws_rotation_rank_abstain_no_retry"
                 return out
+            # Count/digest fields only; no public symbol, private path,
+            # turnover or provider payload is sent to journald.
+            for key in (
+                "rank_closed_hour_end_ms",
+                "rank_candidate_pool_count",
+                "rank_complete_positive_24h_candidates",
+                "rank_incomplete_24h_candidates",
+                "rank_complete_zero_turnover_candidates",
+                "rank_all_candidate_windows_complete24h",
+                "rank_catalog_census_matches_before_after",
+                "rank_candidate_pool_digest_sha256",
+                "rank_digest_sha256",
+            ):
+                out[key]=rank[key]
             catalog=cache_current_n50_ws_metadata_once(
                 manifest_directory=man,
                 ws_directory=ws,
