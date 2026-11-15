@@ -1617,3 +1617,8 @@ No WS real observamos 24 fechamentos 50/50 em 13–14/11 (22 de uma coorte, 2 da
 ## J2/WS-WATCH1 #638 — integrar watchlist D308 à fonte N50 WS auditada (15/11/2026)
 
 J2 já possui indicadores de rompimento, tendência/pullback, BTC/força relativa, confluência sintética e ablação J3 OOS. O gap concreto era conectar a watchlist **REST D308** ao leitor da epoch ativa **WS D624**. Issue #638 / branch `work/issue-638-j2-ws-n50-watchlist` implementam projeção read-only e classificação de observações LONG/SHORT usando as regras puras D308 compartilhadas, sem duplicar a matemática nem gerar sinais, ordens, preços ou PnL. CLI owner com dois opt-ins e confirmação privada adicional para símbolos; padrão é apenas contagens. Testes adversariais e documentação em `docs/J2_N50_WS_DESCRIPTIVE_WATCHLIST.md`. **Candidato em revisão/CI, sem merge ou release neste checkpoint.** Independente do gate D323/Top50 J1; não precisa reiniciar horas N50.
+
+
+## J2/J3 #640 — aferição de observações WS em horizontes futuros (15/11/2026)
+
+PR #639 J2 shortlist WS/D308 integrada no GitHub SHA `e7904d65237cd99be4c42f250df53e592c6b53b8`, CI Linux/docs + Windows/offline + PAPER/mobile verdes, sem deploy. Agora issue #640, branch `work/issue-640-j2-j3-ws-forward-outcomes` implementa módulo puro de congelamento e maturação 1/4/8/24h, com custos J3 existentes, BTC de referência e abstenção para falta de candles/coorte divergente. Testes e documentação em `docs/J2_J3_WS_FORWARD_OUTCOMES.md`. **Este incremental é candidato à CI/revisão e não é sinal ou backtest válido; sem deploy.** J1 D323 e #319 seguem gates operacionais separados.

@@ -339,3 +339,8 @@ Integrar somente resultados do **mesmo candle UTC fechado**, obtidos das mesmas 
 ## J2/WS-WATCH1 — watchlist quantitativa N50 WS observacional (#638)
 
 Fonte única: o mesmo leitor WS J2/D624 que audita 50 × 24 fechamentos da epoch atual na SQLite owner read-only e revalida a rotação D321. Sem regressão para REST. A integração reutiliza as regras de observação D308 (rompimento atual dos extremos das 23 barras anteriores, força relativa ao BTC, intensidade/turnover USDT), com filtro e ordenação determinísticos, sem alterar os cálculos. A saída padrão só contém contagens; símbolos privados exigem confirmação explícita. É material de **pesquisa**, não score preditivo nem sinal autorizado: `approved_for_signals=false`, `orders_sent=false`, `financial_backtest_approved=false`. Aplicativo J5 e motores de execução não acionam esse módulo automaticamente. Documentado em `docs/J2_N50_WS_DESCRIPTIVE_WATCHLIST.md`.
+
+
+## J2/J3 — observação congelada e outcome posterior N50 WS (#640, 15/11/2026)
+
+J2 #638 produz observações descritivas de rompimento e força BTC a partir do WS auditado. J2/J3 #640 acrescenta um registro *em memória* de até cinco observações por lado com horário e referência de fechamento e um segundo estágio que usa **apenas fechamentos futuros já maturados**, em 1h/4h/8h/24h. O movimento ex-post com direção LONG/SHORT de pesquisa é comparado ao benchmark BTC de mesma direção. Taxas, slippage e funding de fixture são calculados pelo mesmo `synthetic_cost_scenarios` de J3. Não supor entrada no fechamento, fill, liquidação, probabilidade de acerto, lucro ou autenticação prospectiva. Sem credencial, coleta, ordem ou release; consulte `docs/J2_J3_WS_FORWARD_OUTCOMES.md`.

@@ -1841,3 +1841,8 @@ J5 issue #636, branch `work/issue-636-j5-n50-scope-progress`: métricas separada
 ## J2/#638 — ponte descritiva para WebSocket N50 (15/11/2026)
 
 **Jornada:** J2 Entradas; issue #638; branch `work/issue-638-j2-ws-n50-watchlist`; PR/CI/SHA conclusivos a registrar após criação. O objetivo imediato é expor pesquisa por rom­pimento atual/força relativa/turnover da epoch N50 WS, consumindo somente o auditor privado existente D624 e reutilizando a watchlist D308, sem rede/ordens. Teste offline, contrato público de contagens e documentação D345 implementados como candidato; nenhum deploy. **Dependências para dados reais:** WS 50x24 por mesma coorte no SQLite (gate D323) e leitura owner autorizada; #319 marketwide separada. Não solicitar `prossiga`, seguir com revisão+CI+merge seguro sem produção.
+
+
+## J2/J3 #640 — próximo progresso sem aguardar 24h de implementação (15/11/2026)
+
+**Jornada/tarefa:** J2→J3, #640, branch `work/issue-640-j2-j3-ws-forward-outcomes`. **Fonte integrada:** PR J2 #639 MERGED SHA `e7904d65237cd99be4c42f250df53e592c6b53b8`, head `7ec04a0422475a3935df2ffad4406e75e6bcfb42`, CI run 43707883404 (docs/Windows) e 43707883339 (PAPER) SUCESSO. D346, módulo puro e testes para freeze e outcome de referência com custos sintéticos J3, 1h/4h/8h/24h, no GitHub. **Status deste incremento:** branch sob CI/revisão, sem PR mergeada ou release neste checkpoint. **Bloqueios reais:** J1 owner D323 ainda não declarada PASS, marketwide #319 separado, registro prospectivo e despesas reais de execution não demonstrados. **Ação elegível seguinte:** abrir/revisar PR, testes Linux/Windows/PAPER, corrigir regressões e merge seguro sem deploy. Sem ordens reais, sem troca de DAC, sem VPS ou gasto.
