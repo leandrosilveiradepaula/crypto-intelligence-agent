@@ -246,7 +246,9 @@
           a.stopBps < 10000 && a.hits <= a.lastStep,
           "Política automática PAPER adulterada");
       }
-      let exited = 0n, autoHits = 0, priorAutoStep = 0, stopped = false;
+      let exited = 0n, replayRemaining = initial, autoHits = 0;
+      let priorAutoStep = 0, stopped = false;
+      const reserveFloor = initial * BigInt(p.runnerBpsAtOpen) / BPS;
       for (const event of p.events) {
         requireValid(event && ["PARTIAL_PAPER","CLOSE_PAPER"].includes(event.kind) &&
           typeof event.units === "string" && INTEGER.test(event.units) &&
@@ -258,6 +260,19 @@
             event.percentBps >= 1 && event.percentBps <= 10000,
             "Parcial PAPER sem base");
         }
+        const eventUnits = BigInt(event.units);
+        requireValid(replayRemaining > 0n && eventUnits <= replayRemaining,
+          "Evento PAPER excede saldo cronológico");
+        if (event.kind === "PARTIAL_PAPER") {
+          const ref = event.basis === "INITIAL_POSITION" ? initial : replayRemaining;
+          requireValid(ref * BigInt(event.percentBps) / BPS === eventUnits &&
+            replayRemaining - eventUnits >= reserveFloor,
+            "Quantidade parcial PAPER difere do replay exato");
+        } else {
+          requireValid(eventUnits === replayRemaining,
+            "Encerramento PAPER não corresponde ao saldo anterior");
+        }
+        replayRemaining -= eventUnits;
         const autoTagged = Object.hasOwn(event, "autoStep") ||
           Object.hasOwn(event, "autoAction");
         if (autoTagged) {
@@ -284,7 +299,7 @@
       requireValid(!hasAuto || (p.auto.hits === autoHits &&
         (!stopped || p.status === "CLOSED")),
         "Progresso automático PAPER inconsistente");
-      requireValid(exited + remaining === initial,
+      requireValid(exited + remaining === initial && replayRemaining === remaining,
         "Ledger de quantidades PAPER inconsistente");
     }
     return raw;
