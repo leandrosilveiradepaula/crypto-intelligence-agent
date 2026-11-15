@@ -1863,3 +1863,11 @@ PR #645 MERGED no commit `f71293d7c9a11898b995e5a53acc4a2d531c5680`; head revisa
 ## J5 #646 — indicador de risco mark hipotético no PAPER (15/11/2026 UTC)
 
 Base verificada `main=f71293d7c9a11898b995e5a53acc4a2d531c5680`, issue #646, branch `work/issue-646-j5-paper-mark-reference`; arquivos `web/app/app.js`, `web/app/style.css`, testes Node/Chrome existentes e `docs/J5_PAPER_MARK_REFERENCE.md`. O cálculo financeiro é o mesmo BigInt J5 já testado; o mark digitado não é preço real, não persiste e não dispara ordem. **Próxima ação elegível:** abrir PR, inspecionar diff, CI 3 jobs no SHA final, merge seguro sem publicação se os gates verdes. Nenhuma implantação, mudança na VPS, credenciais, custo ou trading. J1 N50 WS/rotação timers ativos na última leitura 15/11 12:13 UTC, serviço 11:59Z exit0; janela D323 no mesmo epoch desde 14/11 16UTC até 15/11 15UTC não antecipar. #585/#319 ainda exigem prova distinta.
+
+## J5 #646 — entregue na main, sem deploy (15/11/2026 UTC)
+
+Issue #646 fechada, PR #647 MERGED SHA `94c78554f8531d258626df7f8781f7b82e9f4c82`, HEAD revisado `723e26b1a6e2fb174420963acc8d5722218c1b13`. Workflows CI 43713120923 (docs+Windows) e 43713120890 (PAPER/Chrome) SUCESSO. Campo mark hipotético e cálculo bruto BigInt operacional **no código**, não em release público ou VPS; não implica lucro, preço mark live ou trading.
+
+## J5 #648 — restore local de backup PAPER (15/11/2026 UTC)
+
+Base main conferida `94c78554f8531d258626df7f8781f7b82e9f4c82`, issue #648, branch `work/issue-648-j5-paper-backup-restore`. Arquivos `web/app/{app.js,index.html}`, `scripts/audit_j5_product_app_browser.py`, `tests/test_j5_product_app_mvp.py`, `docs/J5_PAPER_LOCAL_BACKUP_RESTORE.md`; importação do export local com validação estrita e confirmação pré-substituição. **Próxima ação elegível:** abrir PR, CI 3 jobs no SHA exato, corrigir QA e merge seguro sem deploy. Nenhum outro processo, app, serviço, usuário, DAG, dado privado, ordem, migração ou VPS tocado. #585 J1 D323 agendada 15/11 15:05 UTC em automação separada; ainda sem PASS, Top50 #319 separado.
