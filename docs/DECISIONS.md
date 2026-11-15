@@ -1762,3 +1762,7 @@ O J2/J3 não pode demonstrar desempenho de entradas se a mesma execução escolh
 ## D349 — referência mark manual e PnL bruto somente PAPER no app J5 (#646; 15/11/2026)
 
 O motor `web/app/engine.js` já implementa a variação bruta de mark por quantidade remanescente (`grossMarkPnlCents`). Não duplicar o cálculo com float, nem fabricar uma fonte de mark. Expor um campo manual, efêmero e local por posição aberta; saída em centavos exatos com sinal LONG/SHORT, atualização após parciais e falha fechada sem manter valor favorável obsoleto. Variação mark não equivale a PnL líquido, resultado realizado, stop, fill, liquidação ou preço de corretora. Nenhum dado de marcação é persistido nem dispara ordem, e o N50 fica intocado. `docs/J5_PAPER_MARK_REFERENCE.md`.
+
+## D350 — recuperação de backup JSON PAPER local com confirmação (#648, 15/11/2026)
+
+A exportação `cia-j5-paper-local-export-v1` já existia, mas a UI não conseguia restaurá-la. Preservar o engine BigInt e a versão v1 do estado; aceitar somente o JSON completo exato de simulação, sem flags de ordens, segredo, preço de exchange ou campos extras, com data UTC canônica. Exigir `CIAEngine.validateState` e estrutura fechada antes de perguntar ao usuário sobre **substituir seus cenários PAPER locais**. Cancelamento ou corrupção deixam o estado atual intacto; aceitação substitui e salva somente no armazenamento do navegador. Não acrescentar API, rede, execução real, SQL ou alterações da VPS. Ver `docs/J5_PAPER_LOCAL_BACKUP_RESTORE.md`.
