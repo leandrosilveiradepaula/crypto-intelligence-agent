@@ -126,6 +126,33 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "() => document.documentElement.scrollWidth > window.innerWidth + 1"
                     ):
                         errors.append("automatic PAPER panel overflows 320px viewport")
+                if width == 768:
+                    # One click replays a finite hypothetical mark path. The
+                    # path must never be treated as observed market data.
+                    page.locator("#auto-enabled").check()
+                    page.locator("#open-submit").click()
+                    batch = page.locator(".auto-batch-input").first
+                    batch.fill("101\n102\n99\n98")
+                    page.locator(".auto-batch-button").first.click()
+                    page.wait_for_function(
+                        "() => document.querySelector('#metric-open').textContent === '0'",
+                        timeout=5000,
+                    )
+                    page.locator(".position-card details summary").first.click()
+                    if ("Auto PAPER STOP" not in page.locator(".ledger").inner_text()
+                            or "1 ignorados" not in page.locator("#notice").inner_text()
+                            or page.locator(".auto-batch-button").count()):
+                        errors.append("automatic PAPER batch did not stop and skip future fixture rows")
+                    page.reload(wait_until="load")
+                    page.locator(".position-card details summary").first.click()
+                    if (page.locator("#metric-open").inner_text() != "0"
+                            or "Auto PAPER TARGET_2" not in
+                            page.locator(".ledger").inner_text()):
+                        errors.append("automatic PAPER batch did not survive reload")
+                    if page.evaluate(
+                        "() => document.documentElement.scrollWidth > innerWidth + 1"
+                    ):
+                        errors.append("PAPER batch panel overflows tablet viewport")
                 if width == 390:
                     page.locator("#open-submit").click()
                     if page.locator("#metric-open").inner_text() != "1":
