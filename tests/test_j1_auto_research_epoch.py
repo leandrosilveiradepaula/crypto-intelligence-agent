@@ -185,6 +185,22 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
             client=BoundedBybitPublicClient(transport=fake_bybit),
         )
 
+    def test_offline_seal_refuses_forged_pool_coverage_before_writing(self):
+        fake = report()
+        fake["insufficient_closed24h_candidates"] = 1
+        self.save(fake)
+        refused = self.seal()
+        self.assertEqual(refused["status"], "abstain")
+        self.assertFalse(refused["manifest_written"])
+        self.assertFalse((self.manifest / FILE_NAME).exists())
+        self.assertEqual(refused["network_requests"], 0)
+        self.assertFalse(refused["orders_sent"])
+        self.save(report())
+        approved = self.seal()
+        self.assertTrue(approved["manifest_written"])
+        self.assertEqual(approved["rank_candidate_pool_count"], 370)
+        self.assertTrue(approved["rank_all_candidate_windows_complete24h"])
+
     def test_one_step_capture_seal_uses_50_public_symbols_only_in_manifest(self):
         module = "scripts.run_j1_current_ranked_epoch_once.research_current_closed24h_once"
         with patch(module, return_value=report()) as capture:
