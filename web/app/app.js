@@ -425,6 +425,44 @@
     return snapshot;
   }
 
+  function exactBackupKeys(obj, keys) {
+    check(obj && typeof obj === "object" && !Array.isArray(obj) &&
+      Object.keys(obj).length === keys.length &&
+      keys.every(key => Object.hasOwn(obj, key)),
+      "Backup PAPER com campos desconhecidos");
+  }
+  function validatePaperBackup(backup) {
+    // The exported PAPER fixture has no permission to mutate market data,
+    // execute orders, or carry arbitrary fields into persistent local state.
+    exactBackupKeys(backup, ["schema_version", "simulation_only",
+      "orders_sent", "exported_at", "state"]);
+    check(backup.schema_version === "cia-j5-paper-local-export-v1" &&
+      backup.simulation_only === true && backup.orders_sent === false,
+      "Backup não é simulação PAPER autorizada");
+    check(typeof backup.exported_at === "string" &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(backup.exported_at),
+      "Horário do backup PAPER inválido");
+    const stamp = Date.parse(backup.exported_at);
+    check(Number.isFinite(stamp) && stamp > Date.parse("2020-01-01T00:00:00.000Z") &&
+      stamp <= Date.now() + 300000 &&
+      new Date(stamp).toISOString() === backup.exported_at,
+      "Horário do backup PAPER inconsistente");
+    const restored = E.validateState(backup.state);
+    exactBackupKeys(restored, ["version", "nextId", "config", "positions"]);
+    exactBackupKeys(restored.config, ["leverage", "marginCents", "runnerBps", "paused"]);
+    restored.positions.forEach(position => {
+      exactBackupKeys(position, ["id", "symbol", "side", "openedAt",
+        "entryPriceUnits", "marginCents", "leverageAtOpen", "runnerBpsAtOpen",
+        "initialUnits", "remainingUnits", "events", "status"]);
+      position.events.forEach(event => {
+        exactBackupKeys(event, event.kind === "PARTIAL_PAPER" ?
+          ["kind", "basis", "percentBps", "units", "at"] :
+          ["kind", "units", "at"]);
+      });
+    });
+    return restored;
+  }
+
   function renderFeed() {
     $("feed-empty").hidden = !!feed;
     $("feed-loaded").hidden = !feed;
@@ -712,7 +750,20 @@
         } else if (payload.schema_version === "j2-n50-ws-descriptive-watchlist-v1") {
           watchlist = validateWatchlist(payload);
           warn("Watchlist J2 importada somente nesta sessão; observações não são sinais nem ordens.", false);
-        } else throw new Error("Schema JSON desconhecido. Importe somente relatórios sanitizados N50/J2.");
+        } else if (payload.schema_version === "cia-j5-paper-local-export-v1") {
+          const restored = validatePaperBackup(payload);
+          if (!window.confirm("Restaurar este backup PAPER? Todos os cenários locais atuais serão substituídos. A VPS e a coleta N50 não serão alteradas.")) {
+            warn("Restauração cancelada. Os cenários PAPER atuais foram preservados.", false);
+            return;
+          }
+          state = restored;
+          delete $("open-form").dataset.edited;
+          save();
+          warn(storageAvailable ?
+            "Backup PAPER restaurado neste navegador. Nenhuma ordem foi enviada." :
+            "Backup PAPER aberto nesta sessão, mas não foi possível persistir no navegador. Exporte novamente antes de sair.",
+            !storageAvailable);
+        } else throw new Error("Schema JSON desconhecido. Importe relatórios sanitizados N50/J2 ou backup PAPER local.");
         render();
       } catch (err) {
         warn("Importação recusada: " + err.message, true);
