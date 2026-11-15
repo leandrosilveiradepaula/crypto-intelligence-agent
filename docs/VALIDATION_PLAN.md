@@ -1393,3 +1393,8 @@ Testes `tests/test_j5_product_app_mvp.py` e `scripts.audit_j5_product_app_browse
 
 ## J5/APP-SYNC2 — pesquisar somente após 50×24 do owner (#632)
 Confirmar `read_j2_descriptive()` com wrapper J2 mockado, `allow_private_readonly_research=True` e `include_private_symbols=False`, recusar missing window, 49/50, valores fora da janela, SHA inválido, sinal/ordem, row privativa, fonte não autenticada, nunca emitir path/hash de registry. HTTP `GET /api/j2-research` apenas loopback; 503 sanitizado e métodos de escrita bloqueados. Chrome real em localhost deve carregar contagens J2 synthetic 50/50 e zerar status quando backend recusar; no modo `file://`, nenhuma requisição externa. Ciclo J1/N50 segue independente. CI Linux/docs, Windows/offline e Chrome/PAPER no head exato; merge sem deploy/ordens. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+
+## J5/OPPORTUNITIES #642 — watchlist real J2 no browser local
+
+Executar `tests/test_j5_product_app_mvp.py` e `scripts.audit_j5_product_app_browser` com Chromium real em viewport 320/390/768/1280: importar JSON WS com até 5 observações por direção, verificar ranking/regras/status, cartão responsivo e sem overflow; importar JSON agregado sem nomes e não fabricar tickers; adulterar símbolo com HTML, ordem, SHA, origem, ratio, shortlist parcial e contador para garantir recusa, mantendo última tela segura. Confirmar que a importação não altera `state.positions`, não chama endpoint, não usa `innerHTML`, não faz upload ou persistência de símbolos, não executa trade. Rodar Linux/docs + Windows/offline + PAPER/mobile e revisar SHA antes do merge sem deploy. Documento `docs/J5_WS_WATCHLIST_MOBILE.md`.
