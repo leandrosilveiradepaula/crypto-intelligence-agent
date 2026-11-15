@@ -91,6 +91,8 @@ def _entry(item: object, now_ms: int) -> tuple[int, bool, tuple[str, str] | None
     # These digests are hints from service logs, not an audit of private
     # epochs or SQLite. Legacy reports without both remain usable for
     # hourly counts, but never produce same-cohort continuity.
+    if status != _OK:
+        return end, False, None
     ranked = report.get("ranked_scope_sha256")
     metadata = report.get("ws_metadata_sha256")
     if ((ranked is None) != (metadata is None)
