@@ -241,6 +241,23 @@
     for (let i = 23; i >= 0 && snapshot.slots[i].state === "ok"; --i) streak++;
     check(streak === snapshot.consecutive_recent_observed_hours,
       "Sequência N50 inconsistente");
+    // v1 legacy imports have no scope metadata; do not invent a cohort.
+    const scopeKeys = ["same_scope_recent_50_of_50_hours",
+      "scope_evidence_available", "scope_changed_in_window"];
+    if (scopeKeys.some(key => Object.hasOwn(snapshot, key))) {
+      check(scopeKeys.every(key => Object.hasOwn(snapshot, key)) &&
+        typeof snapshot.scope_evidence_available === "boolean" &&
+        typeof snapshot.scope_changed_in_window === "boolean" &&
+        Number.isInteger(snapshot.same_scope_recent_50_of_50_hours) &&
+        snapshot.same_scope_recent_50_of_50_hours >= 0 &&
+        snapshot.same_scope_recent_50_of_50_hours <= streak &&
+        (snapshot.scope_evidence_available ?
+          (snapshot.same_scope_recent_50_of_50_hours >= 1 &&
+            snapshot.slots[23].state === "ok") :
+          snapshot.same_scope_recent_50_of_50_hours === 0) &&
+        (!snapshot.scope_changed_in_window || states.ok >= 2),
+        "Progresso da coorte inconsistente");
+    }
     return snapshot;
   }
   function validateResearch(snapshot) {
@@ -293,6 +310,13 @@
     set("n50-ok", feed.observed_50_of_50_hours + " / 24");
     set("n50-streak", feed.consecutive_recent_observed_hours);
     set("n50-failed", feed.failed_hours + feed.duplicate_hours);
+    const hasScope = feed.scope_evidence_available === true;
+    set("n50-scope", hasScope ?
+      feed.same_scope_recent_50_of_50_hours + " / 24" : "—");
+    set("n50-scope-note", feed.scope_changed_in_window === true ?
+      "Mudança de coorte nos relatórios: não é falha da coleta nem reinício da homologação." :
+      hasScope ? "Mesma coorte nos relatórios recentes; a auditoria SQLite D323 é separada." :
+      "Os relatórios importados não identificam a coorte. Continuidade não demonstrada.");
     const timeline = $("timeline");
     timeline.replaceChildren();
     feed.slots.forEach(slot => {
@@ -380,7 +404,7 @@
     $("research-empty").hidden = !!research;
     $("research-loaded").hidden = !research;
     if (!research) {
-      set("research-status", "Aguardando 24h");
+      set("research-status", "J2 aguarda auditoria privada");
       return;
     }
     set("research-status", researchOrigin === "local-auto" ?
@@ -415,6 +439,9 @@
     const n50 = !feed ? "N50: fonte indisponível ou sem relatório." :
       !recent ? "N50: relatório obsoleto; atualização necessária." :
       "N50: " + feed.observed_50_of_50_hours + "/24 horas 50/50 observadas em logs" +
+      (feed.scope_evidence_available === true ?
+        "; mesma coorte observada: " + feed.same_scope_recent_50_of_50_hours + "/24" :
+        "; coorte não comprovada nos logs") +
       (feedOrigin === "manual" ? " (importação manual)." : " (fonte local).");
     const j2 = !research ? "J2: aguardando janela privada íntegra de 50 × 24h." :
       researchOrigin === "manual" ? "J2: pesquisa descritiva importada manualmente; sem sinais." :
