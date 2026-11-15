@@ -196,7 +196,7 @@ class FutureMarksTests(unittest.TestCase):
 
     def test_only_matured_horizon_scored_and_no_fabricated_zero(self):
         _, ref = decision()
-        for horizon in (1, 4, 24):
+        for horizon in (1, 4, 8, 24):
             end = ref.decision_end_ms + horizon*HOUR_MS
             pending = evaluate(ref, horizon,
                                now=end+179_999)
@@ -268,6 +268,9 @@ class FutureMarksTests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             evaluate(ref,funding={first.symbol:(funding,),
                                   "OTHERUSDT":(funding,)})
+        if first.symbol != "BTCUSDT":
+            with self.assertRaises(DataValidationError):
+                evaluate(ref, funding={"BTCUSDT": (funding,)})
 
     def test_future_mark_grader_never_opens_database_network_or_order(self):
         _, ref = decision()
@@ -286,7 +289,7 @@ class FutureMarksTests(unittest.TestCase):
             evaluate(replace(ref, window_sha256="0"*64))
         with self.assertRaises(DataValidationError):
             evaluate(replace(ref, decision_commitment_sha256="0"*64))
-        for h in (0,2,25,True,1.0,"1"):
+        for h in (0,2,9,25,True,1.0,"1"):
             with self.subTest(h=h), self.assertRaises(DataValidationError):
                 evaluate(ref,horizon=h)
 
