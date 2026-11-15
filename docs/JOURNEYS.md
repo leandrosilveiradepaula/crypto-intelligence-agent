@@ -445,3 +445,7 @@ Depois da prova real de 50 candidatos/1200 candles, desenvolver captura de todos
 ## J4/J5 AUTO-PAPER1 #650 — entrega integrada entre gestão e mobile (15/11/2026 UTC)
 
 Próximo incremento de produto: criar cenários PAPER com regras configuradas de dois alvos e stop acionados por preço **hipotético digitado**, usando as funções locais BigInt já existentes e respeitando runner, com identificação e replay dos eventos automáticos no navegador/backup. A interface não se conecta a exchange nem se apropria dos observáveis J2 como ordens; não substitui o motor J4 Python de risco, reservas e reconciliação. Código em branch `work/issue-650-j4-j5-paper-auto-exits` aguardando review/CI/merge sem deploy. A aceitação J4/J5 e negociação automática real permanecem gates distintos.
+
+## J5/J6 #652 — replay automático transacional de fixtures no celular (15/11/2026 UTC)
+
+Incremento de uso local após os gatilhos J4/J5 #650: o operador pode colar até 24 preços de fechamento **sintéticos** e executar o cenário inteiro em uma ação, com rollback integral em caso de erro tardio e contagens após STOP. É um teste de lógica, não coleta, backtest OOS, order engine ou trading. Branch `work/issue-652-j5-paper-batch-marks` sob PR/CI; sem deploy. Acesso a dados reais, RiskGate da corretora e execução continuam separados.
