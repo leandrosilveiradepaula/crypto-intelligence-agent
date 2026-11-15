@@ -1,10 +1,10 @@
-# Estado operacional — WU44 Bybit V5 restrita no primeiro GET; Kraken price-only real, J1 Top50/volume/rights abertas, 2026-10-26 UTC
+# Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
 Projeto: Crypto Intelligence Agent. Repo PÚBLICO: `leandrosilveiradepaula/crypto-intelligence-agent`.
 Missão: futuros perpétuos crypto, entradas quantitativas e saídas parciais; operação manual sem ordens reais nesta fase.
 Autonomia: `AGENTS.md`; não pedir "prossiga", avançar em microtarefas seguras, usar GitHub como verdade. Nenhum custo adicional (R$0), permissão sensível, deploy/migration em produção ou trade sem gate humano.
 
-## Jornada ativa: J1 Dados — épica #2 aberta
+## Jornada ativa: J2/J3 observação prospectiva (#656); J1 #2/#319 concluídas no escopo D360
 - J0 documental concluída (issue #1, PRs #10/#11).
 - WU1 #9/PR12 SHA `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
 - WU2 #13/PR14 SHA `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`.
@@ -1919,3 +1919,12 @@ Autorização explícita do Product Owner. PR #655 **MERGED** no SHA `b75124c2ef
 **Código e validação:** PR #654 D357 (`dd6aab6d02de8452346b236b3c1f3ff4e28d7869`) e PR #655 D359 (`b75124c2efbfa1a2a5d1b2c38f0f597c397e2d90`) integradas. PR #655 head revisado `852646205dfa5a7bcedfccbdfcf9dd8eedf2502b`, 3/3 CI Linux/docs, Windows/offline, PAPER/Chrome verdes, 32 regressões owner locais PASS. Auditor foi instalado em checkout privado **isolado**, não houve atualização do código do serviço WS/rotador, SQL write, mudança systemd, ordem ou gasto. Timers WS/rotação permanecem ativos/habilitados na verificação de 20:23 UTC. A automação de 16:20 BRT não publicou o resultado, portanto o próprio executor reconsultou e gravou a evidência no GitHub (issue #319 D360), que foi **CLOSED/completed em 20:24:48 UTC**.
 
 **Decisão de aceite:** J1 é aprovada **no escopo de fundação de dados e seleção dinâmica de Top50 técnico de perpétuos USDT para pesquisa pessoal**, com ingestão/read-only, histórico UTC fechado, qualidade, persistência, integridade WS, rotação e seleção PIT causal auditados. O aceite não implica catálogo crypto-only global independente, fonte autenticada para ordens, garantia de feed ininterrupto futuro, revisão de todos fornecedores Kraken/Binance, homologação operacional 24/7 para produção, rentabilidade ou execução financeira. `marketwide_top50_verified=false`, `crypto_identity_independently_verified=false`, `approved_for_signals=false`, `live_trading_authorized=false` **permanecem obrigatoriamente false**. Issues J1 auxiliares de refinamento (#429 supervisão/health avançado, #525 cenários 48h, #585 reconciliação REST de gaps) podem permanecer abertas para evolução e J6; **não reabrir a coleta/24h já comprovadas**. O produto J2/J3/J4/J5/J6 permanece em desenvolvimento e não está pronto para ordens reais.
+
+
+## J2/J3 — continuidade pós-J1 D360 / preparação #656 (15/11/2026)
+
+- Estado verificado: J1 #2/#319 **fechadas** após job D359 exit 0 e evidência D360; critérios pesquisa Top50 técnico aprovados, flags globais e ordens reais false. Não repetir a janela N50 nem reabrir revisão manual de 370 tokens.
+- Código pré-existente: PRs J2 #639, J3 #641 e ledger prospectivo #645 integradas. Ainda sem **captura real** de decisões no ledger do owner e sem outcomes reais 1/4/8h comprovados.
+- #656 / branch `work/issue-656-j2-prospective-handoff`: preflight owner sem escrita e contrato de implantação separado. O branch acrescenta CLI, testes e runbook; PR/CI/SHA final são registrados no GitHub, não inferidos deste texto. Sem cutover N50, criação de ledger real, serviço, cron, SQL write ou ordens.
+- Próximo ato após validação/merge de código: considerar gate próprio para executar **uma captura owner única** em janela vigente e score posterior, com observabilidade e preservação das epochs, sem supor que a passagem do tempo executará código sozinha.
+- Bloqueios: implantação explícita ainda pendente; NTP/DAC/epoch/24h devem ser checados na VPS antes de captura; ausência de atestação temporal independente e de desempenho ajustado ao risco. `approved_for_signals=false`, `live_trading_authorized=false`.
