@@ -92,7 +92,15 @@ import json, os, re, sys, time
 kind = sys.argv[1]
 try:
     raw = os.environ["PILOT_JSON"]
-    data = json.loads(raw)
+    def distinct(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError("duplicate response key")
+            obj[key] = value
+        return obj
+    data = json.loads(raw, object_pairs_hook=distinct,
+                      parse_constant=lambda _: (_ for _ in ()).throw(ValueError("invalid JSON constant")))
     if type(data) is not dict or len(raw) > 4096:
         raise ValueError()
     status = data.get("status")
@@ -100,6 +108,7 @@ try:
         raise ValueError()
     if (data.get("orders_sent") is not False
             or data.get("approved_for_signals") is not False
+            or data.get("live_trading_authorized") is not False
             or data.get("database_mutation_statements") != 0
             or data.get("network_requests") != 0
             or data.get("systemd_modified") is not False):
@@ -147,6 +156,20 @@ try:
             print("D362_SCORE_HORIZON_HOURS=" + str(horizon))
             print("D362_SELECTED_OBSERVATIONS=" + str(selected))
             print("D362_MATURED_OBSERVATIONS=" + str(matured))
+            if status == "ex_post_reference_marks_scored_not_a_backtest":
+                # Only aggregate sums, never symbols, prices or per-asset rows.
+                aggregate = {
+                    "gross_reference_bps_sum": "D362_GROSS_REFERENCE_BPS_SUM",
+                    "net_reference_after_assumed_costs_bps_sum": "D362_NET_REFERENCE_COSTED_BPS_SUM",
+                    "same_side_btc_excess_reference_bps_sum": "D362_BTC_EXCESS_REFERENCE_BPS_SUM",
+                    "assumed_total_cost_quote_units": "D362_ASSUMED_COST_QUOTE_SUM",
+                }
+                for source_key, output_key in aggregate.items():
+                    amount = data.get(source_key)
+                    if (type(amount) is not str or len(amount) > 600
+                            or not re.fullmatch(r"-?[0-9]{1,300}(?:\\.[0-9]{1,300})?", amount)):
+                        raise ValueError()
+                    print(output_key + "=" + amount)
             print("D362_REFERENCE_ONLY_NOT_FILLS=true")
     else:
         raise ValueError()

@@ -33,7 +33,8 @@ class OwnerPilotD362ContractTests(unittest.TestCase):
             "test_j2_ws_prospective_ledger.py", "test_j2_n50_ws_private_screen.py",
             "owner_cli preflight", "owner_cli capture", "owner_cli score",
             "safe_report", "PILOT_JSON", "D362_CAPTURE_ABSTAIN_NO_RETRY",
-            "D362_SCORE_ABSTAIN_NO_RETRY",
+            "D362_SCORE_ABSTAIN_NO_RETRY", "object_pairs_hook=distinct",
+            "D362_NET_REFERENCE_COSTED_BPS_SUM", "D362_GROSS_REFERENCE_BPS_SUM",
         ):
             with self.subTest(needle=needle):
                 self.assertIn(needle, data)
