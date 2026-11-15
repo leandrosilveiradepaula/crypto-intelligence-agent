@@ -135,5 +135,42 @@ class OwnerPilotD362ContractTests(unittest.TestCase):
         self.assertEqual(rejected.stdout.strip(), "D362_REPORT_REJECTED")
 
 
+    def test_capture_projection_accepts_explicit_live_false_and_fails_closed_without(self):
+        import json
+        import sys
+        import time
+        from crypto_intelligence_agent import j2_ws_prospective_ledger as ledger
+
+        source = SCRIPT.read_text(encoding="utf-8")
+        code = source.split("<<'PY'\\n", 1)[1].split("\\nPY\\n", 1)[0]
+        now_ms = time.time_ns() // 1_000_000
+        end_ms = now_ms - now_ms % 3_600_000
+        report = ledger._report("owner_local_decision_captured_not_independent_attestation")
+        report.update(
+            decision_closed_end_ms=end_ms,
+            capture_records_created=1,
+            candidates_captured=2,
+            owner_ws_sqlite_readonly_replayed=True,
+            local_decision_record_consistency_verified=True,
+        )
+        def run(payload):
+            return subprocess.run(
+                [sys.executable, "-B", "-", "capture"],
+                input=code, capture_output=True, text=True, timeout=5,
+                env={**os.environ, "PILOT_JSON": json.dumps(payload)},
+            )
+        ok = run(report)
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        self.assertIn("D362_CANDIDATES_CAPTURED=2", ok.stdout)
+        self.assertNotIn("BTCUSDT", ok.stdout)
+        absent = dict(report)
+        absent.pop("live_trading_authorized")
+        denied = run(absent)
+        self.assertEqual(denied.returncode, 77)
+        self.assertEqual(denied.stdout.strip(), "D362_REPORT_REJECTED")
+        unsafe = dict(report, live_trading_authorized=True)
+        self.assertEqual(run(unsafe).returncode, 77)
+
+
 if __name__ == "__main__":
     unittest.main()

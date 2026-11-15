@@ -257,6 +257,23 @@ class OwnerLedgerCaptureTests(unittest.TestCase):
 
 
 class CLIContractTests(unittest.TestCase):
+    def test_owner_capture_status_has_explicit_false_live_trading_gate(self):
+        # The D362 VPS sanitizer requires this explicit false flag.
+        # Missing is NOT equivalent to disabled, even though no order exists.
+        for status in (
+            "owner_capture_abstain",
+            "owner_local_decision_captured_not_independent_attestation",
+            "owner_decision_hour_already_recorded",
+        ):
+            with self.subTest(status=status):
+                report = ledger._report(status)
+                self.assertIs(report["live_trading_authorized"], False)
+                self.assertIs(report["approved_for_signals"], False)
+                self.assertIs(report["orders_sent"], False)
+                self.assertEqual(report["network_requests"], 0)
+                self.assertEqual(report["database_mutation_statements"], 0)
+                self.assertIs(report["systemd_modified"], False)
+
     def test_cli_requires_explicit_capture_gate_and_censored_costs(self):
         from scripts.research_j2_ws_prospective_once import main
         with patch("scripts.research_j2_ws_prospective_once.capture_owner_ws_decision_once",

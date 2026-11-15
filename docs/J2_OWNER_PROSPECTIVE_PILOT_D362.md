@@ -32,6 +32,17 @@ As linhas de score exibem também **somas agregadas** em bps brutos, após custo
 
 **Flag de pesquisa:** J1 D360 = aprovada para seleção técnica e coleta; `prospective_registration_independently_verified=false`, `out_of_sample_results_validated=false`, `financial_backtest_approved=false`, `approved_for_signals=false`, `live_trading_authorized=false`, `marketwide_top50_verified=false`. O SHA local e relógio NTP do host não são testemunha externa do instante de registro.
 
+## D363 — compatibilidade de relatório antes do primeiro release (15/11/2026)
+
+O primeiro gate de captura da VPS exige `live_trading_authorized=false`
+**explicitamente** no JSON da captura. Na revisão pré-release foi identificado
+que `j2_ws_prospective_ledger._report` não incluía essa chave, embora o
+executor D362 a recusasse corretamente. Corrigido o contrato do módulo owner
+e adicionada regressão de projeção de captura: sem a chave ou com valor
+verdadeiro, a resposta é rejeitada antes de divulgar resultado. A implantação
+deve usar o novo SHA da PR de correção, não o SHA anterior D362. Não há
+alteração de algoritmo, de histórico ou de permissão de execução.
+
 ## Testes offline
 
 `python -m unittest discover -s tests -p test_j2_ws_owner_pilot_d362.py -v`
