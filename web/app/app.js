@@ -450,6 +450,9 @@
     const restored = E.validateState(backup.state);
     exactBackupKeys(restored, ["version", "nextId", "config", "positions"]);
     exactBackupKeys(restored.config, ["leverage", "marginCents", "runnerBps", "paused"]);
+    check(restored.positions.every(position =>
+      Number(position.id.slice(4)) < restored.nextId),
+      "Backup PAPER com contador de IDs inconsistente");
     restored.positions.forEach(position => {
       exactBackupKeys(position, ["id", "symbol", "side", "openedAt",
         "entryPriceUnits", "marginCents", "leverageAtOpen", "runnerBpsAtOpen",
