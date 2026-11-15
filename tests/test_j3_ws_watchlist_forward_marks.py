@@ -63,7 +63,9 @@ def future(frozen, *, up="101", down="99", btc="100.5"):
 
 def evaluate(frozen, horizon=1, *, now=None, marks=None, scope=SCOPE, costs=None,
              funding=None):
-    end = frozen.decision_end_ms + HOUR_MS*horizon
+    # Do not let a malformed horizon crash the TEST helper before the
+    # production validator can reject the invalid caller input itself.
+    end = frozen.decision_end_ms + HOUR_MS*(horizon if type(horizon) is int else 1)
     return evaluate_ws_watchlist_forward_marks(
         frozen, horizon_bars=horizon,
         observed_at_ms=end+240_000 if now is None else now,
