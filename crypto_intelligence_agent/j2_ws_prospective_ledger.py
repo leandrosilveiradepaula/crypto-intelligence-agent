@@ -31,7 +31,7 @@ _SCHEMA = "j2-ws-owner-decision-ledger-v1"
 _MAX_RECORD_BYTES = 8192
 _FIELDS = frozenset((
     "schema_version", "decision_end_ms", "registered_at_ms",
-    "scope_sha256", "window_sha256", "btc_decision_close",
+    "scope_sha256", "window_sha256", "ws_metadata_sha256", "btc_decision_close",
     "candidates", "decision_commitment_sha256", "record_sha256",
 ))
 
@@ -61,7 +61,7 @@ def _canonical(value: dict) -> bytes:
     ).encode("ascii")
 
 
-def _record_payload(ref: FrozenWSWatchlistReference) -> dict[str, Any]:
+def _record_payload(ref: FrozenWSWatchlistReference, ws_metadata_sha256: str) -> dict[str, Any]:
     if type(ref) is not FrozenWSWatchlistReference or _commitment(ref) != ref.decision_commitment_sha256:
         raise DataValidationError("frozen reference commitment mismatched")
     data = {
@@ -70,6 +70,7 @@ def _record_payload(ref: FrozenWSWatchlistReference) -> dict[str, Any]:
         "registered_at_ms": ref.registered_at_ms,
         "scope_sha256": ref.scope_sha256,
         "window_sha256": ref.window_sha256,
+        "ws_metadata_sha256": _digest(ws_metadata_sha256),
         "btc_decision_close": format(ref.btc_decision_close, "f"),
         "candidates": [
             {
@@ -83,7 +84,7 @@ def _record_payload(ref: FrozenWSWatchlistReference) -> dict[str, Any]:
     return data
 
 
-def _decode_record(raw: bytes) -> FrozenWSWatchlistReference:
+def _decode_record(raw: bytes) -> tuple[FrozenWSWatchlistReference, str]:
     if not isinstance(raw, bytes) or not 1 <= len(raw) <= _MAX_RECORD_BYTES:
         raise DataValidationError("owner ledger size out of bounds")
     try:
@@ -133,7 +134,7 @@ def _decode_record(raw: bytes) -> FrozenWSWatchlistReference:
     )
     if _commitment(ref) != ref.decision_commitment_sha256:
         raise DataValidationError("owner ledger decision commitment altered")
-    return ref
+    return ref, _digest(obj["ws_metadata_sha256"])
 
 
 def _distinct_pairs(pairs: list) -> dict:
@@ -179,10 +180,10 @@ def _filename(root: Path, end_ms: int) -> Path:
     return root / f"decision-{end_ms}.json"
 
 
-def _write_once(ref: FrozenWSWatchlistReference) -> str:
+def _write_once(ref: FrozenWSWatchlistReference, ws_metadata_sha256: str) -> str:
     root = _owner_directory(create=True)
     name = _filename(root, ref.decision_end_ms)
-    obj = _record_payload(ref)
+    obj = _record_payload(ref, ws_metadata_sha256)
     raw = _canonical(obj)
     if len(raw) > _MAX_RECORD_BYTES:
         raise DataValidationError("owner record too large")
@@ -216,7 +217,7 @@ def _write_once(ref: FrozenWSWatchlistReference) -> str:
     return obj["record_sha256"]
 
 
-def _read_one(decision_end_ms: int) -> FrozenWSWatchlistReference:
+def _read_one(decision_end_ms: int) -> tuple[FrozenWSWatchlistReference, str]:
     root = _owner_directory(create=False)
     path = _filename(root, decision_end_ms)
     before = path.lstat()
@@ -232,10 +233,10 @@ def _read_one(decision_end_ms: int) -> FrozenWSWatchlistReference:
         if (inside.st_ino,inside.st_dev) != (before.st_ino,before.st_dev):
             raise DataValidationError("owner record changed inode")
         raw = stream.read(_MAX_RECORD_BYTES+1)
-    ref = _decode_record(raw)
+    ref, metadata_digest = _decode_record(raw)
     if ref.decision_end_ms != decision_end_ms:
         raise DataValidationError("owner record indexed under different decision hour")
-    return ref
+    return ref, metadata_digest
 
 
 def _private_source(now_ms: int) -> tuple[dict[str, Any], dict[str, str]]:
@@ -297,7 +298,7 @@ def capture_owner_ws_decision_once(*, allow_private_readonly_research: bool = Fa
         # A slower writer must not record the prior hour after its cutoff.
         if time.time_ns()//1_000_000 >= ref.decision_end_ms+HOUR_MS-60_000:
             return out
-        _write_once(ref)
+        _write_once(ref, snapshot["ws_metadata_sha256"])
         out.update(
             status="owner_local_decision_captured_not_independent_attestation",
             capture_records_created=1,
@@ -334,7 +335,9 @@ def score_owner_ws_decision_once(*, horizon_bars: int,
         if time.time_ns()//1_000_000//HOUR_MS != now//HOUR_MS:
             return out
         end = source["latest_closed_end_ms"]
-        ref = _read_one(end-horizon_bars*HOUR_MS)
+        ref, original_metadata = _read_one(end-horizon_bars*HOUR_MS)
+        if original_metadata != source["ws_metadata_sha256"]:
+            return _report("owner_ws_metadata_changed_forward_abstain")
         names = {item.symbol for item in ref.candidates} | {"BTCUSDT"}
         values = {symbol: closes[symbol] for symbol in names}
         result = evaluate_ws_watchlist_forward_marks(
