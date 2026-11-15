@@ -145,6 +145,96 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     page.locator("#research-count").wait_for(state="visible", timeout=5000)
                     if page.locator("#research-count").inner_text() != "50":
                         errors.append("research count-only import not rendered")
+                    ws_shortlist = {
+                        "schema_version":"j2-n50-ws-descriptive-watchlist-v1",
+                        "status":"ws_descriptive_watchlist_ready",
+                        "quality":"private_ws_observations_not_trading_signals",
+                        "ws_journal_integrity_replayed":True,
+                        "audited_assets":50,"eligible_closed_bars_per_asset":24,
+                        "btc_context_available":True,
+                        "latest_closed_end_ms":last,
+                        "window_digest_sha256":"a"*64,
+                        "observed_up_breakout_candidates":1,
+                        "observed_down_breakout_candidates":1,
+                        "unclassified_volume_assets":0,
+                        "up_breakout_watchlist":[{
+                            "symbol":"AAAUSDT", "breakout":"above_prior_23h_high",
+                            "relative_vs_btc_pct_points":"1.2",
+                            "return_24bars_pct":"4.4",
+                            "mean_true_range_14_pct":"1.3",
+                            "quote_turnover_24bars_usdt":"100000",
+                            "last_quote_turnover_vs_prior23_mean":"1.6",
+                            "approved_for_signals":False,"orders_sent":False,
+                        }],
+                        "down_breakout_watchlist":[{
+                            "symbol":"BBBUSDT",
+                            "breakout":"below_prior_23h_low",
+                            "relative_vs_btc_pct_points":"-2.4",
+                            "return_24bars_pct":"-4.4",
+                            "mean_true_range_14_pct":"1.1",
+                            "quote_turnover_24bars_usdt":"90000",
+                            "last_quote_turnover_vs_prior23_mean":"1.2",
+                            "approved_for_signals":False,"orders_sent":False,
+                        }],
+                        "formal_d323_24h_verified":False,
+                        "continuous_collector_verified":False,
+                        "rotation_36h_live_verified":False,
+                        "marketwide_top50_verified":False,
+                        "crypto_identity_independently_verified":False,
+                        "source_authenticated":False,
+                        "approved_for_signals":False,"approved_for_live_use":False,
+                        "financial_backtest_approved":False,
+                        "orders_sent":False,"systemd_modified":False,
+                        "execution_intents_created":0,"network_requests":0,
+                        "database_mutation_statements":0,
+                    }
+                    page.locator("#import-file").set_input_files({
+                        "name":"j2-private-watchlist.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(ws_shortlist).encode(),
+                    })
+                    page.locator("#watchlist-up-count").wait_for(
+                        state="visible", timeout=5000)
+                    if (page.locator("#watchlist-up-count").inner_text() != "1"
+                            or page.locator("#watchlist-down-count").inner_text() != "1"
+                            or page.locator("#watchlist-up-rows .research-item").count() != 1
+                            or page.locator("#watchlist-down-rows .research-item").count() != 1
+                            or "AAAUSDT" not in page.locator("#watchlist-up-rows").inner_text()
+                            or "BBB" not in page.locator("#watchlist-down-rows").inner_text()):
+                        errors.append("private WS shortlist not shown in mobile cards")
+                    if page.locator("#metric-open").inner_text() != "2":
+                        errors.append("watchlist import wrongly created a PAPER position")
+                    count_only_shortlist = dict(
+                        ws_shortlist, up_breakout_watchlist=[],
+                        down_breakout_watchlist=[],
+                    )
+                    page.locator("#import-file").set_input_files({
+                        "name":"j2-count-only-watchlist.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(count_only_shortlist).encode(),
+                    })
+                    if (page.locator("#watchlist-up-rows .research-item").count()
+                            or page.locator("#watchlist-down-rows .research-item").count()
+                            or "AAAUSDT" in page.locator("#watchlist-up-rows").inner_text()):
+                        errors.append("count-only watchlist leaked names")
+                    forged = dict(
+                        ws_shortlist, up_breakout_watchlist=[
+                            dict(ws_shortlist["up_breakout_watchlist"][0],
+                                 symbol="<img src=x onerror=alert(1)>")
+                        ],
+                    )
+                    page.locator("#import-file").set_input_files({
+                        "name":"j2-invalid-watchlist.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(forged).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        timeout=5000,
+                    )
+                    if (page.locator("#watchlist-up-rows .research-item").count()
+                            or page.locator("img").count()):
+                        errors.append("invalid private shortlist was rendered")
                     malicious = dict(research, status="<img src=x onerror=alert(1)>")
                     page.locator("#import-file").set_input_files({
                         "name":"invalid.json","mimeType":"application/json",
