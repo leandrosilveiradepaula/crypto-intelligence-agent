@@ -72,6 +72,60 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     errors.append("document overflows mobile viewport")
                 if geometry["source"] != "offline_paper" or geometry["forms"] < 2:
                     errors.append("wrong app shell or missing PAPER forms")
+                if width == 320:
+                    # J4/J5 automatic PAPER exit triggers run only for explicit
+                    # hypothetical mark closes; never on J2 market imports.
+                    page.locator("#auto-enabled").check()
+                    if page.locator("#auto-config").is_hidden():
+                        errors.append("automatic PAPER controls were not shown")
+                    page.locator("#open-submit").click()
+                    if (page.locator("#metric-open").inner_text() != "1"
+                            or page.locator(".auto-step-button").count() != 1):
+                        errors.append("automatic PAPER scenario was not created")
+                    mark = page.locator(".position-card .mark-reference input").first
+                    mark.fill("101")
+                    page.locator(".auto-step-button").first.click()
+                    if ("Auto PAPER: 1/2 alvos" not in
+                            page.locator(".position-meta").first.inner_text()
+                            or "0,75" not in
+                            page.locator(".position-balances").first.inner_text()):
+                        errors.append("first PAPER target did not reduce remaining units")
+                    page.reload(wait_until="load")
+                    if "Auto PAPER: 1/2 alvos" not in page.locator(".position-meta").first.inner_text():
+                        errors.append("automatic PAPER target was not persisted")
+                    mark = page.locator(".position-card .mark-reference input").first
+                    mark.fill("NaN")
+                    page.locator(".auto-step-button").first.click()
+                    if ("Fechamento hipotético" not in page.locator("#notice").inner_text()
+                            or "Auto PAPER: 1/2 alvos" not in
+                            page.locator(".position-meta").first.inner_text()):
+                        errors.append("invalid hypothetical mark advanced automatic PAPER state")
+                    mark.fill("102")
+                    page.locator(".auto-step-button").first.click()
+                    if ("Auto PAPER: 2/2 alvos" not in
+                            page.locator(".position-meta").first.inner_text()
+                            or "0,375" not in
+                            page.locator(".position-balances").first.inner_text()):
+                        errors.append("second PAPER target did not leave residual runner")
+                    mark = page.locator(".position-card .mark-reference input").first
+                    mark.fill("99")
+                    page.locator(".auto-step-button").first.click()
+                    # Ledger is nested in a closed <details>, so expand before
+                    # asserting the event text: hidden innerText may be empty.
+                    page.locator(".position-card details summary").first.click()
+                    if (page.locator("#metric-open").inner_text() != "0"
+                            or page.locator(".auto-step-button").count()
+                            or "Auto PAPER STOP" not in page.locator(".ledger").inner_text()):
+                        errors.append("hypothetical stop did not close PAPER residual")
+                    page.reload(wait_until="load")
+                    page.locator(".position-card details summary").first.click()
+                    if (page.locator("#metric-open").inner_text() != "0"
+                            or "Auto PAPER STOP" not in page.locator(".ledger").inner_text()):
+                        errors.append("automatic PAPER stop was not persisted after reload")
+                    if page.evaluate(
+                        "() => document.documentElement.scrollWidth > window.innerWidth + 1"
+                    ):
+                        errors.append("automatic PAPER panel overflows 320px viewport")
                 if width == 390:
                     page.locator("#open-submit").click()
                     if page.locator("#metric-open").inner_text() != "1":

@@ -441,3 +441,7 @@ Bloco independente enquanto J1 depende de prova real da VPS: gate de correlaçã
 ## J1/TOP50 #502 — ranking UTC fechado de universo basico
 
 Depois da prova real de 50 candidatos/1200 candles, desenvolver captura de todos os 822 perpétuos USDT tecnicamente elegíveis em lotes privados retomáveis, sem rebaixar universo revisado anterior. A conta de 822 não é prova de 822 criptomoedas; ranking de 24h UTC fechado da lista basica também não é por si só homologação J1. Gates #319/#429/#2 seguem abertos até evidências em VPS, revisão independente crypto-only e continuidade. D249.
+
+## J4/J5 AUTO-PAPER1 #650 — entrega integrada entre gestão e mobile (15/11/2026 UTC)
+
+Próximo incremento de produto: criar cenários PAPER com regras configuradas de dois alvos e stop acionados por preço **hipotético digitado**, usando as funções locais BigInt já existentes e respeitando runner, com identificação e replay dos eventos automáticos no navegador/backup. A interface não se conecta a exchange nem se apropria dos observáveis J2 como ordens; não substitui o motor J4 Python de risco, reservas e reconciliação. Código em branch `work/issue-650-j4-j5-paper-auto-exits` aguardando review/CI/merge sem deploy. A aceitação J4/J5 e negociação automática real permanecem gates distintos.

@@ -1647,3 +1647,7 @@ PR #647 **MERGED** SHA `94c78554f8531d258626df7f8781f7b82e9f4c82`, head `723e26b
 ## J5/PAPER-BACKUP1 #648 — restaurar JSON PAPER após exportação (15/11/2026 UTC)
 
 Issue #648 e branch `work/issue-648-j5-paper-backup-restore`: leitor local estrito do export existente, E.validateState e chaves exatas, confirmação explícita antes de substituir cenários, cancelamento sem mutação e persistência local. QA Chromium real de reset/cancel/restore/adulteração e documentação `docs/J5_PAPER_LOCAL_BACKUP_RESTORE.md`. **Código candidato à CI/review/merge seguro**, nenhum novo endpoint, alteração do J1/WS, VPS ou ordem real. D323 #585 e Top50 #319 mantidos.
+
+## J4/J5 AUTO-PAPER1 #650 — alvos e stop no mobile, somente fixtures (15/11/2026 UTC)
+
+Base `main=d1afead1dbbab8bf2ab3fc608e110c84320f99f3`, issue #650, branch `work/issue-650-j4-j5-paper-auto-exits`: opt-in de alvos de 1/2 etapas e stop de marca fictícia por posição PAPER nova, automático somente quando o usuário fornece e confirma **um próximo fechamento hipotético**. Reutiliza `partialExit` / `closeRunner` BigInt; guarda passo/idempotência local e proveniência dos eventos, mantém import/export v1, compatibilidade com posições legadas, runner residual e detecção de adulteração. Testes Node/Chromium preparados e contrato `docs/J4_J5_PAPER_AUTOMATIC_EXIT_SIM.md`. **PR/CI/merge pendentes neste checkpoint**, sem publicação, acesso real, ordem, marcação de exchange ou mudança J1. J4 Python persistente continua separado e não homologado para negociação.
