@@ -1744,3 +1744,8 @@ Reutilizar o wrapper owner J2/WS-READ1 D338, **não** calcular um ranking novo n
 ## D345 — usar regras J2 observacionais existentes no journal WebSocket N50 (#638; 15/11/2026)
 
 Decisão técnica: evitar reproduzir indicadores de entrada ou coletar outra janela REST. O módulo J2/WS-WATCH1 primeiro valida a origem local `j2-ws-n50-descriptive-24closed-v1` (50 × 24 candles por ativo no mesmo epoch, BTC, digests e relógio causal) e **reutiliza** as funções já versionadas de validação e ranking da watchlist D308. A saída de quantidades é apropriada ao futuro app; símbolos privados são apenas opt-in owner. As regras são hipóteses fixas não calibradas, sem validação OOS/alpha. D323 e Top50 global #319 permanecem gates separados. Código/CI não equivalem à execução do owner na VPS. Não gerar ordens reais, testnet, PnL ou novas permissões, sem custo adicional.
+
+
+## D346 — aferição ex-post de observações J2 WS com custos existentes J3 (15/11/2026, #640)
+
+Decisão técnica: após integrar J2/WS-WATCH1, introduzir um contrato de **pré-registro em memória** dos candidatos da mesma epoch e uma segunda etapa de comparação de fechamentos futuros já maduros (1h/4h/24h), reaproveitando J3/PRE2 para taxas/slippage/funding hipotéticos sem duplicar cálculos financeiros. Maturação de um candidato é medida somente após o candle futuro fechar, com resultado ausente como censura/abstenção, nunca zero. Comparar com BTC na mesma direção e manter o ranking congelado. O digest em memória não comprova registro prospectivo: são necessárias provas persistentes de decisão ex-ante e walk-forward OOS para validar qualquer vantagem. Sem stop intrabar, liquidação, fill, ordens, alavancagem real, suposta performance ou mudança de fonte J1; Top50 #319 e D323 #585 preservados.
