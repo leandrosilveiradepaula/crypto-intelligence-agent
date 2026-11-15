@@ -1832,6 +1832,12 @@ Base confirmada `main=f003784a4f66cee0eeb46827d8009a3ce7b86dea`, #630/PR #631 me
 Branch `work/issue-634-j5-quality-readiness` criada após merge #633 `094ff83193c54571ea3e52dfa971c7a6a9d33202`. Área `Qualidade dos dados` no console PAPER: distingue N50 ausente, obsoleto, observado em log e manual; J2 aguardando 50×24h, importação manual ou agregado recebido sem promover prontidão se N50 obsoleto. Sem endpoint novo, ordem, deploy ou leitura privada. Teste de contrato atualizado. **PR/CI ainda a verificar; não declarar entregue ou homologado**. J1 #585: 21/24 logs horários 50/50 verificados até 14:00 UTC; D323/24h owner, rotação 36h e universo dinâmico ainda pendentes. Próximo: CI Linux/Windows/Chrome e revisão SHA exato; corrigir regressões, merge sem produção se gates verdes.
 
 
+## J5/#636 — coorte observada no painel sem reiniciar o relógio J1 (15/11/2026)
+
+Jornada J1 #585: leitura VPS real de 18 relatórios N50 consecutivos 50/50 na **mesma** coorte 14/11 16:00–15/11 09:00 UTC, sem gaps ou falha declarada, com digest em todas as horas; D323 owner SQLite ainda sem PASS e marketwide #319 ainda aberto. Roda agendada leitura owner após 15/11 15:00 UTC, sem novo ciclo a menos que o auditor prove defeito concreto. Nenhuma ordem autorizada.
+
+J5 issue #636, branch `work/issue-636-j5-n50-scope-progress`: métricas separadas de sequência de serviço vs mesma coorte a partir de hashes sanitizados, sem expor digests, adicionar campos compatíveis ao painel mobile, testes de rotação 22+2 e README `docs/J5_N50_COHORT_PROGRESS.md`. Alterações de código em PR sob revisão/CI; **sem deploy na VPS**. Prioridades paralelas: continuar pesquisa J2/J3 e interface J5, sem depender de repetir janelas D323. Próxima ação: CI/revisão/merge segura desta PR sem publicação, depois auditoria owner do SQLite na janela efetivamente completa.
+
 ## J2/#638 — ponte descritiva para WebSocket N50 (15/11/2026)
 
 **Jornada:** J2 Entradas; issue #638; branch `work/issue-638-j2-ws-n50-watchlist`; PR/CI/SHA conclusivos a registrar após criação. O objetivo imediato é expor pesquisa por rom­pimento atual/força relativa/turnover da epoch N50 WS, consumindo somente o auditor privado existente D624 e reutilizando a watchlist D308, sem rede/ordens. Teste offline, contrato público de contagens e documentação D345 implementados como candidato; nenhum deploy. **Dependências para dados reais:** WS 50x24 por mesma coorte no SQLite (gate D323) e leitura owner autorizada; #319 marketwide separada. Não solicitar `prossiga`, seguir com revisão+CI+merge seguro sem produção.
