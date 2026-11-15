@@ -132,6 +132,11 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .position-balances div { background: #101f31; border-radius: 8px; padding: 10px; min-width: 0; }
 .position-balances span { display: block; font-size: .7rem; color: var(--muted); }
 .position-balances strong { font-size: .93rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.mark-reference { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.2fr); align-items: center; gap: 12px; margin-top: 13px; padding: 12px; border: 1px solid #3a5b73; background: #132239; border-radius: 10px; min-width: 0; }
+.mark-output { min-width: 0; overflow-wrap: anywhere; }
+.mark-output strong { display: block; font-variant-numeric: tabular-nums; font-size: .89rem; }
+.mark-output small { display: block; color: var(--muted); font-size: .68rem; line-height: 1.45; margin-top: 4px; }
+.mark-output[data-valid="false"] strong { color: var(--red); }
 .position-card details { margin-top: 13px; }
 .position-card summary { font-size: .8rem; color: var(--aqua); font-weight: 750; cursor: pointer; }
 .partial-form { margin-top: 12px; }
@@ -185,6 +190,7 @@ footer { border-top: 1px solid var(--border); color: #8ea4bc; font-size: .73rem;
   .metric strong { font-size: 1.1rem; }
   .form-grid { grid-template-columns: 1fr; }
   .partial-form .form-grid { grid-template-columns: 1fr; }
+  .mark-reference { grid-template-columns: 1fr; }
   .inline-metrics { gap: 5px; }
   .inline-metrics div { padding: 10px 7px; }
   .inline-metrics strong { font-size: 1.15rem; }
