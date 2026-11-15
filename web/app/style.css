@@ -140,6 +140,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .auto-policy { grid-column: 1 / -1; min-width: 0; border-top: 1px solid #3a5b73; padding-top: 10px; }
 .auto-policy p { margin: 0 0 9px; }
 .auto-step-button { width: 100%; }
+.auto-batch { margin-top: 12px; }
+.auto-batch-input { width: 100%; min-height: 84px; min-width: 0; resize: vertical; border-radius: 10px; border: 1px solid #425673; padding: 11px 12px; color: var(--text); background: #0f1b2b; }
+.auto-batch-button { width: 100%; margin-top: 9px; }
 .auto-configuration { margin: 12px 0 0; padding: 12px; background: #132239; border: 1px solid #3a5b73; border-radius: 10px; }
 #open-form .switchline { margin-top: 18px; }
 .position-card details { margin-top: 13px; }
