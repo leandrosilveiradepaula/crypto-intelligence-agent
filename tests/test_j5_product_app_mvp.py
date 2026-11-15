@@ -88,6 +88,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn("function renderQuality()", js)
         self.assertIn('function validateWatchlist(snapshot)', js)
         self.assertIn('function renderWatchlist()', js)
+        self.assertIn("mark-reference", js)
+        self.assertIn("E.grossMarkPnlCents(position, decimal(markInput.value))", js)
+        self.assertIn('output.dataset.valid = "false"', js)
         self.assertIn('function exactJ2Metric(raw)', js)
         self.assertIn('compareJ2Keys(previous, key)', js)
         self.assertIn('"j2-n50-ws-descriptive-watchlist-v1"', js)
@@ -120,6 +123,10 @@ const a = E.openPosition(s, {
 }, "2026-11-13T18:00:00.000Z");
 assert.equal(a.initialUnits,"150000000");
 assert.equal(E.grossEntryExposureCents(a),15000n);
+assert.equal(E.grossMarkPnlCents(a,"100"),0n);
+assert.equal(E.grossMarkPnlCents(a,"101"),150n);
+assert.equal(E.grossMarkPnlCents(a,"99"),-150n);
+assert.throws(()=>E.grossMarkPnlCents(a,"NaN"),/Preço|Mark/);
 for (const [p,quantity] of [["50",75000000n],["60",45000000n],["70",21000000n]]) {
   assert.equal(E.partialExit(a,{basis:"REMAINING_BALANCE",percent:p}),quantity);
   assert.deepEqual(E.validateState(JSON.parse(JSON.stringify(s))),s);

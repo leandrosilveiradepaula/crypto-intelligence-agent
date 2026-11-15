@@ -134,6 +134,43 @@
       cell("Saídas fictícias registradas", position.events.length)
     );
     card.append(cells);
+    if (position.status === "OPEN") {
+      // A user-provided hypothetical mark is never fetched or persisted.
+      // Reuse the exact BigInt PAPER engine, after all partial exits.
+      const mark = el("section", "mark-reference");
+      mark.setAttribute("aria-label", "Variação bruta PAPER de " + position.id);
+      const label = el("label", "field", "Mark hipotético (US$)");
+      const entryUnits = BigInt(position.entryPriceUnits);
+      const markInput = control("input",
+        (entryUnits / E.SCALE).toString() + "." +
+        (entryUnits % E.SCALE).toString().padStart(8, "0"));
+      markInput.setAttribute("aria-label",
+        "Preço mark hipotético de " + position.id);
+      label.append(markInput);
+      const output = el("div", "mark-output");
+      output.setAttribute("role", "status");
+      output.setAttribute("aria-live", "polite");
+      const result = el("strong");
+      const disclaimer = el("small", null,
+        "Variação bruta de referência sobre o saldo restante. Não inclui taxas, " +
+        "funding, slippage ou liquidação. Não é preço real nem PnL executável.");
+      output.append(result, disclaimer);
+      const calculate = () => {
+        try {
+          const gross = E.grossMarkPnlCents(position, decimal(markInput.value));
+          result.textContent = "PnL bruto hipotético: " + amount(gross);
+          output.dataset.valid = "true";
+        } catch (_) {
+          // Never show an outdated favorable result for malformed input.
+          result.textContent = "Mark inválido: informe preço positivo válido.";
+          output.dataset.valid = "false";
+        }
+      };
+      markInput.addEventListener("input", calculate);
+      calculate();
+      mark.append(label, output);
+      card.append(mark);
+    }
     const details = el("details");
     details.append(el("summary", null, "Parciais, runner e histórico"));
     const ledger = el("ol", "ledger");

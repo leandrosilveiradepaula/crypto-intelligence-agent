@@ -1855,3 +1855,11 @@ J5 issue #636, branch `work/issue-636-j5-n50-scope-progress`: métricas separada
 ## J2/J3 #644 — freeze/score operacional local sem VPS (15/11/2026)
 
 **Jornada:** J2→J3, issue #644, branch `work/issue-644-j2-ws-prospective-ledger`; PR/CI/SHA conclusivos registrar após criação. **Entregas em código candidato:** leitura explícita de last closes privados do replay 50x24 WS existente; `crypto_intelligence_agent/j2_ws_prospective_ledger.py` com escrita atômica owner 0600, uma única decisão por hora sem sobrescrever, e score retrospectivo 1/4/8h via J3 com custos declarados; `scripts/research_j2_ws_prospective_once.py` para captura/score com opt-ins. **Não foi executado na VPS**, nem tem timer, endpoint, acesso DAC expandido ou ordens. Requer futura homologação owner do estado real e gate de release antes de qualquer execução operativa, não há prova de registro prospectivo independente. CI a executar Linux/Windows/PAPER no SHA e merge seguro sem deploy; D323/J1/Top50 #585/#319 independentes.
+
+## J2/J3 #644 — integrado, sem execução operacional (15/11/2026 UTC)
+
+PR #645 MERGED no commit `f71293d7c9a11898b995e5a53acc4a2d531c5680`; head revisado `869156a8a064ea12d03d95568e73381ee6cfb58d`, CI GitHub Actions 43712011578 (docs+Windows) e 43712011580 (PAPER) sucesso. Issue #644 fechada. Nada instalado na VPS: capture/score futuro requer operação owner autorizada, janela WS 50×24 íntegra, custo explícito, sem timestamp attestation independente e sem ordens. D323/Top50 ainda pendentes.
+
+## J5 #646 — indicador de risco mark hipotético no PAPER (15/11/2026 UTC)
+
+Base verificada `main=f71293d7c9a11898b995e5a53acc4a2d531c5680`, issue #646, branch `work/issue-646-j5-paper-mark-reference`; arquivos `web/app/app.js`, `web/app/style.css`, testes Node/Chrome existentes e `docs/J5_PAPER_MARK_REFERENCE.md`. O cálculo financeiro é o mesmo BigInt J5 já testado; o mark digitado não é preço real, não persiste e não dispara ordem. **Próxima ação elegível:** abrir PR, inspecionar diff, CI 3 jobs no SHA final, merge seguro sem publicação se os gates verdes. Nenhuma implantação, mudança na VPS, credenciais, custo ou trading. J1 N50 WS/rotação timers ativos na última leitura 15/11 12:13 UTC, serviço 11:59Z exit0; janela D323 no mesmo epoch desde 14/11 16UTC até 15/11 15UTC não antecipar. #585/#319 ainda exigem prova distinta.

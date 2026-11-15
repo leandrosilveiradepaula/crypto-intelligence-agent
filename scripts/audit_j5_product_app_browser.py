@@ -76,6 +76,28 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     page.locator("#open-submit").click()
                     if page.locator("#metric-open").inner_text() != "1":
                         errors.append("creating PAPER scenario did not open position")
+                    # Mark input is hypothetical, exact BigInt and cannot change
+                    # any position event or persist a market-price claim.
+                    mark_input = page.locator(".position-card .mark-reference input").first
+                    mark_result = page.locator(".position-card .mark-output").first
+                    if ("US$ 0" not in mark_result.inner_text()
+                            or mark_result.get_attribute("data-valid") != "true"):
+                        errors.append("mark must start at entry reference with zero gross PnL")
+                    mark_input.fill("101")
+                    if ("US$ 1,5" not in mark_result.inner_text()
+                            or mark_result.get_attribute("data-valid") != "true"):
+                        errors.append("LONG +1% should yield US$1.50 gross for 50x paper")
+                    mark_input.fill("NaN")
+                    if ("Mark inválido" not in mark_result.inner_text()
+                            or "US$ 1,5" in mark_result.inner_text()
+                            or mark_result.get_attribute("data-valid") != "false"):
+                        errors.append("invalid mark left stale favorable PnL on screen")
+                    mark_input.fill("99")
+                    if ("US$ -1,5" not in mark_result.inner_text()
+                            or mark_result.get_attribute("data-valid") != "true"):
+                        errors.append("LONG -1% should yield negative gross reference")
+                    if page.locator("#metric-open").inner_text() != "1":
+                        errors.append("mark edit must not open or close PAPER positions")
                     for p in ("50", "60", "70"):
                         page.locator(".position-card details summary").first.click()
                         page.locator(".partial-form input").first.fill(p)
@@ -84,6 +106,12 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     remaining = page.locator(".position-card .position-balances div").nth(1).locator("strong").inner_text()
                     if remaining != "0,09":
                         errors.append("50/60/70 partials must leave 6% of 1.5 units")
+                    partial_mark = page.locator(".position-card .mark-reference input").first
+                    partial_result = page.locator(".position-card .mark-output").first
+                    partial_mark.fill("101")
+                    if ("US$ 0,09" not in partial_result.inner_text()
+                            or partial_result.get_attribute("data-valid") != "true"):
+                        errors.append("mark PnL must use remaining units after partial exits")
                     page.locator("#leverage").fill("20")
                     page.locator("#settings-form button").click()
                     page.locator("#margin").fill("2")
