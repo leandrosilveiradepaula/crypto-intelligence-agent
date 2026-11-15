@@ -13,6 +13,9 @@ import json
 from crypto_intelligence_agent.j2_ws_prospective_ledger import (
     capture_owner_ws_decision_once, score_owner_ws_decision_once,
 )
+from crypto_intelligence_agent.j2_ws_owner_preflight import (
+    preflight_owner_ws_decision_once,
+)
 from crypto_intelligence_agent.j3_ws_watchlist_forward_marks import (
     ForwardCostAssumptions,
 )
@@ -22,6 +25,8 @@ from crypto_intelligence_agent.market_data import DataValidationError
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    preflight = commands.add_parser("preflight")
+    preflight.add_argument("--allow-private-readonly-research", action="store_true")
     capture = commands.add_parser("capture")
     capture.add_argument("--allow-private-readonly-research", action="store_true")
     capture.add_argument("--allow-private-ledger-write", action="store_true")
@@ -35,7 +40,12 @@ def main(argv: list[str] | None = None) -> int:
     ):
         score.add_argument("--"+flag, required=True)
     args = parser.parse_args(argv)
-    if args.command == "capture":
+    if args.command == "preflight":
+        report = preflight_owner_ws_decision_once(
+            allow_private_readonly_research=args.allow_private_readonly_research,
+        )
+        ok = report["status"] == "owner_preflight_ready_no_capture"
+    elif args.command == "capture":
         report = capture_owner_ws_decision_once(
             allow_private_readonly_research=args.allow_private_readonly_research,
             allow_private_ledger_write=args.allow_private_ledger_write,
