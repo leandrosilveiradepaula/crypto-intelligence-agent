@@ -1799,3 +1799,8 @@ Autorização expressa do Product Owner para implantar a telemetria D357 na VPS 
 ## D361 — preflight J2/J3 owner-only antes de capturas prospectivas (#656, 15/11/2026)
 
 Com J1 D360 aprovada para pesquisa e o ledger D348 já integrado, não replicar motor de watchlist nem criar coletor novo. Primeiro adicionar preflight **read-only** da epoch atual com política fail-closed para POSIX owner, DAC, `timedatectl` NTP, janela HH:+3..+59 (exclusive em HH:59:00), auditoria WS 50×24 e drift do relógio. Não gerar diretório/arquivo de decisão no preflight e não mostrar símbolos ou preços. Um PASS só qualifica tentativa futura de `capture` com gate explícito; não comprova registro ex-ante nem rentabilidade. Rota de execução real/agendamento exige release separado, preservando a N50 e flags de negociação falsas. Ver `docs/J2_WS_PROSPECTIVE_PREFLIGHT_656.md`.
+
+
+## D362 — executor J2/J3 one-shot isolado, sem extensão de acesso MCP (#658, 15/11/2026)
+
+Com J1 D360 homologada para pesquisa e PR #657 preflight J2 já integrada, usar o padrão D359 de checkout pinado e `runuser` owner no âmbito de um **piloto futuro expressamente autorizado**, sem expandir ACLs ou trocar N50. O broker só possui operação owner fixa D323, não J2; o acesso direto ao home `cia-probe` é corretamente negado. Criar script de três modos (pré-verificação OS não mutante; captura 1x gated; score 1/4/8h gated) com CI/PR, saída sanitizada e abstenção sem retry. Só após gate de implantação o código pode ser instalado/operado na VPS. Nenhum agendamento/ordem/score real nesta decisão. Ver `docs/J2_OWNER_PROSPECTIVE_PILOT_D362.md`.
