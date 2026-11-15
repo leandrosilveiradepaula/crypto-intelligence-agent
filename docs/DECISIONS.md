@@ -1753,3 +1753,8 @@ Decisão técnica: após integrar J2/WS-WATCH1, introduzir um contrato de **pré
 ## D347 — cards J2 WS locais no painel PAPER, sem ordens (#642, 15/11/2026)
 
 Decisão de produto: reaproveitar o importador JSON local existente do J5 para exibir **contagens e até 5 observações LONG/SHORT** da watchlist J2/WS-WATCH1 já integrada. Dados privados de símbolo só aparecem após arquivo privado opt-in, nunca no endpoint agregado, rede externa ou `localStorage`. Validar o contrato WS 50×24 e ordenar indicadores decimais no navegador com BigInt; não transformar candidatos retrospectivos em sinal, execução ou sugestão automática. Nenhum botão que abra posições a partir desses cards. Feed N50/loopback e funções PAPER permanecem separados. `docs/J5_WS_WATCHLIST_MOBILE.md`.
+
+
+## D348 — capturar watchlist WS prévia em ledger owner 0600 e avaliar candles maduros (#644; 15/11/2026)
+
+O J2/J3 não pode demonstrar desempenho de entradas se a mesma execução escolhe retrospectivamente a decisão e já conhece seu futuro. Integrar ao leitor J2/D624 de 50×24 da mesma coorte: opção `include_private_last_closes` estritamente privada e default false, decisão J2/D345 congelada no instante de registro local, gravação owner 0700/0600 com nome por hora, hash, sincronização e exclusividade (sem sobrescrever), e leitura posterior no mesmo WS owner com custo J3/D346 explícito. Priorizar 1/4/8h na janela operacional antes de rotação de 36h; 24h futuro somente após evidência de continuidade entre coortes. SHA e arquivos self-owned **não são prova temporal independente**, nem resultado financeiro, nem autorização de ordens. Não modificar N50, REST, DAG, DAC existente, serviço VPS nem persistência financeira. Ver `docs/J2_WS_PROSPECTIVE_DECISIONS.md`.

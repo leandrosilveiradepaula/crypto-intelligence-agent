@@ -1850,3 +1850,8 @@ J5 issue #636, branch `work/issue-636-j5-n50-scope-progress`: métricas separada
 ## J5/#642 — mostrar shortlist J2 WS sem sinais (15/11/2026)
 
 **Jornada:** J5 interface PT-BR; issue #642, branch `work/issue-642-j5-ws-watchlist-mobile`. Arquivos: `web/app/index.html`, `web/app/app.js`, `web/app/style.css`, `scripts/audit_j5_product_app_browser.py`, `tests/test_j5_product_app_mvp.py`, `docs/J5_WS_WATCHLIST_MOBILE.md`. App local passa a mostrar até cinco observações de alta e baixa da J2 #638 somente após importação explícita de JSON válido, sem alterar N50 ou estado PAPER. Prontidão de J1 owner 50×24 e D323 permanece pendente, não simular nomes. **Status deste incremento:** PR/CI a registrar, sem deploy. Próximo passo seguro: CI Linux/Windows/PAPER, corrigir regressões e merge exato sem publicar na VPS.
+
+
+## J2/J3 #644 — freeze/score operacional local sem VPS (15/11/2026)
+
+**Jornada:** J2→J3, issue #644, branch `work/issue-644-j2-ws-prospective-ledger`; PR/CI/SHA conclusivos registrar após criação. **Entregas em código candidato:** leitura explícita de last closes privados do replay 50x24 WS existente; `crypto_intelligence_agent/j2_ws_prospective_ledger.py` com escrita atômica owner 0600, uma única decisão por hora sem sobrescrever, e score retrospectivo 1/4/8h via J3 com custos declarados; `scripts/research_j2_ws_prospective_once.py` para captura/score com opt-ins. **Não foi executado na VPS**, nem tem timer, endpoint, acesso DAC expandido ou ordens. Requer futura homologação owner do estado real e gate de release antes de qualquer execução operativa, não há prova de registro prospectivo independente. CI a executar Linux/Windows/PAPER no SHA e merge seguro sem deploy; D323/J1/Top50 #585/#319 independentes.

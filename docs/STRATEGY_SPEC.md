@@ -344,3 +344,8 @@ Fonte única: o mesmo leitor WS J2/D624 que audita 50 × 24 fechamentos da epoch
 ## J2/J3 — observação congelada e outcome posterior N50 WS (#640, 15/11/2026)
 
 J2 #638 produz observações descritivas de rompimento e força BTC a partir do WS auditado. J2/J3 #640 acrescenta um registro *em memória* de até cinco observações por lado com horário e referência de fechamento e um segundo estágio que usa **apenas fechamentos futuros já maturados**, em 1h/4h/8h/24h. O movimento ex-post com direção LONG/SHORT de pesquisa é comparado ao benchmark BTC de mesma direção. Taxas, slippage e funding de fixture são calculados pelo mesmo `synthetic_cost_scenarios` de J3. Não supor entrada no fechamento, fill, liquidação, probabilidade de acerto, lucro ou autenticação prospectiva. Sem credencial, coleta, ordem ou release; consulte `docs/J2_J3_WS_FORWARD_OUTCOMES.md`.
+
+
+## J2/WS-DECISION1 — eventos de pesquisa congelados antes do outcome (#644)
+
+A watchlist WS de até 5 observações LONG/SHORT da J2 só se torna mensurável em processo quando a seleção e os closes privados do **mesmo replay auditado 50×24** são congelados na hora do fechamento. Não gerar watchlist usando future para escolher símbolo. Reusar `freeze_ws_watchlist_reference` / `evaluate_ws_watchlist_forward_marks` J3, com custos declarados e BTC do mesmo intervalo. Registro owner uma vez por hora, arquivo privado e hash; nunca proclamar inalterabilidade independente, previsibilidade, garantia de acerto ou PnL. Censurar horizontes com rotação/gap. Contrato `docs/J2_WS_PROSPECTIVE_DECISIONS.md`.

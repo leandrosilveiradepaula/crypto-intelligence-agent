@@ -145,6 +145,35 @@ class ReadOnlyWSN50ResearchTests(unittest.TestCase):
         self.assertEqual([r["descriptive_rank"] for r in result["research_rows"]],
                          list(range(1,51)))
 
+    def test_last_closes_are_only_returned_to_separate_private_owner_optin(self):
+        ordinary = self.run_it(include_private_symbols=True)
+        self.assertNotIn("private_last_closes", ordinary)
+        self.assertNotIn("private_last_closes", self.run_it())
+        with_prices = self.run_it(
+            include_private_symbols=True, include_private_last_closes=True,
+        )
+        self.assertEqual(with_prices["status"], "ws_n50_descriptive_24h_ready")
+        self.assertEqual(len(with_prices["private_last_closes"]), 50)
+        self.assertEqual(
+            set(with_prices["private_last_closes"]),
+            {row["symbol"] for row in with_prices["research_rows"]},
+        )
+        self.assertTrue(all(
+            Decimal(close) > 0 for close in with_prices["private_last_closes"].values()
+        ))
+        self.assertNotIn("private_last_closes", self.run_it(
+            include_private_symbols=False, include_private_last_closes=True,
+        ))
+        self.assertEqual(self.run_it(
+            include_private_symbols=False,
+            include_private_last_closes=True,
+        )["audited_assets"], 0)
+        self.assertFalse(self.run_it(
+            allow_private_readonly_research=False,
+            include_private_symbols=True,
+            include_private_last_closes=True,
+        )["ws_journal_integrity_replayed"])
+
     def test_only_49_of_50_and_unknown_epoch_fail_closed(self):
         with closing(sqlite3.connect(self.path)) as db,db:
             db.execute("DELETE FROM confirmed WHERE symbol=? AND open_ms=?",

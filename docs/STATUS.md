@@ -1626,3 +1626,8 @@ PR #639 J2 shortlist WS/D308 integrada no GitHub SHA `e7904d65237cd99be4c42f250d
 ## J5/#642 — candidatos J2 agora representáveis no app PAPER (15/11/2026)
 
 Issue #642, branch `work/issue-642-j5-ws-watchlist-mobile`: interface mobile adiciona painel de observações J2 alta/baixa sobre a watchlist WebSocket já integrada por J2 #638, com cards opcionais de ticker/direção/força BTC/volume sob **importação privada explícita**, e contagens apenas na falta de símbolos. Sem upload, persistência, ordem, novo GET, release ou API. Contrato de segurança JavaScript e QA de Chromium com 320/390/768/1280 documentados em `docs/J5_WS_WATCHLIST_MOBILE.md`. **Código candidato à revisão/CI; sem merge/deploy neste checkpoint.** Gate D323 #585/Top50 #319 mantido.
+
+
+## J2/J3 #644 — registro de decisões antes de resultados WS (15/11/2026)
+
+Após merge J2 #639 (`e7904d65237cd99be4c42f250df53e592c6b53b8`) e J2/J3 #641 (`d30447f865538161fc80f908aee2f3a32642702c`), a issue #644 / branch `work/issue-644-j2-ws-prospective-ledger` introduz opção de last closes privada no replay J2/D624 e registro local da shortlist uma única vez por UTC sob owner, com avaliação posterior 1/4/8h da mesma coorte e premissas de custos explícitas. Não duplica coletor nem endpoints. Testes e `docs/J2_WS_PROSPECTIVE_DECISIONS.md`. **Candidato à revisão/CI e sem instalação VPS**, sem ordem ou performance comprovada. D323 #585 e marketwide #319 continuam separados.
