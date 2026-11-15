@@ -334,3 +334,8 @@ A aritmética 50/60/70 da posição **restante** continua a deixar 6% residual. 
 ## J2/CONFLUENCE1 — combinação de hipóteses (research-only)
 
 Integrar somente resultados do **mesmo candle UTC fechado**, obtidos das mesmas séries sintéticas pelo motor PRE4 (compressão/rompimento + regime BTC + força relativa) e pelo motor de retomada de tendência após correção. Shortlist condicional somente se os dois identificarem a **mesma direção** no mesmo fechamento e BTC não vetar; abstinências de breakout sem pullback atual, veto BTC e conflito são explícitas. Não traduzir concordância em probabilidade de acerto nem aumentar risco por consenso. Ranking segue o PRE4, sem duplicar fórmulas ou impor quantidade fixa de posições. Qualquer ingestão WS real requer antes provenance e gates J1, validação J3 e autorização do produto; nenhuma ordem real liberada pela pesquisa. Contrato em `docs/J2_SYNTHETIC_CONFLUENCE_RESEARCH.md`, issue #615.
+
+
+## J2/WS-WATCH1 — watchlist quantitativa N50 WS observacional (#638)
+
+Fonte única: o mesmo leitor WS J2/D624 que audita 50 × 24 fechamentos da epoch atual na SQLite owner read-only e revalida a rotação D321. Sem regressão para REST. A integração reutiliza as regras de observação D308 (rompimento atual dos extremos das 23 barras anteriores, força relativa ao BTC, intensidade/turnover USDT), com filtro e ordenação determinísticos, sem alterar os cálculos. A saída padrão só contém contagens; símbolos privados exigem confirmação explícita. É material de **pesquisa**, não score preditivo nem sinal autorizado: `approved_for_signals=false`, `orders_sent=false`, `financial_backtest_approved=false`. Aplicativo J5 e motores de execução não acionam esse módulo automaticamente. Documentado em `docs/J2_N50_WS_DESCRIPTIVE_WATCHLIST.md`.

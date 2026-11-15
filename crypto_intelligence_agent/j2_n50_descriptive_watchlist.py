@@ -73,47 +73,14 @@ def _parse_decimal(raw: object, *, nonnegative: bool = False) -> Decimal:
     return number
 
 
-def _validated(snapshot: object) -> tuple[list[dict[str, Any]], Decimal]:
-    if type(snapshot) is not dict:
-        raise ValueError("research_snapshot_type")
-    if (
-        snapshot.get("schema_version") != "j2-private-n50-24closed-research-v1"
-        or snapshot.get("status") != "descriptive_research_ready"
-        or snapshot.get("owner_journal_integrity_verified") is not True
-        or snapshot.get("audited_assets") != 50
-        or type(snapshot.get("audited_assets")) is not int
-        or snapshot.get("eligible_closed_bars_per_asset") != 24
-        or type(snapshot.get("eligible_closed_bars_per_asset")) is not int
-        or snapshot.get("btc_context_available") is not True
-        or snapshot.get("marketwide_top50_verified") is not False
-        or snapshot.get("crypto_identity_independently_verified") is not False
-        or snapshot.get("source_authenticated") is not False
-        or snapshot.get("approved_for_signals") is not False
-        or snapshot.get("approved_for_live_use") is not False
-        or snapshot.get("orders_sent") is not False
-        or snapshot.get("network_requests") != 0
-        or snapshot.get("database_mutation_statements") != 0
-        or snapshot.get("systemd_modified") is not False
-        or type(snapshot.get("epoch_id")) is not str
-        or re.fullmatch(r"epoch-[0-9]{13}", snapshot["epoch_id"]) is None
-        or type(snapshot.get("window_digest_sha256")) is not str
-        or _DIGEST.fullmatch(snapshot["window_digest_sha256"]) is None
-        or type(snapshot.get("scope_digest_sha256")) is not str
-        or _DIGEST.fullmatch(snapshot["scope_digest_sha256"]) is None
-    ):
-        raise ValueError("unverified_research_snapshot")
-    end = snapshot.get("latest_published_end_ms")
-    as_of = snapshot.get("as_of_ms")
-    if (
-        type(end) is not int or end % HOUR_MS != 0
-        or type(as_of) is not int
-        or not end <= as_of <= end + 2 * HOUR_MS
-    ):
-        raise ValueError("invalid_closed_hour")
-    source = snapshot.get("research_rows")
+def _validated_descriptive_rows(
+    source: object, btc_return: Decimal,
+) -> list[dict[str, Any]]:
+    """Reuse strict Decimal, BTC and ordering rules for REST and WS readers."""
     if type(source) is not list or len(source) != 50:
         raise ValueError("incomplete_research_universe")
-    btc_return = _parse_decimal(snapshot.get("btc_return_24bar_pct"))
+    if type(btc_return) is not Decimal or not btc_return.is_finite():
+        raise ValueError("invalid_btc_return")
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
     for rank, original in enumerate(source, 1):
@@ -162,7 +129,91 @@ def _validated(snapshot: object) -> tuple[list[dict[str, Any]], Decimal]:
         row["return"] for row in rows if row["symbol"] == "BTCUSDT"
     ) != btc_return:
         raise ValueError("missing_or_inconsistent_btc")
-    return rows, btc_return
+    return rows
+
+
+
+
+def _validated(snapshot: object) -> tuple[list[dict[str, Any]], Decimal]:
+    if type(snapshot) is not dict:
+        raise ValueError("research_snapshot_type")
+    if (
+        snapshot.get("schema_version") != "j2-private-n50-24closed-research-v1"
+        or snapshot.get("status") != "descriptive_research_ready"
+        or snapshot.get("owner_journal_integrity_verified") is not True
+        or snapshot.get("audited_assets") != 50
+        or type(snapshot.get("audited_assets")) is not int
+        or snapshot.get("eligible_closed_bars_per_asset") != 24
+        or type(snapshot.get("eligible_closed_bars_per_asset")) is not int
+        or snapshot.get("btc_context_available") is not True
+        or snapshot.get("marketwide_top50_verified") is not False
+        or snapshot.get("crypto_identity_independently_verified") is not False
+        or snapshot.get("source_authenticated") is not False
+        or snapshot.get("approved_for_signals") is not False
+        or snapshot.get("approved_for_live_use") is not False
+        or snapshot.get("orders_sent") is not False
+        or snapshot.get("network_requests") != 0
+        or snapshot.get("database_mutation_statements") != 0
+        or snapshot.get("systemd_modified") is not False
+        or type(snapshot.get("epoch_id")) is not str
+        or re.fullmatch(r"epoch-[0-9]{13}", snapshot["epoch_id"]) is None
+        or type(snapshot.get("window_digest_sha256")) is not str
+        or _DIGEST.fullmatch(snapshot["window_digest_sha256"]) is None
+        or type(snapshot.get("scope_digest_sha256")) is not str
+        or _DIGEST.fullmatch(snapshot["scope_digest_sha256"]) is None
+    ):
+        raise ValueError("unverified_research_snapshot")
+    end = snapshot.get("latest_published_end_ms")
+    as_of = snapshot.get("as_of_ms")
+    if (
+        type(end) is not int or end % HOUR_MS != 0
+        or type(as_of) is not int
+        or not end <= as_of <= end + 2 * HOUR_MS
+    ):
+        raise ValueError("invalid_closed_hour")
+    btc_return = _parse_decimal(snapshot.get("btc_return_24bar_pct"))
+    return _validated_descriptive_rows(snapshot.get("research_rows"), btc_return), btc_return
+
+def _rank_descriptive_candidates(
+    rows: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Shared deterministic D308 sorting: only retrospective observations."""
+    up = [row for row in rows if
+          row["breakout"] == "above_prior_23h_high"
+          and row["relative"] > 0
+          and row["turnover"] > 0
+          and row["volume_ratio"] is not None
+          and row["volume_ratio"] >= 1]
+    down = [row for row in rows if
+            row["breakout"] == "below_prior_23h_low"
+            and row["relative"] < 0
+            and row["turnover"] > 0
+            and row["volume_ratio"] is not None
+            and row["volume_ratio"] >= 1]
+    up.sort(key=lambda r: (
+        -r["relative"], -r["volume_ratio"], -r["turnover"], r["symbol"],
+    ))
+    down.sort(key=lambda r: (
+        r["relative"], -r["volume_ratio"], -r["turnover"], r["symbol"],
+    ))
+    return up, down
+
+
+
+def _display_descriptive_candidate(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "symbol": row["symbol"],
+        "relative_vs_btc_pct_points": format(row["relative"], "f"),
+        "return_24bars_pct": format(row["return"], "f"),
+        "quote_turnover_24bars_usdt": format(row["turnover"], "f"),
+        "last_quote_turnover_vs_prior23_mean": format(
+            row["volume_ratio"], "f"
+        ),
+        "mean_true_range_14_pct": format(row["atr"], "f"),
+        "breakout": row["breakout"],
+        "approved_for_signals": False,
+        "orders_sent": False,
+    }
 
 
 def build_descriptive_watchlist(
@@ -179,24 +230,7 @@ def build_descriptive_watchlist(
         return _empty("invalid_privacy_option")
     try:
         rows, _ = _validated(snapshot)
-        up = [row for row in rows if
-              row["breakout"] == "above_prior_23h_high"
-              and row["relative"] > 0
-              and row["turnover"] > 0
-              and row["volume_ratio"] is not None
-              and row["volume_ratio"] >= 1]
-        down = [row for row in rows if
-                row["breakout"] == "below_prior_23h_low"
-                and row["relative"] < 0
-                and row["turnover"] > 0
-                and row["volume_ratio"] is not None
-                and row["volume_ratio"] >= 1]
-        up.sort(key=lambda r: (
-            -r["relative"], -r["volume_ratio"], -r["turnover"], r["symbol"],
-        ))
-        down.sort(key=lambda r: (
-            r["relative"], -r["volume_ratio"], -r["turnover"], r["symbol"],
-        ))
+        up, down = _rank_descriptive_candidates(rows)
         out.update(
             status="descriptive_watchlist_ready",
             epoch_id=snapshot["epoch_id"],
@@ -211,25 +245,11 @@ def build_descriptive_watchlist(
             owner_journal_integrity_verified=True,
         )
         if include_private_symbols:
-            def display(row: dict[str, Any]) -> dict[str, Any]:
-                return {
-                    "symbol": row["symbol"],
-                    "relative_vs_btc_pct_points": format(row["relative"], "f"),
-                    "return_24bars_pct": format(row["return"], "f"),
-                    "quote_turnover_24bars_usdt": format(row["turnover"], "f"),
-                    "last_quote_turnover_vs_prior23_mean": format(
-                        row["volume_ratio"], "f"
-                    ),
-                    "mean_true_range_14_pct": format(row["atr"], "f"),
-                    "breakout": row["breakout"],
-                    "approved_for_signals": False,
-                    "orders_sent": False,
-                }
             out["up_breakout_watchlist"] = [
-                display(row) for row in up[:_MAX_ITEMS]
+                _display_descriptive_candidate(row) for row in up[:_MAX_ITEMS]
             ]
             out["down_breakout_watchlist"] = [
-                display(row) for row in down[:_MAX_ITEMS]
+                _display_descriptive_candidate(row) for row in down[:_MAX_ITEMS]
             ]
         return out
     except (ValueError, TypeError, InvalidOperation, OverflowError):
