@@ -1841,3 +1841,8 @@ J5 issue #636, branch `work/issue-636-j5-n50-scope-progress`: métricas separada
 ## J2/#638 — ponte descritiva para WebSocket N50 (15/11/2026)
 
 **Jornada:** J2 Entradas; issue #638; branch `work/issue-638-j2-ws-n50-watchlist`; PR/CI/SHA conclusivos a registrar após criação. O objetivo imediato é expor pesquisa por rom­pimento atual/força relativa/turnover da epoch N50 WS, consumindo somente o auditor privado existente D624 e reutilizando a watchlist D308, sem rede/ordens. Teste offline, contrato público de contagens e documentação D345 implementados como candidato; nenhum deploy. **Dependências para dados reais:** WS 50x24 por mesma coorte no SQLite (gate D323) e leitura owner autorizada; #319 marketwide separada. Não solicitar `prossiga`, seguir com revisão+CI+merge seguro sem produção.
+
+
+## J5/#642 — mostrar shortlist J2 WS sem sinais (15/11/2026)
+
+**Jornada:** J5 interface PT-BR; issue #642, branch `work/issue-642-j5-ws-watchlist-mobile`. Arquivos: `web/app/index.html`, `web/app/app.js`, `web/app/style.css`, `scripts/audit_j5_product_app_browser.py`, `tests/test_j5_product_app_mvp.py`, `docs/J5_WS_WATCHLIST_MOBILE.md`. App local passa a mostrar até cinco observações de alta e baixa da J2 #638 somente após importação explícita de JSON válido, sem alterar N50 ou estado PAPER. Prontidão de J1 owner 50×24 e D323 permanece pendente, não simular nomes. **Status deste incremento:** PR/CI a registrar, sem deploy. Próximo passo seguro: CI Linux/Windows/PAPER, corrigir regressões e merge exato sem publicar na VPS.
