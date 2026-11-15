@@ -1739,3 +1739,8 @@ Entrega prioritária do produto: `GET /api/n50-progress` somente na mesma origem
 
 ## J5/APP-SYNC2 — D342: pesquisa descritiva J2 com sincronização local somente agregada (13/11/2026 UTC)
 Reutilizar o wrapper owner J2/WS-READ1 D338, **não** calcular um ranking novo nem ler SQLite diretamente no app: adicionar somente `GET /api/j2-research` ao servidor loopback e consulta client a cada 5 minutos. Falta de 24h, acesso, dados ou integridade = indisponível sem valor artificial. Expor zero símbolos ou linhas privadas, zero sinais/ordens. Não depender de publicação remota; deploy, auth e celular via Internet ficam sob gate distinto. Issue #632, `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+
+## D345 — usar regras J2 observacionais existentes no journal WebSocket N50 (#638; 15/11/2026)
+
+Decisão técnica: evitar reproduzir indicadores de entrada ou coletar outra janela REST. O módulo J2/WS-WATCH1 primeiro valida a origem local `j2-ws-n50-descriptive-24closed-v1` (50 × 24 candles por ativo no mesmo epoch, BTC, digests e relógio causal) e **reutiliza** as funções já versionadas de validação e ranking da watchlist D308. A saída de quantidades é apropriada ao futuro app; símbolos privados são apenas opt-in owner. As regras são hipóteses fixas não calibradas, sem validação OOS/alpha. D323 e Top50 global #319 permanecem gates separados. Código/CI não equivalem à execução do owner na VPS. Não gerar ordens reais, testnet, PnL ou novas permissões, sem custo adicional.
