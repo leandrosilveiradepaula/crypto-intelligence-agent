@@ -204,6 +204,14 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         errors.append("private WS shortlist not shown in mobile cards")
                     if page.locator("#metric-open").inner_text() != "2":
                         errors.append("watchlist import wrongly created a PAPER position")
+                    fits = page.evaluate(
+                        "() => document.documentElement.scrollWidth <= window.innerWidth + 1"
+                    )
+                    if not fits:
+                        errors.append("private shortlist overflows mobile viewport")
+                    if out_dir is not None:
+                        page.screenshot(path=str(out_dir / f"app-{width}px-watchlist.png"),
+                                        full_page=True)
                     count_only_shortlist = dict(
                         ws_shortlist, up_breakout_watchlist=[],
                         down_breakout_watchlist=[],
