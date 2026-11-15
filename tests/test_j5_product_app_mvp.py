@@ -54,6 +54,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('id="quality-n50"', html)
         self.assertIn('id="quality-j2"', html)
         self.assertIn("Qualidade dos dados", html)
+        self.assertIn('id="n50-scope"', html)
+        self.assertIn('id="n50-scope-note"', html)
+        self.assertIn("Horas da mesma coorte", html)
         self.assertNotIn("api.bybit.com", html)
 
     def test_browser_code_has_no_transport_or_dynamic_html_execution(self):
@@ -77,6 +80,11 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('loc.hostname === "localhost"', js)
         self.assertIn('feedOrigin === "manual"', js)
         self.assertIn("function renderQuality()", js)
+        self.assertIn("same_scope_recent_50_of_50_hours", js)
+        self.assertIn("scope_evidence_available", js)
+        self.assertIn("scope_changed_in_window", js)
+        self.assertIn("Progresso da coorte inconsistente", js)
+        self.assertIn("não é falha da coleta", js)
         self.assertIn("relatório obsoleto", js)
         self.assertIn("janela privada íntegra", js)
         self.assertIn("pesquisa agregada disponível", js)
