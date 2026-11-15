@@ -142,7 +142,7 @@ class OwnerPilotD362ContractTests(unittest.TestCase):
         from crypto_intelligence_agent import j2_ws_prospective_ledger as ledger
 
         source = SCRIPT.read_text(encoding="utf-8")
-        code = source.split("<<'PY'\\n", 1)[1].split("\\nPY\\n", 1)[0]
+        code = source.split("<<'PY'\n", 1)[1].split("\nPY\n", 1)[0]
         now_ms = time.time_ns() // 1_000_000
         end_ms = now_ms - now_ms % 3_600_000
         report = ledger._report("owner_local_decision_captured_not_independent_attestation")
