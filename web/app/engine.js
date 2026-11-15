@@ -44,6 +44,28 @@
   function emptyState() {
     return { version: 1, nextId: 1, config: settings(), positions: [] };
   }
+  function createAutoPolicy(raw, position) {
+    if (raw === undefined) return undefined; // Legacy manually-managed position.
+    requireValid(raw && typeof raw === "object" && !Array.isArray(raw) &&
+      Object.keys(raw).length === 4 &&
+      ["target1", "target2", "stop", "partial"].every(k =>
+        Object.hasOwn(raw, k)), "Política automática PAPER inválida");
+    const target1Bps = percent(raw.target1, false);
+    const target2Bps = percent(raw.target2, false);
+    const stopBps = percent(raw.stop, false);
+    const partialBps = percent(raw.partial, false);
+    requireValid(target1Bps < target2Bps && target2Bps < 10000 &&
+      stopBps < 10000, "Alvos e stop PAPER exigem percentuais ordenados abaixo de 100%");
+    // Two target exits must fit the runner floor at creation. Do not add a
+    // position and discover later that its configured automatic exits fail.
+    const dryRun = {...position, events: []};
+    const pct = format(BigInt(partialBps), 2).replace(",", ".");
+    partialExit(dryRun, {basis: "REMAINING_BALANCE", percent: pct});
+    partialExit(dryRun, {basis: "REMAINING_BALANCE", percent: pct});
+    return {version: 1, target1Bps, target2Bps, stopBps, partialBps,
+      lastStep: 0, hits: 0};
+  }
+
   function openPosition(state, input, now) {
     requireValid(state && state.version === 1 && Array.isArray(state.positions),
       "Estado PAPER inválido");
@@ -77,6 +99,8 @@
       initialUnits: units.toString(), remainingUnits: units.toString(),
       events: [], status: "OPEN"
     };
+    const auto = createAutoPolicy(input.auto, position);
+    if (auto !== undefined) position.auto = auto;
     state.positions.push(position);
     state.nextId += 1;
     return position;
@@ -118,6 +142,49 @@
     });
     return left;
   }
+  function applyAutoPaperStep(position, rawMark, step, now) {
+    requireValid(position && position.status === "OPEN" &&
+      position.auto && position.auto.version === 1,
+      "Gatilhos PAPER indisponíveis nesta posição");
+    const policy = position.auto;
+    requireValid(Number.isSafeInteger(step) && step > 0 && step <= 100000 &&
+      step === policy.lastStep + 1,
+      "Passo PAPER repetido ou fora de sequência");
+    const mark = fixed(rawMark, 8, "Fechamento hipotético");
+    requireValid(mark > 0n, "Fechamento hipotético deve ser positivo");
+    const entry = BigInt(position.entryPriceUnits);
+    const scaled = mark * BPS;
+    const long = position.side === "LONG";
+    const stopTouched = long ?
+      scaled <= entry * (BPS - BigInt(policy.stopBps)) :
+      scaled >= entry * (BPS + BigInt(policy.stopBps));
+    let action = "NO_TRIGGER";
+    let units = 0n;
+    if (stopTouched) {
+      units = closeRunner(position, now);
+      action = "STOP";
+    } else if (policy.hits < 2) {
+      const target = policy.hits === 0 ? policy.target1Bps : policy.target2Bps;
+      const reached = long ?
+        scaled >= entry * (BPS + BigInt(target)) :
+        scaled <= entry * (BPS - BigInt(target));
+      if (reached) {
+        const pct = format(BigInt(policy.partialBps), 2).replace(",", ".");
+        units = partialExit(position, {basis: "REMAINING_BALANCE", percent: pct}, now);
+        action = policy.hits === 0 ? "TARGET_1" : "TARGET_2";
+        policy.hits += 1;
+      }
+    }
+    if (action !== "NO_TRIGGER") {
+      const event = position.events[position.events.length - 1];
+      event.autoStep = step;
+      event.autoAction = action;
+    }
+    policy.lastStep = step;
+    return Object.freeze({step, action, units: units.toString(),
+      remainingUnits: position.remainingUnits, ordersSent: false});
+  }
+
   function grossEntryExposureCents(position) {
     const initial = BigInt(position.initialUnits);
     const rest = BigInt(position.remainingUnits);
@@ -163,7 +230,23 @@
         (p.status === "OPEN" ? remaining > 0n : remaining === 0n) &&
         Array.isArray(p.events) && p.events.length <= MAX_EVENTS,
         "Saldo PAPER não conservado");
-      let exited = 0n;
+      const hasAuto = Object.hasOwn(p, "auto");
+      if (hasAuto) {
+        const a = p.auto;
+        requireValid(a && typeof a === "object" && !Array.isArray(a) &&
+          Object.keys(a).length === 7 &&
+          ["version", "target1Bps", "target2Bps", "stopBps",
+           "partialBps", "lastStep", "hits"].every(k => Object.hasOwn(a, k)) &&
+          a.version === 1 && Number.isSafeInteger(a.lastStep) &&
+          a.lastStep >= 0 && a.lastStep <= 100000 &&
+          Number.isSafeInteger(a.hits) && a.hits >= 0 && a.hits <= 2 &&
+          [a.target1Bps, a.target2Bps, a.stopBps, a.partialBps].every(n =>
+            Number.isInteger(n) && n > 0 && n <= 10000) &&
+          a.target1Bps < a.target2Bps && a.target2Bps < 10000 &&
+          a.stopBps < 10000 && a.hits <= a.lastStep,
+          "Política automática PAPER adulterada");
+      }
+      let exited = 0n, autoHits = 0, priorAutoStep = 0, stopped = false;
       for (const event of p.events) {
         requireValid(event && ["PARTIAL_PAPER","CLOSE_PAPER"].includes(event.kind) &&
           typeof event.units === "string" && INTEGER.test(event.units) &&
@@ -175,8 +258,32 @@
             event.percentBps >= 1 && event.percentBps <= 10000,
             "Parcial PAPER sem base");
         }
+        const autoTagged = Object.hasOwn(event, "autoStep") ||
+          Object.hasOwn(event, "autoAction");
+        if (autoTagged) {
+          requireValid(hasAuto && Number.isSafeInteger(event.autoStep) &&
+            event.autoStep > priorAutoStep &&
+            event.autoStep <= p.auto.lastStep && !stopped,
+            "Evento automático PAPER repetido ou fora de sequência");
+          priorAutoStep = event.autoStep;
+          if (event.autoAction === "STOP") {
+            requireValid(event.kind === "CLOSE_PAPER",
+              "STOP PAPER precisa encerrar o saldo");
+            stopped = true;
+          } else {
+            autoHits += 1;
+            requireValid(event.autoAction === "TARGET_" + autoHits &&
+              event.kind === "PARTIAL_PAPER" &&
+              event.basis === "REMAINING_BALANCE" &&
+              event.percentBps === p.auto.partialBps && autoHits <= 2,
+              "Parcial automática PAPER sem contrato");
+          }
+        }
         exited += BigInt(event.units);
       }
+      requireValid(!hasAuto || (p.auto.hits === autoHits &&
+        (!stopped || p.status === "CLOSED")),
+        "Progresso automático PAPER inconsistente");
       requireValid(exited + remaining === initial,
         "Ledger de quantidades PAPER inconsistente");
     }
@@ -185,7 +292,7 @@
   const publicApi = Object.freeze({
     SCALE, BPS, format, fixed, percent, settings, emptyState,
     openPosition, partialExit, closeRunner, grossEntryExposureCents,
-    grossMarkPnlCents, validateState
+    grossMarkPnlCents, applyAutoPaperStep, validateState
   });
   global.CIAEngine = publicApi;
   if (typeof module === "object" && module && module.exports) module.exports = publicApi;
