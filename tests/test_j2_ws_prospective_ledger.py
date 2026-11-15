@@ -109,6 +109,7 @@ class OwnerLedgerCaptureTests(unittest.TestCase):
         self.assertEqual(captured["status"],
                          "owner_local_decision_captured_not_independent_attestation")
         self.assertEqual(captured["capture_records_created"],1)
+        self.assertEqual(captured["decision_closed_end_ms"],END)
         self.assertGreater(captured["candidates_captured"],0)
         self.assertFalse(captured["prospective_registration_independently_verified"])
         self.assertTrue(captured["owner_ws_sqlite_readonly_replayed"])
@@ -131,6 +132,8 @@ class OwnerLedgerCaptureTests(unittest.TestCase):
         self.assertEqual(result["aligned_observations"],captured["candidates_captured"])
         self.assertEqual(result["matured_observations"],captured["candidates_captured"])
         self.assertTrue(result["owner_local_decision_file_verified"])
+        self.assertEqual(result["decision_closed_end_ms"],END)
+        self.assertEqual(result["future_closed_end_ms"],END+HOUR_MS)
         self.assertTrue(result["owner_ws_sqlite_readonly_replayed"])
         self.assertTrue(result["database_accessed"])
         self.assertFalse(result["prospective_registration_independently_verified"])
