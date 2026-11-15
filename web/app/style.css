@@ -137,6 +137,11 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .mark-output strong { display: block; font-variant-numeric: tabular-nums; font-size: .89rem; }
 .mark-output small { display: block; color: var(--muted); font-size: .68rem; line-height: 1.45; margin-top: 4px; }
 .mark-output[data-valid="false"] strong { color: var(--red); }
+.auto-policy { grid-column: 1 / -1; min-width: 0; border-top: 1px solid #3a5b73; padding-top: 10px; }
+.auto-policy p { margin: 0 0 9px; }
+.auto-step-button { width: 100%; }
+.auto-configuration { margin: 12px 0 0; padding: 12px; background: #132239; border: 1px solid #3a5b73; border-radius: 10px; }
+#open-form .switchline { margin-top: 18px; }
 .position-card details { margin-top: 13px; }
 .position-card summary { font-size: .8rem; color: var(--aqua); font-weight: 750; cursor: pointer; }
 .partial-form { margin-top: 12px; }
