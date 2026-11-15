@@ -3,7 +3,7 @@
 ## J0 — Fundação
 Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomia, jornadas e decisões versionados.
 
-## J1 — Dados (épica #2 ABERTA)
+## J1 — Dados (épica #2 concluída para pesquisa em D360; refinamentos operacionais separados)
 | Unidade | Issue / PR | SHA integração | Evidência |
 | --- | --- | --- | --- |
 | WU1 contratos e adaptador Binance read-only | #9 / #12 | `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193` | testes offline |

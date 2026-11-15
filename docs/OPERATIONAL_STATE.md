@@ -1,10 +1,10 @@
-# Estado operacional — WU44 Bybit V5 restrita no primeiro GET; Kraken price-only real, J1 Top50/volume/rights abertas, 2026-10-26 UTC
+# Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
 Projeto: Crypto Intelligence Agent. Repo PÚBLICO: `leandrosilveiradepaula/crypto-intelligence-agent`.
 Missão: futuros perpétuos crypto, entradas quantitativas e saídas parciais; operação manual sem ordens reais nesta fase.
 Autonomia: `AGENTS.md`; não pedir "prossiga", avançar em microtarefas seguras, usar GitHub como verdade. Nenhum custo adicional (R$0), permissão sensível, deploy/migration em produção ou trade sem gate humano.
 
-## Jornada ativa: J1 Dados — épica #2 aberta
+## Jornada ativa: J2/J3 observação prospectiva (#656); J1 #2/#319 concluídas no escopo D360
 - J0 documental concluída (issue #1, PRs #10/#11).
 - WU1 #9/PR12 SHA `c9bf70c3f8429b1474a9b68cc1aeb0a3cd209193`.
 - WU2 #13/PR14 SHA `f3567eb063f0b7cfeffe40169ba0b8e9fce1da96`.
