@@ -1679,3 +1679,7 @@ PR #654 MERGED no SHA `dd6aab6d02de8452346b236b3c1f3ff4e28d7869`, CI final Linux
 ## J1/D359 — prova final PIT Top50 via auditor isolado na VPS (15/11/2026 UTC)
 
 Autorizado pelo Product Owner. Implantação sem cutover para proteger N50/D323: checkout owner 0700 separado do serviço, SHA pinado, testes D286/D287/D321 offline, censo real GET-only uma vez em janela 19:01:30 UTC de 15/11, recibo D357 de contagens/cobertura da pool. Código/CI no GitHub em preparação; **não alegar novo PASS antes do job real**. Restante J1 #319 depende de `rank_incomplete_24h_candidates=0`, catálogos PIT consistentes, hashes e status sucesso. Sem alterar serviço N50, banco, timer, credenciais ou qualquer ordem. D359 documentado.
+
+## J1/D359 — CI verde e auditor proprietário isolado preparado (15/11/2026 ~18:43 UTC)
+
+PR #655 MERGED SHA `b75124c2efbfa1a2a5d1b2c38f0f597c397e2d90`, 3/3 CI SUCCESS. VPS job `484e99fb820b435e8096c471ec2dfc8a` rodando: duas pipelines CI revalidadas, SHA head pinado, regressão offline owner 9+12+11 testes PASS, N50/rotador não alterados. **Captura real D359 ainda não começou** (janela UTC 19:01:30). A automação `6af9fcfb246881919ea498430a0b3496` verificará resultado às 16:20 BRT e poderá concluir #319/#2 somente se recibo real e critérios de pesquisa forem comprovados. Coleta D323 24×50/1200 já PASS, mercado real/trading permanece desabilitado. Não reiniciar ciclo nem pedir "prossiga".
