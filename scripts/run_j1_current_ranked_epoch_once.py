@@ -113,8 +113,12 @@ def seal_current_ranked_scope_once(
             raise ValueError("unsafe_manifest_destination")
         _strict_owner(scope_directory, directory=True)
         report = _decode_private_file(report_path, max_bytes=MAX_REPORT_BYTES)
+        # The independent offline "seal" path must enforce the same
+        # accounting contract as the integrated "capture-seal" path.
+        coverage = sanitized_rank_coverage_receipt(report)
         manifest = build_ranked_research_scope(report, now_ms=now_ms)
         _write_scope_file_once(scope_directory, manifest)
+        result.update(coverage)
         result.update({
             "status": "sealed_current_auto_rank_research_scope_only",
             "manifest_written": True,
