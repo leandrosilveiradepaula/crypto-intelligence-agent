@@ -63,6 +63,10 @@ class AppLayoutContractTests(unittest.TestCase):
             self.assertIn(f'id="{item}"', html)
         self.assertIn("Observações selecionadas J2", html)
         self.assertIn("Importar relatórios ou restaurar PAPER", html)
+        self.assertIn('id="auto-enabled"', html)
+        self.assertIn('id="auto-target1"', html)
+        self.assertIn('id="auto-stop"', html)
+        self.assertIn("Simular próximo fechamento", (APP / "app.js").read_text(encoding="utf-8"))
         self.assertIn("substitui cenários locais somente após sua confirmação", html)
         self.assertIn("não é previsão, sinal ou ordem", html)
         self.assertNotIn("api.bybit.com", html)
@@ -91,6 +95,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('function validateWatchlist(snapshot)', js)
         self.assertIn('function renderWatchlist()', js)
         self.assertIn("mark-reference", js)
+        self.assertIn("E.applyAutoPaperStep(position,", js)
+        self.assertIn('$("auto-enabled").checked', js)
+        self.assertIn('keys.push("autoStep", "autoAction")', js)
         self.assertIn("E.grossMarkPnlCents(position, decimal(markInput.value))", js)
         self.assertIn("function validatePaperBackup(backup)", js)
         self.assertIn("exactBackupKeys(restored.config", js)
@@ -187,6 +194,83 @@ console.log("J5_MVP1_BIGINT_PAPER_PASS");
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("J5_MVP1_BIGINT_PAPER_PASS", result.stdout)
+
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js offline PAPER automatic exits")
+    def test_j4_j5_auto_targets_stop_replay_and_legacy_backup(self):
+        script=r"""
+const assert = require("node:assert/strict");
+const E = require("./web/app/engine.js");
+const s = E.emptyState();
+const cfg = {target1:"1",target2:"2",stop:"1",partial:"50"};
+const input = {symbol:"BTCUSDT",side:"LONG",entry:"100",margin:"3",
+               leverage:50,runner:"6",auto:cfg};
+const a = E.openPosition(s, input, "2026-11-15T11:00:00.000Z");
+assert.equal(a.auto.lastStep,0);
+assert.equal(a.auto.hits,0);
+assert.equal(a.leverageAtOpen,50);
+assert.equal(E.applyAutoPaperStep(a,"100",1).action,"NO_TRIGGER");
+assert.equal(a.events.length,0);
+assert.equal(E.applyAutoPaperStep(a,"101",2).action,"TARGET_1");
+assert.equal(a.remainingUnits,"75000000");
+assert.equal(a.events[0].autoStep,2);
+assert.equal(a.events[0].autoAction,"TARGET_1");
+assert.throws(()=>E.applyAutoPaperStep(a,"102",2),/repetido|sequência/);
+assert.equal(a.remainingUnits,"75000000");
+assert.throws(()=>E.applyAutoPaperStep(a,"NaN",3),/Fechamento/);
+assert.equal(a.auto.lastStep,2);
+assert.equal(a.remainingUnits,"75000000");
+assert.equal(E.applyAutoPaperStep(a,"102",3).action,"TARGET_2");
+assert.equal(a.remainingUnits,"37500000");
+assert.equal(a.events[1].autoAction,"TARGET_2");
+assert.equal(E.applyAutoPaperStep(a,"103",4).action,"NO_TRIGGER");
+assert.equal(a.remainingUnits,"37500000");
+assert.equal(E.applyAutoPaperStep(a,"99",5).action,"STOP");
+assert.equal(a.remainingUnits,"0");
+assert.equal(a.status,"CLOSED");
+assert.equal(a.events[2].autoAction,"STOP");
+assert.equal(a.events[2].autoStep,5);
+assert.throws(()=>E.applyAutoPaperStep(a,"99",6),/indisponíveis|encerrado/);
+assert.deepEqual(E.validateState(JSON.parse(JSON.stringify(s))),s);
+
+const b = E.openPosition(s, {...input, symbol:"ETHUSDT",
+  side:"SHORT",runner:"6"}, "2026-11-15T11:01:00.000Z");
+assert.equal(E.applyAutoPaperStep(b,"99",1).action,"TARGET_1");
+assert.equal(E.applyAutoPaperStep(b,"98",2).action,"TARGET_2");
+assert.equal(E.applyAutoPaperStep(b,"101",3).action,"STOP");
+assert.equal(b.status,"CLOSED");
+assert.equal(b.events[2].autoAction,"STOP");
+
+const third = E.openPosition(s, {...input,symbol:"SOLUSDT",
+  auto:undefined}, "2026-11-15T11:02:00.000Z");
+assert.equal(third.auto,undefined);
+E.partialExit(third,{basis:"REMAINING_BALANCE",percent:"50"});
+assert.deepEqual(E.validateState(JSON.parse(JSON.stringify(s))),s);
+const count = s.positions.length;
+assert.throws(()=>E.openPosition(s,{...input,symbol:"BADUSDT",
+  runner:"90"}, "2026-11-15T11:04:00.000Z"),/runner/);
+assert.throws(()=>E.openPosition(s,{...input,symbol:"BADUSDT",
+  auto:{...cfg,target1:"3"}}, "2026-11-15T11:04:00.000Z"),/ordenados/);
+assert.equal(s.positions.length,count);
+const corrupted=JSON.parse(JSON.stringify(s));
+corrupted.positions[0].auto.hits=1;
+assert.throws(()=>E.validateState(corrupted),/Progresso automático/);
+const duplicate=JSON.parse(JSON.stringify(s));
+duplicate.positions[0].events[1].autoStep=2;
+assert.throws(()=>E.validateState(duplicate),/sequência/);
+const forged=JSON.parse(JSON.stringify(s));
+forged.positions[2].events[0].autoStep=1;
+forged.positions[2].events[0].autoAction="TARGET_1";
+assert.throws(()=>E.validateState(forged),/sequência/);
+console.log("J4_J5_AUTO_EXIT_BIGINT_PAPER_PASS");
+"""
+        result = subprocess.run(
+            [shutil.which("node"), "-e", script],
+            cwd=ROOT, text=True, capture_output=True, timeout=15,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("J4_J5_AUTO_EXIT_BIGINT_PAPER_PASS", result.stdout)
 
 
 if __name__ == "__main__":
