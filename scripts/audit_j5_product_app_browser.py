@@ -150,6 +150,10 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "name":"paper-restore.json", "mimeType":"application/json",
                         "buffer":backup_bytes,
                     })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Restauração cancelada')",
+                        timeout=5000,
+                    )
                     if page.locator("#metric-open").inner_text() != "0":
                         errors.append("cancelled PAPER restore still modified state")
                     page.once("dialog", lambda dialog: dialog.accept())
@@ -181,7 +185,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "buffer":json.dumps(poisoned).encode(),
                     })
                     page.wait_for_function(
-                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        "() => document.querySelector('#notice').textContent.includes('campos desconhecidos')",
                         timeout=5000,
                     )
                     if page.locator("#metric-open").inner_text() != "2":
