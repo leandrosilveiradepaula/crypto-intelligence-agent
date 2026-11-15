@@ -1622,3 +1622,7 @@ J2 já possui indicadores de rompimento, tendência/pullback, BTC/força relativ
 ## J2/J3 #640 — aferição de observações WS em horizontes futuros (15/11/2026)
 
 PR #639 J2 shortlist WS/D308 integrada no GitHub SHA `e7904d65237cd99be4c42f250df53e592c6b53b8`, CI Linux/docs + Windows/offline + PAPER/mobile verdes, sem deploy. Agora issue #640, branch `work/issue-640-j2-j3-ws-forward-outcomes` implementa módulo puro de congelamento e maturação 1/4/8/24h, com custos J3 existentes, BTC de referência e abstenção para falta de candles/coorte divergente. Testes e documentação em `docs/J2_J3_WS_FORWARD_OUTCOMES.md`. **Este incremental é candidato à CI/revisão e não é sinal ou backtest válido; sem deploy.** J1 D323 e #319 seguem gates operacionais separados.
+
+## J5/#642 — candidatos J2 agora representáveis no app PAPER (15/11/2026)
+
+Issue #642, branch `work/issue-642-j5-ws-watchlist-mobile`: interface mobile adiciona painel de observações J2 alta/baixa sobre a watchlist WebSocket já integrada por J2 #638, com cards opcionais de ticker/direção/força BTC/volume sob **importação privada explícita**, e contagens apenas na falta de símbolos. Sem upload, persistência, ordem, novo GET, release ou API. Contrato de segurança JavaScript e QA de Chromium com 320/390/768/1280 documentados em `docs/J5_WS_WATCHLIST_MOBILE.md`. **Código candidato à revisão/CI; sem merge/deploy neste checkpoint.** Gate D323 #585/Top50 #319 mantido.

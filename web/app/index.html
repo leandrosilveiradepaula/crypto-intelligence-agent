@@ -123,6 +123,36 @@
             </div>
           </div>
         </div>
+        <div class="panel watchlist-panel" aria-labelledby="watchlist-title">
+          <div class="panel-heading">
+            <h3 id="watchlist-title">Observações selecionadas J2</h3>
+            <span id="watchlist-status" class="status-label">Sem watchlist importada</span>
+          </div>
+          <p class="muted fine">Rompimento, força relativa ao BTC e volume da janela WS auditada. Observação histórica — não é previsão, sinal ou ordem.</p>
+          <div id="watchlist-empty" class="empty">
+            <strong>Nenhum candidato J2 carregado</strong>
+            <p>Importe um JSON de watchlist somente leitura. Sem autorização de símbolos privados, serão exibidas apenas as contagens.</p>
+          </div>
+          <div id="watchlist-loaded" hidden>
+            <div class="inline-metrics">
+              <div><strong id="watchlist-up-count">—</strong><span>Observações de alta</span></div>
+              <div><strong id="watchlist-down-count">—</strong><span>Observações de baixa</span></div>
+              <div><strong id="watchlist-unclassified-count">—</strong><span>Sem razão de turnover</span></div>
+              <div><strong id="watchlist-closed-end">—</strong><span>Última vela UTC</span></div>
+            </div>
+            <div class="watchlist-columns">
+              <div>
+                <h4>Alta · observações LONG</h4>
+                <div id="watchlist-up-rows" class="research-list"></div>
+              </div>
+              <div>
+                <h4>Baixa · observações SHORT</h4>
+                <div id="watchlist-down-rows" class="research-list"></div>
+              </div>
+            </div>
+            <p id="watchlist-note" class="muted fine">Sem habilitação de sinais ou ordens. J3 ainda precisa avaliar custo, risco e resultados.</p>
+          </div>
+        </div>
       </section>
 
       <section class="group" id="posicoes" aria-labelledby="position-title">
@@ -197,7 +227,7 @@
             <label class="file-drop" for="import-file">
               <span aria-hidden="true" class="upload-icon">↓</span>
               <strong>Selecionar arquivo JSON local</strong>
-              <span>Relatório `j5-n50-ws-log-progress-v1` ou `j2-ws-n50-descriptive-24closed-v1`</span>
+              <span>Relatórios N50, pesquisa J2 ou `j2-n50-ws-descriptive-watchlist-v1`</span>
               <input type="file" id="import-file" accept=".json,application/json">
             </label>
             <p class="muted fine">O arquivo é lido pelo navegador, limitado a 1 MiB e nunca enviado pela rede. Importações não persistem após recarregar.</p>
