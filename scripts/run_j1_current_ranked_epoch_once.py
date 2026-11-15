@@ -14,7 +14,8 @@ from typing import Any
 
 from crypto_intelligence_agent.bybit_public_j1_transport import BoundedBybitPublicClient
 from crypto_intelligence_agent.j1_auto_research_epoch import (
-    FILE_NAME, build_ranked_research_scope, validate_ranked_research_scope,
+    FILE_NAME, build_ranked_research_scope, sanitized_rank_coverage_receipt,
+    validate_ranked_research_scope,
 )
 from crypto_intelligence_agent.j1_rest_incremental_owner import run_hourly_once
 from scripts.audit_bybit_marketwide_closed24h import CensusAbstain, _strict_owner
@@ -112,8 +113,12 @@ def seal_current_ranked_scope_once(
             raise ValueError("unsafe_manifest_destination")
         _strict_owner(scope_directory, directory=True)
         report = _decode_private_file(report_path, max_bytes=MAX_REPORT_BYTES)
+        # The independent offline "seal" path must enforce the same
+        # accounting contract as the integrated "capture-seal" path.
+        coverage = sanitized_rank_coverage_receipt(report)
         manifest = build_ranked_research_scope(report, now_ms=now_ms)
         _write_scope_file_once(scope_directory, manifest)
+        result.update(coverage)
         result.update({
             "status": "sealed_current_auto_rank_research_scope_only",
             "manifest_written": True,
@@ -180,8 +185,13 @@ def capture_and_seal_current_rank_once(
         ):
             out["failure_category"] = "full_current_capture_abstained"
             return out
+        # Validate coverage of every catalog candidate before sealing.
+        # Incomplete candidates do NOT interrupt the existing provisional
+        # research N50; they prevent claiming a fully covered pool.
+        coverage = sanitized_rank_coverage_receipt(proof)
         scope = build_ranked_research_scope(proof, now_ms=clock())
         _write_scope_file_once(scope_directory, scope)
+        out.update(coverage)
         out.update({
             "status": "sealed_current_auto_rank_research_scope_only",
             "manifest_written": True,

@@ -14,6 +14,7 @@ from unittest.mock import patch
 from crypto_intelligence_agent.bybit_public_j1_transport import BoundedBybitPublicClient
 from crypto_intelligence_agent.j1_auto_research_epoch import (
     FILE_NAME, HOUR_MS, build_ranked_research_scope, validate_ranked_research_scope,
+    sanitized_rank_coverage_receipt,
 )
 from crypto_intelligence_agent.j1_rest_incremental_owner import (
     _DB_NAME, _frontier,
@@ -47,6 +48,9 @@ def report(*, members=None):
         "orders_sent": False,
         "ranked_research_candidates": 50,
         "complete_closed24h_candidates": 370,
+        "insufficient_closed24h_candidates": 0,
+        "zero_closed24h_turnover_candidates": 0,
+        "all_provisional_candidates_have_complete24h": True,
         "decision_closed_hour_end_ms": SELECTED,
         "catalog_pre_observed_at_ms": SELECTED + 70_000,
         "catalog_post_observed_at_ms": SELECTED + 120_000,
@@ -71,6 +75,33 @@ def fake_bybit(url, _limit):
 
 
 class RankedScopeContractTests(unittest.TestCase):
+    def test_rank_coverage_receipt_counts_and_no_global_promotion(self):
+        checked = sanitized_rank_coverage_receipt(report())
+        self.assertEqual(checked["rank_candidate_pool_count"], 370)
+        self.assertEqual(checked["rank_complete_positive_24h_candidates"], 370)
+        self.assertEqual(checked["rank_incomplete_24h_candidates"], 0)
+        self.assertTrue(checked["rank_all_candidate_windows_complete24h"])
+        self.assertNotIn("BTCUSDT", json.dumps(checked))
+        missing = report()
+        missing["complete_closed24h_candidates"] = 369
+        missing["insufficient_closed24h_candidates"] = 1
+        missing["all_provisional_candidates_have_complete24h"] = False
+        weaker = sanitized_rank_coverage_receipt(missing)
+        self.assertFalse(weaker["rank_all_candidate_windows_complete24h"])
+        self.assertEqual(weaker["rank_incomplete_24h_candidates"], 1)
+        for change in (
+            {"insufficient_closed24h_candidates": 1},
+            {"complete_closed24h_candidates": 369},
+            {"all_provisional_candidates_have_complete24h": False},
+            {"rank_digest_sha256": "forged"},
+            {"zero_closed24h_turnover_candidates": -1},
+        ):
+            forged = report()
+            forged.update(change)
+            with self.subTest(change=change):
+                with self.assertRaises(ValueError):
+                    sanitized_rank_coverage_receipt(forged)
+
     def test_scope_pinned_and_no_auto_trading(self):
         valid = build_ranked_research_scope(report(), now_ms=BASE+120_000)
         selected, digest = validate_ranked_research_scope(
@@ -154,6 +185,22 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
             client=BoundedBybitPublicClient(transport=fake_bybit),
         )
 
+    def test_offline_seal_refuses_forged_pool_coverage_before_writing(self):
+        fake = report()
+        fake["insufficient_closed24h_candidates"] = 1
+        self.save(fake)
+        refused = self.seal()
+        self.assertEqual(refused["status"], "abstain")
+        self.assertFalse(refused["manifest_written"])
+        self.assertFalse((self.manifest / FILE_NAME).exists())
+        self.assertEqual(refused["network_requests"], 0)
+        self.assertFalse(refused["orders_sent"])
+        self.save(report())
+        approved = self.seal()
+        self.assertTrue(approved["manifest_written"])
+        self.assertEqual(approved["rank_candidate_pool_count"], 370)
+        self.assertTrue(approved["rank_all_candidate_windows_complete24h"])
+
     def test_one_step_capture_seal_uses_50_public_symbols_only_in_manifest(self):
         module = "scripts.run_j1_current_ranked_epoch_once.research_current_closed24h_once"
         with patch(module, return_value=report()) as capture:
@@ -167,6 +214,10 @@ class RankedScopePrivateOwnerTests(unittest.TestCase):
         self.assertEqual(result["status"],
                          "sealed_current_auto_rank_research_scope_only", result)
         self.assertTrue(result["manifest_written"])
+        self.assertTrue(result["rank_all_candidate_windows_complete24h"])
+        self.assertEqual(result["rank_candidate_pool_count"], 370)
+        self.assertEqual(result["rank_incomplete_24h_candidates"], 0)
+        self.assertEqual(result["rank_digest_sha256"], "b" * 64)
         self.assertFalse(result["database_modified"])
         self.assertFalse(result["orders_sent"])
         self.assertNotIn("BTCUSDT", json.dumps(result))

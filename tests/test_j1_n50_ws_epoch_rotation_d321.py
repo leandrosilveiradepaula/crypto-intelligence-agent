@@ -180,6 +180,55 @@ class N50WSEpochRotationTests(unittest.TestCase):
         self.assertEqual(out["rank_network_requests"],0)
         self.assertFalse(out["new_epoch_activated"])
 
+    def test_rotated_epoch_reports_rank_pool_coverage_without_symbols(self):
+        due = T + 37 * HOUR + 75_000
+        rank = {
+            "status": "sealed_current_auto_rank_research_scope_only",
+            "requests_attempted": 372,
+            "rank_closed_hour_end_ms": due // HOUR * HOUR,
+            "rank_candidate_pool_count": 370,
+            "rank_complete_positive_24h_candidates": 369,
+            "rank_incomplete_24h_candidates": 1,
+            "rank_complete_zero_turnover_candidates": 0,
+            "rank_all_candidate_windows_complete24h": False,
+            "rank_catalog_census_matches_before_after": True,
+            "rank_candidate_pool_digest_sha256": "c" * 64,
+            "rank_digest_sha256": "d" * 64,
+        }
+        opts = dict(
+            state_directory=self.state, epoch_root=self.root,
+            allow_private_rotation=True, allow_public_network=True,
+            confirm_region_and_personal_research=True,
+            allow_private_manifest_write=True,
+            allow_private_ws_cache_write=True,
+            clock_ms=lambda: due,
+        )
+        with patch.object(rotate, "capture_and_seal_current_rank_once",
+                          return_value=rank), \
+             patch.object(rotate, "cache_current_n50_ws_metadata_once",
+                          return_value={
+                              "status": "ws_metadata_owner_n50_cached_for_ws_research",
+                              "catalog_gets": 1,
+                          }), \
+             patch.object(rotate, "activate_n50_ws_epoch_once",
+                          return_value=epoch.ActiveN50WSEpoch(
+                              "active_n50_ws_epoch_rotated",
+                              ranked_scope_sha256="a" * 64,
+                              ws_metadata_sha256="b" * 64,
+                          )):
+            out = rotate.rotate_n50_ws_owner_epoch_once(**opts)
+        self.assertEqual(out["status"], "n50_ws_epoch_rotation_complete")
+        self.assertEqual(out["rank_network_requests"], 372)
+        self.assertEqual(out["rank_candidate_pool_count"], 370)
+        self.assertEqual(out["rank_complete_positive_24h_candidates"], 369)
+        self.assertEqual(out["rank_incomplete_24h_candidates"], 1)
+        self.assertFalse(out["rank_all_candidate_windows_complete24h"])
+        self.assertEqual(out["rank_digest_sha256"], "d" * 64)
+        self.assertTrue(out["new_epoch_activated"])
+        self.assertNotIn("BTCUSDT", json.dumps(out))
+        self.assertFalse(out["orders_sent"])
+        self.assertFalse(out["marketwide_top50_verified"])
+
     def test_rotation_once_per_epoch_when_rank_rate_limited(self):
         due=T+37*HOUR+75_000
         # No actual provider I/O, rank fails in a fixture; the next tick
