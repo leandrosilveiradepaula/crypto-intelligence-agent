@@ -1639,3 +1639,11 @@ PR #645 **MERGED** em `main=f71293d7c9a11898b995e5a53acc4a2d531c5680`; issue #64
 ## J5/PAPER-MARK1 #646 — variação bruta por mark manual no aplicativo (15/11/2026)
 
 Issue #646, branch `work/issue-646-j5-paper-mark-reference`: UI de posições abertas com mark digitado e PnL bruto referencial usando exclusivamente BigInt já existente, após parciais. Testes Node/Chromium 390 px e contrato `docs/J5_PAPER_MARK_REFERENCE.md`. **Código candidato** a CI/revisão/merge sem deploy; não mostra mark real de exchange, preço ao vivo, PnL líquido/realizado, custo ou liquidação. N50/SQLite/VPS e watchlist J2 não mudam; nenhuma ordem.
+
+## J5/PAPER-MARK1 #646 — indicador mark integrado no app (15/11/2026 UTC)
+
+PR #647 **MERGED** SHA `94c78554f8531d258626df7f8781f7b82e9f4c82`, head `723e26b1a6e2fb174420963acc8d5722218c1b13`, CI 43713120923 Linux/docs+Windows e 43713120890 PAPER/Chrome SUCCESS. Issue #646 encerrada. Exibe variação bruta hipotética LONG/SHORT e após parciais, entrada mark manual, sem dados reais/custos/liquidação/ordem; nenhum deploy.
+
+## J5/PAPER-BACKUP1 #648 — restaurar JSON PAPER após exportação (15/11/2026 UTC)
+
+Issue #648 e branch `work/issue-648-j5-paper-backup-restore`: leitor local estrito do export existente, E.validateState e chaves exatas, confirmação explícita antes de substituir cenários, cancelamento sem mutação e persistência local. QA Chromium real de reset/cancel/restore/adulteração e documentação `docs/J5_PAPER_LOCAL_BACKUP_RESTORE.md`. **Código candidato à CI/review/merge seguro**, nenhum novo endpoint, alteração do J1/WS, VPS ou ordem real. D323 #585 e Top50 #319 mantidos.
