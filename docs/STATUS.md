@@ -1608,3 +1608,8 @@ Issue #630, branch `work/issue-630-j5-loopback-n50-live-status`, base `main=32c4
 
 ## J5/APP-SYNC2 — pesquisa J2 automática no painel local (13/11/2026 UTC)
 Após #630/PR #631 integrados à `main=f003784a4f66cee0eeb46827d8009a3ce7b86dea`, issue #632 e branch `work/issue-632-j5-loopback-j2-readonly` adicionam segundo endpoint privado localhost `/api/j2-research`. Reporta apenas 50×24 métricas descritivas agregadas após wrapper owner J2 existente, nenhuma linha de símbolo ou aprovação. UI consulta a cada 5min e recusa data stale. Sem acesso root, nenhuma alteração VPS, deploy ou ordens. A prova real J1 D323 ainda depende da janela 24h, a pesquisa poderá ficar vazia até lá. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+
+## J5/#636 — coorte do N50 visível separadamente no painel (15/11/2026)
+
+No WS real observamos 24 fechamentos 50/50 em 13–14/11 (22 de uma coorte, 2 da seguinte) e depois 18 fechamentos 50/50 da nova coorte até 15/11 09:00 UTC. O contador geral de logs não demonstra por si mesmo os mesmos 50 ativos por 24h. #636 adiciona contagem independente de horas da **mesma** coorte no painel J5, com indicação de troca de universo, mas sem promover a D323 ou o Top50 #319 a PASS. Código candidato à CI/merge, nenhum deploy, sem ordens. J2/J3/J4/J5 continuam em paralelo enquanto a D323 espera somente a janela já em curso. Ver `docs/J5_N50_COHORT_PROGRESS.md`.
