@@ -1631,3 +1631,11 @@ Issue #642, branch `work/issue-642-j5-ws-watchlist-mobile`: interface mobile adi
 ## J2/J3 #644 — registro de decisões antes de resultados WS (15/11/2026)
 
 Após merge J2 #639 (`e7904d65237cd99be4c42f250df53e592c6b53b8`) e J2/J3 #641 (`d30447f865538161fc80f908aee2f3a32642702c`), a issue #644 / branch `work/issue-644-j2-ws-prospective-ledger` introduz opção de last closes privada no replay J2/D624 e registro local da shortlist uma única vez por UTC sob owner, com avaliação posterior 1/4/8h da mesma coorte e premissas de custos explícitas. Não duplica coletor nem endpoints. Testes e `docs/J2_WS_PROSPECTIVE_DECISIONS.md`. **Candidato à revisão/CI e sem instalação VPS**, sem ordem ou performance comprovada. D323 #585 e marketwide #319 continuam separados.
+
+## J2/J3 #644 — código integrado; operação prospectiva ainda não iniciada (15/11/2026)
+
+PR #645 **MERGED** em `main=f71293d7c9a11898b995e5a53acc4a2d531c5680`; issue #644 fechada. CI final GitHub Actions `43712011578` Linux/docs + Windows/offline e `43712011580` PAPER/mobile concluídas com SUCCESS. Módulo owner de captura imutável/horizontes 1/4/8h integrado **somente em código**, não instalado/rodado na VPS. Não há timestamps prospectivos independentes, ganhos demonstrados ou ordens. D323/J1 e Top50 #319 seguem abertos.
+
+## J5/PAPER-MARK1 #646 — variação bruta por mark manual no aplicativo (15/11/2026)
+
+Issue #646, branch `work/issue-646-j5-paper-mark-reference`: UI de posições abertas com mark digitado e PnL bruto referencial usando exclusivamente BigInt já existente, após parciais. Testes Node/Chromium 390 px e contrato `docs/J5_PAPER_MARK_REFERENCE.md`. **Código candidato** a CI/revisão/merge sem deploy; não mostra mark real de exchange, preço ao vivo, PnL líquido/realizado, custo ou liquidação. N50/SQLite/VPS e watchlist J2 não mudam; nenhuma ordem.
