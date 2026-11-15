@@ -1617,3 +1617,8 @@ No WS real observamos 24 fechamentos 50/50 em 13–14/11 (22 de uma coorte, 2 da
 ## J2/WS-WATCH1 #638 — integrar watchlist D308 à fonte N50 WS auditada (15/11/2026)
 
 J2 já possui indicadores de rompimento, tendência/pullback, BTC/força relativa, confluência sintética e ablação J3 OOS. O gap concreto era conectar a watchlist **REST D308** ao leitor da epoch ativa **WS D624**. Issue #638 / branch `work/issue-638-j2-ws-n50-watchlist` implementam projeção read-only e classificação de observações LONG/SHORT usando as regras puras D308 compartilhadas, sem duplicar a matemática nem gerar sinais, ordens, preços ou PnL. CLI owner com dois opt-ins e confirmação privada adicional para símbolos; padrão é apenas contagens. Testes adversariais e documentação em `docs/J2_N50_WS_DESCRIPTIVE_WATCHLIST.md`. **Candidato em revisão/CI, sem merge ou release neste checkpoint.** Independente do gate D323/Top50 J1; não precisa reiniciar horas N50.
+
+
+## J5/#642 — candidatos J2 agora representáveis no app PAPER (15/11/2026)
+
+Issue #642, branch `work/issue-642-j5-ws-watchlist-mobile`: interface mobile adiciona painel de observações J2 alta/baixa sobre a watchlist WebSocket já integrada por J2 #638, com cards opcionais de ticker/direção/força BTC/volume sob **importação privada explícita**, e contagens apenas na falta de símbolos. Sem upload, persistência, ordem, novo GET, release ou API. Contrato de segurança JavaScript e QA de Chromium com 320/390/768/1280 documentados em `docs/J5_WS_WATCHLIST_MOBILE.md`. **Código candidato à revisão/CI; sem merge/deploy neste checkpoint.** Gate D323 #585/Top50 #319 mantido.
