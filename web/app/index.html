@@ -179,6 +179,22 @@
                   <input id="margin" name="margin" inputmode="decimal" value="3" required autocomplete="off">
                 </label>
               </div>
+              <label class="switchline"><input id="auto-enabled" type="checkbox"> Ativar gatilhos de saída automáticos PAPER</label>
+              <div id="auto-config" class="form-grid auto-configuration" hidden>
+                <label class="field">Alvo 1 favorável (%)
+                  <input id="auto-target1" inputmode="decimal" value="1" autocomplete="off">
+                </label>
+                <label class="field">Alvo 2 favorável (%)
+                  <input id="auto-target2" inputmode="decimal" value="2" autocomplete="off">
+                </label>
+                <label class="field">Stop adverso (%)
+                  <input id="auto-stop" inputmode="decimal" value="1" autocomplete="off">
+                </label>
+                <label class="field">Parcial por alvo (% do saldo)
+                  <input id="auto-partial" inputmode="decimal" value="50" autocomplete="off">
+                </label>
+              </div>
+              <p class="muted fine">Gatilhos opcionais somente sobre fechamentos hipotéticos que você informar. Stop PAPER não é proteção real nem simula liquidação ou execução na corretora.</p>
               <div class="form-summary">
                 <span>Alavancagem atual: <strong id="form-leverage">50x</strong></span>
                 <span>Runner mínimo: <strong id="form-runner">6%</strong></span>
