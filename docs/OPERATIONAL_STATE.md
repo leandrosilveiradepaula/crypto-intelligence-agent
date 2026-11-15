@@ -1928,3 +1928,12 @@ Autorização explícita do Product Owner. PR #655 **MERGED** no SHA `b75124c2ef
 - #656 / branch `work/issue-656-j2-prospective-handoff`: preflight owner sem escrita e contrato de implantação separado. O branch acrescenta CLI, testes e runbook; PR/CI/SHA final são registrados no GitHub, não inferidos deste texto. Sem cutover N50, criação de ledger real, serviço, cron, SQL write ou ordens.
 - Próximo ato após validação/merge de código: considerar gate próprio para executar **uma captura owner única** em janela vigente e score posterior, com observabilidade e preservação das epochs, sem supor que a passagem do tempo executará código sozinha.
 - Bloqueios: implantação explícita ainda pendente; NTP/DAC/epoch/24h devem ser checados na VPS antes de captura; ausência de atestação temporal independente e de desempenho ajustado ao risco. `approved_for_signals=false`, `live_trading_authorized=false`.
+
+
+## J2/J3 #658 — D362 executor operacional preparado, ainda não instalado (15/11/2026)
+
+- J1 #2/#319 aprovadas para pesquisa; último aceite D360. Não reabrir N50 ou exigir revisão manual de candidatos.
+- PR #657 merged main `c15231a16b6d97837bb79b4c889da471d33c7035`. 3/3 CI PASS. Próximo bloco #658: script `deploy/vps/j2_ws_prospective_owner_pilot_d362_once.sh` em branch `work/issue-658-j2-owner-prospective-once` para preflight OS, eventual captura owner única e scores posteriores 1/4/8h.
+- Evidência operacional da checagem anterior: WS N50 timer=active, timer de rotação=active, NTP=yes. Broker atual não possui operação owner J2 e nega acesso direto ao diretório privado; **não contornar DAC**.
+- Status D362 até CI/merge: proposta em código, nenhum novo job VPS, checkout instalado, ledger J2 real, timer, ordem ou PnL. Registrar PR/head SHA/run IDs na issue quando conhecidos.
+- Gate pendente: autorização de implantação owner isolada e primeira captura após revisão/CI no SHA, com escopo do runbook D362. Se negado, manter o roteiro pronto e continuar tarefas offline independentes.

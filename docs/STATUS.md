@@ -1696,3 +1696,8 @@ PR #655 MERGED SHA `b75124c2efbfa1a2a5d1b2c38f0f597c397e2d90`, 3/3 CI SUCCESS. V
 ## J2/J3 OPS-PROSPECTIVE1 #656 — preflight read-only preparado no código (15/11/2026 UTC)
 
 J1 #2/#319 encerrada no escopo D360 (370/370 pool no PIT e 24×50 WS auditado; não habilita sinais/trading). O ledger J2/J3 #644 já estava integrado mas ainda **não operava na VPS**. A #656 acrescenta verificação sem mutação de owner/DAC/NTP/janela HH:03–HH:59 e reutiliza a auditoria 50×24 de D348/D624; CLI `preflight` sanitizado, testes adversariais e runbook. **Nenhum capture/score real, scheduler, deploy, ordem ou PnL demonstrado nesta entrega.** Issue/PR/SHA e CI devem constar da própria #656/PR; `docs/J2_WS_PROSPECTIVE_PREFLIGHT_656.md`.
+
+
+## J2/J3 #658 / D362 — executor de piloto prospectivo controlado (15/11/2026)
+
+J1 D360 homologada para pesquisa; PR #657 integrada no SHA `c15231a16b6d97837bb79b4c889da471d33c7035`, CI 3/3. O preflight está **somente no GitHub**, não instalado na VPS. D362 prepara script de one-shot pinado no checkout owner isolado, sem tocar em N50 nem criar agendamento. CI/PR ainda exigem confirmação e merge no SHA exato. Instalação/captura dependem de gate de release e autorização expressa; não declarar operação prospectiva efetiva com base em código. `docs/J2_OWNER_PROSPECTIVE_PILOT_D362.md`.

@@ -462,3 +462,8 @@ Incremento de uso local após os gatilhos J4/J5 #650: o operador pode colar até
 ## J2/J3 #656 — transição controlada de código para observação prospectiva (15/11/2026)
 
 Com aceite J1 D360 para pesquisa, reutilizar watchlist WS J2 #638, avaliação J3 #640 e ledger ex-ante J2/J3 #644. Incremento #656 só adiciona preflight local read-only de owner, DAC, horário sincronizado e epoch 50×24 antes de qualquer captura. CI/PR não são registro prospectivo real. A execução na VPS e eventual agendamento são gates separados, com abstenção em mudança de epoch e nenhuma ordem. `docs/J2_WS_PROSPECTIVE_PREFLIGHT_656.md`.
+
+
+## J2/J3 #658 D362 — iniciar observação prospectiva real sem refazer J1
+
+Aprimoramento operacional após J1 D360 e J2/J3 D348: script em checkout owner separado para preflight OS somente leitura, captura de uma decisão J2 no fechamento UTC após provas privadas de 50x24 e avaliação 1/4/8h em tempos distintos. O código e CI não significam release. Implantação e captura reais demandam gate expresso, sem alterar timers e dados da J1. Ver `docs/J2_OWNER_PROSPECTIVE_PILOT_D362.md`.
