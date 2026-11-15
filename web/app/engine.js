@@ -185,6 +185,42 @@
       remainingUnits: position.remainingUnits, ordersSent: false});
   }
 
+  function replayAutoPaperMarks(position, marks) {
+    requireValid(position && position.status === "OPEN" &&
+      position.auto && position.auto.version === 1,
+      "Replay automático exige posição PAPER aberta com gatilhos");
+    requireValid(Array.isArray(marks) && marks.length >= 1 && marks.length <= 24,
+      "Cenário PAPER exige de 1 a 24 fechamentos fictícios");
+    // Prevalidate the COMPLETE fixture. A malformed later row must never
+    // leave earlier exits half-committed in the original browser state.
+    for (const mark of marks) {
+      const value = fixed(mark, 8, "Fechamento hipotético do cenário");
+      requireValid(value > 0n, "Cenário PAPER não aceita mark zero");
+    }
+    const draft = {...position,
+      auto: {...position.auto},
+      events: position.events.map(event => ({...event}))};
+    let processed = 0, skippedAfterClose = 0, targets = 0, stopped = false;
+    for (const mark of marks) {
+      if (draft.status === "CLOSED") {
+        skippedAfterClose += 1;
+        continue;
+      }
+      const next = applyAutoPaperStep(draft, mark, draft.auto.lastStep + 1);
+      processed += 1;
+      if (next.action === "TARGET_1" || next.action === "TARGET_2") targets += 1;
+      if (next.action === "STOP") stopped = true;
+    }
+    // All-or-nothing for this synchronous, fixture-only batch. No DB, orders,
+    // network or intermediate localStorage writes exist in the engine.
+    position.remainingUnits = draft.remainingUnits;
+    position.status = draft.status;
+    position.events = draft.events;
+    position.auto = draft.auto;
+    return Object.freeze({processedSteps: processed, skippedAfterClose,
+      targetEvents: targets, stopTriggered: stopped, ordersSent: false});
+  }
+
   function grossEntryExposureCents(position) {
     const initial = BigInt(position.initialUnits);
     const rest = BigInt(position.remainingUnits);
@@ -307,7 +343,7 @@
   const publicApi = Object.freeze({
     SCALE, BPS, format, fixed, percent, settings, emptyState,
     openPosition, partialExit, closeRunner, grossEntryExposureCents,
-    grossMarkPnlCents, applyAutoPaperStep, validateState
+    grossMarkPnlCents, applyAutoPaperStep, replayAutoPaperMarks, validateState
   });
   global.CIAEngine = publicApi;
   if (typeof module === "object" && module && module.exports) module.exports = publicApi;
