@@ -110,11 +110,15 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     mark = page.locator(".position-card .mark-reference input").first
                     mark.fill("99")
                     page.locator(".auto-step-button").first.click()
+                    # Ledger is nested in a closed <details>, so expand before
+                    # asserting the event text: hidden innerText may be empty.
+                    page.locator(".position-card details summary").first.click()
                     if (page.locator("#metric-open").inner_text() != "0"
                             or page.locator(".auto-step-button").count()
                             or "Auto PAPER STOP" not in page.locator(".ledger").inner_text()):
                         errors.append("hypothetical stop did not close PAPER residual")
                     page.reload(wait_until="load")
+                    page.locator(".position-card details summary").first.click()
                     if (page.locator("#metric-open").inner_text() != "0"
                             or "Auto PAPER STOP" not in page.locator(".ledger").inner_text()):
                         errors.append("automatic PAPER stop was not persisted after reload")
