@@ -125,6 +125,9 @@
       "Entrada hipotética US$ " + E.format(position.entryPriceUnits, 8),
       "Runner mínimo " + E.format(BigInt(position.runnerBpsAtOpen), 2) + "%"
     ].forEach(item => meta.append(el("span", null, item)));
+    if (position.auto) meta.append(el("span", null,
+      "Auto PAPER: " + position.auto.hits + "/2 alvos · passo " +
+      position.auto.lastStep));
     card.append(meta);
     const cells = el("div", "position-balances");
     cells.append(
@@ -169,6 +172,38 @@
       markInput.addEventListener("input", calculate);
       calculate();
       mark.append(label, output);
+      if (position.auto) {
+        const a = position.auto;
+        const rules = el("div", "auto-policy");
+        const percentage = bp => E.format(BigInt(bp), 2) + "%";
+        rules.append(el("p", "muted fine",
+          "Regras desta posição: alvo 1 +" + percentage(a.target1Bps) +
+          ", alvo 2 +" + percentage(a.target2Bps) +
+          ", stop -" + percentage(a.stopBps) +
+          ", saída " + percentage(a.partialBps) +
+          " sobre o saldo restante. Alvos: " + a.hits + "/2; passos: " +
+          a.lastStep + ". O runner não é realizado pelos alvos."));
+        const trigger = el("button", "secondary auto-step-button",
+          "Simular próximo fechamento PAPER");
+        trigger.type = "button";
+        trigger.setAttribute("aria-label",
+          "Aplicar gatilhos PAPER de " + position.id);
+        trigger.addEventListener("click", () => {
+          try {
+            const tick = E.applyAutoPaperStep(position,
+              decimal(markInput.value), position.auto.lastStep + 1);
+            save();
+            render();
+            const labels = {NO_TRIGGER:"sem gatilho",
+              TARGET_1:"alvo 1: parcial fictícia", TARGET_2:"alvo 2: parcial fictícia",
+              STOP:"stop fictício: saldo encerrado"};
+            warn("Passo PAPER " + tick.step + ": " + labels[tick.action] +
+              ". Nenhuma ordem ou execução de corretora.", false);
+          } catch (err) { warn(err.message, true); }
+        });
+        rules.append(trigger);
+        mark.append(rules);
+      }
       card.append(mark);
     }
     const details = el("details");
@@ -180,7 +215,9 @@
         "Parcial (" + E.format(BigInt(event.percentBps), 2) + "% sobre " +
         (event.basis === "REMAINING_BALANCE" ? "saldo" : "inicial") + ")" :
         "Encerramento do saldo";
-      ledger.append(el("li", null, (index + 1) + ". " + type +
+      const automated = event.autoAction ?
+        "Auto PAPER " + event.autoAction + " · passo " + event.autoStep + " · " : "";
+      ledger.append(el("li", null, (index + 1) + ". " + automated + type +
         " · " + E.format(event.units, 8) + " unidades abstratas"));
     });
     details.append(ledger);
@@ -454,13 +491,24 @@
       Number(position.id.slice(4)) < restored.nextId),
       "Backup PAPER com contador de IDs inconsistente");
     restored.positions.forEach(position => {
-      exactBackupKeys(position, ["id", "symbol", "side", "openedAt",
+      const positionKeys = ["id", "symbol", "side", "openedAt",
         "entryPriceUnits", "marginCents", "leverageAtOpen", "runnerBpsAtOpen",
-        "initialUnits", "remainingUnits", "events", "status"]);
+        "initialUnits", "remainingUnits", "events", "status"];
+      if (Object.hasOwn(position, "auto")) {
+        positionKeys.push("auto");
+        exactBackupKeys(position.auto, ["version", "target1Bps",
+          "target2Bps", "stopBps", "partialBps", "lastStep", "hits"]);
+      }
+      exactBackupKeys(position, positionKeys);
       position.events.forEach(event => {
-        exactBackupKeys(event, event.kind === "PARTIAL_PAPER" ?
+        const keys = event.kind === "PARTIAL_PAPER" ?
           ["kind", "basis", "percentBps", "units", "at"] :
-          ["kind", "units", "at"]);
+          ["kind", "units", "at"];
+        if (Object.hasOwn(event, "autoStep") ||
+            Object.hasOwn(event, "autoAction")) {
+          keys.push("autoStep", "autoAction");
+        }
+        exactBackupKeys(event, keys);
       });
     });
     return restored;
@@ -689,6 +737,9 @@
       }
     });
     $("margin").addEventListener("input", () => { $("open-form").dataset.edited = "true"; });
+    $("auto-enabled").addEventListener("change", () => {
+      $("auto-config").hidden = !$("auto-enabled").checked;
+    });
     $("open-form").addEventListener("submit", event => {
       event.preventDefault();
       try {
@@ -697,7 +748,13 @@
           entry: decimal($("entry").value),
           margin: decimal($("margin").value),
           leverage: state.config.leverage,
-          runner: E.format(BigInt(state.config.runnerBps), 2).replace(",", ".")
+          runner: E.format(BigInt(state.config.runnerBps), 2).replace(",", "."),
+          auto: $("auto-enabled").checked ? {
+            target1: decimal($("auto-target1").value),
+            target2: decimal($("auto-target2").value),
+            stop: decimal($("auto-stop").value),
+            partial: decimal($("auto-partial").value)
+          } : undefined
         });
         save();
         render();
