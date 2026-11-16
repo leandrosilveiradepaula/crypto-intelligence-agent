@@ -1,6 +1,6 @@
 # Contrato de execução automática — entradas, saídas e segurança
 
-**Decisão de produto:** D77 / issue #147, 26/10/2026 UTC. **ALVO: operação automática** de entradas, stops, alvos parciais, trailing, manutenção de parcela residual e encerramento de posições em futuros perpétuos cripto na Binance USD-M ou Bybit V5 linear (venue final ainda não escolhida). Esta decisão **substitui** a interpretação anterior de execução exclusivamente MANUAL da J0/WU47. Registros históricos anteriores permanecem históricos, não orientações atuais.
+**Decisões de produto:** D77 (26/10/2026) confirma **operação automática** de entradas, stops, alvos parciais, trailing, residual e encerramento; D383 (16/11/2026) escolhe **Bybit V5 linear, contratos perpétuos cripto USDT elegíveis, como única venue operacional-alvo**. A alternativa Binance do texto original D77 fica histórica, não autoriza desenvolver roteamento paralelo. D77 substitui a interpretação MANUAL da J0/WU47. Detalhamento técnico e interfaces em `docs/BYBIT_V5_ARCHITECTURE_D383.md`.
 
 **Estado em 26/10/2026:** somente preparação offline e pesquisa. **NENHUMA execução de ordens reais foi autorizada, nem existe motor de ordens homologado.** O Product Owner definiu a funcionalidade-alvo, mas não deu autorização para ativar trading real, implantar produção, criar ou utilizar chaves, nem assumir gastos. Custo adicional R$0,00.
 
