@@ -23,7 +23,7 @@ from crypto_intelligence_agent.market_data import DataValidationError
 
 _WINDOWS_MS = (17 * 60_000, 24 * 60_000)
 _HORIZONS = (1, 4, 8)
-_FINITE = re.compile(r"-?(?:0|[1-9][0-9]{0,299})(?:[.][0-9]{1,300})?\\Z")
+_FINITE = re.compile(r"-?(?:0|[1-9][0-9]{0,299})(?:[.][0-9]{1,300})?\Z")
 _FALSE = (
     "prospective_registration_verified", "intrabar_path_verified",
     "venue_fees_verified", "funding_schedule_verified",
@@ -170,13 +170,15 @@ def run_once(*, costs: ForwardCostAssumptions,
                 or any(pre.get(k) is not True for k in (
                     "owner_nonroot_posix_verified", "owner_ledger_parent_dac_verified",
                     "os_ntp_sync_reported", "capture_window_open",
-                    "owner_ws_50x24_readonly_replayed"))
+                    "capture_eligible_now", "owner_ws_50x24_readonly_replayed"))
                 or any(pre.get(k) is not False for k in (
                     "prospective_registration_independently_verified",
                     "financial_backtest_approved", "marketwide_top50_verified",
                     "approved_for_signals", "live_trading_authorized",
                     "orders_sent", "systemd_modified"))
+                or type(pre.get("network_requests")) is not int
                 or pre.get("network_requests") != 0
+                or type(pre.get("database_mutation_statements")) is not int
                 or pre.get("database_mutation_statements") != 0):
             return _empty("owner_score_tick_preflight_abstain")
         checked = time.time_ns() // 1_000_000
