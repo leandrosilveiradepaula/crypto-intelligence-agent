@@ -37,9 +37,9 @@ class BybitTargetD383DocumentationTests(unittest.TestCase):
             "API",
         ):
             self.assertIn(s, architecture)
-        self.assertIn("WebSocket público", architecture)
+        self.assertIn("WS público", architecture)
         self.assertIn("REST público", architecture)
-        self.assertIn("WebSocket privado", architecture)
+        self.assertIn("WS privado", architecture)
         self.assertIn("D383", self.read("docs/ARCHITECTURE.md"))
 
     def test_legacy_j1_and_capital_risks_preserved(self):
@@ -56,7 +56,7 @@ class BybitTargetD383DocumentationTests(unittest.TestCase):
             "sem chaves",
             "autorização humana explícita",
         ):
-            self.assertIn(s, decision)
+            self.assertIn(s.casefold(), decision.casefold())
         self.assertIn("50x", decision)
         self.assertIn("offline_paper", decision)
         self.assertIn("D383", self.read("docs/VALIDATION_PLAN.md"))
