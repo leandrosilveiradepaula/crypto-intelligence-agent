@@ -94,6 +94,32 @@ class PaperIntrahourProofD392Tests(unittest.TestCase):
         )
         self.assertEqual(len(digest), 64)
 
+    def test_real_cli_process_emits_auditable_json_for_all_scenarios(self):
+        import subprocess
+        import sys
+
+        cases = [
+            ("LONG", "two_targets_then_stop", "fixture_cycle_closed"),
+            ("SHORT", "two_targets_then_stop", "fixture_cycle_closed"),
+            ("LONG", "unknown_blocks_stop",
+             "fixture_unknown_requires_reconciliation"),
+        ]
+        for side, scenario, expected in cases:
+            with self.subTest(side=side, scenario=scenario):
+                run = subprocess.run(
+                    [sys.executable, "-m",
+                     "scripts.run_paper_intrahour_proof_d392",
+                     "--side", side, "--scenario", scenario],
+                    check=True, capture_output=True, text=True, timeout=30,
+                )
+                report = json.loads(run.stdout)
+                self.assertEqual(report["status"], expected)
+                self.assertEqual(report["position_side"], side)
+                self.assertEqual(len(report["timeline"]), 3)
+                self.assertFalse(report["orders_sent"])
+                self.assertFalse(report["net_pnl_verified"])
+                self.assertEqual(run.stderr, "")
+
     def test_invalid_fixture_options_fail_without_any_broker(self):
         with self.assertRaises(DataValidationError):
             demonstrate_paper_intrahour_cycle(scenario="live_trading")
