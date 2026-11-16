@@ -40,3 +40,24 @@ a janela 48h.
 ## Validação
 `python -m unittest discover -s tests -p test_j1_n50_ws_replay_count_d379.py -v`.
 Todos os testes são offline, sem conexão com a VPS.
+
+## D380 — regra de repetição do fechamento e evidência da VPS
+Em 16/11/2026 auditoria real como `cia-probe` com job
+`a26605d332994bfdbc542b2f315d5877` retornou integridade SQLite
+`True`, epoch ativa `True`, 50 linhas às 08h, 50 às 09h,
+250 no total. A falha foi **posterior** à persistência da hora.
+O conteúdo do frame rejeitado não foi salvo, portanto não se afirma
+qual dos campos variou na mensagem real.
+
+O código D380 muda somente a **classificação de uma repetição** já
+previamente validada: retém o primeiro payload quando todos os campos
+não temporais coincidem e `received_ms/server_ms/trade_ms` são
+monotônicos. Repetição com alteração de preço, volume, turnover,
+identidade ou timestamps regressivos segue rejeitada com `DataGapError`.
+É proibido substituir o primeiro recebimento; contagens auditáveis não
+são lucro, nem atestado de fonte ou de continuidade futura.
+
+Testes: `test_j1_n50_ws_economic_replay_d380.py` e atualização da
+regressão D331 para divergência econômica genuína. A alteração não é
+implantação: apenas após CI, revisão e gate de recuperação no VPS
+considerar religar WS/rotação e observar um fechamento fresco.
