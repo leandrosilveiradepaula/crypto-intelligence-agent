@@ -1716,3 +1716,6 @@ J3 somente código: tick read-only owner para avaliar 1/4/8h **de decisões capt
 
 ## J4/J5 #669 — estresse adverso PAPER (16/11/2026)
 Implementação candidata em branch `work/issue-669-paper-adverse-stress`: perdas hipotéticas 1%/2% em cada posição e soma descritiva do cenário de 2% no painel local. Não tratar cálculo como VaR/liquidação, nem como rollout de app ou autorização de ordens. Aguardam PR, SHA exato e CI antes de aceite.
+
+## J1 #671 — incidente operacional WS após J1 D360 (16/11/2026)
+VPS: WS timer/rotation desabilitados após `ws_journal_closed_replay_conflict` de 09:00 UTC; REST fallback ativo mas última execução falhou com `catchup_exceeds_48h_owner_review`, sem GET. A aprovação J1 para pesquisa permanece válida para as janelas auditadas, mas coleta atual não é contínua. Branch `work/issue-671-j1-ws-replay-countonly-audit` desenvolve diagnóstico owner SQLite `mode=ro` e testes offline; ainda não executado contra owner privado. Sem alterar regra de persistência, serviço ou J2. Gate: PR/CI e auditoria real antes de reparo ou reativação. Veja `docs/J1_N50_WS_REPLAY_RECOVERY_D379.md`.
