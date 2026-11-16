@@ -16,14 +16,14 @@ SHA = "a" * 40
 
 
 def prepared_preflight() -> dict:
-    return {
-        "status": "owner_preflight_ready_no_capture",
-        "capture_eligible_now": True,
-        "owner_ws_50x24_readonly_replayed": True,
-        "orders_sent": False,
-        "live_trading_authorized": False,
-        "database_mutation_statements": 0,
-    }
+    from crypto_intelligence_agent.j2_ws_owner_preflight import _report
+    report = _report("owner_preflight_ready_no_capture")
+    report.update(
+        owner_nonroot_posix_verified=True, owner_ledger_parent_dac_verified=True,
+        os_ntp_sync_reported=True, capture_window_open=True,
+        capture_eligible_now=True, owner_ws_50x24_readonly_replayed=True,
+    )
+    return report
 
 
 def captured(status="owner_local_decision_captured_not_independent_attestation",
@@ -109,6 +109,10 @@ class OwnerTickTests(unittest.TestCase):
             dict(prepared_preflight(), capture_eligible_now=False),
             dict(prepared_preflight(), status="owner_ws_50x24_unavailable"),
             dict(prepared_preflight(), live_trading_authorized=True),
+            dict(prepared_preflight(), systemd_modified=True),
+            dict(prepared_preflight(), network_requests=1),
+            dict(prepared_preflight(), owner_ledger_parent_dac_verified=False),
+            dict(prepared_preflight(), database_mutation_statements=True),
         ):
             with self.subTest(ready=ready):
                 result, _, writer = self._tick(ready=ready)

@@ -112,11 +112,20 @@ def run_once(*, allow_private_readonly_research: bool = False,
             allow_private_readonly_research=True
         )
         if (type(preflight) is not dict
+                or preflight.get("schema_version") != "j2-ws-owner-preflight-v1"
                 or preflight.get("status") != "owner_preflight_ready_no_capture"
-                or preflight.get("capture_eligible_now") is not True
-                or preflight.get("owner_ws_50x24_readonly_replayed") is not True
-                or preflight.get("orders_sent") is not False
-                or preflight.get("live_trading_authorized") is not False
+                or any(preflight.get(key) is not True for key in (
+                    "owner_nonroot_posix_verified", "owner_ledger_parent_dac_verified",
+                    "os_ntp_sync_reported", "capture_window_open",
+                    "capture_eligible_now", "owner_ws_50x24_readonly_replayed"))
+                or any(preflight.get(key) is not False for key in (
+                    "prospective_registration_independently_verified",
+                    "marketwide_top50_verified", "financial_backtest_approved",
+                    "approved_for_signals", "live_trading_authorized",
+                    "orders_sent", "systemd_modified"))
+                or type(preflight.get("network_requests")) is not int
+                or preflight.get("network_requests") != 0
+                or type(preflight.get("database_mutation_statements")) is not int
                 or preflight.get("database_mutation_statements") != 0):
             return _empty("owner_preflight_abstain")
         next_now = time.time_ns() // 1_000_000
