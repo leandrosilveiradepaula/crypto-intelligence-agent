@@ -52,7 +52,12 @@ case "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" in
   *) echo "blocked: WS owner service not quiesced" >&2; exit 77 ;;
 esac
 test "$($SYSTEMCTL show cia-j1-n50-ws-fallback.service -p Result --value)" = success
-test "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" = inactive
+# REST fallback may already have failed with catchup_exceeds_48h; it must
+# be quiesced, but a recorded failed state is not a reason to block recovery.
+case "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" in
+  inactive|failed) ;;
+  *) echo "D381_REST_SERVICE_NOT_QUIESCED" >&2; exit 77 ;;
+esac
 test "$($SYSTEMCTL show cia-j1-n50-ws-rotate.service -p ActiveState --value)" = inactive
 test "$($SYSTEMCTL show cia-j2-owner-prospective.timer -p LoadState --value)" = not-found
 test "$($SYSTEMCTL show cia-j3-owner-forward.timer -p LoadState --value)" = not-found
@@ -233,7 +238,12 @@ echo "D381_RECOVERY_STAGE_2_CODE_PINNED_AND_OFFLINE_TESTS_PASS"
 # Keep the N2 timer enabled until all code and owner safety gates pass.
 test "$($SYSTEMCTL show "$N2" -p ActiveState --value)" = active
 test "$($SYSTEMCTL show "$N2" -p UnitFileState --value)" = enabled
-test "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" = inactive
+# REST fallback may already have failed with catchup_exceeds_48h; it must
+# be quiesced, but a recorded failed state is not a reason to block recovery.
+case "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" in
+  inactive|failed) ;;
+  *) echo "D381_REST_SERVICE_NOT_QUIESCED" >&2; exit 77 ;;
+esac
 test "$($SYSTEMCTL show cia-j1-n50-ws-rotate.service -p ActiveState --value)" = inactive
 case "$($SYSTEMCTL show "$SERVICE" -p ActiveState --value)" in
   failed|inactive) ;;
