@@ -1937,3 +1937,10 @@ Autorização explícita do Product Owner. PR #655 **MERGED** no SHA `b75124c2ef
 - Evidência operacional da checagem anterior: WS N50 timer=active, timer de rotação=active, NTP=yes. Broker atual não possui operação owner J2 e nega acesso direto ao diretório privado; **não contornar DAC**.
 - Status D362 até CI/merge: proposta em código, nenhum novo job VPS, checkout instalado, ledger J2 real, timer, ordem ou PnL. Registrar PR/head SHA/run IDs na issue quando conhecidos.
 - Gate pendente: autorização de implantação owner isolada e primeira captura após revisão/CI no SHA, com escopo do runbook D362. Se negado, manter o roteiro pronto e continuar tarefas offline independentes.
+
+## J2/J3 #658 — D363 correção antes da captura owner (15/11/2026)
+
+- Product Owner autorizou expressamente uma instalação isolada sob `cia-probe` e **uma** captura J2 real, condicionadas ao preflight privado. Nenhum agendador, ordens, gasto ou alteração na N50 autorizados.
+- Preflight VPS externo realizado na janela 23:17 UTC: NTP `yes`; dois timers N50 WS e rotação `active/enabled`; main antes da correção `369bc539b1c6d9309388a020a7f3b556c84e9cfa`.
+- Revisão obrigatória encontrou incompatibilidade de contrato: status `capture` owner sem campo `live_trading_authorized=false`, mas executor D362 exige false explícito. Corrigir **antes** de qualquer captura, com regressão e CI Linux/Windows/Chrome no SHA final. Sem merge/CI/execuções reais afirmadas neste registro; registrar evidências na issue #658.
+- Próxima ação: aprovar e integrar correção D363 em GitHub, executar um único job de piloto com SHA integrado e registrar status; abstenção se relógio/epoch/24×50 não estiverem válidos. Nunca relançar `capture` indiscriminadamente.

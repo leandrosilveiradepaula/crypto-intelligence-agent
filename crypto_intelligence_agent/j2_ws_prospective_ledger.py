@@ -50,6 +50,7 @@ def _report(status: str) -> dict[str, Any]:
         "marketwide_top50_verified": False,
         "financial_backtest_approved": False,
         "approved_for_signals": False,
+        "live_trading_authorized": False,
         "orders_sent": False,
         "network_requests": 0,
         "database_mutation_statements": 0,
