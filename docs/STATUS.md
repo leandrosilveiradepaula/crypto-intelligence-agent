@@ -1752,3 +1752,7 @@ Na frente de automação sem VPS, a PR #683 propõe extensão PAPER do journal e
 ## J4 #676 / D389 — primeira coordenação de saídas automáticas PAPER (16/11/2026)
 
 Com D387 e D388 integrados, D389 implementa `paper_intrahour_coordinator_d389.py`: um tick pode acionar stop ou alvo, **nunca ambos**; stop vem primeiro. Testes offline cobrem simultaneidade, reservas idempotentes, parcial anterior preenchida/pendente, stale, LONG/SHORT. Evidência de merge/CI depende da PR D389. Nenhum preço simulado equivale a fill e nenhum stop nativo/ordem real está disponível. Próximas camadas: trailing/runner, integração ao WS público D386 e replay intrabar J3/J6. J1 D384 continua pendente da execução na VPS.
+
+## J2 #677 / D390 — primeiro adaptador público de rede Bybit (16/11/2026)
+
+Novo código de integração D390 reutiliza `_real_session_factory` existente de Bybit (importação lazy) para executar uma lease pública de ticker com opt-in, por duração limitada e sem order send, instalada somente como código; não altera J1 nem inicia daemon. Testes unitários offline e documento `docs/J2_BYBIT_PUBLIC_OPTIN_D390.md` na branch `work/issue-677-bybit-public-optin-adapter-d390`. PR/CI/merge conferir no GitHub. Próximo passo: piloto público isolado, supervisor contínuo e integração PAPER, sem produção até gates.
