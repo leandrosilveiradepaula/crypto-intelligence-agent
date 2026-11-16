@@ -81,7 +81,7 @@ class ProtectivePaperStopD388Tests(unittest.TestCase):
     def test_stop_triggers_before_first_target_no_fictitious_fill(self):
         self.open()
         t=START+8*MIN
-        result=self.step(t, mark="98", last="110", bid="110")
+        result=self.step(t, mark="98", last="110", bid="100")
         self.assertEqual(result.state, PaperEmergencyStopState.RESERVED)
         self.assertEqual(result.reserved_units, D(100))
         self.assertEqual(result.confirmed_remaining_units, D(100))
@@ -213,6 +213,8 @@ class ProtectivePaperStopD388Tests(unittest.TestCase):
         self.assertEqual(self.step(t, cutoff=t+3_100).state,
                          PaperEmergencyStopState.STALE)
         self.assertEqual(self.step(t+1, qty="0").state,
+                         PaperEmergencyStopState.STALE)
+        self.assertEqual(self.step(t+2, bid="110", ask="100").state,
                          PaperEmergencyStopState.STALE)
         with self.assertRaises(DataValidationError):
             step_paper_emergency_stop(
