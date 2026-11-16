@@ -77,10 +77,8 @@ class ForwardProjection(unittest.TestCase):
         ):
             with self.subTest(variant=variant):
                 p = tick._projection(variant, horizon=1, future_end=END)
-                if "market_symbol" in variant:
-                    self.assertNotIn("BTCUSDT", json.dumps(p))
-                else:
-                    self.assertEqual(p["status"], "abstained")
+                self.assertEqual(p["status"], "abstained")
+                self.assertNotIn("BTCUSDT", json.dumps(p))
 
     def test_aggregates_only_and_no_fabricated_positive(self):
         p = tick._projection(future_score(4, selected=2), horizon=4, future_end=END)
@@ -92,6 +90,7 @@ class ForwardProjection(unittest.TestCase):
             dict(future_score(4, selected=2), net_reference_after_assumed_costs_bps_sum="NaN"),
             dict(future_score(4, selected=2), decision_closed_end_ms=END-3*HOUR_MS),
             dict(future_score(4, selected=2), live_trading_authorized=True),
+            dict(future_score(4, selected=2), private_symbol="BTCUSDT"),
         ):
             with self.subTest(raw=raw):
                 self.assertEqual(tick._projection(raw, horizon=4, future_end=END)["status"],

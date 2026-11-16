@@ -34,6 +34,25 @@ _FALSE = (
 )
 
 
+_SCORE_FIELDS = frozenset((
+    "schema_version", "status", "quality", "horizon_bars",
+    "selected_observations", "matured_observations", "aligned_observations",
+    "contrary_observations", "unchanged_observations",
+    "gross_reference_bps_sum", "net_reference_after_assumed_costs_bps_sum",
+    "same_side_btc_excess_reference_bps_sum", "assumed_total_cost_quote_units",
+    "funding_events_hypothetical", "prospective_registration_verified",
+    "intrabar_path_verified", "venue_fees_verified",
+    "funding_schedule_verified", "out_of_sample_results_validated",
+    "financial_backtest_approved", "marketwide_top50_verified",
+    "approved_for_signals", "live_trading_authorized", "orders_sent",
+    "network_requests", "database_accessed", "database_mutation_statements",
+    "systemd_modified", "owner_local_decision_file_verified",
+    "decision_closed_end_ms", "future_closed_end_ms",
+    "owner_ws_sqlite_readonly_replayed",
+    "prospective_registration_independently_verified",
+))
+
+
 def _empty(status: str) -> dict[str, Any]:
     return {
         "schema_version": "j3-owner-forward-score-tick-v1",
@@ -81,7 +100,8 @@ def _projection(raw: object, *, horizon: int, future_end: int) -> dict[str, Any]
             and raw.get("database_mutation_statements") == 0):
         generic["status"] = "owner_source_abstained"
         return generic
-    if (raw.get("schema_version") != "j3-ws-watchlist-forward-reference-v1"
+    if (set(raw) != _SCORE_FIELDS
+            or raw.get("schema_version") != "j3-ws-watchlist-forward-reference-v1"
             or status not in (
                 "no_observations_selected",
                 "ex_post_reference_marks_scored_not_a_backtest",

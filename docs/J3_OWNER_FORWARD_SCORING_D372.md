@@ -25,7 +25,7 @@ deram certo e sem preencher horas faltantes com zero de lucro.
   custos e fonte; não gera sinais, posições, fills ou ordens. A cada prazo,
   devolve `reference_marks_scored_hypothetical_only`,
   `no_observations_selected` ou `abstained`, sempre **sanitizado**
-  e sem nomes/preços. Se alguma decisão estiver ausente ou a coorte
+  e sem nomes/preços. O validador usa um conjunto **exato** de campos para cada relatório de score; campos extras (inclusive possíveis símbolos/segredos) invalidam a avaliação, não são expostos. Se alguma decisão estiver ausente ou a coorte
   tiver girado, não há retorno inventado. Se o relógio mudar durante
   os três scorers, descarta todos os resultados do tick.
 - `scripts/render_j3_ws_forward_score_timer_once.py`: só imprime
