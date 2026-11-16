@@ -1736,3 +1736,7 @@ O Product Owner determinou Bybit V5 linear para mercado e execução automático
 ## J1 / D384 — regressão operacional de preflight pós-D381 (16/11/2026)
 
 WS 13:59 UTC rejeitou ativação por `scripts.preflight_j1_n50_ws_systemd` (status `blocked`, exit 65). OnFailure desabilitou WS+rotação e reabilitou REST.timer; REST 14:02 e 15:02 abstiveram por catch-up acima de 48h, sem GET. Auditoria aponta incompatibilidade exata D295 (N2.service deve estar `inactive`) versus D381 (`failed` foi aceito no cutover). Nova correção D384 na issue #671, arquivo `deploy/vps/recover_j1_n50_ws_d384_failed_state_once.sh` e runbook D384, com gate de release. **J1 histórica continua aceita para pesquisa, coleta corrente não voltou**. J2/J3 novos timers e ordens reais continuam inativos.
+
+## J2 #677 / D385 — parser intrahorário Bybit (16/11/2026)
+
+Primeira implementação de código: `crypto_intelligence_agent/bybit_public_ticker_state_d385.py` modela snapshot/delta com Decimal exato, valida tempos/sequências e citações obsoletas, planos de subscriptions para N50 e símbolos com posições abertas, sem ordens e sem tocar J1. Testes offline `tests/test_bybit_public_ticker_state_d385.py`, documentação `docs/J2_BYBIT_PUBLIC_TICKER_D385.md`. **Ainda não existe conexão WebSocket persistente na VPS** nem execução de sinais com este módulo; próximo passo #677 é supervisor com ACK/reconnect/backpressure, então #676 PAPER. A issue J1 #671 continua sem cutover D384: PR #679 mergeada `599431c043f863a915178f967af232408029b796`, execução do release pela ferramenta barrada antes do job.
