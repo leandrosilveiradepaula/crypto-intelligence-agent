@@ -44,6 +44,8 @@ class D381RecoveryTests(unittest.TestCase):
         self.assertIn('data["database_modified"] is False', s)
         self.assertIn('data["orders_sent"] is False', s)
         self.assertIn("systemd-analyze verify", s)
+        self.assertEqual(s.count("D381_REST_SERVICE_NOT_QUIESCED"), 2)
+        self.assertNotIn('test "$($SYSTEMCTL show cia-j1-rest-hourly.service -p ActiveState --value)" = inactive', s)
         self.assertIn('cia-j2-owner-prospective.timer -p LoadState', s)
         self.assertIn('cia-j3-owner-forward.timer -p LoadState', s)
 
