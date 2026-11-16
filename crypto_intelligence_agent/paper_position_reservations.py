@@ -227,6 +227,11 @@ class PaperPositionBalance:
     runner_filled_units: Decimal = Decimal(0)
     runner_reserved_unfilled_units: Decimal = Decimal(0)
     runner_unallocated_units: Decimal = Decimal(0)
+    # D388: protective PAPER stop can close unfilled planned tranches plus runner.
+    # This is a synthetic intent, never a native exchange stop.
+    protective_stop_seen: bool = False
+    protective_filled_units: Decimal = Decimal(0)
+    protective_reserved_unfilled_units: Decimal = Decimal(0)
 
     @property
     def leverage_at_intent(self) -> int | None:
@@ -321,17 +326,24 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
         runner_filled = Decimal(0)
         runner_reserved = Decimal(0)
         runner_order_seen = False
+        protective_stop_seen = False
+        protective_filled = Decimal(0)
+        protective_reserved = Decimal(0)
         seen_orders = {opening.intent_id}
         seen_events = {e.event_id for e in record.opening_events}
         order_states: list[PaperExitOrderBalance] = []
         count = len(record.opening_events)
         for x in record.exits:
             if (type(x.tranche_step) is not int or
-                    not 0 <= x.tranche_step <= len(filled) or
+                    not -1 <= x.tranche_step <= len(filled) or
                     (x.tranche_step == 0 and schedule.residual_floor_units == 0)):
                 raise DataValidationError("paper exit references unplanned tranche or runner")
             if runner_order_seen and x.tranche_step != 0:
                 raise DataValidationError("planned tranches cannot follow a runner exit")
+            if protective_stop_seen:
+                # Protective stop is terminal to ALL future exit plans,
+                # including further stops. Recovery requires manual reconciliation.
+                raise DataValidationError("PAPER protective stop must be final exit intent")
             order = x.intent
             if (type(order) is not PaperOrderIntent
                     or order.effect is not PaperOrderEffect.REDUCE_ONLY
@@ -362,7 +374,14 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
                 raise DataValidationError("paper position exceeds total event budget")
             replay = replay_paper_order(order, x.events, as_of_ms=x.as_of_ms)
             outstanding = replay.unfilled_units if replay.requires_reconciliation else Decimal(0)
-            if x.tranche_step == 0:
+            if x.tranche_step == -1:
+                if (runner_order_seen
+                        or any(o.snapshot.requires_reconciliation for o in order_states)):
+                    raise DataValidationError("PAPER protective stop with unresolved exits")
+                protective_stop_seen = True
+                protective_filled += replay.filled_total_units
+                protective_reserved += outstanding
+            elif x.tranche_step == 0:
                 runner_order_seen = True
                 runner_filled += replay.filled_total_units
                 runner_reserved += outstanding
@@ -390,13 +409,15 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
             raise DataValidationError("runner exit requires fully reconciled partial exits")
         if runner_filled + runner_reserved > schedule.residual_floor_units:
             raise DataValidationError("paper runner exit exceeds original runner allocation")
-        total_filled = sum(filled, Decimal(0)) + runner_filled
-        outstanding_all = sum(reserved, Decimal(0)) + runner_reserved
+        if protective_stop_seen and (runner_order_seen or any(reserved)):
+            raise DataValidationError("protective stop requires no outstanding planned exit")
+        total_filled = sum(filled, Decimal(0)) + runner_filled + protective_filled
+        outstanding_all = sum(reserved, Decimal(0)) + runner_reserved + protective_reserved
         remaining = initial - total_filled
         unreserved = remaining - outstanding_all
         if (unreserved < 0 or remaining < 0
                 or total_filled + outstanding_all > initial
-                or (not runner_order_seen
+                or (not runner_order_seen and not protective_stop_seen
                     and unreserved < schedule.residual_floor_units)):
             raise DataValidationError("paper exits exceed confirmed quantity or runner floor")
     return PaperPositionBalance(
@@ -417,7 +438,11 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
         runner_filled_units=runner_filled,
         runner_reserved_unfilled_units=runner_reserved,
         runner_unallocated_units=(
+            Decimal(0) if protective_stop_seen else
             schedule.residual_floor_units - runner_filled - runner_reserved),
+        protective_stop_seen=protective_stop_seen,
+        protective_filled_units=protective_filled,
+        protective_reserved_unfilled_units=protective_reserved,
     )
 
 
@@ -650,7 +675,20 @@ class SQLitePaperPositionJournal:
                     or intent.max_reducible_units is None
                     or intent.max_reducible_units > original.confirmed_remaining_units):
                 raise DataValidationError("paper exit cannot reverse or exceed confirmed position")
-            if tranche_step == 0:
+            if type(tranche_step) is not int or original.protective_stop_seen:
+                raise DataValidationError("PAPER exit type invalid or stop already initiated")
+            if tranche_step == -1:
+                # Stop priority for PAPER positions even before any partial
+                # target, but NEVER if an older exit remains unresolved.
+                if (original.venue is not PaperVenue.BYBIT_V5
+                        or original.confirmed_remaining_units <= 0
+                        or original.reserved_unfilled_units != 0
+                        or any(x.snapshot.requires_reconciliation
+                               for x in original.exit_orders)
+                        or any(x.tranche_step == 0 for x in original.exit_orders)
+                        or intent.requested_units != original.confirmed_remaining_units):
+                    raise DataValidationError("PAPER protective close requires unreserved full balance")
+            elif tranche_step == 0:
                 if (original.runner_floor_units <= 0
                         or not original.tranches
                         or any(t.filled_units != t.target_units or
