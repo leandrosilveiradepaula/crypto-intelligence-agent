@@ -1,6 +1,6 @@
 # Arquitetura candidata para a J0
 
-A tecnologia específica será escolhida por adequação, licenças e limites reais da VPS, não por preferência de framework.
+A stack de aplicação será escolhida por adequação e recursos reais da VPS. **A venue operacional já foi escolhida: Bybit V5 linear, decisão D383 (16/11/2026), com REST público/privado e WebSocket público/privado.** A escolha de Bybit não autoriza chaves, testnet ou ordens reais; ver `docs/BYBIT_V5_ARCHITECTURE_D383.md`.
 
 ## Módulos previstos
 1. Adaptadores de futuros perpétuos: fontes públicas REST/WebSocket, metadados de contrato, OHLCV, mark price, funding, open interest quando disponível.
