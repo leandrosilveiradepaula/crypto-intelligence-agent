@@ -474,5 +474,8 @@ A interface local distingue: (a) observações registradas antes do resultado; (
 ## J2 #663 — construção de histórico prospectivo sem hindsight
 Implementação offline de tentativa de captura J2 periódica, idempotente por hora, com limites POSIX/UTC e validator da mesma coorte N50. Agendamento de produção sujeito a gate específico; rotacionar epoch N50 não implica resetar decisões privadas e uma abstenção não vira sinal. O score futuro continua separado.
 
+## J4/J5 #665 — observabilidade de risco em PAPER
+A evolução J4/J5 distingue marca hipotética de cotação real: impacto bruto na margem configurada (alavancagem individual imutável), alerta visual de perda >= 100%, sem estimativa de margem de manutenção, liquidação real, fill de corretora ou execução. Não ativa J4 automático em live.
+
 ## J3 #667 — validação periódica sem hindsight ou execução real
 Após código J2 #663 de captura recorrente, preparar J3 owner **somente leitura** para avaliar decisões congeladas antes das 1/4/8h futuras, sem preencher registros ausentes nem cruzar coorte rotacionada. Resultado de zero candidatos é abstenção, não lucro zero. Renderer de timer HH:17 UTC em SHA40 pinado não instala nem habilita serviço; release separado obrigatório. Ver `docs/J3_OWNER_FORWARD_SCORING_D372.md`.
