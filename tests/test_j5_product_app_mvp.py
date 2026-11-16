@@ -99,7 +99,7 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('function renderWatchlist()', js)
         self.assertIn("mark-reference", js)
         self.assertIn("E.grossHypotheticalMarginImpactBps(", js)
-        self.assertIn("Impacto bruto na margem PAPER", js)
+        self.assertIn("Impacto bruto na margem original PAPER", js)
         self.assertIn("liquidação real desconhecida", js)
         self.assertIn("E.applyAutoPaperStep(position,", js)
         self.assertIn("E.replayAutoPaperMarks(position, marks)", js)
