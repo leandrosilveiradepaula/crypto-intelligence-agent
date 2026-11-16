@@ -1713,3 +1713,6 @@ Incremento offline de produto: mostrar impacto percentual bruto sobre margem das
 
 ## J3/OPS-FORWARD1 #667 — candidato de score horário de pesquisa (16/11/2026)
 J3 somente código: tick read-only owner para avaliar 1/4/8h **de decisões capturadas antes do resultado**, com custos hipotéticos e abstenção sem PnL para horas vazias. Nenhum serviço instalado, nenhuma nova captura ou ordem. Score 1h D364 continua associado ao job único `b8671bba364948c385e129d0009f38d3`; checar seu resultado real à parte. Ver `docs/J3_OWNER_FORWARD_SCORING_D372.md`.
+
+## J4/J5 #669 — estresse adverso PAPER (16/11/2026)
+Implementação candidata em branch `work/issue-669-paper-adverse-stress`: perdas hipotéticas 1%/2% em cada posição e soma descritiva do cenário de 2% no painel local. Não tratar cálculo como VaR/liquidação, nem como rollout de app ou autorização de ordens. Aguardam PR, SHA exato e CI antes de aceite.
