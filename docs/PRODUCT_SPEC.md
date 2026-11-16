@@ -1,7 +1,7 @@
 # Especificação do produto
 
 ## Objetivo
-Plataforma de inteligência quantitativa que pesquisa entradas de alto potencial em futuros perpétuos e auxilia a captura progressiva de lucros em operações vencedoras. Nenhuma promessa de rentabilidade.
+Plataforma de inteligência quantitativa para futuros perpétuos. **Produto-alvo: robô que detecta oportunidades, abre, acompanha e encerra posições automaticamente, sem confirmação manual a cada operação**, incluindo saídas parciais e residual; interface móvel para acompanhar, configurar e pausar. Desenvolvimento atual em PAPER, ordens reais somente após gate específico. Nenhuma promessa de rentabilidade.
 
 ## Contratos principais
 - Universo dinâmico de contratos elegíveis; usar volume comparável, filtros de liquidez e histórico de elegibilidade para evitar viés de sobrevivência.
@@ -14,6 +14,7 @@ Plataforma de inteligência quantitativa que pesquisa entradas de alto potencial
 - Pesquisa reproduzível: candles fechados, trajetória intrabar, taxas, slippage, funding, manutenção e liquidação, walk-forward, benchmark e fora da amostra.
 - ML somente se melhorar desempenho validado. LLM e LangGraph opcionais para contexto e explicação, nunca fonte primária de compra.
 - Interface em PT-BR, simples no celular: oportunidades, bot ativo/pausado, posições/ordens/fills, parciais, resultados, alertas e kill-switch.
+- **Tempo de decisão/execução:** velas de 1h para contexto e pesquisa NÃO limitam entradas, monitoramento, stops ou saídas à virada da hora. O produto final usa dados intrahorários/mercado em tempo real, eventos de ordens e de posições, proteção nativa na venue quando homologada e motor automático orientado a eventos. Não prometer fills imediatos nem segurança com 50x; testar atraso, perdas de feed e custos em PAPER antes de live.
 
 ## Limites de implantação durante desenvolvimento
 O modo `live` permanece desabilitado: nenhum POST de ordens com capital real antes de gate de segurança, risco, validação e autorização do Product Owner. Desenvolver primeiro em `offline_paper` e, após autorização específica, `testnet`. Sem dependência de serviços pagos ou credenciais reais nesta fase. Retorno líquido ajustado ao risco da carteira é mais importante que taxa de acerto ou percentual isolado sobre a margem. 50x é parâmetro de pesquisa, não garantia de segurança.
