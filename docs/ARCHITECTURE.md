@@ -14,6 +14,12 @@ A tecnologia específica será escolhida por adequação, licenças e limites re
 9. ML/LLM: extensões opcionais submetidas a validação independente.
 10. AutoExecutionEngine: cadeia signal -> risk -> intent persistida -> adapter venue -> ack/fills reconciliados -> saídas; implementação simulada primeiro e live somente após gate.
 
+## D382 — duas temporalidades, robô automático
+
+- **J1:** WS de fechamentos de 1h N50 para regime, ranking e histórico causal. Não confundir esse coletor de janela curta com feed contínuo de trading.
+- **J2/J4:** futura entrada de eventos intrahorários de mercado e, em modos autorizados, eventos privados de ordens/fills/posições por venue; motor automático de sinais, risk gate e gestão contínua de posição. Stops/parciais/trailing podem ocorrer entre fechamentos de 1h, não dependem de clique. Feed obsoleto ou posição/ordem não reconciliada suspende novas entradas; proteções nativas precisam de confirmação real.
+- **J3/J6:** reprodução dos mesmos contratos temporais em backtest intrabar/PAPER prospectivo, com latência, funding, taxas, slippage, liquidação e recuperação de desconexões. Testnet/live somente por gates distintos; nenhuma execução com capital real é habilitada por esta descrição.
+
 ## Candidatos gratuitos
 Python, bibliotecas científicas, FastAPI, PostgreSQL, DuckDB/Parquet, CCXT, Freqtrade quando compatível e n8n existente, se útil. Nenhum deles é obrigatório antes de uma decisão de arquitetura registrada.
 
