@@ -72,7 +72,9 @@ class D331FailureTaxonomyTests(unittest.TestCase):
     def test_42_prefix_then_conflicting_confirmed_replay_is_distinct_and_stops(self):
         earlier = [postclose(member) for member in MEMBERS[:42]]
         repeat = deepcopy(earlier[0])
-        repeat["data"][0]["timestamp"] = DECISION + 700
+        # A genuinely changed financial observation must remain fatal;
+        # clock-only repetition is tested separately by D380.
+        repeat["data"][0]["turnover"] = "16.51"
         report = self.run_session([*earlier, repeat, *[
             postclose(member) for member in MEMBERS[42:]
         ]])
