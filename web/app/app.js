@@ -159,15 +159,26 @@
       const disclaimer = el("small", null,
         "Variação bruta de referência sobre o saldo restante. Não inclui taxas, " +
         "funding, slippage ou liquidação. Não é preço real nem PnL executável.");
-      output.append(result, disclaimer);
+      const marginImpact = el("small", "risk-impact");
+      output.append(result, marginImpact, disclaimer);
       const calculate = () => {
         try {
           const gross = E.grossMarkPnlCents(position, decimal(markInput.value));
+          const impactBps = E.grossHypotheticalMarginImpactBps(
+            position, decimal(markInput.value));
           result.textContent = "PnL bruto hipotético: " + amount(gross);
+          marginImpact.textContent = "Impacto bruto na margem PAPER: " +
+            E.format(impactBps, 2) + "%" +
+            (impactBps <= -10000n ?
+              " · perda teórica igual ou superior à margem; liquidação real desconhecida" :
+              " · sem custos e sem inferir liquidação");
+          marginImpact.dataset.severity = impactBps <= -10000n ? "critical" : "normal";
           output.dataset.valid = "true";
         } catch (_) {
           // Never show an outdated favorable result for malformed input.
           result.textContent = "Mark inválido: informe preço positivo válido.";
+          marginImpact.textContent = "Impacto na margem indisponível.";
+          marginImpact.dataset.severity = "normal";
           output.dataset.valid = "false";
         }
       };

@@ -1704,3 +1704,6 @@ J1 D360 homologada para pesquisa; PR #657 integrada no SHA `c15231a16b6d97837bb7
 
 ## J3/J5 #661 — painel PAPER de observações prospectivas (16/11/2026)
 Apenas código offline: recepção de decisão J2 em JSON sanitizado e resultados J3 1/4/8h com checagem temporal e estados de abstenção. Não há sincronização com VPS nesta entrega. A captura D364 (0 candidatos) não prova retorno. Ver `docs/J5_PRODUCT_APP_MVP.md` e issue #661. Sem gatilhos de execução real.
+
+## J4/J5 #665 — risco bruto de margem PAPER (16/11/2026)
+Incremento offline de produto: mostrar impacto percentual bruto sobre margem das posições PAPER a partir de mark manual e `leverageAtOpen` (1–100x), alerta sem inferir liquidação ou proteger posição. Testes 1x/20x/50x, SHORT/LONG e partial runner. Nenhum feed/ordem/posição real ou deploy. Issue #665; PR/CI/SHA são registrados no GitHub.

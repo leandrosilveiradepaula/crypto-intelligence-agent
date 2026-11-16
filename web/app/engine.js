@@ -233,6 +233,22 @@
     const direction = position.side === "LONG" ? 1n : -1n;
     return difference * BigInt(position.remainingUnits) * direction / 100000000000000n;
   }
+  function grossHypotheticalMarginImpactBps(position, rawMark) {
+    // Price move × leverageAtOpen, on the original simulated margin.
+    // This is NOT liquidation, a fill, net return or risk-adjusted profit.
+    requireValid(position && position.status === "OPEN" &&
+      ["LONG", "SHORT"].includes(position.side) &&
+      Number.isInteger(position.leverageAtOpen) &&
+      position.leverageAtOpen >= 1 && position.leverageAtOpen <= 100,
+      "Posição PAPER ou alavancagem inválida");
+    const mark = fixed(rawMark, 8, "Mark hipotético");
+    requireValid(mark > 0n, "Mark hipotético deve ser positivo");
+    const entry = BigInt(position.entryPriceUnits);
+    requireValid(entry > 0n, "Preço hipotético de entrada inválido");
+    const side = position.side === "LONG" ? 1n : -1n;
+    return (mark - entry) * side * BigInt(position.leverageAtOpen) * BPS / entry;
+  }
+
   function validateState(raw) {
     requireValid(raw && typeof raw === "object" && !Array.isArray(raw) &&
       raw.version === 1 && Number.isSafeInteger(raw.nextId) &&
@@ -457,7 +473,8 @@
   const publicApi = Object.freeze({
     SCALE, BPS, format, fixed, percent, settings, emptyState,
     openPosition, partialExit, closeRunner, grossEntryExposureCents,
-    grossMarkPnlCents, applyAutoPaperStep, replayAutoPaperMarks, validateState,
+    grossMarkPnlCents, grossHypotheticalMarginImpactBps,
+    applyAutoPaperStep, replayAutoPaperMarks, validateState,
     validateProspectiveCapture, validateProspectiveScore
   });
   global.CIAEngine = publicApi;

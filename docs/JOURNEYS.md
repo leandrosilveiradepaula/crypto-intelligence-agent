@@ -470,3 +470,6 @@ Aprimoramento operacional após J1 D360 e J2/J3 D348: script em checkout owner s
 
 ## J3/J5 #661 — distinguir decisão, observação e posição PAPER
 A interface local distingue: (a) observações registradas antes do resultado; (b) resultados J3 posteriores, se existirem; (c) posição simulada J4, que não deriva de nenhuma captura J2. Sem transição implícita de pesquisa para ordem ou PnL, sem backend público, sem mudança N50.
+
+## J4/J5 #665 — observabilidade de risco em PAPER
+A evolução J4/J5 distingue marca hipotética de cotação real: impacto bruto na margem configurada (alavancagem individual imutável), alerta visual de perda >= 100%, sem estimativa de margem de manutenção, liquidação real, fill de corretora ou execução. Não ativa J4 automático em live.

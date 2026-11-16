@@ -1949,3 +1949,7 @@ Autorização explícita do Product Owner. PR #655 **MERGED** no SHA `b75124c2ef
 - Front-end PAPER offline: planejado adicionar importação estrita de capturas owner J2 e outcomes J3 1/4/8h sem persistência, rede, símbolo/preço ou poder de enviar ordens; vínculo entre captura e score pelo fechamento UTC.
 - Primeira captura D364 teve 0 candidatos. UI deve chamar isso de abstenção, não PnL. O job de score 1h `b8671bba364948c385e129d0009f38d3` está sob execução única programada, resultado ainda não comprovado no instante de escrita; conferir VPS após a janela antes de declarar maturação.
 - Issue #661/PR e CI do SHA exato serão registrados em GitHub; nenhuma implantação do painel J5 no celular/VPS foi realizada. J2 recorrência exigirá release separado.
+
+## J4/J5 #665 — margem de risco PAPER offline (16/11/2026)
+- Trabalho independente: cálculo BigInt de movimento percentual do mark × alavancagem registrada na posição, com alerta de perda teórica de pelo menos 100% da margem. Não muda ledger de posições e não executa stops; os motores J4 existentes de parciais/runner permanecem imutáveis.
+- Branch `work/issue-665-paper-margin-risk` em revisão; PR/CI/merge exigem comprovação no GitHub. Sem acesso à VPS, sem ordem real, sem custo, sem afirmar preço de liquidação. J2 captura 0 candidatos não abre PAPER automaticamente.
