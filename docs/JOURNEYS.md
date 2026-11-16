@@ -470,3 +470,6 @@ Aprimoramento operacional após J1 D360 e J2/J3 D348: script em checkout owner s
 
 ## J3/J5 #661 — distinguir decisão, observação e posição PAPER
 A interface local distingue: (a) observações registradas antes do resultado; (b) resultados J3 posteriores, se existirem; (c) posição simulada J4, que não deriva de nenhuma captura J2. Sem transição implícita de pesquisa para ordem ou PnL, sem backend público, sem mudança N50.
+
+## J2 #663 — construção de histórico prospectivo sem hindsight
+Implementação offline de tentativa de captura J2 periódica, idempotente por hora, com limites POSIX/UTC e validator da mesma coorte N50. Agendamento de produção sujeito a gate específico; rotacionar epoch N50 não implica resetar decisões privadas e uma abstenção não vira sinal. O score futuro continua separado.

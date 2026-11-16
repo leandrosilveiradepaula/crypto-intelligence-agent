@@ -1704,3 +1704,6 @@ J1 D360 homologada para pesquisa; PR #657 integrada no SHA `c15231a16b6d97837bb7
 
 ## J3/J5 #661 — painel PAPER de observações prospectivas (16/11/2026)
 Apenas código offline: recepção de decisão J2 em JSON sanitizado e resultados J3 1/4/8h com checagem temporal e estados de abstenção. Não há sincronização com VPS nesta entrega. A captura D364 (0 candidatos) não prova retorno. Ver `docs/J5_PRODUCT_APP_MVP.md` e issue #661. Sem gatilhos de execução real.
+
+## J2/OPS-RECURRENT1 #663 — preparação para observação recorrente (16/11/2026)
+Código apenas: um tick de captura J2 owner fail-closed, janela UTC HH:07–HH:13, idempotência por fechamento UTC e renderer de units systemd sem instalação. **A captura recorrente não está ativada.** O único job de score 1h da decisão D364 (#658) foi previamente agendado e deve ser conferido à parte. Gates de release/autorizações pendentes. Ver `docs/J2_OWNER_HOURLY_RESEARCH_D367.md`.
