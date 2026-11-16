@@ -1,7 +1,7 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
 Projeto: Crypto Intelligence Agent. Repo PÚBLICO: `leandrosilveiradepaula/crypto-intelligence-agent`.
-Missão: futuros perpétuos crypto, entradas quantitativas e saídas parciais; operação manual sem ordens reais nesta fase.
+Missão: futuros perpétuos crypto; **alvo D77 = operações AUTOMÁTICAS** (entradas, parciais, stops, trailing, runner e saída), sem confirmação manual por trade. **Fase atual:** desenvolvimento/pesquisa e PAPER, nenhuma ordem real até gate live. A coleta N50 WS de fechamento horário NÃO substitui feed intrahorário para decisões/proteção da posição.
 Autonomia: `AGENTS.md`; não pedir "prossiga", avançar em microtarefas seguras, usar GitHub como verdade. Nenhum custo adicional (R$0), permissão sensível, deploy/migration em produção ou trade sem gate humano.
 
 ## Jornada ativa: J2/J3 observação prospectiva (#656); J1 #2/#319 concluídas no escopo D360
