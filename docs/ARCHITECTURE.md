@@ -652,3 +652,7 @@ O caminho `web/app/index.html` agrega visão geral, pesquisa (snapshot sanitizad
 
 ## J5/APP-SYNC2 — complemento do backend loopback para J2
 O HTTP local `scripts/serve_j5_local_readonly.py` possui agora `GET /api/j2-research`, além de `GET /api/n50-progress`. Em vez de nova implementação de candle/indicador, chama `observe_active_private_ws_n50_24closed` diretamente com opt-in e `include_private_symbols=False`, valida status e 50×24 por contrato e projeta somente allowlist de agregados. `web/app/app.js` consulta J2 em localhost:8765 a cada 5min, status clear-on-failure, importação manual preservada, 100% offline em `file://`; não toca corretora, chaves ou execução. A principal interface segue PAPER, sem backtest homologado ou sinais. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+## J4 / D388 — uma só contabilidade para emergência e parciais (16/11/2026)
+
+Em PAPER, `SQLitePaperPositionJournal` é fonte única dos tamanhos confirmados/reservados para tranches positivas, runner 0 e novo stop de emergência `tranche_step=-1`. Stop pode reservar saldo completo antes da primeira parcial, mas nunca concorrer com saída anterior UNKNOWN/pendente nem gerar fill sem evento explícito. A camada de evento Bybit D385 alimenta a decisão PAPER `paper_intrahour_emergency_stop_d388.py`; futura integração com D387 deve executar stop **primeiro**, sem duas reservas para mesmo tick. Estes contratos **não** implicam API de ordens, proteção nativa, stop garantido, executor real nem migração do SQLite J1. Ver `docs/J4_PAPER_EMERGENCY_STOP_D388.md`.

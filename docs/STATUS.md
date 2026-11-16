@@ -1744,3 +1744,7 @@ Primeira implementação de código: `crypto_intelligence_agent/bybit_public_tic
 ## J2 #677 / D386 — supervisor intrahorário de mercado Bybit (16/11/2026)
 
 Na continuação autônoma sem acesso para cutover J1, o código do supervisor público D386 e testes de fake socket foram propostos para controlar **sessão WebSocket de mercado** com ACK, reconexão, limite de consumo, ping/pong, quote typed D385 e callback PAPER. PR/CI/merge consultar no GitHub e não assumir conclusão sem evidência. O código **não é serviço 24×7 instalado**; próxima integração é conector público real e benchmark em ambiente isolado, depois J4 #676. Sem alterar o N50 J1, ordens, conta ou custo.
+
+## J4 #676 / D388 — stop antes dos alvos (16/11/2026)
+
+Na frente de automação sem VPS, a PR #683 propõe extensão PAPER do journal existente para stop integral `tranche_step=-1`, ativado por mark Bybit, incluindo stop LONG/SHORT, saldo remanescente após parcial, UNKNOWN/pending bloqueante, replays e concorrência. Docs `docs/J4_PAPER_EMERGENCY_STOP_D388.md`. **Checar CI e merge reais antes de classificar entregue**; um stop PAPER é somente intenção, não ordem nativa. Próximo código é coordenar stop primeiro e alvos D387 em um só consumidor de quote, depois integrar runner e feed #677. J1 D384 continua pendente de executor na VPS; não misturar as jornadas.
