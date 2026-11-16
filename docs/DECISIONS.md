@@ -1861,3 +1861,7 @@ A J4 #676 deve poder iniciar **um stop automático antes de qualquer alvo**. Par
 ## D389 — coordenação stop-first antes das metas parciais PAPER (16/11/2026)
 
 Na J4 #676, as decisões D387 (alvos intrahorários) e D388 (stop emergencial) passam a ser avaliadas em **uma única chamada tipada** `step_paper_intrahour_coordinated`, com stop primeiro. Só o resultado `HOLD` do stop pode liberar a avaliação do alvo. Dados stale, livros inválidos, stop reservado/pendente e ordem anterior UNKNOWN exigem abstenção/reconciliação sem inventar fills ou dupla reserva. AUTO4 permanece fonte única de estado e conserva o tamanho confirmado. Sem stop nativo, ordens reais, novo journal ou mudança de J1. Ver `docs/J4_PAPER_INTRAHOUR_COORDINATOR_D389.md` e #676.
+
+## D390 — conexão pública Bybit finita, com opt-in e sem ordens (16/11/2026)
+
+O supervisor D386 de ticker público deve reutilizar o `StreamSession` existente da J1 via conector adaptado, sem duplicar biblioteca ou executor. `bybit_public_ticker_optin_d390.py` só abre conexão pública de pesquisa se as três autorizações booleanas de acesso público, pesquisa read-only e elegibilidade regional forem expressamente verdadeiras; sem gate não toca rede. Lease finita, testes injetados sem rede, saída sanitizada e estado fechado/inválido ao retornar. ACK de assinatura sem ticker não é prova de preço ou coleta. Ainda **não** implementa monitoramento permanente 24×7, ordens, credenciais ou release. Ver #677 e `docs/J2_BYBIT_PUBLIC_OPTIN_D390.md`.
