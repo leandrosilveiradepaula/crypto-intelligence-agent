@@ -192,6 +192,47 @@ class BybitTickerStateD385Tests(unittest.TestCase):
                 universe_at_ms=NOW - 10_000)
         self.assertIn("tickers.ETHUSDT", b.topics)
 
+    def test_added_dynamic_ticker_needs_its_own_ack_and_new_snapshot(self):
+        b = book()
+        added, removed = b.rotate_membership(
+            ranked_symbols=("BTCUSDT", "SOLUSDT"),
+            position_symbols=(), universe_at_ms=NOW + 100,
+        )
+        self.assertEqual(added, ("tickers.SOLUSDT",))
+        self.assertEqual(removed, ("tickers.ETHUSDT",))
+        self.assertEqual(b.sanitized_report(at_ms=NOW + 100)["pending_subscription_acks"], 1)
+        with self.assertRaises(DataValidationError):
+            b.acknowledge_added_topics(("tickers.BTCUSDT",))
+        b.acknowledge_added_topics(added)
+        q = b.ingest(ticker("SOLUSDT", ts=NOW + 110, cs=8),
+                     received_at_ms=NOW + 120)
+        self.assertEqual(q.symbol, "SOLUSDT")
+        self.assertIsNotNone(b.current("SOLUSDT", at_ms=NOW + 120))
+        self.assertEqual(b.sanitized_report(at_ms=NOW + 120)["pending_subscription_acks"], 0)
+
+        fail = book()
+        fail.rotate_membership(
+            ranked_symbols=("BTCUSDT", "SOLUSDT"),
+            position_symbols=(), universe_at_ms=NOW + 100,
+        )
+        with self.assertRaises(DataGapError):
+            fail.ingest(ticker("SOLUSDT", ts=NOW + 110, cs=9),
+                        received_at_ms=NOW + 120)
+        self.assertFalse(fail.sanitized_report(at_ms=NOW + 120)["connected"])
+
+    def test_future_universe_is_not_causally_available(self):
+        b = book()
+        b.ingest(ticker(), received_at_ms=NOW)
+        b.rotate_membership(
+            ranked_symbols=("BTCUSDT", "ETHUSDT"),
+            position_symbols=(), universe_at_ms=NOW + 1000,
+        )
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW + 300))
+        with self.assertRaises(DataGapError):
+            b.ingest(ticker(kind="delta", cs=11, ts=NOW + 100),
+                     received_at_ms=NOW + 300)
+        self.assertFalse(b.sanitized_report(at_ms=NOW + 300)["connected"])
+
     def test_failed_frame_cannot_leave_a_partial_updated_state(self):
         b = book()
         b.ingest(ticker(), received_at_ms=NOW)
