@@ -95,6 +95,12 @@
     set("metric-open", opened.length);
     set("metric-exposure", amount(exposure));
     set("metric-margin", amount(margin));
+    let adverse2 = 0n;
+    for (const position of opened) {
+      adverse2 += E.adversePaperShockLossCents(position, 200);
+    }
+    set("metric-stress", amount(adverse2));
+    set("metric-stress-count", opened.length + " cenários abertos; choque adverso independente por posição");
     set("metric-n50", feed ? feed.observed_50_of_50_hours + " / 24" : "— / 24");
     set("metric-n50-label", feed ? "Relatório importado; não é D323" : "Nenhum relatório importado");
     set("paper-gate", state.config.paused ?
@@ -136,7 +142,11 @@
       cell("Quantidade inicial abstrata", E.format(position.initialUnits, 8)),
       cell("Quantidade restante", E.format(position.remainingUnits, 8)),
       cell("Exposição nominal da parcela", amount(E.grossEntryExposureCents(position))),
-      cell("Saídas fictícias registradas", position.events.length)
+      cell("Saídas fictícias registradas", position.events.length),
+      ...(position.status === "OPEN" ? [
+        cell("Perda bruta em choque adverso de 1%", amount(E.adversePaperShockLossCents(position, 100))),
+        cell("Perda bruta em choque adverso de 2%", amount(E.adversePaperShockLossCents(position, 200)))
+      ] : [])
     );
     card.append(cells);
     if (position.status === "OPEN") {
