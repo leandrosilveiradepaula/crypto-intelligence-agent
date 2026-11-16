@@ -407,7 +407,7 @@
     const scored = raw.status === "ex_post_reference_marks_scored_not_a_backtest";
     const noCandidates = raw.status === "no_observations_selected";
     const decimal = v => typeof v === "string" &&
-      /^-?(?:0|[1-9][0-9]{0,299})(?:\\.[0-9]{1,300})?$/.test(v);
+      /^-?(?:0|[1-9][0-9]{0,299})(?:[.][0-9]{1,300})?$/.test(v);
     requireValid(raw.schema_version === "j3-ws-watchlist-forward-reference-v1" &&
       (scored || noCandidates) &&
       raw.quality === "ex_post_closed_mark_cost_assumptions_not_fills" &&
