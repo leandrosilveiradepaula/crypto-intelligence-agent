@@ -10,7 +10,7 @@ Plataforma de inteligência quantitativa para futuros perpétuos. **Produto-alvo
 - Motor de sinais com múltiplas estratégias, regimes do BTC, força relativa, tendência, compressão, rompimento, correções, volume, volatilidade, liquidez e derivativos.
 - Planejador de saídas parciais: porcentagens da posição inicial OU do saldo restante, definidas explicitamente; permitir runner residual.
 - Acompanhar exposição, correlação, custos, funding, margem, liquidação, posições, ordens automáticas, fills e resultados.
-- **Produto-alvo: execução AUTOMÁTICA de entradas e saídas** na venue escolhida (Binance USD-M ou Bybit V5 linear), com risco pré-ordem, stops, realizações parciais, trailing, runner, reconciliação de fills e kill-switch. **Nesta fase somente engenharia offline/paper, sem ordens reais**.
+- **Produto-alvo D383: execução AUTOMÁTICA de entradas e saídas exclusivamente na Bybit V5 linear (perpétuos cripto USDT elegíveis)**, com risco pré-ordem, stops, realizações parciais, trailing, runner, reconciliação de fills e kill-switch. Binance e outras venues são apenas histórico de pesquisa; não implementar segundo executor. **Nesta fase somente engenharia offline/paper, sem ordens reais**.
 - Pesquisa reproduzível: candles fechados, trajetória intrabar, taxas, slippage, funding, manutenção e liquidação, walk-forward, benchmark e fora da amostra.
 - ML somente se melhorar desempenho validado. LLM e LangGraph opcionais para contexto e explicação, nunca fonte primária de compra.
 - Interface em PT-BR, simples no celular: oportunidades, bot ativo/pausado, posições/ordens/fills, parciais, resultados, alertas e kill-switch.
