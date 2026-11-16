@@ -1760,3 +1760,7 @@ Novo código de integração D390 reutiliza `_real_session_factory` existente de
 ## J4 #676 / D391 — ligação ticker Bybit → stop/target PAPER (16/11/2026)
 
 Implementação `paper_intrahour_quote_router_d391.py` liga as cotações D385/D386 à decisão D389 e ao ledger AUTO4 existente, com testes de parcial/stop/replay, timestamp/latência, símbolo e callback D386 inteiramente offline. A PR #686 tem code review/CI obrigatórios; não confundir com feed Bybit 24×7 implantado ou execução em conta real. D390 PR #685 já integrada `45e291846a4be2e31312b8e8dbf62e777d70e936`, mas sua lease read-only não foi instalada na VPS. J1 D384 continua bloqueada operacionalmente.
+
+## J4 #676 / D392 — evidência executável de fluxo PAPER end-to-end (16/11/2026)
+
+Novo comando `python -m scripts.run_paper_intrahour_proof_d392` e testes integrados exercitam ticker fictício -> router D391 -> stop/targets D389 -> SQLite AUTO4, com entrada 10h05, primeira parcial 10h12, segunda 10h19, stop 10h27, fills *explicitamente simulados* e reinício entre frames, para LONG/SHORT e cenário UNKNOWN bloqueante. O relatório canônico inclui digest e saldo, sem valores de preços nem IDs de posição. **CI, PR e merge devem ser conferidos no GitHub antes de afirmar sucesso**; nenhum feed real ou ordem foi executado por esta tarefa. Documento `docs/J4_PAPER_INTRAHOUR_PROOF_D392.md`.
