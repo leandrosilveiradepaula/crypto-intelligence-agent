@@ -112,6 +112,7 @@ class BybitPublicTickerBook:
             raise DataValidationError("ticker_quote_age_budget_invalid")
         self._max_quote_age_ms = max_quote_age_ms
         self._connected = False
+        self._acked_symbols: set[str] = set()
         self._quotes: dict[str, BybitTickerQuote] = {}
         self._last_data: dict[str, tuple] = {}
         self._snapshots = 0
@@ -134,10 +135,12 @@ class BybitPublicTickerBook:
         """The caller must first verify subscribe ACKs for this session."""
         self._quotes.clear()
         self._last_data.clear()
+        self._acked_symbols = set(self._monitored)
         self._connected = True
 
     def mark_disconnected(self) -> None:
         self._connected = False
+        self._acked_symbols.clear()
         self._quotes.clear()
         self._last_data.clear()
         self._invalidations += 1
@@ -156,11 +159,22 @@ class BybitPublicTickerBook:
         removed = tuple("tickers." + s for s in sorted(self._monitored - new_monitored))
         self._quotes = {s: q for s, q in self._quotes.items() if s in new_monitored}
         self._last_data = {s: d for s, d in self._last_data.items() if s in new_monitored}
+        self._acked_symbols.intersection_update(new_monitored)
         self._ranked, self._positions = new_ranked, new_positions
         self._monitored = new_monitored
         self._universe_at_ms = observed
         # New topics must obtain an upstream subscription ACK and fresh snapshot.
         return added, removed
+
+    def acknowledge_added_topics(self, topics: tuple[str, ...]) -> None:
+        """Only call after validating the real subscribe ACK for these topics."""
+        if not self._connected or type(topics) is not tuple or not topics:
+            raise DataValidationError("ticker_added_topic_ack_invalid")
+        if len(set(topics)) != len(topics) or any(
+            t not in self.topics or t[8:] in self._acked_symbols for t in topics
+        ):
+            raise DataValidationError("ticker_added_topic_ack_invalid")
+        self._acked_symbols.update(t[8:] for t in topics)
 
     def ingest(self, raw: str | bytes, *, received_at_ms: int) -> BybitTickerQuote:
         if not self._connected:
@@ -173,6 +187,8 @@ class BybitPublicTickerBook:
 
     def _ingest_validated(self, raw: str | bytes, *, received_at_ms: int) -> BybitTickerQuote:
         at = _ms(received_at_ms, "ticker_received")
+        if at < self._universe_at_ms:
+            raise DataGapError("ticker_future_universe_at_receive")
         payload = decode_public_market_json_exact(raw, max_bytes=MAX_FRAME_BYTES)
         if set(payload) != {"topic", "type", "ts", "cs", "data"}:
             raise DataValidationError("ticker_envelope_fields_invalid")
@@ -182,6 +198,8 @@ class BybitPublicTickerBook:
         symbol = topic[8:]
         if symbol not in self._monitored:
             raise DataGapError("ticker_outside_reviewed_membership")
+        if symbol not in self._acked_symbols:
+            raise DataGapError("ticker_subscription_not_acknowledged")
         if kind not in ("snapshot", "delta"):
             raise DataValidationError("ticker_event_type_invalid")
         exchange_at = _ms(payload["ts"], "ticker_exchange")
@@ -262,7 +280,8 @@ class BybitPublicTickerBook:
         """Return None on stale/missing/nonexecutable quotes, never fake a fill."""
         now = _ms(at_ms, "ticker_query")
         quote = self._quotes.get(symbol) if self._connected else None
-        if (quote is None or now < quote.received_at_ms
+        if (quote is None or now < self._universe_at_ms
+                or now < quote.received_at_ms
                 or now - quote.received_at_ms > self._max_quote_age_ms
                 or not quote.has_positive_book_depth):
             return None
@@ -278,6 +297,7 @@ class BybitPublicTickerBook:
             "monitored_contracts": len(self._monitored),
             "ranked_contracts": len(self._ranked),
             "position_contracts": len(self._positions),
+            "pending_subscription_acks": len(self._monitored - self._acked_symbols),
             "fresh_quotes": fresh,
             "unavailable_quotes": len(self._monitored) - fresh,
             "snapshots": self._snapshots,
