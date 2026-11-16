@@ -1728,3 +1728,7 @@ PR de código #673 D380 integrada main `4f273a6f20193423054d18e8f11b895aa109d12b
 
 ## Produto D382 — ratificação da automação de trading (16/11/2026)
 A decisão D77 de 26/10/2026 **já determinava** execução automática de entradas e saídas. D06 é histórica; explicação anterior de execução manual como destino estava errada. Reforço de contrato: WS N50 de 1h é contexto, não monitoração de posições; entradas, stops e saídas poderão ocorrer intrahora por feed/eventos independentes, com testes PAPER antes de integração live. Próximas tarefas nos escopos já abertos: J2 #3, J4 #5, J5 #6 e J6 #7. Sem ativação de ordens reais, credenciais, serviços novos ou gastos. 
+
+## D383 — venue única escolhida: Bybit V5 (16/11/2026)
+
+O Product Owner determinou Bybit V5 linear para mercado e execução automáticos, sem escolha pendente entre exchanges. Arquitetura documentada em `docs/BYBIT_V5_ARCHITECTURE_D383.md`. REST público já existe na J1; WS atual coleta candles 1h perto do fechamento, mas não substitui feed público contínuo nem WS privado de ordens/fills/posições. Nova frente de desenvolvimento usa Bybit REST+WS com contrato único, sem reiniciar J1. D77/D382 continuam: entradas/saídas intrahorárias automáticas no alvo; `offline_paper` atualmente, `testnet` e `live` bloqueados por gates separados. Próxima unidade read-only do feed contínuo e J4 #676 PAPER intrabar; não foram instalados novos serviços nem executadas ordens reais.
