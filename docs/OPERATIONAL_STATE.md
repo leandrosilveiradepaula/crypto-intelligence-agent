@@ -1944,3 +1944,8 @@ Autorização explícita do Product Owner. PR #655 **MERGED** no SHA `b75124c2ef
 - Preflight VPS externo realizado na janela 23:17 UTC: NTP `yes`; dois timers N50 WS e rotação `active/enabled`; main antes da correção `369bc539b1c6d9309388a020a7f3b556c84e9cfa`.
 - Revisão obrigatória encontrou incompatibilidade de contrato: status `capture` owner sem campo `live_trading_authorized=false`, mas executor D362 exige false explícito. Corrigir **antes** de qualquer captura, com regressão e CI Linux/Windows/Chrome no SHA final. Sem merge/CI/execuções reais afirmadas neste registro; registrar evidências na issue #658.
 - Próxima ação: aprovar e integrar correção D363 em GitHub, executar um único job de piloto com SHA integrado e registrar status; abstenção se relógio/epoch/24×50 não estiverem válidos. Nunca relançar `capture` indiscriminadamente.
+
+## J3/J5 #661 — projeção móvel de decisões prospectivas (16/11/2026 UTC)
+- Front-end PAPER offline: planejado adicionar importação estrita de capturas owner J2 e outcomes J3 1/4/8h sem persistência, rede, símbolo/preço ou poder de enviar ordens; vínculo entre captura e score pelo fechamento UTC.
+- Primeira captura D364 teve 0 candidatos. UI deve chamar isso de abstenção, não PnL. O job de score 1h `b8671bba364948c385e129d0009f38d3` está sob execução única programada, resultado ainda não comprovado no instante de escrita; conferir VPS após a janela antes de declarar maturação.
+- Issue #661/PR e CI do SHA exato serão registrados em GitHub; nenhuma implantação do painel J5 no celular/VPS foi realizada. J2 recorrência exigirá release separado.

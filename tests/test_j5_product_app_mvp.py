@@ -62,6 +62,9 @@ class AppLayoutContractTests(unittest.TestCase):
                      "watchlist-down-rows", "watchlist-note"):
             self.assertIn(f'id="{item}"', html)
         self.assertIn("Observações selecionadas J2", html)
+        self.assertIn('id="prospective-status"', html)
+        self.assertIn('id="prospective-horizons"', html)
+        self.assertIn("sem candidatos", html.lower())
         self.assertIn("Importar relatórios ou restaurar PAPER", html)
         self.assertIn('id="auto-enabled"', html)
         self.assertIn('id="auto-target1"', html)
@@ -103,6 +106,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('keys.push("autoStep", "autoAction")', js)
         self.assertIn("E.grossMarkPnlCents(position, decimal(markInput.value))", js)
         self.assertIn("function validatePaperBackup(backup)", js)
+        self.assertIn("E.validateProspectiveCapture(payload)", js)
+        self.assertIn("E.validateProspectiveScore(payload, prospectiveCapture)", js)
+        self.assertIn("function renderProspective()", js)
         self.assertIn("exactBackupKeys(restored.config", js)
         self.assertIn("E.validateState(backup.state)", js)
         self.assertIn('window.confirm("Restaurar este backup PAPER?', js)
@@ -128,6 +134,79 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('if (feedOrigin === "manual") return; // Import may complete during GET.', js)
         self.assertLess((APP / "app.js").stat().st_size, 50_000)
         self.assertLess((APP / "style.css").stat().st_size, 40_000)
+
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js read-only prospective report validators")
+    def test_j2_j3_prospective_imports_are_causal_and_zero_safe(self):
+        code = r"""
+const assert = require("node:assert/strict");
+const E = require("./web/app/engine.js");
+const end = Date.UTC(2026, 10, 15, 3, 0);
+const C = {
+  schema_version:"j2-ws-owner-ledger-status-v1",
+  status:"owner_local_decision_captured_not_independent_attestation",
+  capture_records_created:1,candidates_captured:0,decision_closed_end_ms:end,
+  owner_ws_sqlite_readonly_replayed:true,local_decision_record_consistency_verified:true,
+  prospective_registration_independently_verified:false,marketwide_top50_verified:false,
+  financial_backtest_approved:false,approved_for_signals:false,
+  live_trading_authorized:false,orders_sent:false,network_requests:0,
+  database_mutation_statements:0,systemd_modified:false
+};
+assert.equal(E.validateProspectiveCapture(C).candidates_captured, 0);
+for (const bad of [
+  {...C, private_symbol:"BTCUSDT"}, {...C, live_trading_authorized:true},
+  {...C, candidates_captured:12}, {...C, capture_records_created:0},
+  {...C, decision_closed_end_ms:end+1}, {...C, orders_sent:true}
+]) assert.throws(()=>E.validateProspectiveCapture(bad));
+const S = {
+  schema_version:"j3-ws-watchlist-forward-reference-v1",
+  status:"no_observations_selected", quality:"ex_post_closed_mark_cost_assumptions_not_fills",
+  horizon_bars:1,selected_observations:0,matured_observations:0,
+  aligned_observations:0,contrary_observations:0,unchanged_observations:0,
+  gross_reference_bps_sum:null,net_reference_after_assumed_costs_bps_sum:null,
+  same_side_btc_excess_reference_bps_sum:null,assumed_total_cost_quote_units:null,
+  funding_events_hypothetical:0,
+  prospective_registration_verified:false,intrabar_path_verified:false,
+  venue_fees_verified:false,funding_schedule_verified:false,
+  out_of_sample_results_validated:false,financial_backtest_approved:false,
+  marketwide_top50_verified:false,approved_for_signals:false,
+  live_trading_authorized:false,orders_sent:false,network_requests:0,
+  database_accessed:true,database_mutation_statements:0,systemd_modified:false,
+  owner_local_decision_file_verified:true,decision_closed_end_ms:end,
+  future_closed_end_ms:end+3600000,owner_ws_sqlite_readonly_replayed:true,
+  prospective_registration_independently_verified:false
+};
+assert.equal(E.validateProspectiveScore(S,C).status,"no_observations_selected");
+for (const bad of [
+  {...S, future_closed_end_ms:end+2*3600000},
+  {...S, gross_reference_bps_sum:"12"},
+  {...S, net_reference_after_assumed_costs_bps_sum:"1"},
+  {...S, status:"ex_post_reference_marks_scored_not_a_backtest"},
+  {...S, selected_observations:1},
+  {...S, private_tick:"BTCUSDT"},
+  {...S, prospective_registration_independently_verified:true},
+  {...S, out_of_sample_results_validated:true},
+]) assert.throws(()=>E.validateProspectiveScore(bad,C));
+const one = {...C,candidates_captured:2};
+const score = {...S,status:"ex_post_reference_marks_scored_not_a_backtest",
+  selected_observations:2,matured_observations:2,
+  aligned_observations:1,contrary_observations:1,
+  gross_reference_bps_sum:"23.25",
+  net_reference_after_assumed_costs_bps_sum:"-0.5",
+  same_side_btc_excess_reference_bps_sum:"12.0",
+  assumed_total_cost_quote_units:"0.20"};
+assert.equal(E.validateProspectiveScore(score,one).net_reference_after_assumed_costs_bps_sum,"-0.5");
+assert.throws(()=>E.validateProspectiveScore({...score,net_reference_after_assumed_costs_bps_sum:"NaN"},one));
+assert.throws(()=>E.validateProspectiveScore({...score,matured_observations:1},one));
+assert.throws(()=>E.validateProspectiveScore(score,{...one,decision_closed_end_ms:end-3600000}));
+console.log("J2_J3_PROSPECTIVE_UI_CONTRACT_PASS");
+"""
+        result = subprocess.run(
+            [shutil.which("node"), "-e", code],
+            cwd=ROOT, text=True, capture_output=True, timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("J2_J3_PROSPECTIVE_UI_CONTRACT_PASS", result.stdout)
 
     @unittest.skipUnless(shutil.which("node"), "optional Node.js offline PAPER arithmetic")
     def test_bigint_paper_partial_and_fixed_leverage_after_settings_change(self):

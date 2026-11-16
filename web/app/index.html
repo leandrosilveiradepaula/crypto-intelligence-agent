@@ -153,6 +153,26 @@
             <p id="watchlist-note" class="muted fine">Sem habilitação de sinais ou ordens. J3 ainda precisa avaliar custo, risco e resultados.</p>
           </div>
         </div>
+        <div class="panel watchlist-panel" aria-labelledby="prospective-title">
+          <div class="panel-heading">
+            <h3 id="prospective-title">Decisões prospectivas J2 · resultados J3</h3>
+            <span id="prospective-status" class="status-label">Aguardando captura</span>
+          </div>
+          <p class="muted fine">Importe uma captura J2 e depois o JSON de avaliação de 1, 4 ou 8 horas pelo seletor abaixo. Os dados ficam só nesta sessão. Nada é enviado à corretora.</p>
+          <div id="prospective-empty" class="empty">
+            <strong>Sem decisão prospectiva importada</strong>
+            <p>Nenhum resultado está disponível. Uma captura sem candidatos é registrada como abstenção, nunca como lucro ou perda.</p>
+          </div>
+          <div id="prospective-loaded" hidden>
+            <div class="inline-metrics">
+              <div><strong id="prospective-selected">—</strong><span>Oportunidades selecionadas</span></div>
+              <div><strong id="prospective-at">—</strong><span>Fechamento da decisão UTC</span></div>
+            </div>
+            <ol id="prospective-horizons" class="prospective-horizons" aria-label="Resultados posteriores 1, 4 e 8 horas"></ol>
+            <p id="prospective-note" class="muted fine">Sem sinal ou operação real.</p>
+          </div>
+          <p class="muted fine">Registro local não é atestação independente. Resultados J3 usam preços de fechamento e custos assumidos, não execução de ordens, PnL realizado ou validação fora da amostra.</p>
+        </div>
       </section>
 
       <section class="group" id="posicoes" aria-labelledby="position-title">
@@ -243,7 +263,7 @@
             <label class="file-drop" for="import-file">
               <span aria-hidden="true" class="upload-icon">↓</span>
               <strong>Selecionar arquivo JSON local</strong>
-              <span>Relatórios N50/J2 ou backup de cenários PAPER exportado deste aplicativo</span>
+              <span>Relatórios N50/J2/J3 sanitizados ou backup de cenários PAPER</span>
               <input type="file" id="import-file" accept=".json,application/json">
             </label>
             <p class="muted fine">O arquivo é lido somente no navegador (até 1 MiB), sem upload. Relatórios N50/J2 não persistem. A restauração de backup PAPER substitui cenários locais somente após sua confirmação.</p>
