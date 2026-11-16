@@ -1,6 +1,6 @@
 # Decisões do produto
 
-Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente.
+Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente. **Para destino de execução, D383 (Bybit exclusiva) prevalece sobre a escolha aberta de Binance/Bybit da D77 histórica; D77 (operação automática) permanece vigente.**
 
 - D01: mercado inicial de futuros perpétuos de criptomoedas. Universo dinâmico, referência inicial nos 50 contratos elegíveis de maior volume.
 - D02: alavancagem global inicial 50x, configurável. Mudanças afetam apenas novas posições; cada posição preserva a alavancagem de abertura.
@@ -1833,3 +1833,11 @@ D380 está mergeada em main, sem implantação. Preparar executor root-only D381
 ## D382 — horários de velas não são horários obrigatórios de trading (16/11/2026)
 
 Ratificação da D77, não uma mudança de produto: o Product Owner explicitou novamente que o objetivo sempre foi um **robô totalmente automático**, sem cliques manuais por operação. A coleta N50 WebSocket de candle 1h é um componente de contexto/pesquisa, **não** restringe o motor de entrada, o acompanhamento de risco e as saídas automáticas ao fechamento de 1h. Implementar caminho independente de dados de mercado intrahorários, estado de execução/ordens e gestão orientada a eventos, inclusive alvos parciais, stops, trailing, runner e proteção contra liquidação. Em PAPER, simular esse ciclo automaticamente com eventos intrabar e testes de latência, desconexão e slippage. Quando autorizado, o executor em venue deverá conciliar fills, proteger posições com semântica nativa apropriada e impedir entradas com estado incerto. **D06 é histórica e foi substituída pela D77 em 26/10/2026.** Não alegar que o robô está operacional ou autorizar `testnet`/`live` por esta decisão; os gates técnicos e autorização do titular continuam obrigatórios.
+
+## D383 — Bybit V5 como venue operacional única (16/11/2026, Product Owner)
+
+**Decisão material expressa:** o Product Owner determinou utilizar a **Bybit**, não manter Binance/Bybit como candidatas paralelas. A plataforma-alvo operará futuros perpétuos de criptomoedas Bybit V5 `category=linear`, inicialmente USDT/USDT settlement elegível, desde que conta, instrumento, limites e região sejam comprovados. Usar REST público para instrumentos, ranking, velas históricas e recuperação; WebSocket público persistente para preços/mark, bid-ask, fechamento de candles e indicadores intrahorários; REST autenticado após gate para abertura/redução/TP/SL/trailing; WebSocket privado para ordens/fills/posições e REST privado para conciliação pós-falha. WS Trade de envio é alternativa futura não prioritária. A página comercial não torna WS exclusivo de dados privados ou históricos.
+
+**Correção de coordenação:** REST da Bybit já existe no projeto (`bybit_public_j1_transport.py`, `j1_rest_incremental_owner.py`, `run_j1_rest_hourly_once.py`). O problema foi tratar arquitetura J1 de fechamento como infraestrutura global de trading. D382 exige feed intrahorário independente, sem refazer J1 nem criar dois escritores da epoch.
+
+**Risco específico:** alavancagem na Bybit é configurada por símbolo/mode e pode conflitar com posições anteriores; uma configuração global alterada deve valer apenas para novas entradas e NÃO alterar posição existente na corretora. Margens mínimas, `qtyStep`, `minNotionalValue`, `positionIdx`, `reduceOnly`, TP/SL `Full/Partial` e gatilhos `Mark/Last/Index` são gates obrigatórios. `ACK != FILL` e REST GET de candle aberto não prova fechamento; manter idempotência, segurança de stops e reconciliação. 50x é parâmetro de pesquisa, não proteção. Regras e fontes: `docs/BYBIT_V5_ARCHITECTURE_D383.md`. `offline_paper` por padrão; sem chaves, ordens reais, testnet ou custo adicional sem gates específicos. D77 (trading automático) continua vigente.

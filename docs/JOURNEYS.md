@@ -11,6 +11,8 @@
 | J6 Homologação | Paper trading contínuo, testnet autorizada, incidentes e gates de eventual live, sem ordens reais na homologação inicial | J1–J5 | #7 |
 | J7 Evolução | ML e contexto ampliado, somente com melhoria validada | J3 e J6 | #8 |
 
+**Venue operacional D383 (16/11/2026): Bybit V5 linear como fonte primária e destino exclusivo de ordens automáticas.** O N50 WS de 1h D381 continua isolado; J2 #677 adicionará feed público contínuo sem tocar o journal owner e J4 #676 desenvolverá saídas automáticas PAPER intrahorárias. Testnet/live sempre sujeitos a gates próprios e autorização explícita. Ver `docs/BYBIT_V5_ARCHITECTURE_D383.md`.
+
 ## J1 — Work units
 - WU1 #9 / PR #12: adaptador read-only e contratos, integrada.
 - WU2 #13 / PR #14: backfill e SQLite com integridade, integrada.

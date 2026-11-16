@@ -38,6 +38,10 @@ Custo adicional autorizado R$ 0,00. Usar ferramentas livres, APIs gratuitas, VPS
 Cada work unit para Codex deve incluir objetivo, contexto, escopo e exclusões, critérios de aceite, testes e evidências. Preferir issues duráveis e PRs revisáveis; não pedir implementação do projeto inteiro num prompt. Evitar duplicações, hardcodes de parâmetros configuráveis, regressões e alteração fora de escopo. Validar contratos e cálculos financeiros. CI verde não demonstra rentabilidade nem prontidão completa. Registrar decisões no docs/DECISIONS.md e estado em docs/OPERATIONAL_STATE.md.
 
 
+## Decisões vigentes D77/D383 — automação e venue Bybit
+
+**D383 (16/11/2026): Bybit V5 linear de futuros perpétuos cripto USDT é a venue operacional escolhida pelo Product Owner.** Usar as APIs Bybit REST para snapshots/história, ordens e proteções (autenticadas somente após gate); WebSocket público para feed 24×7 e privado para estado de ordens/fills/posições. Não reabrir escolha entre Binance/Bybit nem desenvolver executor paralelo por conveniência. Velas horárias J1 não são feed contínuo de posições; manter J1 funcionando enquanto validar componente novo. Ler `docs/BYBIT_V5_ARCHITECTURE_D383.md` antes de implementar integração de mercado ou ordens. **PAPER default, zero ordens reais sem gate autorizado e sem inserir chaves no repositório.**
+
 ## Decisão vigente D77 — automação de trading como objetivo
 A correção explícita do Product Owner em 26/10/2026 substitui a diretriz antiga de operação manual como estado FINAL. Construir motor quantitativo + `OrderExecutionEngine` com simulação, controle de risco, reconciliação, idempotência, stops, saídas parciais, trailing, runner e kill-switch. A seleção final entre Binance USD-M e Bybit V5 linear está pendente. **Não enviar ordens reais nem configurar credenciais/deploy sem gate humano próprio.** Modos distintos `offline_paper` (default), `testnet` (opt-in autorizado), `live` (travado até aceite). Exigências e critérios em `docs/AUTOMATED_EXECUTION_SPEC.md`. Trechos históricos de J4 ou WU47 sobre operação MANUAL descrevem somente o escopo anterior e não anulam D77.
 
