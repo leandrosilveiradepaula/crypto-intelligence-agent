@@ -1701,3 +1701,6 @@ J1 #2/#319 encerrada no escopo D360 (370/370 pool no PIT e 24×50 WS auditado; n
 ## J2/J3 #658 / D362 — executor de piloto prospectivo controlado (15/11/2026)
 
 J1 D360 homologada para pesquisa; PR #657 integrada no SHA `c15231a16b6d97837bb79b4c889da471d33c7035`, CI 3/3. O preflight está **somente no GitHub**, não instalado na VPS. D362 prepara script de one-shot pinado no checkout owner isolado, sem tocar em N50 nem criar agendamento. CI/PR ainda exigem confirmação e merge no SHA exato. Instalação/captura dependem de gate de release e autorização expressa; não declarar operação prospectiva efetiva com base em código. `docs/J2_OWNER_PROSPECTIVE_PILOT_D362.md`.
+
+## J3/J5 #661 — painel PAPER de observações prospectivas (16/11/2026)
+Apenas código offline: recepção de decisão J2 em JSON sanitizado e resultados J3 1/4/8h com checagem temporal e estados de abstenção. Não há sincronização com VPS nesta entrega. A captura D364 (0 candidatos) não prova retorno. Ver `docs/J5_PRODUCT_APP_MVP.md` e issue #661. Sem gatilhos de execução real.

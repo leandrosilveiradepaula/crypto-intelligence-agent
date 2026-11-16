@@ -13,6 +13,8 @@
   let research = null;
   let researchOrigin = "none";
   let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
+  let prospectiveCapture = null; // One owner decision, session-only; not an OOS attestation.
+  let prospectiveScores = Object.create(null); // 1/4/8h costed references, never fills.
   let storageAvailable = true;
 
   function el(tag, className, content) {
@@ -724,6 +726,40 @@
       "Snapshot histórico: não interpretar como oportunidade atual. Nenhuma posição foi aberta.");
   }
 
+  function renderProspective() {
+    $("prospective-empty").hidden = !!prospectiveCapture;
+    $("prospective-loaded").hidden = !prospectiveCapture;
+    if (!prospectiveCapture) {
+      set("prospective-status", "Aguardando captura");
+      return;
+    }
+    set("prospective-status", "Registro local · não auditado externamente");
+    set("prospective-at", utc(prospectiveCapture.decision_closed_end_ms));
+    set("prospective-selected", prospectiveCapture.candidates_captured);
+    const list = $("prospective-horizons");
+    list.replaceChildren();
+    for (const horizon of [1, 4, 8]) {
+      const score = prospectiveScores[horizon];
+      const row = el("li", "prospective-horizon");
+      if (!score) {
+        row.textContent = horizon + "h · aguardando avaliação posterior";
+      } else if (score.status === "no_observations_selected") {
+        row.textContent = horizon + "h · sem candidatos; nenhum retorno a medir";
+      } else {
+        row.textContent = horizon + "h · " +
+          score.matured_observations + " observações, " +
+          score.aligned_observations + " favoráveis, " +
+          score.contrary_observations + " contrárias; " +
+          "referência agregada após custos hipotéticos: " +
+          score.net_reference_after_assumed_costs_bps_sum + " bps (soma)";
+      }
+      list.append(row);
+    }
+    set("prospective-note", prospectiveCapture.candidates_captured === 0 ?
+      "Nenhuma oportunidade passou nos filtros. O registro de ausência é válido, mas não representa lucro ou perda." :
+      "Marcas de fechamento, não fills. Custos são hipotéticos; nenhuma observação habilita ordens.");
+  }
+
   function renderQuality() {
     const recent = feed && feed.slots[23].closed_end_ms >= Date.now() - 2 * HOUR;
     const n50 = !feed ? "N50: fonte indisponível ou sem relatório." :
@@ -748,6 +784,7 @@
     renderFeed();
     renderResearch();
     renderWatchlist();
+    renderProspective();
     renderQuality();
   }
   function bind() {
@@ -839,6 +876,20 @@
         } else if (payload.schema_version === "j2-n50-ws-descriptive-watchlist-v1") {
           watchlist = validateWatchlist(payload);
           warn("Watchlist J2 importada somente nesta sessão; observações não são sinais nem ordens.", false);
+        } else if (payload.schema_version === "j2-ws-owner-ledger-status-v1") {
+          // Captures replace the displayed horizon set; never persist market data.
+          const accepted = E.validateProspectiveCapture(payload);
+          prospectiveCapture = accepted;
+          prospectiveScores = Object.create(null);
+          warn("Decisão J2 carregada. Não há certificação temporal externa nem sinais.", false);
+        } else if (payload.schema_version === "j3-ws-watchlist-forward-reference-v1") {
+          check(prospectiveCapture !== null,
+            "Importe primeiro a captura J2 correspondente");
+          const accepted = E.validateProspectiveScore(payload, prospectiveCapture);
+          check(!Object.hasOwn(prospectiveScores, accepted.horizon_bars),
+            "Horizonte já observado nesta sessão; não substituir resultado");
+          prospectiveScores[accepted.horizon_bars] = accepted;
+          warn("Resultado J3 importado. Marca de referência; não representa execução financeira.", false);
         } else if (payload.schema_version === "cia-j5-paper-local-export-v1") {
           const restored = validatePaperBackup(payload);
           if (!window.confirm("Restaurar este backup PAPER? Todos os cenários locais atuais serão substituídos. A VPS e a coleta N50 não serão alteradas.")) {

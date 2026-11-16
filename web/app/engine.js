@@ -340,10 +340,125 @@
     }
     return raw;
   }
+
+  // J3/J5 #661: private-owner *sanitized* research observations only.
+  // Never persist or upload these reports; no on-exchange fills or signals.
+  const UTC_HOUR = 3600000;
+  const PROSPECTIVE_EPOCH_MIN = 1600000000000;
+  const PROSPECTIVE_EPOCH_MAX = 4102444800000;
+  const captureFields = [
+    "schema_version", "status", "capture_records_created", "candidates_captured",
+    "decision_closed_end_ms", "owner_ws_sqlite_readonly_replayed",
+    "local_decision_record_consistency_verified",
+    "prospective_registration_independently_verified", "marketwide_top50_verified",
+    "financial_backtest_approved", "approved_for_signals", "live_trading_authorized",
+    "orders_sent", "network_requests", "database_mutation_statements", "systemd_modified"
+  ];
+  const scoreFields = [
+    "schema_version", "status", "quality", "horizon_bars", "selected_observations",
+    "matured_observations", "aligned_observations", "contrary_observations",
+    "unchanged_observations", "gross_reference_bps_sum",
+    "net_reference_after_assumed_costs_bps_sum",
+    "same_side_btc_excess_reference_bps_sum",
+    "assumed_total_cost_quote_units", "funding_events_hypothetical",
+    "prospective_registration_verified", "intrabar_path_verified",
+    "venue_fees_verified", "funding_schedule_verified",
+    "out_of_sample_results_validated", "financial_backtest_approved",
+    "marketwide_top50_verified", "approved_for_signals", "live_trading_authorized",
+    "orders_sent", "network_requests", "database_accessed",
+    "database_mutation_statements", "systemd_modified",
+    "owner_local_decision_file_verified", "decision_closed_end_ms",
+    "future_closed_end_ms", "owner_ws_sqlite_readonly_replayed",
+    "prospective_registration_independently_verified"
+  ];
+  function exactKeys(raw, fields) {
+    requireValid(raw && typeof raw === "object" && !Array.isArray(raw) &&
+      Object.keys(raw).length === fields.length &&
+      fields.every(field => Object.hasOwn(raw, field)),
+      "Relatório prospectivo contém campos desconhecidos ou incompletos");
+  }
+  function hourlyUtc(value) {
+    return Number.isSafeInteger(value) &&
+      value >= PROSPECTIVE_EPOCH_MIN && value < PROSPECTIVE_EPOCH_MAX &&
+      value % UTC_HOUR === 0 && value <= Date.now() + 300000;
+  }
+  function boundedCount(value, max) {
+    return Number.isSafeInteger(value) && value >= 0 && value <= max;
+  }
+  function validateProspectiveCapture(raw) {
+    exactKeys(raw, captureFields);
+    requireValid(raw.schema_version === "j2-ws-owner-ledger-status-v1" &&
+      raw.status === "owner_local_decision_captured_not_independent_attestation" &&
+      raw.capture_records_created === 1 &&
+      boundedCount(raw.candidates_captured, 10) &&
+      hourlyUtc(raw.decision_closed_end_ms) &&
+      raw.owner_ws_sqlite_readonly_replayed === true &&
+      raw.local_decision_record_consistency_verified === true &&
+      ["prospective_registration_independently_verified", "marketwide_top50_verified",
+       "financial_backtest_approved", "approved_for_signals", "live_trading_authorized",
+       "orders_sent", "systemd_modified"].every(x => raw[x] === false) &&
+      raw.network_requests === 0 && raw.database_mutation_statements === 0,
+      "Captura prospectiva inválida ou sem prova local");
+    return raw;
+  }
+  function validateProspectiveScore(raw, capture) {
+    const decision = validateProspectiveCapture(capture);
+    exactKeys(raw, scoreFields);
+    const scored = raw.status === "ex_post_reference_marks_scored_not_a_backtest";
+    const noCandidates = raw.status === "no_observations_selected";
+    const decimal = v => typeof v === "string" &&
+      /^-?(?:0|[1-9][0-9]{0,299})(?:\\.[0-9]{1,300})?$/.test(v);
+    requireValid(raw.schema_version === "j3-ws-watchlist-forward-reference-v1" &&
+      (scored || noCandidates) &&
+      raw.quality === "ex_post_closed_mark_cost_assumptions_not_fills" &&
+      [1, 4, 8].includes(raw.horizon_bars) &&
+      raw.selected_observations === decision.candidates_captured &&
+      boundedCount(raw.matured_observations, 10) &&
+      raw.decision_closed_end_ms === decision.decision_closed_end_ms &&
+      hourlyUtc(raw.future_closed_end_ms) &&
+      raw.future_closed_end_ms === raw.decision_closed_end_ms +
+        raw.horizon_bars * UTC_HOUR &&
+      raw.owner_local_decision_file_verified === true &&
+      raw.owner_ws_sqlite_readonly_replayed === true &&
+      raw.database_accessed === true &&
+      ["prospective_registration_verified", "intrabar_path_verified",
+       "venue_fees_verified", "funding_schedule_verified",
+       "out_of_sample_results_validated", "financial_backtest_approved",
+       "marketwide_top50_verified", "approved_for_signals",
+       "live_trading_authorized", "orders_sent", "systemd_modified",
+       "prospective_registration_independently_verified"].every(x => raw[x] === false) &&
+      raw.network_requests === 0 && raw.database_mutation_statements === 0 &&
+      boundedCount(raw.funding_events_hypothetical, 100),
+      "Resultado J3 inconsistente com a captura ou com flags de segurança");
+    if (noCandidates) {
+      requireValid(raw.selected_observations === 0 &&
+        raw.matured_observations === 0 && raw.aligned_observations === 0 &&
+        raw.contrary_observations === 0 && raw.unchanged_observations === 0 &&
+        ["gross_reference_bps_sum", "net_reference_after_assumed_costs_bps_sum",
+         "same_side_btc_excess_reference_bps_sum",
+         "assumed_total_cost_quote_units"].every(key => raw[key] === null) &&
+        raw.funding_events_hypothetical === 0,
+        "Ausência de oportunidades não pode gerar PnL");
+    } else {
+      requireValid(raw.selected_observations > 0 &&
+        raw.matured_observations === raw.selected_observations &&
+        ["aligned_observations", "contrary_observations",
+         "unchanged_observations"].every(k => boundedCount(raw[k], 10)) &&
+        raw.aligned_observations + raw.contrary_observations +
+          raw.unchanged_observations === raw.matured_observations &&
+        ["gross_reference_bps_sum", "net_reference_after_assumed_costs_bps_sum",
+         "same_side_btc_excess_reference_bps_sum",
+         "assumed_total_cost_quote_units"].every(k => decimal(raw[k])),
+        "Métricas J3 ausentes ou inconsistentes");
+    }
+    return raw;
+  }
+
   const publicApi = Object.freeze({
     SCALE, BPS, format, fixed, percent, settings, emptyState,
     openPosition, partialExit, closeRunner, grossEntryExposureCents,
-    grossMarkPnlCents, applyAutoPaperStep, replayAutoPaperMarks, validateState
+    grossMarkPnlCents, applyAutoPaperStep, replayAutoPaperMarks, validateState,
+    validateProspectiveCapture, validateProspectiveScore
   });
   global.CIAEngine = publicApi;
   if (typeof module === "object" && module && module.exports) module.exports = publicApi;

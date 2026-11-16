@@ -467,3 +467,6 @@ Com aceite J1 D360 para pesquisa, reutilizar watchlist WS J2 #638, avaliação J
 ## J2/J3 #658 D362 — iniciar observação prospectiva real sem refazer J1
 
 Aprimoramento operacional após J1 D360 e J2/J3 D348: script em checkout owner separado para preflight OS somente leitura, captura de uma decisão J2 no fechamento UTC após provas privadas de 50x24 e avaliação 1/4/8h em tempos distintos. O código e CI não significam release. Implantação e captura reais demandam gate expresso, sem alterar timers e dados da J1. Ver `docs/J2_OWNER_PROSPECTIVE_PILOT_D362.md`.
+
+## J3/J5 #661 — distinguir decisão, observação e posição PAPER
+A interface local distingue: (a) observações registradas antes do resultado; (b) resultados J3 posteriores, se existirem; (c) posição simulada J4, que não deriva de nenhuma captura J2. Sem transição implícita de pesquisa para ordem ou PnL, sem backend público, sem mudança N50.
