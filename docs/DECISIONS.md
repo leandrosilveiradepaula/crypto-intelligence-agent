@@ -1,6 +1,6 @@
 # Decisões do produto
 
-Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente.
+Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente. **Para destino de execução, D383 (Bybit exclusiva) prevalece sobre a escolha aberta de Binance/Bybit da D77 histórica; D77 (operação automática) permanece vigente.**
 
 - D01: mercado inicial de futuros perpétuos de criptomoedas. Universo dinâmico, referência inicial nos 50 contratos elegíveis de maior volume.
 - D02: alavancagem global inicial 50x, configurável. Mudanças afetam apenas novas posições; cada posição preserva a alavancagem de abertura.
