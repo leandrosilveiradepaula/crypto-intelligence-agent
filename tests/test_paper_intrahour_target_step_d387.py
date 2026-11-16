@@ -87,16 +87,6 @@ class PaperIntrahourAutoTargetD387Tests(unittest.TestCase):
             initial_units=D(100),
             tranches=(
                 SyntheticExitTranche(ExitBasis.INITIAL_POSITION, D(30)),
-                SyntheticExitTranche(ExitBasis.REMAINING_BALANCE, D("28.571428")),
-            ),
-            residual_floor_percent=D("49.99"),
-        )
-        # First exit 30 units, second 19.9999996, which is not a lot multiple;
-        # use exact percent with a matching lot step in the actual fixture.
-        plan = SyntheticExitPlan(
-            initial_units=D(100),
-            tranches=(
-                SyntheticExitTranche(ExitBasis.INITIAL_POSITION, D(30)),
                 SyntheticExitTranche(ExitBasis.INITIAL_POSITION, D(20)),
             ),
             residual_floor_percent=D(50),
