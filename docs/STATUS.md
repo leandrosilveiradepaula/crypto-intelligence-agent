@@ -1719,3 +1719,6 @@ Implementação candidata em branch `work/issue-669-paper-adverse-stress`: perda
 
 ## J1 #671 — incidente operacional WS após J1 D360 (16/11/2026)
 VPS: WS timer/rotation desabilitados após `ws_journal_closed_replay_conflict` de 09:00 UTC; REST fallback ativo mas última execução falhou com `catchup_exceeds_48h_owner_review`, sem GET. A aprovação J1 para pesquisa permanece válida para as janelas auditadas, mas coleta atual não é contínua. Branch `work/issue-671-j1-ws-replay-countonly-audit` desenvolve diagnóstico owner SQLite `mode=ro` e testes offline; ainda não executado contra owner privado. Sem alterar regra de persistência, serviço ou J2. Gate: PR/CI e auditoria real antes de reparo ou reativação. Veja `docs/J1_N50_WS_REPLAY_RECOVERY_D379.md`.
+
+## J1 #671 D380 — código de replay econômico restrito (16/11/2026)
+Auditoria real `cia-probe` job `a26605d332994bfdbc542b2f315d5877`, exit 0: epoch válida, PRAGMA integrity OK, fechamentos 08h=50 e 09h=50, total 250 linhas. No frame privado recusado não há prova de campos alterados. Branch `work/issue-671-j1-ws-economic-replay-d380` adapta idempotência apenas para clocks monotônicos com financeiro e identidade invariantes, acrescenta regressões negativas; não altera SQLite no VPS, nem serviço, nem N50 ativo. Reativação depende de release com gate separado.
