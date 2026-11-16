@@ -89,3 +89,7 @@ Primeiro produto navegável real em `web/app/index.html`, responsivo e PT-BR: da
 
 ## J5/APP-SYNC1 — status de coleta com refresh local
 O aplicativo PAPER já oferece atualização N50 em loopback (`127.0.0.1:8765`), somente se o servidor local read-only for iniciado explicitamente. A consulta usa o exportador sanitizado do journalctl e 24 slots; feedback de falha desconecta o indicador sem fingir sincronização. A abertura local `file://` permanece offline. Isto não equivale a aplicativo publicado, acesso autenticado pelo celular fora da VPS, sinal ou execução real; esses próximos passos exigem release e controle de acesso. `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+## J4 D388 — proteção PAPER de emergência como requisito de gestão automática (16/11/2026)
+
+A J4 precisa oferecer stop automático **antes de atingir qualquer alvo** e preservar saídas parciais em tempo intrahorário. D388 introduz uma reserva `REDUCE_ONLY` PAPER de **saldo confirmado integral** (marcada `tranche_step=-1` no journal AUTO4 existente), disparada por `markPrice` Bybit, com segurança de ledger sob UNKNOWN/replays e sem preço de fill inventado. O stop possui precedência lógica sobre alvos; caso exista saída anterior não reconciliada, nova reserva é bloqueada e a proteção é declarada **não comprovada**. A implementação não representa stop nativo na corretora; antes de negociação real, provar proteção Bybit efetiva, modo de posição, latência e recuperação de desconexão. Detalhes em `docs/J4_PAPER_EMERGENCY_STOP_D388.md`.
