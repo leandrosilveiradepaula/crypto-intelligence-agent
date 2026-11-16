@@ -1764,3 +1764,7 @@ Implementação `paper_intrahour_quote_router_d391.py` liga as cotações D385/D
 ## J4 #676 / D392 — evidência executável de fluxo PAPER end-to-end (16/11/2026)
 
 Novo comando `python -m scripts.run_paper_intrahour_proof_d392` e testes integrados exercitam ticker fictício -> router D391 -> stop/targets D389 -> SQLite AUTO4, com entrada 10h05, primeira parcial 10h12, segunda 10h19, stop 10h27, fills *explicitamente simulados* e reinício entre frames, para LONG/SHORT e cenário UNKNOWN bloqueante. O relatório canônico inclui digest e saldo, sem valores de preços nem IDs de posição. **CI, PR e merge devem ser conferidos no GitHub antes de afirmar sucesso**; nenhum feed real ou ordem foi executado por esta tarefa. Documento `docs/J4_PAPER_INTRAHOUR_PROOF_D392.md`.
+
+## J3/J4 D393 — auditar custos somente de fills PAPER explícitos (16/11/2026)
+
+D393 acrescenta `paper_closed_cost_audit_d393.py`, testes e CLI `python -m scripts.run_paper_cost_audit_d393` para conectar o ledger AUTO4 de D392 ao motor de taxas/slippage/funding J3 já existente. Cenário sintético LONG fechado exige preço declarado para três FILLs, calcula custo condicional (-41,385 unidades fictícias com premissas 10/10/5/5 bps e funding 2 bps); cenário UNKNOWN deve retornar campo net null, sem falsa venda. **Não prova liquidação, financiamento real, PnL, preço Bybit ou rentabilidade.** Consultar SHA/CI/merge no GitHub antes de marcar entrega aprovada.
