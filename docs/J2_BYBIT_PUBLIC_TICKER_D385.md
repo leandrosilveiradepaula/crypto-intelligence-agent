@@ -26,7 +26,11 @@ iniciar a sessão. `begin_acknowledged_session` limpa os estados de
 sessões anteriores. Após desconexão, `mark_disconnected` invalida TODOS
 os preços; próximo acesso requer novo snapshot após nova inscrição.
 Assinaturas dinâmicas são planejadas por `rotate_membership`, sem enviar
-uma mensagem pelo próprio componente.
+uma mensagem pelo próprio componente. Após novo ACK validado pelo chamador,
+`acknowledge_added_topics` libera **somente** os tópicos novos admitidos;
+quadros que chegarem antes do ACK são rejeitados e invalidam a sessão.
+Uma atualização de universo com tempo no futuro não autoriza usar seus dados
+antes do instante de observação PIT.
 
 Quadro `snapshot` inicial precisa conter preços last, mark, index,
 bid1/ask1 e respectivas quantidades. `delta` atualiza somente os campos
