@@ -489,9 +489,20 @@ class SQLiteOfflineClosedStreamJournal:
                     (event.symbol, event.open_ms),
                 ).fetchone()
                 if previous:
-                    _validated_payload(previous[0], previous[1])
+                    stored = _validated_payload(previous[0], previous[1])
                     if previous != (event.payload, event.digest):
-                        raise DataGapError("conflicting replay of closed hour")
+                        # D380: the transport can repeat a confirmed, frozen
+                        # candle with later receipt/server/trade timestamps.
+                        # Immutable economic identity and PIT membership must
+                        # match EXACTLY; preserve the first owner receipt.
+                        # Each complete payload has already passed the strict
+                        # bounded clock, digest, and OHLCV validators.
+                        clock_fields = {"received_ms", "server_ms", "trade_ms"}
+                        if (any(payload[key] != stored[key]
+                                for key in _PAYLOAD_FIELDS - clock_fields)
+                                or any(payload[key] < stored[key]
+                                       for key in clock_fields)):
+                            raise DataGapError("conflicting replay of closed hour")
                     return "idempotent"
                 count = db.execute("SELECT COUNT(*) FROM confirmed").fetchone()[0]
                 if count >= MAX_JOURNAL_ROWS:
