@@ -167,7 +167,7 @@
           const impactBps = E.grossHypotheticalMarginImpactBps(
             position, decimal(markInput.value));
           result.textContent = "PnL bruto hipotético: " + amount(gross);
-          marginImpact.textContent = "Impacto bruto na margem PAPER: " +
+          marginImpact.textContent = "Impacto bruto na margem original PAPER (saldo aberto): " +
             E.format(impactBps, 2) + "%" +
             (impactBps <= -10000n ?
               " · perda teórica igual ou superior à margem; liquidação real desconhecida" :

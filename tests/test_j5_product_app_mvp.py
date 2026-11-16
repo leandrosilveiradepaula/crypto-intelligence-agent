@@ -226,14 +226,15 @@ assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-10000n);
 assert.equal(E.grossHypotheticalMarginImpactBps(a,"97"),-15000n);
 assert.equal(E.grossHypotheticalMarginImpactBps(a,"101"),5000n);
 E.partialExit(a,{basis:"REMAINING_BALANCE",percent:"50"});
-assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-10000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-5000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"96"),-10000n);
 const b = E.openPosition(state,{
   symbol:"ETHUSDT",side:"SHORT",entry:"100",margin:"2",leverage:20,runner:"0"
 });
 assert.equal(E.grossHypotheticalMarginImpactBps(b,"102"),-4000n);
 assert.equal(E.grossHypotheticalMarginImpactBps(b,"98"),4000n);
 state.config.leverage = 1;
-assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-10000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-5000n);
 assert.equal(E.grossHypotheticalMarginImpactBps(b,"102"),-4000n);
 assert.throws(()=>E.grossHypotheticalMarginImpactBps(a,"NaN"));
 assert.throws(()=>E.grossHypotheticalMarginImpactBps(a,"0"));

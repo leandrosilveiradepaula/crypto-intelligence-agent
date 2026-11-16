@@ -234,7 +234,7 @@
     return difference * BigInt(position.remainingUnits) * direction / 100000000000000n;
   }
   function grossHypotheticalMarginImpactBps(position, rawMark) {
-    // Price move × leverageAtOpen, on the original simulated margin.
+    // Price move × leverageAtOpen × remaining/initial on original margin.
     // This is NOT liquidation, a fill, net return or risk-adjusted profit.
     requireValid(position && position.status === "OPEN" &&
       ["LONG", "SHORT"].includes(position.side) &&
@@ -245,8 +245,15 @@
     requireValid(mark > 0n, "Mark hipotético deve ser positivo");
     const entry = BigInt(position.entryPriceUnits);
     requireValid(entry > 0n, "Preço hipotético de entrada inválido");
+    const initial = BigInt(position.initialUnits);
+    const remaining = BigInt(position.remainingUnits);
+    requireValid(initial > 0n && remaining > 0n && remaining <= initial,
+      "Quantidades PAPER inválidas");
     const side = position.side === "LONG" ? 1n : -1n;
-    return (mark - entry) * side * BigInt(position.leverageAtOpen) * BPS / entry;
+    // Numerator scales remaining exposure: partial exits lower the loss
+    // relative to the ORIGINAL margin, without changing leverageAtOpen.
+    return (mark - entry) * side * BigInt(position.leverageAtOpen) *
+      BPS * remaining / (entry * initial);
   }
 
   function validateState(raw) {
