@@ -1722,3 +1722,6 @@ VPS: WS timer/rotation desabilitados após `ws_journal_closed_replay_conflict` d
 
 ## J1 #671 D380 — código de replay econômico restrito (16/11/2026)
 Auditoria real `cia-probe` job `a26605d332994bfdbc542b2f315d5877`, exit 0: epoch válida, PRAGMA integrity OK, fechamentos 08h=50 e 09h=50, total 250 linhas. No frame privado recusado não há prova de campos alterados. Branch `work/issue-671-j1-ws-economic-replay-d380` adapta idempotência apenas para clocks monotônicos com financeiro e identidade invariantes, acrescenta regressões negativas; não altera SQLite no VPS, nem serviço, nem N50 ativo. Reativação depende de release com gate separado.
+
+## J1 #671 / D381 — recuperação WS preparada, sem deploy (16/11/2026)
+PR de código #673 D380 integrada main `4f273a6f20193423054d18e8f11b895aa109d12b`, Linux/Windows/Chrome verdes, sem reativar VPS. A execução de retorno J1 está em `deploy/vps/recover_j1_n50_ws_d381_once.sh` na branch `work/issue-671-j1-ws-recovery-d381`, aguardando CI/merge do executor e gate específico de release. `systemd-analyze verify` das units existentes PASS em job isolado real `7ca33e409672436bae39e6a12f8c092d` (a chamada confinada `vps_exec` não tinha DAC e não vale como falha da unit). Nenhum cutover foi executado. Issue #671 permanece aberta.
