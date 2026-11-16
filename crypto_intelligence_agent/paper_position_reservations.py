@@ -376,8 +376,10 @@ def _balance(record: _PaperRecord) -> PaperPositionBalance:
             outstanding = replay.unfilled_units if replay.requires_reconciliation else Decimal(0)
             if x.tranche_step == -1:
                 if (runner_order_seen
-                        or any(o.snapshot.requires_reconciliation for o in order_states)):
-                    raise DataValidationError("PAPER protective stop with unresolved exits")
+                        or any(o.snapshot.requires_reconciliation for o in order_states)
+                        or order.requested_units != initial - sum(filled, Decimal(0))
+                        or order.max_reducible_units != order.requested_units):
+                    raise DataValidationError("PAPER protective stop needs full remaining balance")
                 protective_stop_seen = True
                 protective_filled += replay.filled_total_units
                 protective_reserved += outstanding
