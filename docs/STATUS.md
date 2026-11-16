@@ -1748,3 +1748,7 @@ Na continuação autônoma sem acesso para cutover J1, o código do supervisor p
 ## J4 #676 / D388 — stop antes dos alvos (16/11/2026)
 
 Na frente de automação sem VPS, a PR #683 propõe extensão PAPER do journal existente para stop integral `tranche_step=-1`, ativado por mark Bybit, incluindo stop LONG/SHORT, saldo remanescente após parcial, UNKNOWN/pending bloqueante, replays e concorrência. Docs `docs/J4_PAPER_EMERGENCY_STOP_D388.md`. **Checar CI e merge reais antes de classificar entregue**; um stop PAPER é somente intenção, não ordem nativa. Próximo código é coordenar stop primeiro e alvos D387 em um só consumidor de quote, depois integrar runner e feed #677. J1 D384 continua pendente de executor na VPS; não misturar as jornadas.
+
+## J4 #676 / D389 — primeira coordenação de saídas automáticas PAPER (16/11/2026)
+
+Com D387 e D388 integrados, D389 implementa `paper_intrahour_coordinator_d389.py`: um tick pode acionar stop ou alvo, **nunca ambos**; stop vem primeiro. Testes offline cobrem simultaneidade, reservas idempotentes, parcial anterior preenchida/pendente, stale, LONG/SHORT. Evidência de merge/CI depende da PR D389. Nenhum preço simulado equivale a fill e nenhum stop nativo/ordem real está disponível. Próximas camadas: trailing/runner, integração ao WS público D386 e replay intrabar J3/J6. J1 D384 continua pendente da execução na VPS.
