@@ -1740,3 +1740,7 @@ WS 13:59 UTC rejeitou ativação por `scripts.preflight_j1_n50_ws_systemd` (stat
 ## J2 #677 / D385 — parser intrahorário Bybit (16/11/2026)
 
 Primeira implementação de código: `crypto_intelligence_agent/bybit_public_ticker_state_d385.py` modela snapshot/delta com Decimal exato, valida tempos/sequências e citações obsoletas, planos de subscriptions para N50 e símbolos com posições abertas, sem ordens e sem tocar J1. Testes offline `tests/test_bybit_public_ticker_state_d385.py`, documentação `docs/J2_BYBIT_PUBLIC_TICKER_D385.md`. **Ainda não existe conexão WebSocket persistente na VPS** nem execução de sinais com este módulo; próximo passo #677 é supervisor com ACK/reconnect/backpressure, então #676 PAPER. A issue J1 #671 continua sem cutover D384: PR #679 mergeada `599431c043f863a915178f967af232408029b796`, execução do release pela ferramenta barrada antes do job.
+
+## J2 #677 / D386 — supervisor intrahorário de mercado Bybit (16/11/2026)
+
+Na continuação autônoma sem acesso para cutover J1, o código do supervisor público D386 e testes de fake socket foram propostos para controlar **sessão WebSocket de mercado** com ACK, reconexão, limite de consumo, ping/pong, quote typed D385 e callback PAPER. PR/CI/merge consultar no GitHub e não assumir conclusão sem evidência. O código **não é serviço 24×7 instalado**; próxima integração é conector público real e benchmark em ambiente isolado, depois J4 #676. Sem alterar o N50 J1, ordens, conta ou custo.
