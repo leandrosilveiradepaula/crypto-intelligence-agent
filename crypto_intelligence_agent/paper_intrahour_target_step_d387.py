@@ -156,7 +156,8 @@ def step_paper_intrahour_target(
         raise DataValidationError("PAPER target plan/venue/position mismatch")
     if (cutoff < b.as_of_ms or quote.received_at_ms < b.as_of_ms
             or quote.exchange_at_ms < b.opened_at_ms
-            or quote.exchange_at_ms > quote.received_at_ms + 5_000):
+            or quote.exchange_at_ms > quote.received_at_ms + 5_000
+            or quote.exchange_at_ms > cutoff):
         raise DataGapError("PAPER target noncausal position/quote time")
 
     def outcome(state: PaperAutoTargetState, step: int | None = None,
