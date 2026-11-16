@@ -141,7 +141,7 @@ class AppLayoutContractTests(unittest.TestCase):
         code = r"""
 const assert = require("node:assert/strict");
 const E = require("./web/app/engine.js");
-const end = Date.UTC(2026, 10, 16, 3, 0);
+const end = Date.UTC(2026, 10, 15, 3, 0);
 const C = {
   schema_version:"j2-ws-owner-ledger-status-v1",
   status:"owner_local_decision_captured_not_independent_attestation",
