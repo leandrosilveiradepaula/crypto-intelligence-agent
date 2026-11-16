@@ -1725,3 +1725,6 @@ Auditoria real `cia-probe` job `a26605d332994bfdbc542b2f315d5877`, exit 0: epoch
 
 ## J1 #671 / D381 — recuperação WS preparada, sem deploy (16/11/2026)
 PR de código #673 D380 integrada main `4f273a6f20193423054d18e8f11b895aa109d12b`, Linux/Windows/Chrome verdes, sem reativar VPS. A execução de retorno J1 está em `deploy/vps/recover_j1_n50_ws_d381_once.sh` na branch `work/issue-671-j1-ws-recovery-d381`, aguardando CI/merge do executor e gate específico de release. `systemd-analyze verify` das units existentes PASS em job isolado real `7ca33e409672436bae39e6a12f8c092d` (a chamada confinada `vps_exec` não tinha DAC e não vale como falha da unit). Nenhum cutover foi executado. Issue #671 permanece aberta.
+
+## Produto D382 — ratificação da automação de trading (16/11/2026)
+A decisão D77 de 26/10/2026 **já determinava** execução automática de entradas e saídas. D06 é histórica; explicação anterior de execução manual como destino estava errada. Reforço de contrato: WS N50 de 1h é contexto, não monitoração de posições; entradas, stops e saídas poderão ocorrer intrahora por feed/eventos independentes, com testes PAPER antes de integração live. Próximas tarefas nos escopos já abertos: J2 #3, J4 #5, J5 #6 e J6 #7. Sem ativação de ordens reais, credenciais, serviços novos ou gastos. 

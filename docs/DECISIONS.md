@@ -7,7 +7,7 @@ Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas 
 - D03: margem configurável por posição; US$ 1 a US$ 5 são exemplos, não limites. Quantidade de posições é variável, sem meta fixa.
 - D04: núcleo de decisões quantitativo/estatístico. Regimes, BTC, tendência, rompimentos, compressão, correções, força relativa, volume, liquidez, volatilidade e derivativos.
 - D05: saídas fragmentadas configuráveis sobre posição inicial ou saldo remanescente; manter parcela residual para tendências longas.
-- D06: entradas e saídas reais executadas manualmente na primeira versão; não implementar ordens automáticas.
+- D06 **HISTÓRICA, SUBSTITUÍDA PELA D77**: inicialmente descrevia entradas e saídas manuais; **não é requisito vigente**. A D77 exige execução automática de entradas, saídas e gestão de posições como destino do produto. Fase PAPER e gate de live são limites de implantação, não um objetivo manual.
 - D07: custo adicional autorizado R$ 0. Sem serviços pagos ou APIs pagas. Créditos Codex existentes são permitidos nos limites da conta.
 - D08: interface responsiva, simples, mobile-first e em português.
 - D09: engenharia começa pelo Codex direto; ChatGPT coordena. Factory somente após comprovação de autonomia.
@@ -1829,3 +1829,7 @@ No diário proprietário WS, uma segunda mensagem confirmada para o mesmo contra
 
 ## D381 — recuperação root reversível do N50 WS em SHA fixado (#671, 16/11/2026)
 D380 está mergeada em main, sem implantação. Preparar executor root-only D381 para atualização **única** do checkout owner D322 e troca transacional de `cia-j1-rest-hourly.timer` por WS/rotação existentes, somente após autorização expressa do gate operacional. Requer NTP=yes, código antigo SHA exato, origin/main e novo SHA 40 revisado, epoch válida, auditoria owner SQLite 08/09 50×2 sem gaps e testes locais/CI. A janela segura evita limites do fechamento UTC; rollback restaura REST e pin anterior, preservando dados privados. O REST tem `catchup_exceeds_48h_owner_review`, logo um fallback seguro não garante coleta. J2/J3 continuam desinstalados, zero ordens. Ver `docs/J1_N50_WS_RECOVERY_D381.md`.
+
+## D382 — horários de velas não são horários obrigatórios de trading (16/11/2026)
+
+Ratificação da D77, não uma mudança de produto: o Product Owner explicitou novamente que o objetivo sempre foi um **robô totalmente automático**, sem cliques manuais por operação. A coleta N50 WebSocket de candle 1h é um componente de contexto/pesquisa, **não** restringe o motor de entrada, o acompanhamento de risco e as saídas automáticas ao fechamento de 1h. Implementar caminho independente de dados de mercado intrahorários, estado de execução/ordens e gestão orientada a eventos, inclusive alvos parciais, stops, trailing, runner e proteção contra liquidação. Em PAPER, simular esse ciclo automaticamente com eventos intrabar e testes de latência, desconexão e slippage. Quando autorizado, o executor em venue deverá conciliar fills, proteger posições com semântica nativa apropriada e impedir entradas com estado incerto. **D06 é histórica e foi substituída pela D77 em 26/10/2026.** Não alegar que o robô está operacional ou autorizar `testnet`/`live` por esta decisão; os gates técnicos e autorização do titular continuam obrigatórios.

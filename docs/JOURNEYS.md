@@ -4,9 +4,9 @@
 | --- | --- | --- | --- |
 | J0 Fundação | Especificações, decisões, arquitetura, backlog e CI documental | Repositório | #1 |
 | J1 Dados | Coleta de perpétuos, histórico, qualidade, persistência e conformance | J0 | #2 |
-| J2 Entradas | Indicadores, regimes, estratégias e seleção | J1 | #3 |
+| J2 Entradas | Indicadores, regimes, estratégias e seleção causal; projeto de gatilhos intrahorários automáticos após validação | J1 | #3 |
 | J3 Pesquisa | Backtest, funding, slippage, alavancagem, liquidação e validação | J1 e J2 | #4 |
-| J4 Winner Management/Execução | Ledger de ordens/fills, entradas/saídas automáticas, parciais, trailing, runner e reconciliação | J2 e contratos de J3 | #5 |
+| J4 Winner Management/Execução | Ledger de ordens/fills, entradas/saídas automáticas durante a hora, parciais, stops, trailing, runner e reconciliação orientada a eventos | J2 e contratos de J3 | #5 |
 | J5 Produto | Interface PT-BR, posições, histórico, alertas, estado do bot e kill-switch | J2 e J4 | #6 |
 | J6 Homologação | Paper trading contínuo, testnet autorizada, incidentes e gates de eventual live, sem ordens reais na homologação inicial | J1–J5 | #7 |
 | J7 Evolução | ML e contexto ampliado, somente com melhoria validada | J3 e J6 | #8 |
