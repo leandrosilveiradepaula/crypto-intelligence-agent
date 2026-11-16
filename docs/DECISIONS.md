@@ -7,7 +7,7 @@ Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas 
 - D03: margem configurável por posição; US$ 1 a US$ 5 são exemplos, não limites. Quantidade de posições é variável, sem meta fixa.
 - D04: núcleo de decisões quantitativo/estatístico. Regimes, BTC, tendência, rompimentos, compressão, correções, força relativa, volume, liquidez, volatilidade e derivativos.
 - D05: saídas fragmentadas configuráveis sobre posição inicial ou saldo remanescente; manter parcela residual para tendências longas.
-- D06: entradas e saídas reais executadas manualmente na primeira versão; não implementar ordens automáticas.
+- D06 **HISTÓRICA, SUBSTITUÍDA PELA D77**: inicialmente descrevia entradas e saídas manuais; **não é requisito vigente**. A D77 exige execução automática de entradas, saídas e gestão de posições como destino do produto. Fase PAPER e gate de live são limites de implantação, não um objetivo manual.
 - D07: custo adicional autorizado R$ 0. Sem serviços pagos ou APIs pagas. Créditos Codex existentes são permitidos nos limites da conta.
 - D08: interface responsiva, simples, mobile-first e em português.
 - D09: engenharia começa pelo Codex direto; ChatGPT coordena. Factory somente após comprovação de autonomia.
