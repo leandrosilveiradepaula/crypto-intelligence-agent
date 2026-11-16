@@ -4,7 +4,7 @@
 
 Em 16/11/2026, o Product Owner escolheu explicitamente **Bybit** para a plataforma de futuros perpétuos. A partir desta decisão, **Bybit V5 `linear` de contratos cripto USDT liquidados em USDT** é a venue operacional-alvo e a fonte primária de dados para o produto. Binance/Kraken/OKX/Hyperliquid permanecem como pesquisa histórica, sem nova implementação equivalente, roteamento de ordens ou fallback de execução. Não misturar feeds/identificadores/contas de corretoras para gerar uma ordem. Qualquer mudança de venue exige nova decisão do Product Owner.
 
-**A seleção de Bybit não prova acesso da conta, permissões da API, elegibilidade regional, disponibilidade de instrumentos, homologação de risco, capacidade de ordem nem autorização de negociação financeira.** Modo de desenvolvimento `offline_paper`, `order_submission_enabled=false`, `live_trading_enabled=false`. **sem chaves** da conta neste estágio, nenhum POST autenticado de ordens. Testnet requer gate próprio; live requer gate distinto J6 e autorização humana explícita; nenhum segredo no GitHub público, nenhuma ordem real e custo adicional R$0.
+**A seleção de Bybit não prova acesso da conta, permissões da API, elegibilidade regional, disponibilidade de instrumentos, homologação de risco, capacidade de ordem nem autorização de negociação financeira.** Modo de desenvolvimento `offline_paper`, `order_submission_enabled=false`, `live_trading_enabled=false`. **Sem chaves** da conta neste estágio, nenhum POST autenticado de ordens. Testnet requer gate próprio; live requer gate distinto J6 e autorização humana explícita; nenhum segredo no GitHub público, nenhuma ordem real e custo adicional R$0.
 
 ## Revisão do que já existe
 
