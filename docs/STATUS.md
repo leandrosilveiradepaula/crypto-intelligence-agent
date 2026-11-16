@@ -1756,3 +1756,7 @@ Com D387 e D388 integrados, D389 implementa `paper_intrahour_coordinator_d389.py
 ## J2 #677 / D390 — primeiro adaptador público de rede Bybit (16/11/2026)
 
 Novo código de integração D390 reutiliza `_real_session_factory` existente de Bybit (importação lazy) para executar uma lease pública de ticker com opt-in, por duração limitada e sem order send, instalada somente como código; não altera J1 nem inicia daemon. Testes unitários offline e documento `docs/J2_BYBIT_PUBLIC_OPTIN_D390.md` na branch `work/issue-677-bybit-public-optin-adapter-d390`. PR/CI/merge conferir no GitHub. Próximo passo: piloto público isolado, supervisor contínuo e integração PAPER, sem produção até gates.
+
+## J4 #676 / D391 — ligação ticker Bybit → stop/target PAPER (16/11/2026)
+
+Implementação `paper_intrahour_quote_router_d391.py` liga as cotações D385/D386 à decisão D389 e ao ledger AUTO4 existente, com testes de parcial/stop/replay, timestamp/latência, símbolo e callback D386 inteiramente offline. A PR #686 tem code review/CI obrigatórios; não confundir com feed Bybit 24×7 implantado ou execução em conta real. D390 PR #685 já integrada `45e291846a4be2e31312b8e8dbf62e777d70e936`, mas sua lease read-only não foi instalada na VPS. J1 D384 continua bloqueada operacionalmente.
