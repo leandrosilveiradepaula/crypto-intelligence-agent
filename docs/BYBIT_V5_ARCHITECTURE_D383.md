@@ -20,6 +20,7 @@ Em 16/11/2026, o Product Owner escolheu explicitamente **Bybit** para a platafor
 | Inventário e regras | REST público | `GET /v5/market/instruments-info?category=linear&status=Trading`: paginação por cursor (>500 símbolos), `contractType`, `quoteCoin`, `settleCoin`, `priceFilter.tickSize`, `lotSizeFilter.minOrderQty/qtyStep/minNotionalValue`, `leverageFilter.maxLeverage`, modo/limites de mercado |
 | Ranking Top50 ponto-no-tempo | REST público snapshot, não polling intratick | `GET /v5/market/tickers?category=linear` e `turnover24h` em unidade comparável, timestamp/epoch; excluir contratos não cripto, não perpétuos e não elegíveis |
 | História e gaps de velas fechadas | REST público | `GET /v5/market/kline` com `category=linear,interval=60`, `start/end`, páginas de até 1000 em ordem descendente; **excluir vela aberta**; mark-price OHLC por `/v5/market/mark-price-kline` quando necessário |
+| Pesquisa histórica intrahorária (quando houver cobertura) | Arquivos CSV oficiais Bybit + replay controlado | Bybit documenta downloads públicos de históricos de trades, kline, snapshots de livro e funding; **verificar disponibilidade real por ativo/período, ordem de eventos, unidades, custo e condições de uso antes de importar**. Não inferir qualidade de execução a partir de OHLC ou snapshots esparsos. |
 | Mercado intrahorário 24×7 | WS público `wss://stream.bybit.com/v5/public/linear` | `tickers.{symbol}` (snapshot e delta nominal 100 ms; ausência de campo em delta significa inalterado), `kline.60.{symbol}` com `confirm=true`, subscrições seletivas `orderbook.1/50.{symbol}` e `publicTrade` quando justificado |
 | Envio de abertura/redução/alteração | REST **autenticado, somente após gate** | `POST /v5/order/create`, `/amend`, `/cancel`; `orderLinkId` único até 36 chars, `positionIdx` explícito, `reduceOnly` para reduções; ACK **não é** FILL |
 | Proteção real da posição | REST **autenticado, somente após gate** | `POST /v5/position/trading-stop`, com `Full/Partial`, `takeProfit/stopLoss/trailingStop`, trigger `MarkPrice/LastPrice/IndexPrice`; Partial **adiciona** TP/SL, `tpSize=slSize`; verificar proteção após confirmação |
@@ -69,6 +70,7 @@ A referência comercial https://www.bybit.com/pt-BR/derivative-activity/develope
 - https://bybit-exchange.github.io/docs/v5/market/tickers
 - https://bybit-exchange.github.io/docs/v5/market/kline
 - https://bybit-exchange.github.io/docs/v5/market/mark-kline
+- https://www.bybit.com/pt-PT/learn/bybit-guide/how-to-create-a-bybit-api-key (arquivos históricos públicos CSV de trades/livro/kline/funding; validar cobertura)
 - https://bybit-exchange.github.io/docs/v5/ws/connect
 - https://bybit-exchange.github.io/docs/v5/websocket/public/ticker
 - https://bybit-exchange.github.io/docs/v5/websocket/public/kline
