@@ -481,3 +481,7 @@ A evolução J4/J5 distingue marca hipotética de cotação real: impacto bruto 
 
 ## J3 #667 — validação periódica sem hindsight ou execução real
 Após código J2 #663 de captura recorrente, preparar J3 owner **somente leitura** para avaliar decisões congeladas antes das 1/4/8h futuras, sem preencher registros ausentes nem cruzar coorte rotacionada. Resultado de zero candidatos é abstenção, não lucro zero. Renderer de timer HH:17 UTC em SHA40 pinado não instala nem habilita serviço; release separado obrigatório. Ver `docs/J3_OWNER_FORWARD_SCORING_D372.md`.
+
+## J4 / D387 — incremento automático intrahorário, sem reabrir J1
+
+Issue #676: `paper_intrahour_target_step_d387.py` utiliza o journal J4/AUTO4 existente para reservar saídas parciais automaticamente quando o bid (LONG) ou ask (SHORT) satisfaz nível explícito e a cotação é válida. Não exige clique nem novo candle 1h e **não inventa fill**; componentes PAPER previamente implementados de posições, reservas e runner são reutilizados. Próximas tarefas J4 na mesma issue: stop antes dos alvos, trailing/runner integrado, reconciliação de proteção e feed #677; depois testnet/live sob gates. Não confundir esta primeira implementação com execução em produção.
