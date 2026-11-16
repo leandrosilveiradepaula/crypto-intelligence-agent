@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import argparse
 from contextlib import closing
-from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -16,7 +15,7 @@ import time
 from urllib.parse import quote
 
 from crypto_intelligence_agent.bybit_closed_stream_cache import (
-    HOUR_MS, MAX_JOURNAL_ROWS, SQLiteOfflineClosedStreamJournal,
+    HOUR_MS, MAX_JOURNAL_ROWS,
 )
 from crypto_intelligence_agent.j1_n50_ws_epoch_rotation import load_active_n50_ws_epoch
 
@@ -25,7 +24,7 @@ _SCHEMA = "j1-bybit-ws-closed-fixture-v1"
 
 def count_only_hours(path: Path, *, end_ms: int) -> dict:
     """Read exactly one consistent SQLite snapshot; no symbols or market values."""
-    if (type(path) is not Path or not path.is_absolute()
+    if (not isinstance(path, Path) or not path.is_absolute()
             or path.is_symlink() or not path.is_file()
             or type(end_ms) is not int or end_ms <= 2 * HOUR_MS
             or end_ms % HOUR_MS):
