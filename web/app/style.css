@@ -137,6 +137,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .mark-output strong { display: block; font-variant-numeric: tabular-nums; font-size: .89rem; }
 .mark-output small { display: block; color: var(--muted); font-size: .68rem; line-height: 1.45; margin-top: 4px; }
 .mark-output[data-valid="false"] strong { color: var(--red); }
+.risk-impact { display: block; margin: 7px 0; color: var(--muted); line-height: 1.45; }
+.risk-impact[data-severity="critical"] { color: var(--red); font-weight: 750; }
 .auto-policy { grid-column: 1 / -1; min-width: 0; border-top: 1px solid #3a5b73; padding-top: 10px; }
 .auto-policy p { margin: 0 0 9px; }
 .auto-step-button { width: 100%; }

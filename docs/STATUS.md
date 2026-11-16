@@ -1707,3 +1707,6 @@ Apenas código offline: recepção de decisão J2 em JSON sanitizado e resultado
 
 ## J2/OPS-RECURRENT1 #663 — preparação para observação recorrente (16/11/2026)
 Código apenas: um tick de captura J2 owner fail-closed, janela UTC HH:07–HH:13, idempotência por fechamento UTC e renderer de units systemd sem instalação. **A captura recorrente não está ativada.** O único job de score 1h da decisão D364 (#658) foi previamente agendado e deve ser conferido à parte. Gates de release/autorizações pendentes. Ver `docs/J2_OWNER_HOURLY_RESEARCH_D367.md`.
+
+## J4/J5 #665 — risco bruto de margem PAPER (16/11/2026)
+Incremento offline de produto: mostrar impacto percentual bruto sobre margem das posições PAPER a partir de mark manual e `leverageAtOpen` (1–100x), alerta sem inferir liquidação ou proteger posição. Testes 1x/20x/50x, SHORT/LONG e partial runner. Nenhum feed/ordem/posição real ou deploy. Issue #665; PR/CI/SHA são registrados no GitHub.

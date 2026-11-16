@@ -98,6 +98,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('function validateWatchlist(snapshot)', js)
         self.assertIn('function renderWatchlist()', js)
         self.assertIn("mark-reference", js)
+        self.assertIn("E.grossHypotheticalMarginImpactBps(", js)
+        self.assertIn("Impacto bruto na margem original PAPER", js)
+        self.assertIn("liquidação real desconhecida", js)
         self.assertIn("E.applyAutoPaperStep(position,", js)
         self.assertIn("E.replayAutoPaperMarks(position, marks)", js)
         self.assertIn("auto-batch-input", js)
@@ -207,6 +210,45 @@ console.log("J2_J3_PROSPECTIVE_UI_CONTRACT_PASS");
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("J2_J3_PROSPECTIVE_UI_CONTRACT_PASS", result.stdout)
+
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js PAPER mark-to-margin risk projection")
+    def test_j4_margin_impact_is_leverage_at_open_and_never_liquidation(self):
+        js = r"""
+const assert = require("node:assert/strict");
+const E = require("./web/app/engine.js");
+const state = E.emptyState();
+const a = E.openPosition(state, {
+  symbol:"BTCUSDT",side:"LONG",entry:"100",margin:"3",leverage:50,runner:"6"
+});
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"100"),0n);
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-10000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"97"),-15000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"101"),5000n);
+E.partialExit(a,{basis:"REMAINING_BALANCE",percent:"50"});
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-5000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"96"),-10000n);
+const b = E.openPosition(state,{
+  symbol:"ETHUSDT",side:"SHORT",entry:"100",margin:"2",leverage:20,runner:"0"
+});
+assert.equal(E.grossHypotheticalMarginImpactBps(b,"102"),-4000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(b,"98"),4000n);
+state.config.leverage = 1;
+assert.equal(E.grossHypotheticalMarginImpactBps(a,"98"),-5000n);
+assert.equal(E.grossHypotheticalMarginImpactBps(b,"102"),-4000n);
+assert.throws(()=>E.grossHypotheticalMarginImpactBps(a,"NaN"));
+assert.throws(()=>E.grossHypotheticalMarginImpactBps(a,"0"));
+assert.throws(()=>E.grossHypotheticalMarginImpactBps(a,"-1"));
+assert.throws(()=>E.grossHypotheticalMarginImpactBps({...a,leverageAtOpen:0},"99"));
+E.closeRunner(a);
+assert.throws(()=>E.grossHypotheticalMarginImpactBps(a,"99"));
+assert.equal(E.validateState(state).positions.length,2);
+console.log("J4_PAPER_MARGIN_IMPACT_PASS");
+"""
+        result = subprocess.run([shutil.which("node"), "-e", js],
+                                cwd=ROOT, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("J4_PAPER_MARGIN_IMPACT_PASS", result.stdout)
 
     @unittest.skipUnless(shutil.which("node"), "optional Node.js offline PAPER arithmetic")
     def test_bigint_paper_partial_and_fixed_leverage_after_settings_change(self):

@@ -1459,3 +1459,6 @@ Validar via Node/teste offline `E.validateProspectiveCapture` e `E.validateProsp
 
 ## J2 #663 — verificação de candidato recorrente sem deploy
 Testes offline: opt-ins obrigatórios, POSIX UID/GID não root, janela HH:07..HH:13 UTC, drift e mudança da hora, preflight 50×24 não pronto, flags de segurança, relatório de captura com chaves exatas, 0–10 candidatos, duplicate-hour idempotente, zero network/DB write/ordens e timer `Persistent=false`. O renderer aceita apenas SHA40 exato, gera `User=cia-probe`, rede privada, FS estrito e caminho de write no ledger J2; unit não se instala. Gate VPS posterior deve conferir `systemd-analyze verify` e executar teste one-shot sandboxed sem capturar ou mudar N50 antes do release aprovado.
+
+## J4/J5 PAPER-RISK1 #665 — variação bruta sobre margem sem liquidação
+Node offline: LONG50 entrada 100→98 = -100% bruto de margem, →97 = -150%; →101 = +50%; SHORT20 100→102 = -40%, →98 = +40%. Após saída parcial de 50%, LONG 50x 100→98 passa de -100% para -50% **sobre margem original**; alterar alavancagem global não altera `leverageAtOpen`. Reject NaN, zero, negativo, leverage inválido, posição fechada. UI mark manual não persiste no estado, exibe alerta sem simular liquidação/stop/ordem. Regressões navegador mobile, CSP, e CI Linux/docs + Windows/offline + Chrome/PAPER no HEAD exato.

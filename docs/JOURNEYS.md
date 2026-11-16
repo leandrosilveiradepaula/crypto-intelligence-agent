@@ -473,3 +473,6 @@ A interface local distingue: (a) observações registradas antes do resultado; (
 
 ## J2 #663 — construção de histórico prospectivo sem hindsight
 Implementação offline de tentativa de captura J2 periódica, idempotente por hora, com limites POSIX/UTC e validator da mesma coorte N50. Agendamento de produção sujeito a gate específico; rotacionar epoch N50 não implica resetar decisões privadas e uma abstenção não vira sinal. O score futuro continua separado.
+
+## J4/J5 #665 — observabilidade de risco em PAPER
+A evolução J4/J5 distingue marca hipotética de cotação real: impacto bruto na margem configurada (alavancagem individual imutável), alerta visual de perda >= 100%, sem estimativa de margem de manutenção, liquidação real, fill de corretora ou execução. Não ativa J4 automático em live.

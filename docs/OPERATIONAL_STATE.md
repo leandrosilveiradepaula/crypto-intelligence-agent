@@ -1954,3 +1954,7 @@ Autorização explícita do Product Owner. PR #655 **MERGED** no SHA `b75124c2ef
 - Execução real comprovada: apenas primeira captura D364 em 03:00 UTC com zero candidatos, SHA `adb62f4adb6400ff6c871ed3b70c702a4d18bbdf`; score 1h job `b8671bba364948c385e129d0009f38d3` aguardando janela no momento da criação.
 - Sem reativar J1: desenvolvimento do renderer unit owner `scripts/render_j2_ws_prospective_timer_once.py` e tick `scripts/run_j2_ws_owner_recurring_once.py` sob #663; revisão/CI/PR/SHA documentados no GitHub. **Não instalar o timer** neste bloco; autorização anterior não cobre recorrência.
 - Próximo gate operacional: validar políticas de segurança unit, simular timer e pedir autorização de release distinta; apenas então considerar novo serviço J2 sem tocar coletor N50. Zero ordens/custos novos.
+
+## J4/J5 #665 — margem de risco PAPER offline (16/11/2026)
+- Trabalho independente: cálculo BigInt de movimento percentual do mark × alavancagem registrada na posição, com alerta de perda teórica de pelo menos 100% da margem. Não muda ledger de posições e não executa stops; os motores J4 existentes de parciais/runner permanecem imutáveis.
+- Branch `work/issue-665-paper-margin-risk` em revisão; PR/CI/merge exigem comprovação no GitHub. Sem acesso à VPS, sem ordem real, sem custo, sem afirmar preço de liquidação. J2 captura 0 candidatos não abre PAPER automaticamente.
