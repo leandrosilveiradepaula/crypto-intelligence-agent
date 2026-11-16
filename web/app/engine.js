@@ -256,6 +256,26 @@
       BPS * remaining / (entry * initial);
   }
 
+  // Independent adverse scenarios are not a portfolio VaR or a liquidation price.
+  // Ceil the magnitude to the next cent so sub-cent losses are never hidden.
+  function adversePaperShockLossCents(position, shockBps) {
+    requireValid(position && position.status === "OPEN" &&
+      ["LONG", "SHORT"].includes(position.side) &&
+      Number.isInteger(position.leverageAtOpen) &&
+      position.leverageAtOpen >= 1 && position.leverageAtOpen <= 100 &&
+      Number.isSafeInteger(shockBps) && shockBps >= 1 && shockBps <= 10000,
+      "Cenário adverso PAPER inválido");
+    const initial = BigInt(position.initialUnits);
+    const remaining = BigInt(position.remainingUnits);
+    const margin = BigInt(position.marginCents);
+    requireValid(initial > 0n && remaining > 0n && remaining <= initial &&
+      margin > 0n, "Quantidade ou margem PAPER inválida");
+    const numerator = margin * BigInt(position.leverageAtOpen) *
+      remaining * BigInt(shockBps);
+    const denominator = initial * BPS;
+    return (numerator + denominator - 1n) / denominator;
+  }
+
   function validateState(raw) {
     requireValid(raw && typeof raw === "object" && !Array.isArray(raw) &&
       raw.version === 1 && Number.isSafeInteger(raw.nextId) &&
@@ -481,7 +501,7 @@
     SCALE, BPS, format, fixed, percent, settings, emptyState,
     openPosition, partialExit, closeRunner, grossEntryExposureCents,
     grossMarkPnlCents, grossHypotheticalMarginImpactBps,
-    applyAutoPaperStep, replayAutoPaperMarks, validateState,
+    adversePaperShockLossCents, applyAutoPaperStep, replayAutoPaperMarks, validateState,
     validateProspectiveCapture, validateProspectiveScore
   });
   global.CIAEngine = publicApi;
