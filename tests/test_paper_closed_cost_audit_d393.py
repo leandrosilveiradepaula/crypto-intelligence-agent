@@ -214,6 +214,37 @@ class ClosedPaperCostAuditD393Tests(unittest.TestCase):
                 with self.assertRaises(DataValidationError):
                     self.audit(refs, (bad,))
 
+    def test_cli_process_executes_both_cost_and_unknown_abstention(self):
+        import subprocess
+        import sys
+
+        for scenario in ("closed", "unknown"):
+            with self.subTest(scenario=scenario):
+                completed = subprocess.run(
+                    [sys.executable, "-m", "scripts.run_paper_cost_audit_d393",
+                     "--scenario", scenario],
+                    check=True, capture_output=True, text=True, timeout=30,
+                )
+                result = json.loads(completed.stdout)
+                self.assertEqual(result["schema_version"],
+                                 "paper-closed-cost-audit-d393-v1")
+                self.assertFalse(result["net_pnl_verified"])
+                self.assertFalse(result["orders_sent"])
+                if scenario == "closed":
+                    self.assertEqual(
+                        result["conditional_net_after_supplied_costs_quote"],
+                        "-41.385",
+                    )
+                    self.assertEqual(result["paper_fill_count"], 3)
+                    self.assertEqual(result["confirmed_remaining_units"], "0")
+                else:
+                    self.assertEqual(result["status"],
+                                     "reconciliation_or_open_balance_no_cost_pnl")
+                    self.assertIsNone(
+                        result["conditional_net_after_supplied_costs_quote"],
+                    )
+                    self.assertEqual(result["pending_reserved_units"], "30")
+
     def test_zero_cost_is_distinct_from_real_net_profit(self):
         refs = self.close_all()
         zero = SyntheticPartialCostRates(D(0), D(0), D(0), D(0))
