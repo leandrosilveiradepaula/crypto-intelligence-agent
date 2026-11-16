@@ -54,6 +54,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('id="quality-n50"', html)
         self.assertIn('id="quality-j2"', html)
         self.assertIn("Qualidade dos dados", html)
+        self.assertIn('id="metric-stress"', html)
+        self.assertIn('id="metric-stress-count"', html)
+        self.assertIn("Não é VaR", html)
         self.assertIn('id="n50-scope"', html)
         self.assertIn('id="n50-scope-note"', html)
         self.assertIn("Horas da mesma coorte", html)
@@ -100,6 +103,9 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn("mark-reference", js)
         self.assertIn("E.grossHypotheticalMarginImpactBps(", js)
         self.assertIn("Impacto bruto na margem original PAPER", js)
+        self.assertIn("E.adversePaperShockLossCents(position, 100)", js)
+        self.assertIn("E.adversePaperShockLossCents(position, 200)", js)
+        self.assertIn('set("metric-stress", amount(adverse2))', js)
         self.assertIn("liquidação real desconhecida", js)
         self.assertIn("E.applyAutoPaperStep(position,", js)
         self.assertIn("E.replayAutoPaperMarks(position, marks)", js)
@@ -211,6 +217,40 @@ console.log("J2_J3_PROSPECTIVE_UI_CONTRACT_PASS");
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("J2_J3_PROSPECTIVE_UI_CONTRACT_PASS", result.stdout)
 
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js PAPER adverse scenarios")
+    def test_j4_j5_adverse_shocks_respect_partial_leverage_and_cents(self):
+        js = r"""
+const assert = require("node:assert/strict");
+const E = require("./web/app/engine.js");
+const s = E.emptyState();
+const a = E.openPosition(s,{symbol:"BTCUSDT",side:"LONG",entry:"100",margin:"3",leverage:50,runner:"0"});
+const b = E.openPosition(s,{symbol:"ETHUSDT",side:"SHORT",entry:"100",margin:"2",leverage:50,runner:"0"});
+assert.equal(E.adversePaperShockLossCents(a,100),150n);
+assert.equal(E.adversePaperShockLossCents(a,200),300n);
+assert.equal(E.adversePaperShockLossCents(b,200),200n);
+assert.equal(E.adversePaperShockLossCents(a,200)+E.adversePaperShockLossCents(b,200),500n);
+E.partialExit(a,{basis:"REMAINING_BALANCE",percent:"50"});
+assert.equal(E.adversePaperShockLossCents(a,200),150n);
+s.config.leverage=1;
+assert.equal(E.adversePaperShockLossCents(a,200),150n);
+assert.equal(E.adversePaperShockLossCents(b,200),200n);
+const tiny=E.openPosition(s,{symbol:"SOLUSDT",side:"SHORT",entry:"100",margin:"0.01",leverage:1,runner:"0"});
+assert.equal(E.adversePaperShockLossCents(tiny,1),1n); // ceiling of subcent
+for (const shock of [0,-1,10001,1.1,"200",NaN]) {
+ assert.throws(()=>E.adversePaperShockLossCents(a,shock));
+}
+assert.throws(()=>E.adversePaperShockLossCents({...a,remainingUnits:"0"},200));
+E.closeRunner(a);
+assert.throws(()=>E.adversePaperShockLossCents(a,200));
+assert.equal(E.validateState(s).positions.length,3);
+assert.equal(E.emptyState().positions.length,0);
+console.log("J4_J5_PAPER_ADVERSE_STRESS_PASS");
+"""
+        result = subprocess.run([shutil.which("node"), "-e", js],
+                                cwd=ROOT, capture_output=True, text=True, timeout=15)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("J4_J5_PAPER_ADVERSE_STRESS_PASS", result.stdout)
 
     @unittest.skipUnless(shutil.which("node"), "Node.js PAPER mark-to-margin risk projection")
     def test_j4_margin_impact_is_leverage_at_open_and_never_liquidation(self):
