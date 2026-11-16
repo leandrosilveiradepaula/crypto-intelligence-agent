@@ -4,6 +4,14 @@
 
 **Estado em 26/10/2026:** somente preparação offline e pesquisa. **NENHUMA execução de ordens reais foi autorizada, nem existe motor de ordens homologado.** O Product Owner definiu a funcionalidade-alvo, mas não deu autorização para ativar trading real, implantar produção, criar ou utilizar chaves, nem assumir gastos. Custo adicional R$0,00.
 
+## D382 — coleta horária não limita negociação automática intrahorária (16/11/2026)
+
+**A cada hora** o WS N50 atual abre uma janela próxima ao fechamento para coletar candles de 1h. Ele alimenta contexto, regime, features e pesquisa; **não** é a frequência da tomada de decisão nem do acompanhamento de posições no produto-alvo. Não implementar bot que somente entra ou sai nas viradas de hora. O Product Owner **não confirma cada operação**.
+
+No produto-alvo, uma camada **independente de dados intrahorários/tempo real** oferece preço executável/mark, spread, liquidez, estado do feed e timestamp, e uma camada privada da venue reconciliará eventos de ordens/fills/posições. O motor automático de sinais e a gestão de risco/posições reagem a eventos válidos durante a hora, incluindo stops, alvos, saídas parciais, trailing e residual, sem aguardar o próximo candle fechado. Essas camadas ainda **não estão implantadas/homologadas**; o WS N50 horário não é monitor de posições. Estratégias baseadas em candle fechado podem aguardar o próprio candle por decisão estatística, mas a **proteção e supervisão de posições não**.
+
+Antes da integração live, implementar essa divisão em PAPER com replay intrabar determinístico, cenários de gaps e eventos fora de ordem, sinais idempotentes, latência, slippage, taxas, funding, liquidação, reconciliação de fills/stop nativo e travamento de novas entradas sob dados obsoletos. Stops nativos da corretora, quando validados e realmente instalados, reduzem dependência da conexão local, mas não garantem execução, preço ou ausência de slippage; ausência/incerteza de proteção deve impedir novas entradas. **50x aumenta a criticidade do risco**, não autoriza assumir que é seguro. Live continua desabilitado até os gates D77/J6 e autorização explícita do titular.
+
 ## Fluxo-alvo
 
 1. Fonte financeira com contratos/volumes/unidades/licenças verificadas, relógio UTC e qualidade; universo dinâmico Top50 elegível *point-in-time*. A corretora escolhida deve estar disponível na região e para o instrumento efetivo.
