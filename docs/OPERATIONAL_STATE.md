@@ -1954,3 +1954,8 @@ Autorização explícita do Product Owner. PR #655 **MERGED** no SHA `b75124c2ef
 - Execução real comprovada: apenas primeira captura D364 em 03:00 UTC com zero candidatos, SHA `adb62f4adb6400ff6c871ed3b70c702a4d18bbdf`; score 1h job `b8671bba364948c385e129d0009f38d3` aguardando janela no momento da criação.
 - Sem reativar J1: desenvolvimento do renderer unit owner `scripts/render_j2_ws_prospective_timer_once.py` e tick `scripts/run_j2_ws_owner_recurring_once.py` sob #663; revisão/CI/PR/SHA documentados no GitHub. **Não instalar o timer** neste bloco; autorização anterior não cobre recorrência.
 - Próximo gate operacional: validar políticas de segurança unit, simular timer e pedir autorização de release distinta; apenas então considerar novo serviço J2 sem tocar coletor N50. Zero ordens/custos novos.
+
+## J3 #667 — mecanismo de avaliação periódica preparado, não ativado (16/11/2026)
+- J1 aprovada D360, J2 captura real D364 com 0 candidatos; a primeira tentativa de score 1h continua executada por job one-shot separado, sem resultado antecipado. Automação única `6afa76049d2c81919f4fe0d7ed304a23` prevista para consultar job `b8671bba364948c385e129d0009f38d3` às 04:15 UTC.
+- J2 #663 coleta horária código merged; **unidade não existe na VPS** (consulta systemctl `LoadState=not-found` confirmada). O candidato J3 #667 prepara score 1/4/8h causal, owner-only read-only, alternativa `abstained` em coorte/arquivo ausentes. Nenhuma unit instalada ou timer ativado. Escopo somente código, documentação e CI via PR próprio.
+- Release recorrente J2/J3 é gate humano posterior, não autorizado pela primeira captura D364. Zero ordens reais, custo adicional R$0.
