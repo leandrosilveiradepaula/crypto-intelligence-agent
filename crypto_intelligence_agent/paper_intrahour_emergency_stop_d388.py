@@ -135,7 +135,10 @@ def step_paper_emergency_stop(
 
     if (cutoff < quote.received_at_ms
             or cutoff - quote.received_at_ms > rule.max_quote_age_ms
-            or not quote.has_positive_book_depth):
+            or quote.received_at_ms - quote.exchange_at_ms > 30_000
+            or not quote.has_positive_book_depth
+            or quote.bid_price <= 0 or quote.ask_price <= 0
+            or quote.bid_price > quote.ask_price):
         return report(PaperEmergencyStopState.STALE)
     mark = quote.mark_price
     if type(mark) is not Decimal or not mark.is_finite() or mark <= 0:
