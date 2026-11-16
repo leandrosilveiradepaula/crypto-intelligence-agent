@@ -55,7 +55,7 @@ class ClosedPaperCostAuditD393Tests(unittest.TestCase):
         return first
 
     def close_all(self):
-        self.fill_first()
+        first = self.fill_first()
         second = self.router.process(_tick(
             self.book, minute=19, cs=2, kind="delta",
             mark="102.5", bid="103", ask="103.02",
