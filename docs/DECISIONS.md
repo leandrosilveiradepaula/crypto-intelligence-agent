@@ -1936,3 +1936,13 @@ Uma demonstração integral de engenharia deve projetar estado móvel somente ap
 ## D410 — a cobertura completa da sessão precede decisões PAPER intrahora (17/11/2026)
 
 Conectar automaticamente a época owner J1 revalidada e todas as posições AUTO4 monitoradas ao mesmo WebSocket público Bybit, sem duplicar ranking nem journal. Opt-in de cinco gates separa leitura owner, rede pública, pesquisa/região e permissão de reserva sintética PAPER. O router não recebe tick para novas reservas enquanto um único contrato/posição não estiver com cotação fresca da **mesma sessão assinada e confirmada**; reconexão descarta cobertura anterior. Stop continua prioritário, UNKNOWN continua exigindo reconciliação, snapshot expirado não libera ação. Ao fim de cada lease, reler a época owner e degradar status em rotação; reservar decisões não é fill/stop nativo. Padrão fechado e sem instalação 24×7; evidências de mercado real e gate de release permanecem pendentes.
+
+
+## D411 — entradas exigem qualidade de universo; saídas exigem qualidade da posição (17/11/2026)
+
+Substitui o **critério operacional de saídas** estabelecido em D410: exigir todas as cinquenta cotações recentes para reduzir uma posição PAPER existente é inseguro, pois uma falha em ativo não relacionado não deve impedir stop/realização sobre o instrumento com quote válido. Agora o gate J2/J4 escolhe `require_fresh_held_position_for_paper` para PAPER: somente cotações do contrato da posição, validada por D385 após ACK, snapshot, BBO positivo, monotonicidade e atraso <=3 s, chegam ao D391 stop-first; ticker não relacionado permanece diagnóstico de universo. Saúde global degradada continua vedando entrada/alpha e o status de market completeness continua independente. Nenhum preço próprio válido = nenhuma reserva, sem fill inferido. Não ativar ordens reais nem descrever stop PAPER como stop nativo da corretora.
+
+
+## D411 — frescor medido no timestamp da exchange, não só no recebimento (17/11/2026)
+
+Receber frame agora não transforma dado velho em preço atual. O censo público D390/D405 precisa checar a idade exchange→recepção <=3.000 ms antes de contabilizar contrato observado ou fresco; a prova de timestamp não deve ser substituída por `received_at_ms` recente. O report de latência pode contar o frame como aceito para diagnóstico, mas jamais como cobertura válida para oportunidades/PAPER.

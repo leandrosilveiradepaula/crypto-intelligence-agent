@@ -46,6 +46,7 @@ def run_readonly_bybit_ticker_lease(
     paper_router: PaperIntrahourQuoteRouter | None = None,
     measure_public_coverage: bool = False,
     require_complete_fresh_scope_for_paper: bool = False,
+    require_fresh_held_position_for_paper: bool = False,
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
@@ -65,12 +66,17 @@ def run_readonly_bybit_ticker_lease(
     subscriptions: a PAPER callback can receive a tick only after every
     monitored contract has a fresh causal positive-book observation in
     the CURRENT acknowledged WS session. Default behavior is unchanged.
+    D411: a safer opt-in for managing EXISTING PAPER positions dispatches a
+    quote only when that held contract itself has a current valid quote.
+    Global N50 freshness remains a separate research/entry health metric:
+    missing unrelated assets must never disable protective position exits.
     """
     if (type(allow_public_websocket) is not bool
             or type(confirm_personal_readonly_research) is not bool
             or type(confirm_region_eligible) is not bool
             or type(measure_public_coverage) is not bool
-            or type(require_complete_fresh_scope_for_paper) is not bool):
+            or type(require_complete_fresh_scope_for_paper) is not bool
+            or type(require_fresh_held_position_for_paper) is not bool):
         raise DataValidationError("public_ws_gate_type_invalid")
     if (allow_public_websocket is not True
             or confirm_personal_readonly_research is not True
@@ -108,11 +114,17 @@ def run_readonly_bybit_ticker_lease(
         paper_router is None or not measure_public_coverage
     ):
         raise DataValidationError("public_ws_paper_coverage_gate_requires_monitor")
+    if require_fresh_held_position_for_paper and (
+        paper_router is None or not measure_public_coverage
+        or require_complete_fresh_scope_for_paper
+    ):
+        raise DataValidationError("public_ws_held_position_gate_requires_monitor")
     rank_set, position_set = set(ranked_symbols), set(position_symbols)
     monitored = rank_set | position_set
     seen_this_session: dict[str, int] = {}
     paper_frames_deferred = 0
     paper_frames_routed = 0
+    unrelated_frames_ignored_for_paper = 0
 
     def session_reset() -> None:
         # A previous socket's quotes cannot prove a new socket's coverage.
@@ -122,15 +134,32 @@ def run_readonly_bybit_ticker_lease(
 
     def observed_quote(quote: BybitTickerQuote) -> None:
         nonlocal paper_frames_deferred, paper_frames_routed
+        nonlocal unrelated_frames_ignored_for_paper
         if measure_public_coverage:
             # The exchange clock must be causal relative to the supplied
             # point-in-time scope; no inferred synthetic/retrospective ticks.
             if (quote.symbol in monitored
                     and quote.exchange_at_ms >= universe_at_ms
-                    and quote.exchange_at_ms <= quote.received_at_ms
+                    and 0 <= quote.received_at_ms - quote.exchange_at_ms
+                           <= MAX_QUOTE_AGE_MS
                     and quote.has_positive_book_depth):
                 seen_this_session[quote.symbol] = quote.received_at_ms
         if paper_router is not None:
+            if require_fresh_held_position_for_paper:
+                # Monitoring N50 is NOT a condition for protecting a held
+                # contract. Separate market breadth health from exit routing.
+                # Tick validation, ACK and snapshot causality are already
+                # enforced upstream in D385/D386.
+                if quote.symbol not in paper_router.monitored_symbols:
+                    unrelated_frames_ignored_for_paper += 1
+                    return
+                if (quote.symbol not in seen_this_session
+                        or seen_this_session[quote.symbol] != quote.received_at_ms
+                        or not quote.has_positive_book_depth
+                        or not 0 <= quote.received_at_ms - quote.exchange_at_ms
+                               <= MAX_QUOTE_AGE_MS):
+                    paper_frames_deferred += 1
+                    return
             if require_complete_fresh_scope_for_paper and (
                 not monitored.issubset(seen_this_session)
                 or any(
@@ -171,6 +200,17 @@ def run_readonly_bybit_ticker_lease(
                     "mode": "complete_fresh_scope_current_ws_session_only",
                     "quote_frames_deferred": paper_frames_deferred,
                     "quote_frames_delivered_to_paper": paper_frames_routed,
+                    "orders_sent": False,
+                    "approved_for_live_use": False,
+                }
+            if require_fresh_held_position_for_paper:
+                values["paper_coverage_gate"] = {
+                    "mode": "fresh_held_position_quote_independent_of_n50",
+                    "quote_frames_deferred": paper_frames_deferred,
+                    "quote_frames_delivered_to_paper": paper_frames_routed,
+                    "unrelated_market_frames_ignored_for_paper":
+                        unrelated_frames_ignored_for_paper,
+                    "full_universe_required_for_existing_exits": False,
                     "orders_sent": False,
                     "approved_for_live_use": False,
                 }

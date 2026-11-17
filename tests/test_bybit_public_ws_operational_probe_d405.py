@@ -131,6 +131,23 @@ class LiveWSProbeD405Tests(unittest.TestCase):
         self.assertNotIn("100.0", json.dumps(result))
         self.assertNotIn('"conn_id"', json.dumps(result))
 
+    def test_recent_socket_receipt_of_old_exchange_quote_is_not_fresh(self):
+        c = Clock()
+        # The frame reaches us now but was published five seconds ago.
+        # TCP arrival time must never re-age a stale exchange observation.
+        sock = Socket(c, [ack(), quote("BTCUSDT", utc=BASE - 5_000)])
+        result = run(c, [sock])
+        self.assertTrue(sock.closed)
+        self.assertEqual(result["ticker_frames_accepted"] if
+                         "ticker_frames_accepted" in result
+                         else result["market_frames_accepted"], 1)
+        self.assertEqual(result["received_distinct_contracts"], 0)
+        self.assertEqual(result["fresh_contracts_at_end"], 0)
+        self.assertFalse(result["finite_coverage_observed_once"])
+        self.assertFalse(result["finite_coverage_fresh_at_end"])
+        self.assertFalse(result["orders_sent"])
+        self.assertEqual(result["p95_event_lag_bucket"], "over_5000ms")
+
     def test_missing_held_position_not_covered_even_if_btc_works(self):
         c = Clock()
         sock = Socket(c, [ack(), quote("BTCUSDT")])

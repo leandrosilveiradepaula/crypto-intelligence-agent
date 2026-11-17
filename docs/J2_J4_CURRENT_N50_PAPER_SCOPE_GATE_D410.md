@@ -1,4 +1,4 @@
-# J2/J4 D410 — Top 50 atual + posições PAPER no mesmo feed, com bloqueio por cobertura
+\n> **ATUALIZAÇÃO D411:** o bloqueio de saídas PAPER por qualquer ticker faltante do N50 foi corrigido. Para posições já abertas, o gate agora verifica preço fresco **do próprio contrato**, sem condicionar a proteção aos demais ativos. A cobertura integral continua apenas uma métrica de saúde de pesquisa e preparação de entradas. Consulte `docs/J2_J4_POSITION_EXIT_VS_N50_HEALTH_D411.md`.\n\n# J2/J4 D410 — Top 50 atual + posições PAPER no mesmo feed, com bloqueio por cobertura
 
 ## Funcionalidade entregue em código
 
