@@ -1776,3 +1776,7 @@ O módulo `paper_causal_fill_d394.py` usa o journal AUTO4 já existente e ticker
 ## J4 #676 / D395 — trailing/runner conectado ao callback de mercado PAPER (17/11/2026)
 
 Implementados `paper_intrahour_runner_bridge_d395.py` e extensão opt-in de `paper_intrahour_quote_router_d391.py` para completar STOP fixo -> parcial -> trailing LONG/SHORT do residual -> reserva reduce-only, sempre pelo AUTO4. Testes sintéticos incluem 30+20 de parciais confirmadas, residual 50, ratchet/trailing, estado persistido, stop prioritário, UNKNOWN, lacunas e execução pelo mesmo callback D391. Evidência de PR/CI/merge consultar no GitHub antes de declarar concluído; não há deployment VPS ou feed contínuo read-only homologado.
+
+## J2 #677 / D396 — prova de cobertura pública por contrato em duas épocas (17/11/2026)
+
+Comando `python -m scripts.demo_public_n50_coverage_d396` demonstra duas leases **sintéticas** usando transporte D386 injetado, 50 contratos por universo e manutenção de posições fora do N50 entre rotações. O motor `bybit_public_ticker_coverage_d396.py` exige 50/50 válidos e todas as posições em cada época, frescor no final, PIT crescente, e falha fechado se qualquer assinante faltar. Testes incluem ACK sem preço, replay, BBO vazio, reconnect com snapshots incompletos, symbol drift e limites; documentados em `docs/J2_PUBLIC_TICKER_COVERAGE_D396.md`. PR/CI no SHA exato ainda devem ser verificadas. **Não há WebSocket 24×7 em produção, nem monitor real na VPS.**
