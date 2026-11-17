@@ -11,7 +11,7 @@
   let feedOrigin = "none"; // local-auto, manual, or none
   let research = null;
   let researchOrigin = "none";
-  let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
+  let watchlist = null;
   let prospectiveCapture = null;
   let prospectiveScores = Object.create(null);
   let partialRiskReport = null;
@@ -150,8 +150,7 @@
     );
     card.append(cells);
     if (position.status === "OPEN") {
-      // A user-provided hypothetical mark is never fetched or persisted.
-      // Replay using PAPER engine.
+       // Replay using PAPER engine.
       const mark = el("section", "mark-reference");
       mark.setAttribute("aria-label", "Variação bruta PAPER de " + position.id);
       const label = el("label", "field", "Mark hipotético (US$)");
@@ -185,8 +184,7 @@
           marginImpact.dataset.severity = impactBps <= -10000n ? "critical" : "normal";
           output.dataset.valid = "true";
         } catch (_) {
-          // Never show an outdated favorable result for malformed input.
-          result.textContent = "Mark inválido: informe preço positivo válido.";
+           result.textContent = "Mark inválido: informe preço positivo válido.";
           marginImpact.textContent = "Impacto na margem indisponível.";
           marginImpact.dataset.severity = "normal";
           output.dataset.valid = "false";
