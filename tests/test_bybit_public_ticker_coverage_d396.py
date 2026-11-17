@@ -110,7 +110,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
             return sock
         return new_session
 
-    def run(self, factories, *, epochs=None, seconds=3, sessions=1):
+    def run_pilot(self, factories, *, epochs=None, seconds=3, sessions=1):
         return run_finite_public_ticker_coverage_pilot(
             epochs=(self.a, self.b) if epochs is None else epochs,
             session_factories=tuple(factories),
@@ -125,7 +125,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
     def test_two_50_ranked_epochs_and_open_position_outside_n50(self):
         a = self.factory(self.a.monitored)
         b = self.factory(self.b.monitored)
-        report = self.run((a, b))
+        report = self.run_pilot((a, b))
         self.assertEqual(report.status, "finite_samples_observed_not_continuous")
         self.assertEqual(report.attempted_epochs, 2)
         self.assertEqual(report.ranked_rotations, 1)
@@ -159,7 +159,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
     def test_50_ranked_without_held_outside_ranked_is_incomplete(self):
         f1 = self.factory(self.a.monitored, only=FIRST)
         f2 = self.factory(self.b.monitored)
-        r = self.run((f1, f2))
+        r = self.run_pilot((f1, f2))
         self.assertEqual(r.status, "abstained_incomplete_coverage")
         self.assertEqual(r.attempted_epochs, 1)
         self.assertEqual(r.ranked_rotations, 0)
@@ -170,7 +170,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
         self.assertTrue(self.created[0].closed)
 
     def test_ack_alone_and_duplicate_volume_never_claim_coverage(self):
-        no_quotes = self.run((
+        no_quotes = self.run_pilot((
             self.factory(self.a.monitored, only=()),
             self.factory(self.b.monitored),
         ))
@@ -182,7 +182,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
 
         self.setUp()
         duplicate = snapshot(FIRST[0], self.clock.wall())
-        r = self.run((
+        r = self.run_pilot((
             self.factory(self.a.monitored, only=(FIRST[0],),
                          extras=(duplicate,) * 90),
             self.factory(self.b.monitored),
@@ -193,7 +193,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
         self.assertFalse(r.all_observed_coverage)
 
     def test_zero_book_depth_unusable_even_with_fifty_frames(self):
-        r = self.run((
+        r = self.run_pilot((
             self.factory(self.a.monitored, no_depth=FIRST[20]),
             self.factory(self.b.monitored),
         ))
@@ -204,7 +204,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
         first = self.factory(self.a.monitored, disconnect_after=True)
         after = self.factory(self.a.monitored, only=(FIRST[0],))
         selector = iter((first, after))
-        r = self.run((
+        r = self.run_pilot((
             lambda: next(selector)(),
             self.factory(self.b.monitored),
         ), seconds=8, sessions=2)
@@ -216,7 +216,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
         self.assertTrue(all(x.closed for x in self.created))
 
     def test_missing_ack_or_wrong_symbol_is_terminal(self):
-        r = self.run((
+        r = self.run_pilot((
             self.factory(self.a.monitored, no_ack=True),
             self.factory(self.b.monitored),
         ))
@@ -225,7 +225,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
         self.assertEqual(r.attempted_epochs, 1)
 
         self.setUp()
-        r = self.run((
+        r = self.run_pilot((
             self.factory(self.a.monitored,
                          extras=(snapshot("WRONGUSDT", T),)),
             self.factory(self.b.monitored),
@@ -238,7 +238,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
         # Deliberately admit the scope BEFORE a 2-second transport lag.
         # A market observation predating its PIT membership is not usable.
         earlier_scope = replace(self.a, universe_at_ms=T - 3000)
-        r = self.run((
+        r = self.run_pilot((
             self.factory(self.a.monitored, lagged=10),
             self.factory(self.b.monitored),
         ), epochs=(earlier_scope, self.b))
@@ -251,7 +251,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
         for options in ({"lagged": 1}, {"future_first": True}):
             with self.subTest(options=options):
                 self.setUp()
-                r = self.run((
+                r = self.run_pilot((
                     self.factory(self.a.monitored, **options),
                     self.factory(self.b.monitored),
                 ))
@@ -266,18 +266,18 @@ class TickerCoverageD396Tests(unittest.TestCase):
         with self.assertRaises(DataValidationError):
             TickerUniverseEpoch(FIRST[:49], HELD, T)
         with self.assertRaises(DataGapError):
-            self.run((
+            self.run_pilot((
                 self.factory(self.a.monitored),
                 self.factory(self.b.monitored),
             ), epochs=(self.a, TickerUniverseEpoch(SECOND, ("HOLDUSDT",),
                                                    T+1000)))
         with self.assertRaises(DataGapError):
-            self.run((
+            self.run_pilot((
                 self.factory(self.a.monitored),
                 self.factory(self.b.monitored),
             ), epochs=(self.a, replace(self.b, universe_at_ms=T-1001)))
         with self.assertRaises(DataGapError):
-            self.run((
+            self.run_pilot((
                 self.factory(self.a.monitored),
                 self.factory(self.b.monitored),
             ), epochs=(replace(self.a, universe_at_ms=T+20_000), self.b))
@@ -295,7 +295,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
                 budget=bad,
             )
         with self.assertRaises(DataValidationError):
-            self.run((self.factory(self.a.monitored),))
+            self.run_pilot((self.factory(self.a.monitored),))
         self.assertFalse(self.created)
 
     def test_cli_subprocess_has_auditable_synthetic_50x2_result(self):
