@@ -105,6 +105,11 @@ class PaperIntrahourQuoteRouter:
         self._decisions: dict[str, int] = {}
         self._runner_decisions: dict[str, int] = {}
 
+    @property
+    def monitored_symbols(self) -> frozenset[str]:
+        """Read-only ticker membership required by the D401 public bridge."""
+        return frozenset(self._by_symbol)
+
     def begin_new_market_session(self) -> None:
         """Invalidate transport-specific sequence baselines, not PAPER state.
 
