@@ -179,13 +179,13 @@ class CausalPaperFillD394Tests(unittest.TestCase):
             self.assertEqual(store.load(POSITION_ID).side,SyntheticSide.SHORT)
 
     def test_invalid_settings_abstain_before_any_write(self):
-        for policy in (
-            PaperObservedFillAssumptions(max_spread_bps=D(0)),
-            PaperObservedFillAssumptions(max_quote_age_ms=100),
-        ):
-            with self.subTest(policy=policy):
-                r=self.apply(self.later(),policy=policy)
-                self.assertIn(r.decision,(PaperFillDecision.TOO_WIDE,PaperFillDecision.STALE))
+        zero_spread=PaperObservedFillAssumptions(max_spread_bps=D(0))
+        self.assertEqual(self.apply(self.later(),policy=zero_spread).decision,
+                         PaperFillDecision.TOO_WIDE)
+        short_age=PaperObservedFillAssumptions(max_quote_age_ms=100)
+        q=self.later()
+        self.assertEqual(self.apply(q,policy=short_age,at=q.received_at_ms+250).decision,
+                         PaperFillDecision.STALE)
         for kwargs in ({"max_top_level_participation_bps":D(0)},
                        {"min_quote_after_intent_ms":0},
                        {"max_quote_age_ms":0}):
