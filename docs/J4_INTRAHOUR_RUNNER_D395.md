@@ -62,12 +62,23 @@ liquidação 50x, não substitui stop emergencial nem garante
 proteção após queda de conexão. O feed contínuo público de J2
 e o reconciliador privado de ordens ainda não foram homologados.
 
-Um processo de produto deverá configurar uma rota persistente
-para cada posição habilitada ao trailing, preservar o diário entre
-reinícios e incorporar a ponte ao roteador de cotações J4/D391,
-sob teste prospectivo. **Não foi feita instalação na VPS**.
+O roteador **D391 agora aceita opcionalmente** `runner_policy` e
+`runner_path` em `PaperQuoteRoute`; na ausência desses campos,
+o comportamento antigo permanece inalterado. Com esses campos,
+o callback `on_quote` do supervisor D386 alimenta diretamente
+`step_paper_intrahour_with_runner`, com contadores sanitizados
+de decisões de trailing. A rota nunca usa o próprio SQLite de
+posições como arquivo de trailing.
 
-Próximos gates: integrar esta ponte ao roteador D391, testar
-ciclo completo D394 de fills hipotéticos e replay com lacuna
-e liquidação, expor decisões no painel J5 e homologar
-stream contínuo J2/J6 com dados públicos reais.
+O teste `test_d391_callback_drives_optin_trailing_with_same_auto4_ledger`
+reproduz a chamada do mesmo callback de mercado para armação,
+ratchet e reserva do residual, sem reenviar stop ou target.
+
+Um processo de produto ainda deverá preservar o diário
+`runner_path` entre reinícios e configurar as rotas PAPER
+de forma causal, sem duplicar posições por símbolo.
+**Não foi feita instalação na VPS.**
+
+Próximos gates: integrar D394 de fills hipotéticos do residual
+e replay com liquidação, expor as decisões no painel J5 e
+homologar stream contínuo J2/J6 com dados públicos reais.
