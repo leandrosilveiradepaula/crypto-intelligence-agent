@@ -72,6 +72,11 @@ class PaperIntrahourRunnerStep:
     runner_close: PaperRunnerCloseStepResult | None = None
 
     @property
+    def decision(self) -> PaperIntrahourDecision:
+        """Preserve D391's existing stop/target decision contract."""
+        return self.coordinated.decision
+
+    @property
     def created_intent_id(self) -> str | None:
         if self.runner_close is not None and self.runner_close.created_intent_id:
             return self.runner_close.created_intent_id
