@@ -13,7 +13,13 @@ python -m scripts.run_paper_public_adapter_proof_d402 --scenario closed --mobile
 python -m scripts.run_paper_public_adapter_proof_d402 --scenario unknown --mobile-snapshot
 ```
 
-A resposta do CLI é um JSON único com o relatório original da simulação em `steps` e a chave `mobile_snapshot`. **Para importar no aplicativo**, extraia somente o objeto `mobile_snapshot` em um arquivo JSON separado e use o seletor existente. O modo sem flag não muda o contrato D402 legado e não expõe ID nem símbolos no relatório original.
+A resposta do CLI com `--mobile-snapshot` é um JSON único com o relatório original em `steps` e a chave `mobile_snapshot`. Para gerar um arquivo **diretamente importável no aplicativo**, sem copiar ou extrair JSON manualmente, use:
+
+```sh
+python -m scripts.run_paper_public_adapter_proof_d402 --scenario closed --mobile-output /tmp/cia-paper-mobile.json
+```
+
+O comando cria um arquivo **novo**, privado (0600 no POSIX), e recusa sobrescrevê-lo ou seguir symlink. Neste modo, o stdout mantém apenas o relatório D402; o arquivo tem exatamente o schema `paper_positions_snapshot_v1` da interface J5, sem wrapper. O modo sem flags novas não muda o contrato legado e não expõe IDs nem símbolos no relatório original. Os caminhos acima são ilustrativos; nenhuma instalação na VPS foi realizada.
 
 - **Ciclo encerrado:** três ticks injetados, duas reservas de saídas parciais, fills **explicitamente sintéticos** e reserva de stop, com preenchimento sintético confirmado ao final. O saldo do diário AUTO4 fica zerado.
 - **Ciclo com UNKNOWN:** uma saída simulada em estado desconhecido, nenhuma nova redução concorrente; as posições ficam com reserva pendente e o aplicativo deve mostrar **Reconciliação pendente**. Nenhum fill é inventado.
