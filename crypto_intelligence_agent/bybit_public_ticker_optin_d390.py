@@ -10,7 +10,9 @@ import os
 import time
 from typing import Callable
 
-from .bybit_public_ticker_state_d385 import BybitPublicTickerBook
+from .bybit_public_ticker_state_d385 import (
+    BybitPublicTickerBook, BybitTickerQuote, MAX_QUOTE_AGE_MS,
+)
 from .bybit_public_ticker_supervisor_d386 import (
     TickerLeaseBudget, TickerLeaseReport, supervise_public_tickers,
 )
@@ -42,6 +44,7 @@ def run_readonly_bybit_ticker_lease(
     ),
     session_factory: Callable[[], StreamSession] | None = None,
     paper_router: PaperIntrahourQuoteRouter | None = None,
+    measure_public_coverage: bool = False,
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
@@ -54,10 +57,14 @@ def run_readonly_bybit_ticker_lease(
     D401: optionally route validated, post-ACK snapshots/deltas into the
     existing PAPER AUTO4 router. It may reserve fictional exits only, and
     requires all PAPER positions to belong to the subscribed ticker scope.
+    D405 can optionally count unique, causal positive-depth quotes from the
+    LAST subscription session. This is bounded in memory to the monitored
+    set and never persists symbols, prices, position IDs or snapshots.
     """
     if (type(allow_public_websocket) is not bool
             or type(confirm_personal_readonly_research) is not bool
-            or type(confirm_region_eligible) is not bool):
+            or type(confirm_region_eligible) is not bool
+            or type(measure_public_coverage) is not bool):
         raise DataValidationError("public_ws_gate_type_invalid")
     if (allow_public_websocket is not True
             or confirm_personal_readonly_research is not True
@@ -91,14 +98,36 @@ def run_readonly_bybit_ticker_lease(
         set(ranked_symbols) | set(position_symbols)
     ):
         raise DataValidationError("public_ws_paper_position_outside_subscription")
+    rank_set, position_set = set(ranked_symbols), set(position_symbols)
+    monitored = rank_set | position_set
+    seen_this_session: dict[str, int] = {}
+
+    def session_reset() -> None:
+        # A previous socket's quotes cannot prove a new socket's coverage.
+        seen_this_session.clear()
+        if paper_router is not None:
+            paper_router.begin_new_market_session()
+
+    def observed_quote(quote: BybitTickerQuote) -> None:
+        if measure_public_coverage:
+            # The exchange clock must be causal relative to the supplied
+            # point-in-time scope; no inferred synthetic/retrospective ticks.
+            if (quote.symbol in monitored
+                    and quote.exchange_at_ms >= universe_at_ms
+                    and quote.exchange_at_ms <= quote.received_at_ms
+                    and quote.has_positive_book_depth):
+                seen_this_session[quote.symbol] = quote.received_at_ms
+        if paper_router is not None:
+            paper_router.process(quote)
+
+    needs_callback = measure_public_coverage or paper_router is not None
     try:
         report: TickerLeaseReport = supervise_public_tickers(
             session_factory=session_factory or _public_bybit_session,
             book=book, budget=budget, clock=clock, wall_ms=wall_ms,
             sleeper=sleeper,
-            on_quote=paper_router.process if paper_router is not None else None,
-            on_session_reset=(paper_router.begin_new_market_session
-                              if paper_router is not None else None),
+            on_quote=observed_quote if needs_callback else None,
+            on_session_reset=session_reset if needs_callback else None,
         )
         values = report.sanitized_report()
         # A subscribe ACK does not prove even one current price observation.
@@ -112,6 +141,37 @@ def run_readonly_bybit_ticker_lease(
         if paper_router is not None:
             # Only count-only metadata; never include instrument, price or IDs.
             values["paper_monitoring"] = paper_router.sanitized_report()
+        if measure_public_coverage:
+            stop_ms = wall_ms()
+            if type(stop_ms) is not int or stop_ms < universe_at_ms:
+                raise DataValidationError("public_ws_measurement_clock_invalid")
+            sampled = set(seen_this_session)
+            fresh = {
+                symbol for symbol, recv in seen_this_session.items()
+                if 0 <= stop_ms - recv <= MAX_QUOTE_AGE_MS
+            }
+            # "complete" here covers ONLY this finite lease; no assertion
+            # about future delivery, publisher reliability, orders or stops.
+            observed_all = monitored.issubset(sampled)
+            fresh_all = monitored.issubset(fresh)
+            values.update({
+                "requested_ranked_contracts": len(rank_set),
+                "requested_position_contracts": len(position_set),
+                "requested_distinct_contracts": len(monitored),
+                "unique_ranked_contracts_observed": len(rank_set & sampled),
+                "unique_position_contracts_observed": len(position_set & sampled),
+                "unique_distinct_contracts_observed": len(sampled),
+                "fresh_distinct_contracts_at_end": len(fresh),
+                "finite_coverage_observed_once": (
+                    observed_all and report.status == "lease_completed"
+                    and report.subscriptions_acknowledged >= 1),
+                "finite_coverage_fresh_at_end": (
+                    fresh_all and report.status == "lease_completed"
+                    and report.subscriptions_acknowledged >= 1),
+                "coverage_applies_to_final_session_only": True,
+                "scope_independently_verified": False,
+                "continuous_24x7_verified": False,
+            })
         return values
     finally:
         # Even a completed finite lease is now closed, not a live source for
