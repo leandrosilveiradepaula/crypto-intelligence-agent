@@ -194,7 +194,7 @@
   }
   function install(payload) {
     const accepted = validateReport(payload);
-    current = accepted; // Session-only; never placed in localStorage.
+    current = accepted; // Volatile snapshot; never persisted.
     render();
   }
   global.CIAPersistedPaper = Object.freeze({ validateReport, install });
