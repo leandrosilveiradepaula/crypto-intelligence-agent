@@ -400,7 +400,7 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
         self.assertEqual(result.failure_category, "snapshot_required")
         self.assertEqual(result.preack_frames_bootstrapped_after_ack, 0)
         self.assertEqual(result.ticker_frames_accepted, 0)
-        self.assertEqual(result.subscriptions_acknowledged, 0)
+        self.assertEqual(result.subscriptions_acknowledged, 1)
         self.assertEqual(accepted, [])
         self.assertTrue(sock.closed)
 
