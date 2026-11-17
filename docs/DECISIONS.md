@@ -1926,3 +1926,8 @@ O futuro monitor público Bybit deve reutilizar por leitura a época ativa reval
 ## D408 — referência prospectiva agregada não é backtest ou autorização de entrada (17/11/2026)
 
 Agregar somente arquivos de scores existentes J3 validados pelo contrato owner D667, com chaves (hora de decisão,horizonte) únicas e sem referência faltante tratada como perda. Relatar contagens de observações, favoráveis/contrárias e médias de referência com custos individuais, mas **não** declarar que todos os horários foram incluídos ou que premissas de custo são iguais. Viés de seleção, liquidação intrabar, custos verdadeiros e timestamp independente continuam abertos; nenhum sucesso no scorebook autoriza sinal, ordem, operação 50x ou mudança do risco. Browser só lê JSON importado em sessão e não acessa arquivo privado.
+
+
+## D409 — reutilizar o mesmo diário PAPER do motor até o celular (17/11/2026)
+
+Uma demonstração integral de engenharia deve projetar estado móvel somente após leitura real do diário AUTO4 já persistido, jamais reconstruir filled/reserved/remaining de contadores do navegador. `--mobile-snapshot` adiciona relato de posição à prova D402 sem modificar o contrato padrão, escritas, serviço, mercado ou autorização financeira. Um UNKNOWN mantém reserva pendente e impede novas reduções, ao passo que fills só são confirmados por eventos explícitos de simulação. Não usar snapshots sintéticos para alegar realização financeira, live stop, edge ou feed operacional.
