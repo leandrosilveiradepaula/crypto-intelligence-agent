@@ -86,9 +86,14 @@ e integração com o importador existente. Node
 valida um relatório condicional 50x, relatório
 veto por possível liquidação, ausência de margem
 e ausência de reconciliação, além de numerosas
-entradas malformadas ou inseguras. A CI padrão
-valida o app no Chrome/PAPER e o restante
-do projeto em Linux/Windows.
+entradas malformadas ou inseguras. O navegador
+Chrome real, a **320px**, importa JSON condicional,
+confere alavancagem, resultado e layout, rejeita
+um arquivo forjado que declara PnL verificado,
+importa o veto de liquidação e confirma que não
+resta número financeiro. Após recarregar a página
+o relatório desaparece, preservando as posições
+PAPER locais. A CI também valida Linux/Windows.
 
 ## Pendências de produto
 
