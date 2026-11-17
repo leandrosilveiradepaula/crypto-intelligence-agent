@@ -242,6 +242,70 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
         self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
         self.assertFalse(result["approved_for_live_use"])
 
+    def test_held_mode_refuses_incompatible_requirements_before_network(self):
+        from crypto_intelligence_agent.bybit_public_ticker_optin_d390 import (
+            run_readonly_bybit_ticker_lease,
+        )
+        for extra in (
+            {"measure_public_coverage": False},
+            {"require_complete_fresh_scope_for_paper": True,
+             "measure_public_coverage": True},
+        ):
+            with self.subTest(extra=extra), self.assertRaises(DataValidationError):
+                args = {
+                    "ranked_symbols": N50,
+                    "position_symbols": ("BTCUSDT",),
+                    "universe_at_ms": HOUR_START_MS,
+                    "paper_router": self.router,
+                    "allow_public_websocket": True,
+                    "confirm_personal_readonly_research": True,
+                    "confirm_region_eligible": True,
+                    "measure_public_coverage": True,
+                    "require_fresh_held_position_for_paper": True,
+                    "session_factory": lambda: (_ for _ in ()).throw(
+                        AssertionError("must reject before socket")),
+                }
+                args.update(extra)
+                run_readonly_bybit_ticker_lease(**args)
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 0)
+
+    def test_reconnect_new_held_snapshot_permits_stop_without_other_n50(self):
+        first = Socket(self.clock, [
+            ack(), ticker("BTCUSDT", bid="100", mark="100"),
+            OSError("private-transport-id-must-not-leak"),
+        ])
+        second = Socket(self.clock, [
+            ack(), ticker("BTCUSDT", seq=1, time_delta=5_010,
+                          bid="98", mark="98"),
+        ])
+        sessions = iter((first, second))
+        with patch(
+            "crypto_intelligence_agent.j2_j4_current_n50_paper_lease_d410."
+            "read_current_j1_n50_scope", side_effect=(CURRENT, CURRENT),
+        ):
+            result = run_current_n50_paper_lease_once(
+                state_directory=STATE, paper_router=self.router,
+                allow_private_pointer_read=True,
+                allow_public_websocket=True,
+                confirm_personal_readonly_research=True,
+                confirm_region_eligible=True,
+                allow_synthetic_paper_reservations=True,
+                budget=TickerLeaseBudget(
+                    max_sessions=2, max_frames=100, max_seconds=12,
+                ),
+                session_factory=lambda: next(sessions),
+                clock=self.clock.mono, wall_ms=self.clock.wall,
+                sleeper=self.clock.sleep,
+            )
+        self.assertTrue(first.closed and second.closed)
+        self.assertEqual(result["reconnects"], 1)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 2)
+        self.assertEqual(self.store.load(POSITION_ID).exit_orders[0].tranche_step, -1)
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
+        self.assertFalse(result["finite_coverage_observed_once"])
+        self.assertNotIn("private-transport-id", json.dumps(result))
+        self.assertFalse(result["orders_sent"])
+
     def test_missing_paper_write_optin_blocks_owner_read_and_network(self):
         with patch(
             "crypto_intelligence_agent.j2_j4_current_n50_paper_lease_d410."
