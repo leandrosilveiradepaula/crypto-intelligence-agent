@@ -236,6 +236,7 @@ def run_finite_public_ticker_coverage_pilot(
                 lease.status == "lease_completed"
                 and lease.subscriptions_acknowledged >= 1
                 and covered
+                and fresh == len(epoch.monitored)
             )
             results.append(TickerEpochCoverage(
                 scope_sha256=epoch.private_scope_digest(),
@@ -257,7 +258,10 @@ def run_finite_public_ticker_coverage_pilot(
             if not complete:
                 return TickerCoveragePilotReport(
                     "abstained_incomplete_coverage", len(epochs),
-                    len(results), rotations, False, tuple(results),
+                    len(results), sum(
+                        set(a.ranked_symbols) != set(b.ranked_symbols)
+                        for a, b in zip(epochs[:len(results)-1], epochs[1:len(results)])
+                    ), False, tuple(results),
                 )
         finally:
             # A completed probe can never be mistaken for a live feed.
