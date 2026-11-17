@@ -205,5 +205,82 @@ class RouterD391Tests(unittest.TestCase):
         self.assertFalse(report.sanitized_report()["orders_sent"])
 
 
+    def test_d401_optin_lease_routes_only_valid_post_ack_paper_quotes(self):
+        from crypto_intelligence_agent.bybit_public_ticker_optin_d390 import (
+            run_readonly_bybit_ticker_lease,
+        )
+        clock_ms = T + 12 * MIN
+        raw = json.dumps({
+            "topic": "tickers.BTCUSDT", "type": "snapshot",
+            "ts": clock_ms - 10, "cs": 1,
+            "data": {"symbol": "BTCUSDT", "lastPrice": "101",
+                     "markPrice": "100", "indexPrice": "100",
+                     "bid1Price": "101", "ask1Price": "101.02",
+                     "bid1Size": "2", "ask1Size": "3"},
+        })
+        ack = json.dumps({"op": "subscribe", "success": True,
+                          "ret_msg": "subscribe", "conn_id": "fixture",
+                          "req_id": "cia-ticker-1"})
+        class Clock:
+            elapsed = 0
+            def mono(self): return self.elapsed
+            def wall(self): return clock_ms + int(self.elapsed * 1000)
+            def sleep(self, seconds): self.elapsed += seconds
+        class Socket:
+            def __init__(self, clock, responses):
+                self.clock = clock
+                self.responses = list(responses)
+                self.closed = False
+            def send(self, _payload): pass
+            def recv(self, timeout):
+                if self.responses:
+                    item = self.responses.pop(0)
+                    if isinstance(item, Exception): raise item
+                    return item
+                self.clock.sleep(timeout)
+                raise TimeoutError()
+            def close(self): self.closed = True
+        c = Clock()
+        socket = Socket(c, [ack, raw])
+        config = dict(
+            ranked_symbols=("BTCUSDT",),
+            universe_at_ms=T + 10 * MIN,
+            allow_public_websocket=True,
+            confirm_personal_readonly_research=True,
+            confirm_region_eligible=True,
+            budget=TickerLeaseBudget(max_sessions=1, max_frames=12,
+                                     max_seconds=3),
+            session_factory=lambda: socket, clock=c.mono,
+            wall_ms=c.wall, sleeper=c.sleep,
+            paper_router=self.router,
+        )
+        report = run_readonly_bybit_ticker_lease(**config)
+        self.assertTrue(socket.closed)
+        self.assertEqual(report["ticker_frames_accepted"], 1)
+        self.assertEqual(report["paper_monitoring"]["configured_positions"], 1)
+        self.assertEqual(len(self.store.load(self.position_id).exit_orders), 1)
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(0))
+        self.assertFalse(report["orders_sent"])
+        self.assertFalse(report["paper_monitoring"]["orders_sent"])
+        self.assertNotIn(self.position_id, json.dumps(report))
+
+    def test_d401_out_of_scope_paper_position_rejected_before_socket(self):
+        from crypto_intelligence_agent.bybit_public_ticker_optin_d390 import (
+            run_readonly_bybit_ticker_lease,
+        )
+        called = []
+        with self.assertRaises(DataValidationError):
+            run_readonly_bybit_ticker_lease(
+                ranked_symbols=("ETHUSDT",), universe_at_ms=T,
+                paper_router=self.router,
+                allow_public_websocket=True,
+                confirm_personal_readonly_research=True,
+                confirm_region_eligible=True,
+                session_factory=lambda: called.append(1),
+            )
+        self.assertEqual(called, [])
+        self.assertEqual(len(self.store.load(self.position_id).exit_orders), 0)
+
+
 if __name__=="__main__":
     unittest.main()

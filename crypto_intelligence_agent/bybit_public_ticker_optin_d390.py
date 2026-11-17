@@ -16,6 +16,7 @@ from .bybit_public_ticker_supervisor_d386 import (
 )
 from .bybit_public_ws_once import StreamSession
 from .market_data import DataValidationError
+from .paper_intrahour_quote_router_d391 import PaperIntrahourQuoteRouter
 
 _ALLOWED_WS_HOST = "wss://stream.bybit.com/v5/public/linear"
 
@@ -40,6 +41,7 @@ def run_readonly_bybit_ticker_lease(
         max_sessions=1, max_frames=2048, max_seconds=35,
     ),
     session_factory: Callable[[], StreamSession] | None = None,
+    paper_router: PaperIntrahourQuoteRouter | None = None,
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
@@ -49,6 +51,9 @@ def run_readonly_bybit_ticker_lease(
     Requires positive gates before even constructing the transport. An
     injected factory is intended solely for hermetic tests. Returning a
     report never certifies full N50 delivery or live trading.
+    D401: optionally route validated, post-ACK snapshots/deltas into the
+    existing PAPER AUTO4 router. It may reserve fictional exits only, and
+    requires all PAPER positions to belong to the subscribed ticker scope.
     """
     if (type(allow_public_websocket) is not bool
             or type(confirm_personal_readonly_research) is not bool
@@ -75,16 +80,25 @@ def run_readonly_bybit_ticker_lease(
         raise DataValidationError("public_ws_real_transport_requires_posix")
     if session_factory is not None and not callable(session_factory):
         raise DataValidationError("public_ws_injected_transport_invalid")
+    if paper_router is not None and type(paper_router) is not PaperIntrahourQuoteRouter:
+        raise DataValidationError("public_ws_paper_router_requires_existing_typed_journal")
     book = BybitPublicTickerBook(
         ranked_symbols=ranked_symbols,
         position_symbols=position_symbols,
         universe_at_ms=universe_at_ms,
     )
+    if paper_router is not None and not paper_router.monitored_symbols.issubset(
+        set(ranked_symbols) | set(position_symbols)
+    ):
+        raise DataValidationError("public_ws_paper_position_outside_subscription")
     try:
         report: TickerLeaseReport = supervise_public_tickers(
             session_factory=session_factory or _public_bybit_session,
             book=book, budget=budget, clock=clock, wall_ms=wall_ms,
             sleeper=sleeper,
+            on_quote=paper_router.process if paper_router is not None else None,
+            on_session_reset=(paper_router.begin_new_market_session
+                              if paper_router is not None else None),
         )
         values = report.sanitized_report()
         # A subscribe ACK does not prove even one current price observation.
@@ -95,6 +109,9 @@ def run_readonly_bybit_ticker_lease(
         values["no_service_installed"] = True
         values["marketwide_top50_verified"] = False
         values["approved_for_live_use"] = False
+        if paper_router is not None:
+            # Only count-only metadata; never include instrument, price or IDs.
+            values["paper_monitoring"] = paper_router.sanitized_report()
         return values
     finally:
         # Even a completed finite lease is now closed, not a live source for
