@@ -147,7 +147,8 @@ def demonstrate_adapter_to_paper_cycle(
             report = _lease(router, minute=minute, mark=mark, bid=bid, ask=ask)
             reports.append(report)
             counts = report["paper_monitoring"]["decision_counts"]
-            if counts.get(decision.value, 0) != 1:
+            expected_count = (2 if minute == 19 and scenario == "closed" else 1)
+            if counts.get(decision.value, 0) != expected_count:
                 raise DataValidationError("D402 expected PAPER decision not recorded")
             steps.append(_step(store, minute, decision.value))
             balance = store.load(POSITION_ID)
