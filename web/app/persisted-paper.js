@@ -170,6 +170,8 @@
         span("span", "Runner: " + RUNNERS[p.runner_readiness]),
         span("span", "Ordens incertas: " + p.unknown_order_count +
           " · pendentes: " + p.pending_or_unknown_orders),
+        span("span", p.opening_order_cross_checked ?
+          "Abertura cruzada com diário AUTO2" : "Abertura não cruzada com AUTO2"),
         span("span", "Checkpoint UTC: " + p.checkpoint_utc));
       if (p.margin_intent_requested) {
         const m = p.margin_intent_requested;
@@ -178,6 +180,11 @@
           " · alavancagem solicitada: " + m.leverage_at_intent + "x"));
       } else {
         card.append(span("span", "Margem/alavancagem não registradas no diário"));
+      }
+      if (p.recovered_runner) {
+        card.append(span("span", "Monitor recuperado PAPER: " +
+          p.recovered_runner.state + " · " +
+          p.recovered_runner.observed_tick_count + " marcas hipotéticas"));
       }
       if (p.pending_or_unknown_orders || p.unknown_order_count) {
         card.append(span("strong", "Bloqueado para novas reduções até reconciliação"));
