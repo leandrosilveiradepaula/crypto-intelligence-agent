@@ -1807,3 +1807,8 @@ O painel móvel recebe amostras REST da Bybit via o servidor local loopback exis
 ## J2 — diagnóstico de rede pública intrahorária (D405)
 
 Preparado diagnóstico read-only da conexão WebSocket Bybit de duração limitada, com relatório somente de ACK, cobertura por contrato/posição, frescor e faixas de latência. Nenhuma ordem e nenhuma nova coleta J1. A VPS confirmou handshake HTTP 101 do WebSocket público Bybit com TLS válido, mas não assinou tópicos nem recebeu tickers; execução do probe Python segue bloqueada pela política do gateway. Ainda não existe monitor WS 24×7 em produção. Consulte docs/J2_PUBLIC_WS_OPERATIONAL_PROBE_D405.md.
+
+
+## J2 — origem dinâmica do escopo WebSocket reaproveita a J1 (D406)
+
+A ferramenta dispõe de uma ponte read-only que carrega o escopo ativo de 50 contratos da coleta J1, com verificação de integridade, validade e rotação, repassando-o ao observador público WebSocket existente e mantendo posições externas ao ranking quando explicitamente informadas. A fonte é provisória, e não houve instalação nem prova de ACK/frames reais de ticker na VPS; execução Python permanece bloqueada pelo executor administrativo. Testes offline e documentação: `docs/J2_CURRENT_J1_N50_WS_SCOPE_D406.md`. Nenhum ranking paralelo, segundo escritor de J1, transação ou custo.
