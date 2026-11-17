@@ -35,7 +35,7 @@ def run_current_n50_paper_lease_once(
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
 ) -> dict:
-    """Run ONE bounded subscription with full N50 coverage before PAPER.
+    """Run ONE bounded subscription; protect held PAPER positions independently.
 
     The supplied typed router has already checked the existing AUTO4
     position IDs, stop/target policy and netting; its symbols are derived
@@ -43,11 +43,14 @@ def run_current_n50_paper_lease_once(
     dropped or silently substituted. All gates are checked before owner
     pointer reads, quote callbacks or socket construction.
 
-    A single valid position tick cannot create a PAPER reservation while
-    any N50+position ticker is missing or stale in the current ACKed session.
-    A disconnect invalidates the full-session gate. Revalidating owner epoch
-    after the lease catches rotations: results become degraded, and any
-    synthetic reservations remain in the same journal for reconciliation.
+    A valid ACKed, current quote for a held PAPER contract may trigger a
+    hypothetical stop/partial even when unrelated N50 contracts are silent.
+    Requiring every unrelated market ticker would withhold stops for no
+    position-specific reason. Incomplete N50 still degrades universe health,
+    blocking any assertion of entry/strategy readiness. Reconnect invalidates
+    the quote state; each new session needs ACK and new valid snapshots.
+    Revalidating owner epoch after the lease catches rotations; synthetic
+    reservations remain in AUTO4 for explicit reconciliation.
     """
     if any(type(g) is not bool for g in (
         allow_private_pointer_read, allow_public_websocket,
@@ -95,7 +98,7 @@ def run_current_n50_paper_lease_once(
         confirm_region_eligible=True,
         budget=budget, session_factory=session_factory,
         paper_router=paper_router, measure_public_coverage=True,
-        require_complete_fresh_scope_for_paper=True,
+        require_fresh_held_position_for_paper=True,
         clock=clock, wall_ms=wall_ms, sleeper=sleeper,
     )
     try:
@@ -111,13 +114,15 @@ def run_current_n50_paper_lease_once(
         )
     except (DataGapError, DataValidationError):
         unchanged = False
-    complete = (
+    complete_market_coverage = (
         unchanged
         and raw["status"] == "lease_completed"
         and raw["finite_coverage_observed_once"] is True
         and raw["finite_coverage_fresh_at_end"] is True
-        and raw["paper_coverage_gate"]["quote_frames_delivered_to_paper"] > 0
     )
+    position_events_processed = raw["paper_coverage_gate"][
+        "quote_frames_delivered_to_paper"
+    ] > 0
     # A diagnostic can never assert continuously monitored financial safety:
     # a completed finite lease is CLOSED and PAPER has no native exchange stop.
     return {
@@ -125,8 +130,12 @@ def run_current_n50_paper_lease_once(
         "schema_version": "j2-j4-current-n50-paper-lease-d410-v1",
         "status": (
             "finite_paper_lease_completed_with_fresh_scope"
-            if complete else "finite_paper_lease_degraded_or_incomplete"
+            if complete_market_coverage
+            else "finite_paper_lease_degraded_or_incomplete"
         ),
+        "existing_paper_position_quote_processed": position_events_processed,
+        "unrelated_n50_silence_blocks_protective_paper_exits": False,
+        "universe_health_sufficient_for_new_entries": False,
         "underlying_ws_status": raw["status"],
         "data_mode": (
             "real_public_websocket" if session_factory is None
