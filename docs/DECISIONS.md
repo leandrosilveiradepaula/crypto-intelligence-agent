@@ -1911,3 +1911,8 @@ Uma consulta pública HTTPS Bybit V5 linear por captura, usando cliente GET J1 e
 ## D404 — atualizar preços do painel sem confundir REST com motor de operações (17/11/2026)
 
 Leitura automática pontual de preços públicos é permitida somente via servidor HTTP local opt-in preexistente, com lista de símbolos fornecida, até uma chamada REST/min no servidor e nenhuma consulta do browser à corretora. Dados expirados, ausentes ou inválidos nunca atualizam posições PAPER, stops, estratégias ou ordens. O operador 24×7 será WebSocket separado e exige piloto e gate de release. REST local não amplia o acesso aos dados privados da J1 e não deve ser publicado sem autenticação.
+
+
+## D405 — métricas WebSocket finitas não equivalem a monitor intrahorário homologado (17/11/2026)
+
+A medição WS pública deve exigir gates de rede/região, contrato linear fixo, orçamento de 5–60 segundos, sem chaves e sem estado persistente. Contar contratos distintos após ACK e snapshots válidos, posição aberta mesmo fora do ranking, frescor ao término e faixas de atraso. Reconnect invalida observações anteriores; um diagnóstico de amostra não é serviço contínuo, ranking Top50 provado, proteção garantida ou autorização financeira. Nenhuma sessão de rede real na CI. Sem comando autorizado na VPS, registrar bloqueio concreto em vez de simular evidência.
