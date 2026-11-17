@@ -862,13 +862,6 @@
     renderQuality();
   }
   function bind() {
-    $("refresh-public-market-local").addEventListener("click", () => {
-      if (globalThis.CIAPublicMarket.hasManualPriority()) {
-        warn("A amostra REST importada manualmente tem prioridade nesta sessão. Recarregue a página para usar a fonte local.", false);
-      } else {
-        void globalThis.CIAPublicMarket.refreshLocal();
-      }
-    });
     $("refresh-research-local").addEventListener("click", () => {
       if (researchOrigin === "manual") {
         warn("O JSON J2 importado tem prioridade nesta sessão. Recarregue a página para voltar à pesquisa local.", false);
@@ -1029,11 +1022,8 @@
   if (isLocalReadOnlyOrigin()) {
     $("refresh-local").hidden = false;
     $("refresh-research-local").hidden = false;
-    $("refresh-public-market-local").hidden = false;
-    void globalThis.CIAPublicMarket.refreshLocal();
     void refreshLocalFeed();
     void refreshLocalResearch();
-    window.setInterval(() => { void globalThis.CIAPublicMarket.refreshLocal(); }, 60_000);
     window.setInterval(() => { void refreshLocalFeed(); }, 60_000);
     window.setInterval(() => { void refreshLocalResearch(); }, 300_000);
   }
