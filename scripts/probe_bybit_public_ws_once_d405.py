@@ -66,7 +66,8 @@ def main(argv: list[str] | None = None) -> int:
         }, sort_keys=True))
         return 65
     print(json.dumps(report, sort_keys=True, separators=(",", ":")))
-    return (0 if report["finite_coverage_observed_once"]
+    return (0 if report["real_market_frames_verified"]
+            and report["finite_coverage_observed_once"]
             and report["finite_coverage_fresh_at_end"] else 2)
 
 
