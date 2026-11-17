@@ -1,3 +1,5 @@
+> **Atualização D414 (17/11/2026, 22h34 UTC):** a VPS comprovou ACK válido, porém o receptor terminou com `snapshot_required` após descartar 7 quadros no BTC e 263 no N50. A regra de D413 que descartava irreversivelmente quadros pré-ACK foi substituída por uma **quarentena limitada em RAM**, com reconstrução do estado *somente depois* de um ACK correto, sem enviar quadros iniciais ao PAPER. Consulte `docs/J2_REAL_WS_ACK_SNAPSHOT_REHYDRATION_D414.md`. A justificativa e os testes de D413 abaixo permanecem como registro histórico do primeiro bloqueio, não como a política vigente de bootstrap.
+
 # D413 — diagnóstico real de 129 frames pré-ACK no WebSocket N50
 
 ## Evidência observada em 17/11/2026, 21h38 UTC
