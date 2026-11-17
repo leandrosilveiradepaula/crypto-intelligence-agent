@@ -172,6 +172,57 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
                 self.assertEqual(result.failure_category, "invalid_subscription_ack")
                 self.assertIsNone(book.current("BTCUSDT", at_ms=clock.utc()))
 
+    def test_n50_cross_sequence_stable_with_newer_timestamp_does_not_abort(self):
+        # In a many-topic real stream the cross sequence can remain the
+        # same while the ticker timestamp and partial fields advance.
+        # The public supervisor must validate both and keep other topics
+        # alive instead of stopping after the first such delta.
+        clock = FakeClock()
+        frames = [ack()]
+        for symbol in make_book(fifty=True).topics:
+            item = symbol.removeprefix("tickers.")
+            frames.append(ticker(item, cs=100, ts=NOW-200))
+        frames.extend([
+            ticker("BTCUSDT", cs=100, ts=NOW-150, kind="delta",
+                   markPrice="100.002"),
+            ticker("BTCUSDT", cs=100, ts=NOW-100, kind="delta",
+                   lastPrice="100.123"),
+            ticker("A0USDT", cs=100, ts=NOW-50, kind="delta",
+                   bid1Size="2.5"),
+        ])
+        received = []
+        sock = Session(clock, frames)
+        report = run(make_book(fifty=True), clock, [sock],
+                     budget=TickerLeaseBudget(max_sessions=1,
+                                              max_frames=300, max_seconds=5),
+                     on_quote=received.append)
+        self.assertEqual(report.status, "lease_completed")
+        self.assertIsNone(report.failure_category)
+        self.assertEqual(report.subscriptions_acknowledged, 1)
+        self.assertEqual(report.ticker_frames_accepted, 54)
+        self.assertEqual(len(received), 54)
+        self.assertEqual(received[-3].cross_sequence, 100)
+        self.assertEqual(received[-2].last_price, Decimal("100.123"))
+        self.assertEqual(received[-1].bid_size, Decimal("2.5"))
+        self.assertFalse(report.sanitized_report()["orders_sent"])
+        self.assertTrue(sock.closed)
+
+    def test_same_cross_sequence_same_timestamp_conflict_fails_closed(self):
+        clock = FakeClock()
+        sock = Session(clock, [
+            ack(), ticker(cs=10, ts=NOW-100),
+            ticker(cs=10, ts=NOW-100, kind="delta",
+                   lastPrice="100.7"),
+        ])
+        received = []
+        report = run(make_book(), clock, [sock], on_quote=received.append)
+        self.assertEqual(report.status, "lease_abstained")
+        self.assertEqual(report.failure_category, "conflicting_replay")
+        self.assertEqual(report.ticker_frames_accepted, 1)
+        self.assertEqual(len(received), 1)
+        self.assertFalse(report.sanitized_report()["orders_sent"])
+        self.assertTrue(sock.closed)
+
     def test_bad_market_payload_stops_without_reconnect(self):
         clock = FakeClock()
         b = make_book()
