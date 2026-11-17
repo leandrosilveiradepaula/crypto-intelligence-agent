@@ -14,7 +14,7 @@ import crypto_intelligence_agent.j2_current_j1_n50_public_scope_d406 as bridge
 from crypto_intelligence_agent.j1_n50_ws_epoch_rotation import ActiveN50WSEpoch
 from crypto_intelligence_agent.j1_n50_ws_private_cache import N50WSPrivateAdmission
 from crypto_intelligence_agent.j1_n50_ws_dynamic_scope import DynamicN50WSAdmission
-from crypto_intelligence_agent.market_data import DataGapError
+from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
 
 ROOT = Path(__file__).resolve().parents[1]
 NOW = 1_800_000_000_000
@@ -238,9 +238,7 @@ class J2CurrentJ1N50D406Tests(unittest.TestCase):
             with self.subTest(directory=directory, now=now):
                 with patch.object(bridge, "load_active_n50_ws_epoch",
                                   side_effect=AssertionError("no read")):
-                    with self.assertRaises(DataGapError if False else
-                                           __import__("crypto_intelligence_agent.market_data",
-                                                      fromlist=["DataValidationError"]).DataValidationError):
+                    with self.assertRaises(DataValidationError):
                         bridge.read_current_j1_n50_scope(
                             state_directory=directory, now_ms=now,
                             allow_private_pointer_read=True,
