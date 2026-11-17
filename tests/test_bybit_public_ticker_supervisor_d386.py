@@ -168,7 +168,7 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
                 book = make_book()
                 result = run(book, clock, [Session(clock, frames)])
                 self.assertEqual(result.status, "lease_abstained")
-                self.assertEqual(result.failure_category, "invalid_market_data")
+                self.assertEqual(result.failure_category, "invalid_subscription_ack")
                 self.assertIsNone(book.current("BTCUSDT", at_ms=clock.utc()))
 
     def test_bad_market_payload_stops_without_reconnect(self):
@@ -278,8 +278,53 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
                                          max_seconds=20))
         self.assertEqual(r.status, "lease_abstained")
         self.assertEqual(r.preack_frames_discarded, 129)
+        self.assertEqual(r.failure_category, "preack_limit_reached_before_ack")
         self.assertEqual(r.ticker_frames_accepted, 0)
         self.assertIsNone(book.current("BTCUSDT", at_ms=clock.utc()))
+
+    def test_realistic_n50_preack_burst_over_128_then_ack_is_safe(self):
+        # Real VPS 2026-11-17 showed exactly 129 market envelopes prior to
+        # any accepted ACK, then abstained. With 50+held topics, pre-ACK
+        # packets can exceed the legacy one-size 128 threshold. They must
+        # remain DISCARDED, not replayed into PAPER on late ACK.
+        clock = FakeClock()
+        session = Session(clock, [ticker()] * 129 + [ack(), ticker(cs=2)])
+        accepted = []
+        b = make_book(fifty=True)
+        report = run(
+            b, clock, [session],
+            budget=TickerLeaseBudget(max_sessions=1, max_frames=300,
+                                     max_seconds=10),
+            on_quote=accepted.append,
+        )
+        self.assertEqual(len(session.sent[0]["args"]), 51)
+        self.assertTrue(session.closed)
+        self.assertEqual(report.status, "lease_completed")
+        self.assertEqual(report.preack_frames_discarded, 129)
+        self.assertEqual(report.subscriptions_acknowledged, 1)
+        self.assertEqual(report.ticker_frames_accepted, 1)
+        self.assertEqual(len(accepted), 1)
+        self.assertEqual(accepted[0].cross_sequence, 2)
+        self.assertFalse(report.sanitized_report()["orders_sent"])
+
+    def test_large_preack_without_ack_never_approves_quotes(self):
+        clock = FakeClock()
+        session = Session(clock, [ticker()] * 129)
+        b = make_book(fifty=True)
+        quotes = []
+        report = run(
+            b, clock, [session],
+            budget=TickerLeaseBudget(max_sessions=1, max_frames=300,
+                                     max_seconds=10),
+            on_quote=quotes.append,
+        )
+        self.assertEqual(report.status, "lease_abstained")
+        self.assertEqual(report.failure_category, "no_subscription_ack")
+        self.assertEqual(report.preack_frames_discarded, 129)
+        self.assertEqual(report.subscriptions_acknowledged, 0)
+        self.assertEqual(report.ticker_frames_accepted, 0)
+        self.assertEqual(quotes, [])
+        self.assertFalse(report.sanitized_report()["orders_sent"])
 
     def test_transport_never_opened_when_budget_invalid(self):
         b = make_book()
