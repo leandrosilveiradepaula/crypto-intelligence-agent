@@ -673,6 +673,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                             route.abort()
                     page.route("**/*", route_local_only)
                     page.goto("http://127.0.0.1:8765/", wait_until="load")
+                    page.wait_for_function("() => Boolean(window.CIAPublicMarket)", timeout=5000)
                     page.wait_for_function(
                         "() => document.querySelector('#n50-ok').textContent === '2 / 24'",
                         timeout=5000,
