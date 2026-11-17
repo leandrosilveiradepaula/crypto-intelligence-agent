@@ -139,6 +139,8 @@ class TickerCoverageD396Tests(unittest.TestCase):
                          [51, 52])
         self.assertEqual([r.p95_lag_bucket for r in report.epochs],
                          ["0_to_100ms", "0_to_100ms"])
+        self.assertEqual([r.p99_lag_bucket for r in report.epochs],
+                         ["0_to_100ms", "0_to_100ms"])
         self.assertTrue(all(s.closed for s in self.created))
         self.assertEqual(len(self.created), 2)
         self.assertEqual(set(self.created[0].sent[0]["args"]),
@@ -175,7 +177,8 @@ class TickerCoverageD396Tests(unittest.TestCase):
         self.assertFalse(no_quotes.all_observed_coverage)
         self.assertEqual(no_quotes.epochs[0].subscriptions_acknowledged, 1)
         self.assertEqual(no_quotes.epochs[0].ticker_frames_accepted, 0)
-        self.assertEqual(no_quotes.epochs[0].p95_lag_bucket, None)
+        self.assertIsNone(no_quotes.epochs[0].p95_lag_bucket)
+        self.assertIsNone(no_quotes.epochs[0].p99_lag_bucket)
 
         self.setUp()
         duplicate = snapshot(FIRST[0], self.clock.wall())
@@ -241,7 +244,8 @@ class TickerCoverageD396Tests(unittest.TestCase):
         ), epochs=(earlier_scope, self.b))
         self.assertTrue(r.all_observed_coverage)
         self.assertEqual(r.epochs[0].p95_lag_bucket, "1001_to_5000ms")
-        self.assertTrue(r.sanitized_report()["p95_is_binned_not_exact_ms"])
+        self.assertEqual(r.epochs[0].p99_lag_bucket, "1001_to_5000ms")
+        self.assertTrue(r.sanitized_report()["p95_p99_are_binned_not_exact_ms"])
 
     def test_pre_pit_or_future_exchange_quote_never_proves_coverage(self):
         for options in ({"lagged": 1}, {"future_first": True}):
