@@ -5,6 +5,8 @@ from html.parser import HTMLParser
 from io import StringIO
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import sqlite3
 import tempfile
 from threading import Thread
@@ -227,6 +229,33 @@ class MultiPaperPositionsTests(unittest.TestCase):
         self.assertIn("fixture_multi_position_B", html)
         self.assertIn("Nenhum total consolidado", html) if "Nenhum total consolidado" in html else self.assertIn("Não existe total consolidado", html)
         self.assertNotIn("https://", html)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js required for mobile validator")
+    def test_real_auto4_multi_journal_export_imports_into_j5_mobile_schema(self):
+        # This is a real AUTO4 read-only producer, not a hand-crafted JSON
+        # fixture. No market, account API, order submission or browser storage.
+        payload = multi_paper_snapshot(self.selected())
+        check = r"""
+const fs=require("node:fs");
+const assert=require("node:assert/strict");
+const J5=require("./web/app/persisted-paper.js");
+const report=JSON.parse(fs.readFileSync(0,"utf8"));
+assert.equal(J5.validateReport(report),report);
+assert.equal(report.positions.length,2);
+for (const p of report.positions) {
+  assert.equal(p.native_stop_verified,false);
+  assert.equal(p.trailing_stop_active,false);
+}
+console.log("AUTO4_TO_J5_PAPER_READONLY_PASS");
+"""
+        output = subprocess.run(
+            ["node", "-e", check],
+            input=json.dumps(payload), text=True,
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True, timeout=15,
+        )
+        self.assertEqual(output.returncode, 0, output.stderr)
+        self.assertIn("AUTO4_TO_J5_PAPER_READONLY_PASS", output.stdout)
 
     def test_safe_mobile_html_and_invalid_template_fail_closed(self):
         template = TEMPLATE.read_text("utf-8")
