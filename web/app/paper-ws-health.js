@@ -45,7 +45,8 @@
   const COUNTS = [
     "sessions_attempted", "subscriptions_sent", "subscriptions_acknowledged",
     "reconnects", "frames_seen", "ticker_frames_accepted",
-    "preack_frames_discarded", "heartbeat_pings", "heartbeat_pongs",
+    "preack_frames_discarded", "preack_frames_bootstrapped_after_ack",
+    "heartbeat_pings", "heartbeat_pongs",
     "last_fresh_quote_count", "latency_0_to_100ms", "latency_101_to_1000ms",
     "latency_1001_to_5000ms", "latency_over_5000ms",
     "requested_ranked_contracts", "requested_position_contracts",
