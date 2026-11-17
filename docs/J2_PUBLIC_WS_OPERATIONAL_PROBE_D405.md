@@ -11,6 +11,8 @@ O retorno distingue evidências úteis:
 - histogramas de atraso de exchange→recebimento (P95/P99 por faixa, nunca latência exata), PING/PONG e reconexões;
 - estado de falha/suspensão e booleans explícitos negando coleta 24×7, ranqueamento auditado, ordens e prontidão de negociação.
 
+O relatório diferencia explicitamente `data_mode=real_public_websocket` e `data_mode=injected_offline_fixture`. Em testes com socket injetado, `network_attempted=false` e `real_market_frames_verified=false`, independentemente dos ACKs sintéticos. A CLI real só retorna sucesso após receber frames genuínos e cobertura fresca.
+
 O callback de observação é limitado aos **100 contratos monitorados** pelo estado existente. Após reconexão, os contadores da sessão anterior são apagados e uma posição fora do ranking que não apresentar preço invalida a cobertura, mesmo que todos os outros contratos respondam. O relatório não considera ACK equivalente a preço e não confunde 50 snapshots históricos com preço fresco ao final.
 
 ## Operação condicionada — NÃO realizada na VPS nesta entrega
