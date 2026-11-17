@@ -109,8 +109,8 @@ def _checked_market(quote: BybitTickerQuote) -> None:
     _utc_ms(quote.received_at_ms, "D394 reception clock")
     if type(quote.cross_sequence) is not int or quote.cross_sequence < 1:
         raise DataValidationError("D394 cross sequence invalid")
-    if (not quote.symbol.endswith("USDT")
-            or type(quote.symbol) is not str
+    if (type(quote.symbol) is not str
+            or not quote.symbol.endswith("USDT")
             or not 5 <= len(quote.symbol) <= 25):
         raise DataValidationError("D394 symbol shape invalid")
     for name in ("bid_price", "ask_price", "mark_price", "bid_size", "ask_size"):
