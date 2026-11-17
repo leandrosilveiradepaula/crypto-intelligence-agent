@@ -21,9 +21,10 @@ NOW = 1_800_000_000_000
 SHA = "a" * 64
 META = "b" * 64
 NAMES = tuple(f"A{i:02d}USDT" for i in range(50))
-PRIVATE = Path("/private/current-n50-owner")
-MANIFEST = Path("/private/current-n50-owner/manifest")
-WS_CACHE = Path("/private/current-n50-owner/metadata")
+# Mock-only fixture path: absolute on Linux AND Windows; no file is created.
+PRIVATE = ROOT / "d406-private-owner-test-fixture"
+MANIFEST = PRIVATE / "manifest"
+WS_CACHE = PRIVATE / "metadata"
 
 
 def active(*, metadata=META, activated=NOW - 100_000):
