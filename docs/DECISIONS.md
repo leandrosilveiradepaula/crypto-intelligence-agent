@@ -1916,3 +1916,8 @@ Leitura automática pontual de preços públicos é permitida somente via servid
 ## D405 — métricas WebSocket finitas não equivalem a monitor intrahorário homologado (17/11/2026)
 
 A medição WS pública deve exigir gates de rede/região, contrato linear fixo, orçamento de 5–60 segundos, sem chaves e sem estado persistente. Contar contratos distintos após ACK e snapshots válidos, posição aberta mesmo fora do ranking, frescor ao término e faixas de atraso. Reconnect invalida observações anteriores; um diagnóstico de amostra não é serviço contínuo, ranking Top50 provado, proteção garantida ou autorização financeira. Nenhuma sessão de rede real na CI. Sem comando autorizado na VPS, registrar bloqueio concreto em vez de simular evidência.
+
+
+## D406 — uma só origem dinâmica de ranking para J1/J2, sem segundo escritor (17/11/2026)
+
+O futuro monitor público Bybit deve reutilizar por leitura a época ativa revalidada de N50 da J1, sem algoritmo de seleção concorrente nem reconsulta REST por ciclo. O acesso ao manifesto/cache proprietário exige UID e permissões owner, opt-in explícito, digest de membro e catálogo, validade temporal e releitura do ponteiro para detectar rotação durante a consulta. A fonte continua provisória, não declara Top50 crypto-only independente validado e jamais autoriza trading. Uma posição PAPER fora da coorte deve continuar assinada pelo monitor quando fornecida por fonte reconciliada. Falha de integridade, clock, permissão ou fonte de posição não será substituída por símbolos inventados ou lote fixo de 50. Sem publicar dados privados, escrever na J1, iniciar rede sem os gates ou habilitar ordens reais.
