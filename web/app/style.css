@@ -155,6 +155,16 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .close-button { margin-top: 7px; width: 100%; }
 .ledger { font-size: .73rem; color: var(--muted); margin: 12px 0 0; padding-left: 18px; }
 .ledger li { margin-bottom: 6px; }
+/* D399: a non-financial, imported risk audit is visibly separate from
+   local browser scenarios. Read-only labels, never a native liquidation alert. */
+.risk-audit-panel { margin-top: 16px; }
+.risk-audit-metrics strong { font-size: clamp(.88rem, 1.8vw, 1.2rem); overflow-wrap: anywhere; }
+.risk-audit-decision { margin: 17px 0 8px; padding: 12px 14px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--panel-hi); font-size: .86rem; font-weight: 730; }
+.risk-audit-decision[data-tone="blocked"] { color: var(--amber); border-color: #94774c; }
+.risk-audit-decision[data-tone="conditional"] { color: var(--aqua); border-color: #448b80; }
+.risk-audit-value { color: var(--text); font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere; font-size: .85rem; margin-bottom: 0; }
 .prospective-horizons { display: grid; gap: 8px; padding-left: 19px; margin: 16px 0; }
 .prospective-horizon { color: var(--muted); background: var(--panel-hi); border: 1px solid var(--border); border-radius: 9px; padding: 10px; font-size: .83rem; overflow-wrap: anywhere; }
 .switchline { display: flex; align-items: center; gap: 10px; margin-top: 21px; font-size: .89rem; font-weight: 700; }
