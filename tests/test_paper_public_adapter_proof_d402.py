@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -100,6 +101,30 @@ console.log("D409_OFFLINE_WS_TO_AUTO4_TO_MOBILE_PASS");
         with self.assertRaises(DataValidationError):
             demonstrate_adapter_to_paper_cycle(
                 scenario="closed", include_mobile_snapshot=1)
+
+    def test_cli_writes_directly_importable_private_mobile_file_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp) / "paper-mobile.json"
+            command = [
+                sys.executable, "-m",
+                "scripts.run_paper_public_adapter_proof_d402",
+                "--scenario", "unknown", "--mobile-output", str(dest),
+            ]
+            first = subprocess.run(
+                command, cwd=ROOT, capture_output=True, text=True, timeout=25)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertTrue(dest.is_file())
+            self.assertNotIn("mobile_snapshot", json.loads(first.stdout))
+            payload = json.loads(dest.read_text(encoding="ascii"))
+            self.assertEqual(payload["schema_version"], "paper_positions_snapshot_v1")
+            self.assertTrue(payload["positions"][0]["pending_or_unknown_orders"] > 0)
+            if sys.platform != "win32":
+                self.assertEqual(dest.stat().st_mode & 0o777, 0o600)
+            repeated = subprocess.run(
+                command, cwd=ROOT, capture_output=True, text=True, timeout=25)
+            self.assertEqual(repeated.returncode, 65)
+            self.assertNotIn(str(dest), repeated.stderr)
+            self.assertEqual(payload, json.loads(dest.read_text(encoding="ascii")))
 
     def test_cli_exposes_mobile_snapshot_on_explicit_request_only(self):
         for scenario in ("closed", "unknown"):
