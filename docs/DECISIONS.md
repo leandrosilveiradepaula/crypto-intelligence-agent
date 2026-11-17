@@ -1946,3 +1946,8 @@ Substitui o **critério operacional de saídas** estabelecido em D410: exigir to
 ## D411 — frescor medido no timestamp da exchange, não só no recebimento (17/11/2026)
 
 Receber frame agora não transforma dado velho em preço atual. O censo público D390/D405 precisa checar a idade exchange→recepção <=3.000 ms antes de contabilizar contrato observado ou fresco; a prova de timestamp não deve ser substituída por `received_at_ms` recente. O report de latência pode contar o frame como aceito para diagnóstico, mas jamais como cobertura válida para oportunidades/PAPER.
+
+
+## D412 — nunca apresentar relatório finito como feed operacional conectado (17/11/2026)
+
+A interface J5 pode exibir diagnóstico agregado da subscrição e da gestão PAPER D410/D411 somente após validar o JSON e conservar sua natureza de amostra estática, não autenticada. Diferenciar: N50 global incompleto impede atestar sinais, mas não prova que uma saída PAPER sobre posição com preço válido esteja bloqueada. Exibir modo simulado quando transporte injetado, e mesmo modo público declarado por arquivo não comprova origem independente ou disponibilidade contínua. Sem armazenamento, sem chave, sem ordens e sem preço/ID privado.
