@@ -967,6 +967,9 @@
         } else if (payload.schema_version === "bybit-public-rest-price-pulse-d403-v1") {
           globalThis.CIAPublicMarket.install(payload);
           warn("Preços REST importados: amostra pontual, não feed ao vivo.", false);
+        } else if (payload.schema_version === "paper_positions_snapshot_v1") {
+          globalThis.CIAPersistedPaper.install(payload);
+          warn("Diário PAPER importado somente para leitura.", false);
         } else if (payload.schema_version === "paper-partial-derisk-risk-d398-v1") {
           partialRiskReport = E.validatePaperPartialRiskReport(payload);
           warn("Risco J3 PAPER importado na sessão: não é lucro nem posição local.", false);
