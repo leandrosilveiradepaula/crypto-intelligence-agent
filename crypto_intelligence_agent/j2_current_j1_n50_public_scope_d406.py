@@ -13,6 +13,7 @@ from pathlib import Path
 import time
 from typing import Callable
 
+from .bybit_public_ticker_state_d385 import _symbols, MAX_MONITORED
 from .bybit_public_ws_once import StreamSession
 from .bybit_public_ws_operational_probe_d405 import (
     observe_finite_public_ws_once,
@@ -159,6 +160,17 @@ def probe_current_j1_n50_ws_once(
             "orders_sent": False,
             "approved_for_live_use": False,
         }
+    # Bad runtime arguments must not cause an otherwise unnecessary private
+    # J1 owner file read or any public WS attempt.
+    if (type(position_symbols) is not tuple
+            or type(seconds) is not int or not 5 <= seconds <= 60
+            or (position_symbols and len(position_symbols) > MAX_MONITORED)
+            or not callable(clock) or not callable(wall_ms)
+            or not callable(sleeper)
+            or (session_factory is not None and not callable(session_factory))):
+        raise DataValidationError("D406 market observation budget invalid")
+    if position_symbols:
+        _symbols(position_symbols, maximum=MAX_MONITORED)
     at_ms = wall_ms()
     scope = read_current_j1_n50_scope(
         state_directory=state_directory, now_ms=at_ms,
