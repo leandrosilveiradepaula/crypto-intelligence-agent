@@ -257,8 +257,11 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
         )
         self.router = _route(self.path, short=False)
         self.clock = Clock()
+        # The new snapshot occurs after the UNKNOWN checkpoint. Replayed
+        # pre-checkpoint data must never be reused as a new PAPER trigger.
+        self.clock.now = NOW + 20
         result, _, _ = self.run_once([ack()] + [ticker(s) for s in N50] + [
-            ticker("BTCUSDT", bid="101"),
+            ticker("BTCUSDT", bid="101", time_delta=20),
         ])
         self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
         self.assertGreaterEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
