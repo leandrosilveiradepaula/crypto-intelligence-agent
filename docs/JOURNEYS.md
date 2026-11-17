@@ -485,3 +485,8 @@ Após código J2 #663 de captura recorrente, preparar J3 owner **somente leitura
 ## J4 / D387 — incremento automático intrahorário, sem reabrir J1
 
 Issue #676: `paper_intrahour_target_step_d387.py` utiliza o journal J4/AUTO4 existente para reservar saídas parciais automaticamente quando o bid (LONG) ou ask (SHORT) satisfaz nível explícito e a cotação é válida. Não exige clique nem novo candle 1h e **não inventa fill**; componentes PAPER previamente implementados de posições, reservas e runner são reutilizados. Próximas tarefas J4 na mesma issue: stop antes dos alvos, trailing/runner integrado, reconciliação de proteção e feed #677; depois testnet/live sob gates. Não confundir esta primeira implementação com execução em produção.
+
+
+## Evolução funcional J4/J5 — D407
+
+Consumir no aplicativo, em modo volátil, relatório de posições PAPER persistidas exportado pelo leitor existente AUTO4 (sem leitor novo). Exibir por posição reconciliação, quantidades e runner com aviso permanente de que não são fills de corretora, e rejeitar arquivos que tentem alegar modo live/stop nativo/PnL real. O fluxo é de importação manual read-only até existir operador de feed intrabar e acesso privado autorizado. Evidências em `docs/J5_PERSISTED_PAPER_MOBILE_D407.md`.
