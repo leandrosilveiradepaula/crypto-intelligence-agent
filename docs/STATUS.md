@@ -1842,3 +1842,8 @@ Separadas saúde global do Top50 e proteção das posições já abertas. Antes,
 ## J5 — saúde WebSocket/PAPER no aplicativo (D412)
 
 Implementado importador visual em português para relatório finito do monitor D411: apresenta cobertura do Top50, preços frescos, posições acompanhadas e o contraste entre **mercado degradado** e **saída PAPER avaliada com preço próprio válido**. Mostra claramente quando o arquivo é sintético, alerta que a sessão não está conectada ao celular e não sugere entradas/ordens. Não persiste dados da exchange nem acessa os journals. Ver `docs/J5_PAPER_WS_HEALTH_D412.md`; validar CI/merge antes de declarar em main.
+
+
+## J2 — correção orientada pela primeira sessão real de 129 frames (D413)
+
+A VPS comprovou transporte e recebimento de 129 frames para N50 em 3,657s, mas nenhum ACK ou cotação aceito. Identificado bug no supervisor D386: abortava ao ultrapassar 128 frames pré-ACK e ocultava categoria. Correção amplia descarte finito proporcional ao escopo, mantém fail-closed e apresenta contagem pré-ACK. **Ainda não significa ticker ao vivo validado**: faltam novo ACK, snapshots pós-ACK e cobertura com o código atualizado na VPS. Nenhuma ordem/serviço alterado. `docs/J2_N50_REAL_PREACK_BURST_D413.md`.
