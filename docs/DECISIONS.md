@@ -1951,3 +1951,8 @@ Receber frame agora não transforma dado velho em preço atual. O censo público
 ## D412 — nunca apresentar relatório finito como feed operacional conectado (17/11/2026)
 
 A interface J5 pode exibir diagnóstico agregado da subscrição e da gestão PAPER D410/D411 somente após validar o JSON e conservar sua natureza de amostra estática, não autenticada. Diferenciar: N50 global incompleto impede atestar sinais, mas não prova que uma saída PAPER sobre posição com preço válido esteja bloqueada. Exibir modo simulado quando transporte injetado, e mesmo modo público declarado por arquivo não comprova origem independente ou disponibilidade contínua. Sem armazenamento, sem chave, sem ordens e sem preço/ID privado.
+
+
+## D413 — limite pré-ACK deve depender da quantidade de tópicos sem dispensar confirmação (17/11/2026)
+
+O probe real do N50 falhou exatamente após 129 frames anteriores à assinatura confirmada, por usar teto fixo de 128. Como contratos de perpétuos podem emitir múltiplas mensagens antes do ACK, D386 deve descartar sem retenção/ingestão/callback os quadros pré-ACK até um teto **finitamente proporcional aos tópicos** (64/tópico, piso 128, teto 4096), sem aceitar sinal/PAPER antes do ACK. Falha real de pré-ACK recebe diagnóstico próprio em vez de `invalid_market_data`. Nunca considerar frames recebidos como cotação autenticada: exigir ACK e snapshot posterior. Avaliar com probe real da VPS antes de criar serviço 24×7. `docs/J2_N50_REAL_PREACK_BURST_D413.md`.

@@ -23,7 +23,12 @@ from .market_data import DataGapError, DataValidationError
 MAX_SECONDS = 3600
 MAX_FRAMES = 5_000_000
 MAX_SESSIONS = 4
+# A burst across 50+ topics can exceed 128 frames before the SUBSCRIBE ACK.
+# Drop (never cache, ingest or dispatch) each pre-ACK market frame; use a
+# bounded count proportional to the subscribed topics, capped at 4096.
 MAX_PREACK_FRAMES = 128
+MAX_PREACK_PER_TOPIC = 64
+MAX_PREACK_TOTAL = 4096
 MAX_SUBSCRIBE_ARG_CHARS = 21_000
 PING_EVERY_SECONDS = 20.0
 PONG_DEADLINE_SECONDS = 45.0
@@ -33,6 +38,8 @@ RECONNECT_WAIT_SECONDS = 5.0
 # Fixed categories from our own code only, never include provider payloads.
 _FAILURE_CLASSES = {
     "ticker_subscription_not_acknowledged": "subscription_not_acknowledged",
+    "ticker_ws_preack_budget_exceeded": "preack_limit_reached_before_ack",
+    "ticker_ws_bad_subscription_ack": "invalid_subscription_ack",
     "ticker_envelope_fields_invalid": "bad_envelope",
     "ticker_topic_invalid": "bad_topic",
     "ticker_outside_reviewed_membership": "scope_mismatch",
@@ -167,6 +174,9 @@ def supervise_public_tickers(
         raise DataValidationError("ticker_ws_injected_dependencies_invalid")
     topics = _topic_args(book)
     allowed = frozenset(topics)
+    preack_limit = min(
+        MAX_PREACK_TOTAL, max(MAX_PREACK_FRAMES, len(allowed) * MAX_PREACK_PER_TOPIC),
+    )
     sessions = sends = acks = frames = accepted = preack = pings = pongs = 0
     bins = [0, 0, 0, 0]
     started = _monotonic(clock)
@@ -270,7 +280,7 @@ def supervise_public_tickers(
                     if not acknowledged:
                         preack += 1
                         preack_session += 1
-                        if preack_session > MAX_PREACK_FRAMES:
+                        if preack_session > preack_limit:
                             raise DataGapError("ticker_ws_preack_budget_exceeded")
                         continue
                     received = wall_ms()
