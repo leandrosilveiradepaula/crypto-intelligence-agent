@@ -510,3 +510,8 @@ A tela do aplicativo passa a importar o relatório sanitizado da ponte pública 
 ## J2/J4 D414 — reconstrução segura após ACK no feed público Bybit
 
 A primeira sessão real de teste comprovou que snapshots/deltas podem chegar antes da resposta de confirmação: BTC 7 e N50 263 quadros pré-ACK, ACK=1 e delta posterior sem snapshot local. Corrigir supervisor D386 com quarentena estritamente limitada em memória, reidratação causal *somente* após ACK e nenhum callback de pré-ACK, mantendo a função do diário AUTO4 intacta. Testes sintéticos verificam contratos e limites, mas homologação real depende de nova sessão em VPS autorizada. `docs/J2_REAL_WS_ACK_SNAPSHOT_REHYDRATION_D414.md`.
+
+
+## J2 D415 — validar cruzamento de sequência e timestamp da Bybit
+
+BTCUSDT em feed público verdadeiro recebeu 65 quotes frescas pós-ACK; N50 recebeu 73 quotes para 33 instrumentos, interrompido em `conflicting_replay`. Para não confundir sequência de matching engine com identificador exclusivo de atualização parcial, D385 passa a aceitar `cs` estável apenas com avanço inequívoco de `ts`, preservando idempotência e fail-closed no mesmo instante, na ordem temporal regressiva ou sem snapshot. Regressões offline + teste real owner curto antes de alegar monitor 50/50 ou J6. Ver `docs/J2_REAL_N50_CROSS_SEQUENCE_D415.md`.
