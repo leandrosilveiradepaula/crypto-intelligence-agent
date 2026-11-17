@@ -142,8 +142,34 @@
       status.dataset.tone = "blocked";
     }
   }
+  async function refreshLocal() {
+    const loc = global.location;
+    if (!loc || loc.protocol !== "http:" || loc.port !== "8765" ||
+        !["127.0.0.1", "localhost"].includes(loc.hostname) ||
+        hasManualPriority()) return;
+    try {
+      const response = await global.fetch("/api/bybit-public-price", {
+        method: "GET", credentials: "omit",
+        cache: "no-store", redirect: "error"
+      });
+      if (!response.ok || response.status !== 200 ||
+          !(response.headers.get("content-type") || "").startsWith("application/json")) {
+        throw new Error("Fonte pública local indisponível");
+      }
+      const raw = await response.text();
+      if (raw.length === 0 || raw.length >= 1048576) {
+        throw new Error("Amostra REST fora do limite");
+      }
+      if (hasManualPriority()) return;
+      installLocal(JSON.parse(raw));
+    } catch (_) {
+      // A failed refresh cannot leave an old automatic quote looking fresh.
+      clearLocal();
+    }
+  }
   const api = Object.freeze({
-    validateReport, install, installLocal, clearLocal, hasManualPriority
+    validateReport, install, installLocal, clearLocal, hasManualPriority,
+    refreshLocal
   });
   global.CIAPublicMarket = api;
   if (typeof module === "object" && module && module.exports) {
