@@ -35,7 +35,7 @@ def _no_duplicates(pairs: list[tuple[str, object]]) -> dict:
 
 
 def _read(path: Path) -> dict:
-    if type(path) is not Path or not path.is_absolute() or path.is_symlink():
+    if not isinstance(path, Path) or not path.is_absolute() or path.is_symlink():
         raise DataValidationError("D408 expected absolute non-symlink score file")
     fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
     with os.fdopen(fd, "rb") as reader:
