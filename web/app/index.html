@@ -239,6 +239,28 @@
             <div id="position-list" class="position-list" aria-live="polite"></div>
           </div>
         </div>
+        <div class="panel risk-audit-panel" aria-labelledby="risk-audit-title">
+          <div class="panel-heading">
+            <h3 id="risk-audit-title">Risco de liquidação · auditoria PAPER J3</h3>
+            <span id="risk-audit-status" class="status-label">Sem relatório</span>
+          </div>
+          <p class="muted fine">Importe um relatório D398 sanitizado pelo seletor JSON abaixo. É uma avaliação separada dos cenários criados neste navegador: não são posições ou preços reais da Bybit.</p>
+          <div id="risk-audit-empty" class="empty">
+            <strong>Risco financeiro ainda não avaliado</strong>
+            <p>Nenhum comprovante de margem, FILLs ou trajetória mark foi importado. Sem número de PnL ou inferência de segurança a 50x.</p>
+          </div>
+          <div id="risk-audit-loaded" hidden>
+            <div class="inline-metrics risk-audit-metrics">
+              <div><strong id="risk-leverage">—</strong><span>Alavancagem na abertura PAPER</span></div>
+              <div><strong id="risk-ticks">0</strong><span>Ticks sintéticos avaliados</span></div>
+              <div><strong id="risk-fills">0</strong><span>Preenchimentos PAPER confirmados</span></div>
+              <div><strong id="risk-baseline">—</strong><span>Proxy conservador integral D397</span></div>
+            </div>
+            <p id="risk-decision" class="risk-audit-decision" role="status" aria-live="polite">Sem resultado.</p>
+            <p id="risk-value" class="risk-audit-value">Resultado líquido indisponível.</p>
+          </div>
+          <p class="muted fine">Mesmo quando a referência for positiva, não existe PnL real, prova de liquidação, tiers autenticados, proteção nativa, financiamento completo ou trajetória intrabar verificada. O relatório é temporário: não é salvo nem associado às posições locais.</p>
+        </div>
       </section>
 
       <section class="group" id="configuracoes" aria-labelledby="settings-title">
@@ -269,10 +291,10 @@
             <label class="file-drop" for="import-file">
               <span aria-hidden="true" class="upload-icon">↓</span>
               <strong>Selecionar arquivo JSON local</strong>
-              <span>Relatórios N50/J2/J3 sanitizados ou backup de cenários PAPER</span>
+              <span>Relatórios N50/J2/J3/D398 sanitizados ou backup PAPER</span>
               <input type="file" id="import-file" accept=".json,application/json">
             </label>
-            <p class="muted fine">O arquivo é lido somente no navegador (até 1 MiB), sem upload. Relatórios N50/J2 não persistem. A restauração de backup PAPER substitui cenários locais somente após sua confirmação.</p>
+            <p class="muted fine">O arquivo é lido somente no navegador (até 1 MiB), sem upload. Relatórios N50/J2/J3 e risco D398 não persistem. A restauração de backup PAPER substitui cenários locais somente após sua confirmação.</p>
             <div class="actions">
               <button id="export-paper" class="secondary" type="button">Exportar cenários PAPER</button>
               <button id="reset-paper" class="danger" type="button">Apagar cenários locais</button>
