@@ -35,7 +35,7 @@ Retorno 0 na CLI somente quando todos os contratos fornecidos tiveram cotação 
 
 A documentação oficial confirma o endpoint público linear, o topic ticker, snapshot/delta e o heartbeat `ping`: https://bybit-exchange.github.io/docs/v5/ws/connect e https://bybit-exchange.github.io/docs/v5/websocket/public/ticker.
 
-Na sessão do ChatGPT de 17/11/2026, houve um teste HTTP sem upgrade contra o host WS na VPS: certificado TLS verificado com êxito e resposta HTTP 400. **Essa resposta não demonstra handshake/ACK nem frame real**; serve exclusivamente como verificação de alcance TLS. O executor administrativo acessível permitiu `curl`, mas bloqueou `python -m` e `python -c` por `exec_unavailable`. Não se deve contornar o bloqueio nem declarar que este teste real foi executado.
+Na sessão de 17/11/2026, a VPS obteve **HTTP 101 Switching Protocols** ao enviar um handshake padrão de abertura WebSocket por HTTPS para `stream.bybit.com/v5/public/linear`. A verificação TLS retornou `ssl_verify_result=0`. O cliente `curl` permaneceu conectado até o limite de seis segundos (`exit 28` de timeout após o upgrade); por isso **o handshake WebSocket foi verificado de verdade**, mas não houve envio de mensagem `subscribe` nem observação de ACK/tickers. A resposta HTTP 400 sem Upgrade observada anteriormente foi corretamente substituída pela prova mais forte de 101. O executor administrativo acessível permite `curl`, porém bloqueou `python -m` e `python -c` com `exec_unavailable`; o diagnóstico de quadros reais ainda não foi executado. Não contornar bloqueios nem inferir feed 24×7.
 
 ## Testes para integrar
 
