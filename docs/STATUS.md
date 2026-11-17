@@ -1797,3 +1797,8 @@ Implementado painel responsivo `Risco de liquidação · auditoria PAPER J3` no 
 ## J2/J5 D403 — Painel móvel de amostras REST da Bybit (17/11/2026)
 
 O aplicativo recebeu painel para visualizar preço negociado, mark e bid/ask de contratos selecionados, a partir de amostra pontual pública da Bybit produzida por GET do transport J1. Informações voláteis, indicação de amostra vencida após 30 segundos, sem conexões de browser, ordens, vínculo a posições ou autenticação do arquivo. Testes incluídos; CI/merge devem ser confirmados. Necessária conexão WebSocket contínua e homologação PAPER para qualquer monitoramento intrahora de stops reais. Ver docs/BYBIT_PUBLIC_REST_MARKET_PULSE_D403.md.
+
+
+## Capacidade J5 — atualização de preços públicos por leitura local (D404)
+
+O painel móvel recebe amostras REST da Bybit via o servidor local loopback existente quando este estiver explicitamente habilitado para pesquisa pública e símbolos revisados. Atualização cada 60s, sem mais de uma chamada remota/min pelo backend, indicação de vencimento, sem operações financeiras ou persistência de cotações. Falha de fonte remove preço automático, arquivo manual tem prioridade até reload. Código não representa implantação na VPS ou feed WebSocket contínuo. Testes e plano em docs/J5_PUBLIC_REST_AUTO_D404.md.
