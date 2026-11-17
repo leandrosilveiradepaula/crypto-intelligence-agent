@@ -215,8 +215,13 @@ def run_finite_public_ticker_coverage_pilot(
         positions = set(epoch.position_symbols)
 
         def observe(quote: BybitTickerQuote) -> None:
-            # A positive-depth ticker can be counted once per symbol even if
-            # that symbol sends many repeated updates. No prices are stored.
+            # Coverage MUST be after the externally admitted PIT universe
+            # and must not accept a future exchange stamp as proof.
+            if (quote.exchange_at_ms < epoch.universe_at_ms
+                    or quote.exchange_at_ms > quote.received_at_ms):
+                raise DataGapError("D396 noncausal scope ticker timestamp")
+            # A positive-depth ticker counts once per symbol even if
+            # it sends many repeated updates. No prices are stored.
             if book.current(quote.symbol, at_ms=quote.received_at_ms) is not None:
                 seen.add(quote.symbol)
 
