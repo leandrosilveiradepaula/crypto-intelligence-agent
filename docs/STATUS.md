@@ -1768,3 +1768,7 @@ Novo comando `python -m scripts.run_paper_intrahour_proof_d392` e testes integra
 ## J3/J4 D393 — auditar custos somente de fills PAPER explícitos (16/11/2026)
 
 D393 acrescenta `paper_closed_cost_audit_d393.py`, testes e CLI `python -m scripts.run_paper_cost_audit_d393` para conectar o ledger AUTO4 de D392 ao motor de taxas/slippage/funding J3 já existente. Cenário sintético LONG fechado exige preço declarado para três FILLs, calcula custo condicional (-41,385 unidades fictícias com premissas 10/10/5/5 bps e funding 2 bps); cenário UNKNOWN deve retornar campo net null, sem falsa venda. **Não prova liquidação, financiamento real, PnL, preço Bybit ou rentabilidade.** Consultar SHA/CI/merge no GitHub antes de marcar entrega aprovada.
+
+## J3/J4 D394 — hipótese causal de preenchimento PAPER em BBO (17/11/2026)
+
+O módulo `paper_causal_fill_d394.py` usa o journal AUTO4 já existente e ticker D385 posterior à intenção, não o preço disparador. Limita preenchimentos hipotéticos à profundidade bid/ask observada após latência declarada, saldo da intenção, participação configurável e lote PAPER, com replay idempotente. Bloqueia UNKNOWN/ordens encerradas e livros/cotações obsoletos ou rasos. Testes unitários offline e runbook `docs/J3_CAUSAL_PAPER_FILL_D394.md`. **Não é fill real, não comprova lucro, não libera ordens nem liquidação**. PR/CI/merge verificar no GitHub antes de declarar integração.
