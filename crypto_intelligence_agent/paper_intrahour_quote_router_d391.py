@@ -94,6 +94,9 @@ class PaperIntrahourQuoteRouter:
                 raise DataValidationError("PAPER runner mark and financial ledgers must be separate")
             self._by_symbol[balance.symbol] = r
         self._last: dict[str, BybitTickerQuote] = {}
+        # Preserve timestamp monotonicity across transport reconnects even
+        # when exchange cross-sequence restarts with a new snapshot.
+        self._last_exchange_at_ms: dict[str, int] = {}
         self._max_network_lag_ms = max_network_lag_ms
         self._max_events = max_events
         self._seen = 0
@@ -101,6 +104,15 @@ class PaperIntrahourQuoteRouter:
         self._ignored = 0
         self._decisions: dict[str, int] = {}
         self._runner_decisions: dict[str, int] = {}
+
+    def begin_new_market_session(self) -> None:
+        """Invalidate transport-specific sequence baselines, not PAPER state.
+
+        D386 calls this before a new subscription. A new ACK + snapshot is
+        still mandatory upstream; older timestamps never become new data.
+        Financial reservations and runner journals are never reset.
+        """
+        self._last.clear()
 
     def process(
         self, quote: BybitTickerQuote,
@@ -118,6 +130,9 @@ class PaperIntrahourQuoteRouter:
                 or quote.received_at_ms - quote.exchange_at_ms > self._max_network_lag_ms):
             raise DataGapError("PAPER quote router stale transport")
         old = self._last.get(quote.symbol)
+        watermark = self._last_exchange_at_ms.get(quote.symbol)
+        if watermark is not None and quote.exchange_at_ms <= watermark and old is None:
+            raise DataGapError("PAPER quote router stale replay across sessions")
         if old is not None:
             if (quote.cross_sequence < old.cross_sequence
                     or quote.received_at_ms < old.received_at_ms
@@ -148,6 +163,7 @@ class PaperIntrahourQuoteRouter:
                 quote=quote, as_of_ms=quote.received_at_ms,
             )
         self._last[quote.symbol] = quote
+        self._last_exchange_at_ms[quote.symbol] = quote.exchange_at_ms
         decision = result.decision.value
         self._decisions[decision] = self._decisions.get(decision, 0) + 1
         return result

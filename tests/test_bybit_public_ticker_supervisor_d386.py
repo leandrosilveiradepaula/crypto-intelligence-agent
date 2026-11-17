@@ -88,7 +88,8 @@ def make_book(*, fifty=False):
     )
 
 
-def run(book, clock, sessions, *, budget=None, on_quote=None):
+def run(book, clock, sessions, *, budget=None, on_quote=None,
+        on_session_reset=None):
     iterator = iter(sessions)
 
     def factory():
@@ -100,6 +101,7 @@ def run(book, clock, sessions, *, budget=None, on_quote=None):
                                            max_seconds=10),
         clock=clock.monotonic, wall_ms=clock.utc,
         sleeper=clock.advance, on_quote=on_quote,
+        on_session_reset=on_session_reset,
     )
 
 
@@ -215,6 +217,36 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
         self.assertEqual(r.ticker_frames_accepted, 2)
         self.assertEqual(len(quotes), 2)
         self.assertEqual(quotes[1].cross_sequence, 1)
+
+    def test_consumer_session_reset_precedes_reconnect_and_replayed_seq(self):
+        clock = FakeClock()
+        s1 = Session(clock, [ack(), ticker(cs=9), OSError("disconnect")])
+        s2 = Session(clock, [ack(), ticker(cs=1, ts=NOW + 5000)])
+        events = []
+        result = run(make_book(), clock, [s1, s2],
+                     budget=TickerLeaseBudget(max_sessions=2, max_frames=30,
+                                              max_seconds=20),
+                     on_session_reset=lambda: events.append("reset"),
+                     on_quote=lambda quote: events.append(quote.cross_sequence))
+        self.assertEqual(result.status, "lease_completed")
+        self.assertEqual(events, ["reset", 9, "reset", 1])
+        self.assertTrue(s1.closed and s2.closed)
+
+    def test_session_reset_failure_never_opens_socket(self):
+        clock = FakeClock()
+        attempts = []
+        def factory():
+            attempts.append(1)
+            raise AssertionError("socket must not be opened")
+        def invalid_reset():
+            raise DataGapError("cannot reset downstream")
+        from crypto_intelligence_agent.market_data import DataGapError
+        with self.assertRaises(DataGapError):
+            supervise_public_tickers(
+                session_factory=factory, book=make_book(),
+                on_session_reset=invalid_reset,
+            )
+        self.assertEqual(attempts, [])
 
     def test_pings_pongs_and_missing_pong_budget(self):
         clock = FakeClock()
