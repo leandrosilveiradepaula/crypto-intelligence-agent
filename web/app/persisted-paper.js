@@ -1,0 +1,198 @@
+/* D407: read-only visualizer of EXISTING AUTO4 PAPER position snapshots.
+   Independent of the browser's local lab. No network, order or persistence. */
+(function (global) {
+  "use strict";
+  const ROOT = Object.freeze([
+    "schema_version", "mode", "quality", "source_provenance",
+    "selection", "no_cross_instrument_quantity_aggregation", "orders_sent",
+    "live_trading_authorized", "approved_for_live_use",
+    "financial_pnl_available", "positions"
+  ]);
+  const FIELDS = Object.freeze([
+    "position_id", "venue_candidate", "symbol_fixture", "side",
+    "checkpoint_utc", "initial_confirmed_units", "filled_exit_units",
+    "reserved_unfilled_units", "confirmed_remaining_units",
+    "unreserved_units", "runner_floor_units", "runner_filled_units",
+    "runner_reserved_unfilled_units", "runner_unallocated_units",
+    "runner_readiness", "trailing_stop_active", "native_stop_verified",
+    "recovered_runner", "margin_intent_requested",
+    "opening_order_cross_checked", "pending_or_unknown_orders",
+    "unknown_order_count"
+  ]);
+  const MARGIN = Object.freeze([
+    "leverage_at_intent", "requested_margin_quote", "quote_currency",
+    "quality", "opening_order_cross_checked",
+    "actual_position_margin_verified", "venue_leverage_verified", "orders_sent"
+  ]);
+  const RECOVERED = Object.freeze([
+    "state", "observed_tick_count", "digest_sha256",
+    "hypothetical_only", "native_stop_verified", "trailing_stop_active"
+  ]);
+  const RUNNERS = Object.freeze({
+    "NO_RESIDUAL_RUNNER_CONFIGURED": "Sem parcela residual",
+    "PENDING_EXIT_RECONCILIATION": "Saída pendente: reconciliar",
+    "WAITING_FOR_PARTIAL_FILLS": "Aguardando parciais confirmadas",
+    "RUNNER_CONFIRMED_NOT_PROTECTED": "Runner PAPER sem stop nativo",
+    "RUNNER_EXIT_PENDING_RECONCILIATION": "Runner pendente: reconciliar",
+    "RUNNER_EXIT_PARTIALLY_FILLED": "Runner parcialmente preenchido",
+    "RUNNER_CLOSED_PAPER_ONLY": "Runner encerrado no diário PAPER",
+    "RUNNER_EXIT_CANCELLED_REMAINDER": "Saída cancelada: saldo liberado"
+  });
+  const DEC = /^(?:0|[1-9][0-9]{0,35})(?:\.[0-9]{1,30})?$/;
+  const UNIT_SCALE = 10n ** 30n;
+  let current = null;
+
+  function valid(ok) {
+    if (!ok) throw new Error("Relatório de posições PAPER inválido ou incompatível");
+  }
+  function exact(obj, fields) {
+    valid(obj !== null && typeof obj === "object" && !Array.isArray(obj)
+      && Object.keys(obj).length === fields.length
+      && fields.every(k => Object.hasOwn(obj, k)));
+  }
+  function units(raw, positive) {
+    valid(typeof raw === "string" && DEC.test(raw));
+    const parts = raw.split(".");
+    const scaled = BigInt(parts[0]) * UNIT_SCALE +
+      BigInt(((parts[1] || "") + "0".repeat(30)).slice(0, 30));
+    valid(positive ? scaled > 0n : scaled >= 0n);
+    return scaled;
+  }
+  function validateReport(raw) {
+    exact(raw, ROOT);
+    valid(raw.schema_version === "paper_positions_snapshot_v1" &&
+      raw.mode === "offline_paper" &&
+      raw.quality === "synthetic_journal_replay_only" &&
+      raw.source_provenance === "local_sqlite_digest_not_exchange_authenticated" &&
+      raw.selection === "explicit_ids_same_sqlite_read_transaction" &&
+      raw.no_cross_instrument_quantity_aggregation === true &&
+      raw.orders_sent === false && raw.live_trading_authorized === false &&
+      raw.approved_for_live_use === false && raw.financial_pnl_available === false &&
+      Array.isArray(raw.positions) && raw.positions.length >= 1 &&
+      raw.positions.length <= 128);
+    const ids = new Set();
+    for (const p of raw.positions) {
+      exact(p, FIELDS);
+      valid(typeof p.position_id === "string" &&
+        /^fixture_[A-Za-z0-9_-]{1,120}$/.test(p.position_id) &&
+        !ids.has(p.position_id));
+      ids.add(p.position_id);
+      valid(["BYBIT_V5", "BINANCE_USDM"].includes(p.venue_candidate) &&
+        /^[A-Z0-9]{1,28}USDT$/.test(p.symbol_fixture) &&
+        ["LONG", "SHORT"].includes(p.side) &&
+        typeof p.checkpoint_utc === "string" &&
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(p.checkpoint_utc) &&
+        Number.isFinite(Date.parse(p.checkpoint_utc)) &&
+        Object.hasOwn(RUNNERS, p.runner_readiness) &&
+        p.trailing_stop_active === false && p.native_stop_verified === false &&
+        typeof p.opening_order_cross_checked === "boolean" &&
+        Number.isSafeInteger(p.pending_or_unknown_orders) &&
+        Number.isSafeInteger(p.unknown_order_count) &&
+        p.pending_or_unknown_orders >= 0 &&
+        p.unknown_order_count >= 0 &&
+        p.unknown_order_count <= p.pending_or_unknown_orders &&
+        p.pending_or_unknown_orders <= 1000);
+      const initial = units(p.initial_confirmed_units, true);
+      const exited = units(p.filled_exit_units, false);
+      const reserved = units(p.reserved_unfilled_units, false);
+      const remaining = units(p.confirmed_remaining_units, false);
+      const unreserved = units(p.unreserved_units, false);
+      const floor = units(p.runner_floor_units, false);
+      const runnerFilled = units(p.runner_filled_units, false);
+      const runnerReserved = units(p.runner_reserved_unfilled_units, false);
+      const runnerFree = units(p.runner_unallocated_units, false);
+      valid(exited + remaining === initial &&
+        reserved + unreserved === remaining &&
+        floor <= initial && runnerFilled <= exited &&
+        runnerReserved <= reserved && runnerFree <= remaining);
+      if (p.margin_intent_requested !== null) {
+        const m = p.margin_intent_requested;
+        exact(m, MARGIN);
+        valid(Number.isSafeInteger(m.leverage_at_intent) &&
+          m.leverage_at_intent >= 1 && m.leverage_at_intent <= 200 &&
+          /^[A-Z]{2,12}$/.test(m.quote_currency) &&
+          m.quality === "synthetic_requested_margin_at_intent_only" &&
+          m.opening_order_cross_checked === p.opening_order_cross_checked &&
+          m.actual_position_margin_verified === false &&
+          m.venue_leverage_verified === false && m.orders_sent === false);
+        units(m.requested_margin_quote, true);
+      }
+      if (p.recovered_runner !== null) {
+        const x = p.recovered_runner;
+        exact(x, RECOVERED);
+        valid(["NOT_ACTIVATED", "TRACKING", "TRIGGERED_HYPOTHETICAL_ONLY"]
+          .includes(x.state) &&
+          Number.isSafeInteger(x.observed_tick_count) &&
+          x.observed_tick_count >= 0 &&
+          x.observed_tick_count <= 1000000 &&
+          typeof x.digest_sha256 === "string" &&
+          /^[a-f0-9]{64}$/.test(x.digest_sha256) &&
+          x.hypothetical_only === true && x.native_stop_verified === false &&
+          x.trailing_stop_active === false);
+      }
+    }
+    return raw;
+  }
+  function span(tag, value, className) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    el.textContent = String(value);
+    return el;
+  }
+  function render() {
+    if (typeof document === "undefined") return;
+    const empty = document.getElementById("persisted-paper-empty");
+    const loaded = document.getElementById("persisted-paper-loaded");
+    const status = document.getElementById("persisted-paper-status");
+    const list = document.getElementById("persisted-paper-rows");
+    const summary = document.getElementById("persisted-paper-summary");
+    if (!empty || !loaded || !status || !list || !summary) return;
+    empty.hidden = Boolean(current);
+    loaded.hidden = !current;
+    list.replaceChildren();
+    if (!current) { status.textContent = "Sem diário PAPER"; return; }
+    const blocked = current.positions.filter(p =>
+      p.pending_or_unknown_orders > 0 ||
+      p.runner_readiness.includes("PENDING_EXIT")).length;
+    status.textContent = blocked ? "Reconciliação pendente" : "Diário PAPER importado";
+    summary.textContent = current.positions.length + " posições selecionadas" +
+      (blocked ? " · " + blocked + " com pendências" : " · sem pendências registradas") +
+      " · dados estáticos importados, sem monitor ao vivo";
+    for (const p of current.positions) {
+      const card = span("article", "", "market-pulse-row");
+      card.append(span("strong", p.symbol_fixture + " · " + p.side),
+        span("span", "Posição PAPER: " + p.position_id),
+        span("span", "Abertura fictícia: " + p.initial_confirmed_units +
+          " · parciais preenchidas: " + p.filled_exit_units),
+        span("span", "Restante: " + p.confirmed_remaining_units +
+          " · reservado: " + p.reserved_unfilled_units +
+          " · disponível: " + p.unreserved_units),
+        span("span", "Runner: " + RUNNERS[p.runner_readiness]),
+        span("span", "Ordens incertas: " + p.unknown_order_count +
+          " · pendentes: " + p.pending_or_unknown_orders),
+        span("span", "Checkpoint UTC: " + p.checkpoint_utc));
+      if (p.margin_intent_requested) {
+        const m = p.margin_intent_requested;
+        card.append(span("span", "Margem solicitada PAPER: " +
+          m.requested_margin_quote + " " + m.quote_currency +
+          " · alavancagem solicitada: " + m.leverage_at_intent + "x"));
+      } else {
+        card.append(span("span", "Margem/alavancagem não registradas no diário"));
+      }
+      if (p.pending_or_unknown_orders || p.unknown_order_count) {
+        card.append(span("strong", "Bloqueado para novas reduções até reconciliação"));
+      }
+      list.append(card);
+    }
+  }
+  function install(payload) {
+    const accepted = validateReport(payload);
+    current = accepted; // Session-only; never placed in localStorage.
+    render();
+  }
+  global.CIAPersistedPaper = Object.freeze({ validateReport, install });
+  if (typeof module === "object" && module && module.exports) {
+    module.exports = global.CIAPersistedPaper;
+  }
+  if (typeof document !== "undefined") render();
+})(typeof globalThis !== "undefined" ? globalThis : this);
