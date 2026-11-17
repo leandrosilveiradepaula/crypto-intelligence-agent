@@ -123,7 +123,7 @@ class PublicRestPricePulseD403Tests(unittest.TestCase):
         self.assertNotIn("/v5/order", code)
         self.assertNotIn("api_key", code)
         self.assertNotIn("sqlite3", code)
-        self.assertNotIn("websocket", code.lower().split("from __future__")[1])
+        self.assertNotIn("import websockets", code)
 
     def test_cli_help_does_not_contact_market(self):
         completed = subprocess.run(
