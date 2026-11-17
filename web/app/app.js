@@ -1,5 +1,4 @@
-/* J5/MVP1: interactive PT-BR, local-only PAPER console.
-   No fetch, XMLHttpRequest, WebSocket, beacon, credentials or order endpoints. */
+/* J5 local PAPER research; no exchange orders. */
 (function () {
   "use strict";
   const E = globalThis.CIAEngine;
@@ -13,9 +12,9 @@
   let research = null;
   let researchOrigin = "none";
   let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
-  let prospectiveCapture = null; // One owner decision, session-only; not an OOS attestation.
-  let prospectiveScores = Object.create(null); // 1/4/8h costed references, never fills.
-  let partialRiskReport = null; // D398: session-only.
+  let prospectiveCapture = null;
+  let prospectiveScores = Object.create(null);
+  let partialRiskReport = null;
   let storageAvailable = true;
 
   function el(tag, className, content) {
