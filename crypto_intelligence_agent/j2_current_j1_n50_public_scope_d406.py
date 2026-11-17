@@ -66,7 +66,7 @@ def read_current_j1_n50_scope(
     opens the WS transport, fetches REST, ranks by ticker or writes a file.
     """
     if (allow_private_pointer_read is not True
-            or type(state_directory) is not Path or not state_directory.is_absolute()
+            or not isinstance(state_directory, Path) or not state_directory.is_absolute()
             or type(now_ms) is not int
             or not 1_600_000_000_000 <= now_ms < _MAX_UTC_MS):
         raise DataValidationError("D406 owner scope read not authorized")
