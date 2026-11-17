@@ -495,3 +495,8 @@ Consumir no aplicativo, em modo volátil, relatório de posições PAPER persist
 ## J2/J4 D410 — escopo automático e gate de segurança do monitor PAPER
 
 O monitor finito liga a coorte dinâmica N50 já mantida na J1 ao socket público e ao router AUTO4, incluindo posições externas ao ranking. Exige cobertura ACK+snapshot válida e recente de todo o escopo antes de qualquer nova reserva de saída PAPER; mantém os mesmos journals e a política stop-first. Testes offline provam bloqueio com 49/50 e manutenção do UNKNOWN, sem atribuir confiabilidade 24×7 ou vantagem estatística. Código ainda não liberado para execução na VPS. `docs/J2_J4_CURRENT_N50_PAPER_SCOPE_GATE_D410.md`.
+
+
+## J2/J4 D411 — isolamento da proteção de posições
+
+A saúde completa do N50 orienta seleção/monitoramento de oportunidades, não bloqueia proteção hipotética de posições existentes. O motor PAPER recebe apenas ticker próprio pós-ACK e recente, com stop antes de parcial e idempotência no AUTO4. A avaliação de cobertura ampla segue separada e degradada se qualquer instrumento do N50 estiver ausente. Testes offline; feed real e 24×7 não homologados. `docs/J2_J4_POSITION_EXIT_VS_N50_HEALTH_D411.md`.
