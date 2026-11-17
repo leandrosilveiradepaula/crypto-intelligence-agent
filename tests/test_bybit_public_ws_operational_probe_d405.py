@@ -129,7 +129,7 @@ class LiveWSProbeD405Tests(unittest.TestCase):
             self.assertFalse(result[flag])
         self.assertNotIn("BTCUSDT", json.dumps(result))
         self.assertNotIn("100.0", json.dumps(result))
-        self.assertNotIn("fixture", json.dumps(result))
+        self.assertNotIn("\\"conn_id\\"", json.dumps(result))
 
     def test_missing_held_position_not_covered_even_if_btc_works(self):
         c = Clock()
