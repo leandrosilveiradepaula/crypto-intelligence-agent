@@ -78,6 +78,19 @@ Testes com ticker Bybit tipado sintético e SQLite AUTO4:
   timestamps futuros/obsoletos e timeout abstêm-se;
 - lote arredondado para baixo.
 
+### Prova de composição em uma hora
+
+O teste `test_entire_post_latency_fill_cycle_connects_to_existing_d393_cost_audit`
+percorre a **mesma sequência D389/D391** de duas metas e um stop,
+mas registra os fills sintéticos de 30, 20 e 50 unidades **somente
+a partir de observações BBO adicionais e posteriores à latência**,
+não por `FILL` manual. Em seguida, o módulo J3/D393 audita o
+SQLite AUTO4 já preenchido, vincula os três recibos hipotéticos,
+cobra taxas e funding assumidos e obtém referência condicional
+`-41.385` unidades. A liquidação e o PnL real continuam
+explicitamente não verificados. Esse teste não usa internet,
+autenticação, livro de ordens profundo ou histórico real.
+
 ## Lacunas do modelo
 
 Uma estimativa de fill baseada em uma única cotação
