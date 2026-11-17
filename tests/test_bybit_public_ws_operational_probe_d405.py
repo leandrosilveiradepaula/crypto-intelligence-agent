@@ -148,6 +148,48 @@ class LiveWSProbeD405Tests(unittest.TestCase):
         self.assertFalse(result["orders_sent"])
         self.assertEqual(result["p95_event_lag_bucket"], "over_5000ms")
 
+    def test_real_btc_shape_preack_snapshot_and_deltas_then_ack_then_delta(self):
+        c = Clock()
+        before = [quote("BTCUSDT", seq=1)]
+        before += [
+            json.dumps({
+                "topic": "tickers.BTCUSDT", "type": "delta",
+                "ts": BASE - 50, "cs": index,
+                "data": {"symbol": "BTCUSDT",
+                         "lastPrice": f"100.{index:03d}"},
+            }) for index in range(2, 8)
+        ]
+        after_ack_delta = json.dumps({
+            "topic": "tickers.BTCUSDT", "type": "delta",
+            "ts": BASE - 40, "cs": 8,
+            "data": {"symbol": "BTCUSDT", "lastPrice": "101.123"},
+        })
+        sock = Socket(c, before + [ack(), after_ack_delta])
+        result = run(c, [sock], symbols=("BTCUSDT",), seconds=5)
+        self.assertEqual(result["frames_seen"], 9)
+        self.assertEqual(result["preack_frames_discarded"], 7)
+        self.assertEqual(result["preack_frames_bootstrapped_after_ack"], 7)
+        self.assertEqual(result["subscription_acks"], 1)
+        self.assertEqual(result["market_frames_accepted"], 1)
+        self.assertEqual(result["received_distinct_contracts"], 1)
+        self.assertTrue(result["finite_coverage_observed_once"])
+        self.assertFalse(result["network_attempted"])
+        self.assertFalse(result["real_market_frames_verified"])
+        self.assertFalse(result["orders_sent"])
+        self.assertTrue(sock.closed)
+
+    def test_staged_snapshot_does_not_count_as_market_quote_without_postack(self):
+        c = Clock()
+        sock = Socket(c, [quote("BTCUSDT"), ack()])
+        result = run(c, [sock], symbols=("BTCUSDT",), seconds=5)
+        self.assertEqual(result["preack_frames_bootstrapped_after_ack"], 1)
+        self.assertEqual(result["subscription_acks"], 1)
+        self.assertEqual(result["market_frames_accepted"], 0)
+        self.assertEqual(result["received_distinct_contracts"], 0)
+        self.assertFalse(result["finite_coverage_observed_once"])
+        self.assertFalse(result["real_market_frames_verified"])
+        self.assertFalse(result["orders_sent"])
+
     def test_missing_held_position_not_covered_even_if_btc_works(self):
         c = Clock()
         sock = Socket(c, [ack(), quote("BTCUSDT")])

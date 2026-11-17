@@ -138,12 +138,13 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
         self.assertIn("tickers.BTCUSDT", session.sent[0]["args"])
         self.assertEqual(report.subscriptions_acknowledged, 1)
 
-    def test_pre_ack_market_is_discarded_not_replayed(self):
+    def test_pre_ack_market_bootstraps_only_after_ack_no_callback_replay(self):
         clock = FakeClock()
         session = Session(clock, [ticker(), ack(), ticker(cs=2)])
         received = []
         report = run(make_book(), clock, [session], on_quote=received.append)
         self.assertEqual(report.preack_frames_discarded, 1)
+        self.assertEqual(report.preack_frames_bootstrapped_after_ack, 1)
         self.assertEqual(report.ticker_frames_accepted, 1)
         self.assertEqual(received[0].cross_sequence, 2)
 
@@ -325,6 +326,138 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
         self.assertEqual(report.ticker_frames_accepted, 0)
         self.assertEqual(quotes, [])
         self.assertFalse(report.sanitized_report()["orders_sent"])
+
+    def test_real_btc_pattern_preack_snapshot_then_ack_then_delta(self):
+        # VPS D413: 7 pre-ACK, 1 ACK, then delta without a new snapshot.
+        # Snapshot/deltas are quarantined, validated only on ACK and never
+        # forwarded to a consumer. Post-ACK delta can then use that state.
+        clock = FakeClock()
+        pre = [ticker(cs=1)] + [
+            ticker(cs=i+2, kind="delta", lastPrice=f"100.{i+2:03d}")
+            for i in range(6)
+        ]
+        sock = Session(clock, pre + [
+            ack(), ticker(cs=8, kind="delta", lastPrice="101.12345"),
+        ])
+        seen = []
+        report = run(make_book(), clock, [sock],
+                     budget=TickerLeaseBudget(max_sessions=1,
+                                              max_frames=100,
+                                              max_seconds=10),
+                     on_quote=seen.append)
+        self.assertEqual(report.status, "lease_completed")
+        self.assertEqual(report.frames_seen, 9)
+        self.assertEqual(report.preack_frames_discarded, 7)
+        self.assertEqual(report.preack_frames_bootstrapped_after_ack, 7)
+        self.assertEqual(report.subscriptions_acknowledged, 1)
+        self.assertEqual(report.ticker_frames_accepted, 1)
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(seen[0].last_price, Decimal("101.12345"))
+        self.assertEqual(seen[0].mark_price, Decimal("100"))
+        self.assertTrue(sock.closed)
+        self.assertFalse(report.sanitized_report()["orders_sent"])
+
+    def test_real_n50_pattern_263_preack_then_ack_then_delta(self):
+        clock = FakeClock()
+        names = tuple(f"A{i}USDT" for i in range(50))
+        # 50 snapshots and BTC snapshot, then 212 BTC deltas before ACK.
+        first = [ticker(symbol, cs=1) for symbol in names] + [
+            ticker("BTCUSDT", cs=1),
+        ]
+        updates = [
+            ticker("BTCUSDT", kind="delta", cs=i+2,
+                   lastPrice=f"101.{i:03d}") for i in range(212)
+        ]
+        self.assertEqual(len(first + updates), 263)
+        sock = Session(clock, first + updates + [
+            ack(), ticker("BTCUSDT", kind="delta", cs=214,
+                          lastPrice="102.456"),
+        ])
+        received = []
+        result = run(make_book(fifty=True), clock, [sock],
+                     budget=TickerLeaseBudget(max_sessions=1,
+                                              max_frames=500,
+                                              max_seconds=10),
+                     on_quote=received.append)
+        self.assertEqual(result.status, "lease_completed")
+        self.assertEqual(result.frames_seen, 265)
+        self.assertEqual(result.preack_frames_discarded, 263)
+        self.assertEqual(result.preack_frames_bootstrapped_after_ack, 263)
+        self.assertEqual(result.subscriptions_acknowledged, 1)
+        self.assertEqual(result.ticker_frames_accepted, 1)
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0].last_price, Decimal("102.456"))
+        self.assertFalse(result.sanitized_report()["orders_sent"])
+
+    def test_invalid_preack_delta_remains_fail_closed_even_after_ack(self):
+        clock = FakeClock()
+        sock = Session(clock, [
+            ticker(kind="delta", cs=1, lastPrice="101"),
+            ack(), ticker(cs=2),
+        ])
+        accepted = []
+        result = run(make_book(), clock, [sock], on_quote=accepted.append)
+        self.assertEqual(result.status, "lease_abstained")
+        self.assertEqual(result.failure_category, "snapshot_required")
+        self.assertEqual(result.preack_frames_bootstrapped_after_ack, 0)
+        self.assertEqual(result.ticker_frames_accepted, 0)
+        self.assertEqual(result.subscriptions_acknowledged, 1)
+        self.assertEqual(accepted, [])
+        self.assertTrue(sock.closed)
+
+    def test_preack_bootstrap_cannot_cross_reconnection_without_ack(self):
+        clock = FakeClock()
+        first = Session(clock, [ticker(), OSError("drop_before_ack")])
+        second = Session(clock, [
+            ack(), ticker(kind="delta", ts=NOW + 5_000, cs=2),
+        ])
+        seen = []
+        result = run(make_book(), clock, [first, second],
+                     budget=TickerLeaseBudget(max_sessions=2,
+                                              max_frames=30, max_seconds=15),
+                     on_quote=seen.append)
+        self.assertEqual(result.status, "lease_abstained")
+        self.assertEqual(result.failure_category, "snapshot_required")
+        self.assertEqual(result.sessions_attempted, 2)
+        self.assertEqual(result.preack_frames_discarded, 1)
+        self.assertEqual(result.preack_frames_bootstrapped_after_ack, 0)
+        self.assertEqual(result.ticker_frames_accepted, 0)
+        self.assertEqual(seen, [])
+        self.assertTrue(first.closed and second.closed)
+
+    def test_preack_memory_budget_abstains_before_ack_and_no_callback(self):
+        from unittest.mock import patch
+        clock = FakeClock()
+        packet = ticker()
+        sock = Session(clock, [packet, packet, ack(), ticker(cs=2)])
+        received = []
+        # Simulate memory ceiling without constructing an 8 MiB fixture.
+        with patch(
+            "crypto_intelligence_agent.bybit_public_ticker_supervisor_d386."
+            "MAX_PREACK_BOOTSTRAP_BYTES", len(packet.encode("utf-8")) + 1,
+        ):
+            result = run(make_book(), clock, [sock], on_quote=received.append)
+        self.assertEqual(result.status, "lease_abstained")
+        self.assertEqual(result.failure_category, "preack_bootstrap_memory_limit")
+        self.assertEqual(result.subscriptions_acknowledged, 0)
+        self.assertEqual(result.preack_frames_bootstrapped_after_ack, 0)
+        self.assertEqual(result.ticker_frames_accepted, 0)
+        self.assertEqual(received, [])
+        self.assertTrue(sock.closed)
+
+    def test_wrong_ack_with_staged_snapshot_never_rehydrates(self):
+        clock = FakeClock()
+        sock = Session(clock, [
+            ticker(cs=1), ack(req_id="not-our-lease"),
+            ticker(cs=2,kind="delta", lastPrice="101"),
+        ])
+        received = []
+        report = run(make_book(), clock, [sock], on_quote=received.append)
+        self.assertEqual(report.status, "lease_abstained")
+        self.assertEqual(report.failure_category, "invalid_subscription_ack")
+        self.assertEqual(report.preack_frames_bootstrapped_after_ack, 0)
+        self.assertEqual(report.ticker_frames_accepted, 0)
+        self.assertEqual(received, [])
 
     def test_transport_never_opened_when_budget_invalid(self):
         b = make_book()

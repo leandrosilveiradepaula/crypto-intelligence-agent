@@ -29,6 +29,10 @@ MAX_SESSIONS = 4
 MAX_PREACK_FRAMES = 128
 MAX_PREACK_PER_TOPIC = 64
 MAX_PREACK_TOTAL = 4096
+# Each per-connection pre-ACK payload is quarantined in RAM, never forwarded
+# to PAPER or exposed to callers. Only a matching successful ACK permits
+# validation/replay of the bounded bootstrap; otherwise it is discarded.
+MAX_PREACK_BOOTSTRAP_BYTES = 8 * 1024 * 1024
 MAX_SUBSCRIBE_ARG_CHARS = 21_000
 PING_EVERY_SECONDS = 20.0
 PONG_DEADLINE_SECONDS = 45.0
@@ -40,6 +44,7 @@ _FAILURE_CLASSES = {
     "ticker_subscription_not_acknowledged": "subscription_not_acknowledged",
     "ticker_ws_preack_budget_exceeded": "preack_limit_reached_before_ack",
     "ticker_ws_bad_subscription_ack": "invalid_subscription_ack",
+    "ticker_ws_preack_bootstrap_memory_exceeded": "preack_bootstrap_memory_limit",
     "ticker_envelope_fields_invalid": "bad_envelope",
     "ticker_topic_invalid": "bad_topic",
     "ticker_outside_reviewed_membership": "scope_mismatch",
@@ -81,6 +86,7 @@ class TickerLeaseReport:
     frames_seen: int
     ticker_frames_accepted: int
     preack_frames_discarded: int
+    preack_frames_bootstrapped_after_ack: int
     pong_frames: int
     ping_frames: int
     last_fresh_quote_count: int
@@ -101,6 +107,8 @@ class TickerLeaseReport:
             "frames_seen": self.frames_seen,
             "ticker_frames_accepted": self.ticker_frames_accepted,
             "preack_frames_discarded": self.preack_frames_discarded,
+            "preack_frames_bootstrapped_after_ack":
+                self.preack_frames_bootstrapped_after_ack,
             "heartbeat_pings": self.ping_frames,
             "heartbeat_pongs": self.pong_frames,
             "last_fresh_quote_count": self.last_fresh_quote_count,
@@ -154,10 +162,17 @@ def supervise_public_tickers(
 
     ONE subscribe request per connection. The Bybit linear subscribe ACK may
     omit req_id or return an empty ID; a single request avoids false ACK
-    correlation. Pre-ACK ticker messages are discarded without ingestion.
-    Restart/reconnect invalidates ALL snapshots and later deltas require a new
-    snapshot; transport errors alone trigger bounded reconnect. A broken WS
-    frame is a terminal fail-closed error, never silently skipped.
+    correlation. Bybit has been observed (VPS 2026-11-17) sending initial
+    ticker messages BEFORE the matching subscribe ACK (7 frames for BTC and
+    263 for N50), then a delta needing the earlier initial snapshot. D414
+    quarantines a strictly bounded sequence of pre-ACK packets in RAM.
+    ONLY AFTER a matching successful ACK are these validated into the book
+    in original causal order, with actual receive timestamps. They are
+    NEVER forwarded to on_quote/PAPER, NEVER counted as post-ACK ticker
+    callbacks, and are discarded if ACK fails or the connection closes.
+    An invalid staged message fails the entire lease closed. Reconnect resets
+    both staged state and the book; no prior session seed is carried over.
+    Transport errors alone trigger bounded reconnect.
 
     The optional callback is strictly a caller-supplied PAPER/monitoring hook,
     not an order/exchange adapter. It runs synchronously with no buffered queue.
@@ -178,6 +193,7 @@ def supervise_public_tickers(
         MAX_PREACK_TOTAL, max(MAX_PREACK_FRAMES, len(allowed) * MAX_PREACK_PER_TOPIC),
     )
     sessions = sends = acks = frames = accepted = preack = pings = pongs = 0
+    bootstrap_validated = 0
     bins = [0, 0, 0, 0]
     started = _monotonic(clock)
     book.mark_disconnected()
@@ -193,7 +209,9 @@ def supervise_public_tickers(
             subscriptions_acknowledged=acks,
             reconnects=max(0, sessions - 1),
             frames_seen=frames, ticker_frames_accepted=accepted,
-            preack_frames_discarded=preack, pong_frames=pongs,
+            preack_frames_discarded=preack,
+            preack_frames_bootstrapped_after_ack=bootstrap_validated,
+            pong_frames=pongs,
             ping_frames=pings, last_fresh_quote_count=freshness,
             latency_0_to_100ms=bins[0],
             latency_101_to_1000ms=bins[1],
@@ -226,6 +244,8 @@ def supervise_public_tickers(
                 sends += 1
                 acknowledged = False
                 preack_session = 0
+                preack_staged: list[tuple[str | bytes, int]] = []
+                preack_staged_bytes = 0
                 last_ping = _monotonic(clock)
                 pending_ping: float | None = None
                 attempts = 0
@@ -269,8 +289,23 @@ def supervise_public_tickers(
                         if req_id not in ("", "cia-ticker-1"):
                             raise DataValidationError("ticker_ws_bad_subscription_ack")
                         book.begin_acknowledged_session()
+                        # The server has now explicitly acknowledged this
+                        # exact subscription. Validate all quarantined ticker
+                        # frames, in receive order, to reconstruct snapshot
+                        # state for subsequent post-ACK deltas. Do not emit
+                        # callback/decisions for any pre-ACK frame.
+                        # ACK validity is independent of any subsequent
+                        # bootstrap error. Report it even if replay fails.
                         acknowledged = True
                         acks += 1
+                        for staged_raw, staged_at_ms in preack_staged:
+                            book.ingest(staged_raw, received_at_ms=staged_at_ms)
+                        # Count as bootstrapped only when the entire set is
+                        # valid. On any error the book is invalidated and
+                        # no partial state can reach the caller.
+                        bootstrap_validated += len(preack_staged)
+                        preack_staged.clear()
+                        preack_staged_bytes = 0
                         continue
                     if payload.get("op") is not None:
                         raise DataValidationError("ticker_ws_unexpected_control")
@@ -282,6 +317,17 @@ def supervise_public_tickers(
                         preack_session += 1
                         if preack_session > preack_limit:
                             raise DataGapError("ticker_ws_preack_budget_exceeded")
+                        # Bound both the count and bytes independently. The
+                        # payload parser already enforces per-frame size and
+                        # exact JSON. Nothing escapes this session before ACK.
+                        packet_bytes = (len(raw) if type(raw) is bytes
+                                        else len(raw.encode("utf-8")))
+                        if (preack_staged_bytes + packet_bytes >
+                                MAX_PREACK_BOOTSTRAP_BYTES):
+                            raise DataGapError(
+                                "ticker_ws_preack_bootstrap_memory_exceeded")
+                        preack_staged.append((raw, wall_ms()))
+                        preack_staged_bytes += packet_bytes
                         continue
                     received = wall_ms()
                     quote = book.ingest(raw, received_at_ms=received)

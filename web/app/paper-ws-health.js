@@ -6,6 +6,7 @@
     "schema_version", "status", "failure_category", "sessions_attempted",
     "subscriptions_sent", "subscriptions_acknowledged", "reconnects",
     "frames_seen", "ticker_frames_accepted", "preack_frames_discarded",
+    "preack_frames_bootstrapped_after_ack",
     "heartbeat_pings", "heartbeat_pongs", "last_fresh_quote_count",
     "latency_0_to_100ms", "latency_101_to_1000ms",
     "latency_1001_to_5000ms", "latency_over_5000ms",
@@ -44,7 +45,8 @@
   const COUNTS = [
     "sessions_attempted", "subscriptions_sent", "subscriptions_acknowledged",
     "reconnects", "frames_seen", "ticker_frames_accepted",
-    "preack_frames_discarded", "heartbeat_pings", "heartbeat_pongs",
+    "preack_frames_discarded", "preack_frames_bootstrapped_after_ack",
+    "heartbeat_pings", "heartbeat_pongs",
     "last_fresh_quote_count", "latency_0_to_100ms", "latency_101_to_1000ms",
     "latency_1001_to_5000ms", "latency_over_5000ms",
     "requested_ranked_contracts", "requested_position_contracts",
@@ -78,7 +80,12 @@
     }
   }
   function validateReport(report) {
-    exact(report, ROOT);
+    // Keep earlier, already-importable D410 reports readable. Only the
+    // newer D414 producer includes count-only post-ACK bootstrap evidence.
+    const hasBootstrap = report !== null && typeof report === "object" &&
+      Object.hasOwn(report, "preack_frames_bootstrapped_after_ack");
+    exact(report, hasBootstrap ? ROOT :
+      ROOT.filter(key => key !== "preack_frames_bootstrapped_after_ack"));
     valid(report.schema_version === "j2-j4-current-n50-paper-lease-d410-v1" &&
       ["finite_paper_lease_completed_with_fresh_scope",
        "finite_paper_lease_degraded_or_incomplete"].includes(report.status) &&
@@ -107,7 +114,17 @@
       "existing_paper_position_quote_processed", "owner_scope_unchanged_after_lease",
       "real_market_frames_verified"
     ]) valid(typeof report[key] === "boolean");
-    for (const key of COUNTS) count(report[key]);
+    for (const key of COUNTS) {
+      if (key === "preack_frames_bootstrapped_after_ack" && !hasBootstrap) continue;
+      count(report[key]);
+    }
+    if (hasBootstrap) {
+      valid(report.preack_frames_bootstrapped_after_ack <=
+        report.preack_frames_discarded);
+      if (report.subscriptions_acknowledged === 0) {
+        valid(report.preack_frames_bootstrapped_after_ack === 0);
+      }
+    }
     valid(report.requested_ranked_contracts === 50 &&
       report.requested_distinct_contracts >= 50 &&
       report.requested_distinct_contracts <= 100 &&
@@ -234,6 +251,10 @@
       .filter(([key]) => key === "paper_stop_reserved" || key === "paper_target_reserved")
       .reduce((acc, [, n]) => acc + n, 0));
     add("Reconexões", r.reconnects);
+    add("Mensagens antes do ACK sem decisão PAPER", r.preack_frames_discarded);
+    add("Validadas após ACK para reconstrução do snapshot",
+      Object.hasOwn(r, "preack_frames_bootstrapped_after_ack") ?
+      r.preack_frames_bootstrapped_after_ack : "não registrado neste relatório");
     add("Estado da época J1", r.owner_scope_unchanged_after_lease ?
       "Mesma época nas duas leituras" : "Mudança ou indisponibilidade");
     add("Segurança", "Somente PAPER, sem FILL inferido, stop nativo ou ordem real");
