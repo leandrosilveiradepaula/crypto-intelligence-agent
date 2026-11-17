@@ -215,6 +215,58 @@ class IntrahourRunnerBridgeD395Tests(unittest.TestCase):
             self.step(self.later(first,2,"102",4),policy=incompatible)
         self.assertEqual(self.runner_path.read_bytes(),before)
 
+    def test_d391_callback_drives_optin_trailing_with_same_auto4_ledger(self):
+        from crypto_intelligence_agent.paper_intrahour_quote_router_d391 import (
+            PaperIntrahourQuoteRouter, PaperQuoteRoute,
+        )
+        first=self.fully_confirm_runner()
+        route=PaperQuoteRoute(
+            position_id=POSITION_ID,stop_rule=self.stop,
+            target_policy=self.targets,runner_policy=self.runner_policy,
+            runner_path=self.runner_path,
+        )
+        routed=PaperIntrahourQuoteRouter(
+            position_path=self.position_path,routes=(route,),
+        )
+        armed=routed.process(first)
+        self.assertEqual(armed.runner_decision,PaperRunnerTickDecision.ARMED)
+        self.assertEqual(
+            routed.process(self.later(first,2,"102",4)).runner_decision,
+            PaperRunnerTickDecision.TRACKING,
+        )
+        fired=routed.process(self.later(first,4,"101",5))
+        self.assertEqual(fired.runner_decision,PaperRunnerTickDecision.EXIT_RESERVED)
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders),3)
+        self.assertEqual(self.store.load(POSITION_ID).runner_reserved_unfilled_units,D(50))
+        self.assertEqual(routed.sanitized_report()["runner_decision_counts"],{
+            "paper_runner_close_reserved":1,
+            "paper_trailing_armed":1,
+            "paper_trailing_tracking":1,
+        })
+        self.assertFalse(routed.sanitized_report()["orders_sent"])
+        # D391's replay gate rejects a conflicting repeated cross sequence.
+        with self.assertRaises(Exception):
+            routed.process(self.later(first,4,"98",5))
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders),3)
+
+    def test_optional_route_rejects_incomplete_config_and_same_sqlite(self):
+        from crypto_intelligence_agent.paper_intrahour_quote_router_d391 import (
+            PaperIntrahourQuoteRouter, PaperQuoteRoute,
+        )
+        with self.assertRaises(DataValidationError):
+            PaperQuoteRoute(POSITION_ID,self.stop,self.targets,
+                            runner_policy=self.runner_policy)
+        with self.assertRaises(DataValidationError):
+            PaperQuoteRoute(POSITION_ID,self.stop,self.targets,
+                            runner_path=self.runner_path)
+        same=PaperQuoteRoute(POSITION_ID,self.stop,self.targets,
+                             runner_policy=self.runner_policy,
+                             runner_path=self.position_path)
+        with self.assertRaises(DataValidationError):
+            PaperIntrahourQuoteRouter(
+                position_path=self.position_path,routes=(same,),
+            )
+
     def test_pending_runner_unknown_never_reissues_another_close(self):
         first=self.fully_confirm_runner()
         self.step(first)
