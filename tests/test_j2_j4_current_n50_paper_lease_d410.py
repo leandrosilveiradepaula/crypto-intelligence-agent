@@ -64,6 +64,9 @@ class Socket:
             frame = self.frames.pop(0)
             if isinstance(frame, Exception):
                 raise frame
+            if isinstance(frame, tuple) and frame[0] == "delay":
+                self.clock.sleep(frame[1])
+                return self.recv(timeout)
             return frame
         self.clock.sleep(timeout)
         raise TimeoutError()
@@ -166,6 +169,21 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
         self.assertEqual(result["unique_distinct_contracts_observed"], 50)
         self.assertFalse(result["finite_coverage_observed_once"])
         self.assertEqual(result["status"], "finite_paper_lease_degraded_or_incomplete")
+
+    def test_full_coverage_expiring_before_position_tick_blocks_exit(self):
+        frames = [ack()] + [ticker(s) for s in N50] + [
+            ("delay", 4), ticker("BTCUSDT", time_delta=4_000, bid="101"),
+        ]
+        result, sock, _ = self.run_once(
+            frames, budget=TickerLeaseBudget(
+                max_sessions=1, max_frames=200, max_seconds=8,
+            ),
+        )
+        self.assertTrue(sock.closed)
+        self.assertEqual(result["unique_distinct_contracts_observed"], 51)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 0)
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 0)
+        self.assertFalse(result["finite_coverage_fresh_at_end"])
 
     def test_position_tick_before_full_coverage_does_not_open_until_new_tick(self):
         frames = [ack(), ticker("BTCUSDT", bid="101")] + [
