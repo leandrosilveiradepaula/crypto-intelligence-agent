@@ -153,6 +153,19 @@ def read_j2_descriptive() -> dict[str, Any]:
     return {key: source[key] for key in sorted(_RESEARCH_OUTPUT_KEYS)}
 
 
+_PUBLIC_PULSE_KEYS = frozenset((
+    "schema_version", "status", "source", "server_at_ms", "captured_at_ms",
+    "observed_symbol_count", "quotes", "network_gets_in_this_capture",
+    "crypto_only_membership_verified", "continuous_websocket_verified",
+    "imported_report_authenticated_by_browser", "paper_positions_linked",
+    "orders_sent", "approved_for_signals", "approved_for_live_use",
+))
+_PUBLIC_PRICE_KEYS = frozenset((
+    "symbol", "last_price", "mark_price", "bid_price", "ask_price",
+    "bid_size", "ask_size", "turnover_24h",
+))
+
+
 def read_public_market_prices(*, symbols: tuple[str, ...]) -> dict[str, Any]:
     """One public HTTPS market snapshot, isolated from J1 owner data and PAPER.
 
@@ -164,15 +177,24 @@ def read_public_market_prices(*, symbols: tuple[str, ...]) -> dict[str, Any]:
     except (J1BybitCaptureError, DataValidationError, DataGapError,
             OSError, ValueError, TypeError):
         raise SourceNotReady("D404 public REST source unavailable") from None
-    if (type(value) is not dict or
-            value.get("schema_version") != "bybit-public-rest-price-pulse-d403-v1"
+    if (type(value) is not dict
+            or set(value) != _PUBLIC_PULSE_KEYS
+            or value.get("schema_version") != "bybit-public-rest-price-pulse-d403-v1"
             or value.get("status") != "rest_snapshot_display_only"
+            or value.get("source") != "bybit_v5_public_linear_tickers"
             or value.get("observed_symbol_count") != len(symbols)
-            or value.get("orders_sent") is not False
-            or value.get("approved_for_signals") is not False
-            or value.get("approved_for_live_use") is not False
-            or value.get("paper_positions_linked") is not False):
+            or value.get("network_gets_in_this_capture") != 1
+            or any(value.get(k) is not False for k in (
+                "crypto_only_membership_verified", "continuous_websocket_verified",
+                "imported_report_authenticated_by_browser", "paper_positions_linked",
+                "orders_sent", "approved_for_signals", "approved_for_live_use"))
+            or type(value.get("quotes")) is not list
+            or len(value["quotes"]) != len(symbols)
+            or any(type(q) is not dict or set(q) != _PUBLIC_PRICE_KEYS
+                   for q in value["quotes"])
+            or tuple(q["symbol"] for q in value["quotes"]) != tuple(sorted(symbols))):
         raise SourceNotReady("D404 unsafe public REST projection")
+    # No provider metadata or future accidental fields may leave localhost.
     return value
 
 
