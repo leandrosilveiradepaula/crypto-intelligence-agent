@@ -86,6 +86,72 @@ class BybitTickerStateD385Tests(unittest.TestCase):
         self.assertEqual(b.sanitized_report(at_ms=NOW + 601)["duplicates"], 1)
         self.assertIsNone(b.current("BTCUSDT", at_ms=NOW + 3100))
 
+    def test_same_cross_sequence_with_newer_exchange_time_is_distinct_delta(self):
+        # Bybit calls cs a cross sequence, not a per-message unique ID.
+        # Funding/index/mark/BBO may advance without a new trade sequence.
+        b = book()
+        initial = b.ingest(ticker(cs=10, ts=NOW-100), received_at_ms=NOW)
+        advanced = b.ingest(
+            ticker(kind="delta", cs=10, ts=NOW+80,
+                   markPrice="100.02", bid1Size="1.7"),
+            received_at_ms=NOW+90,
+        )
+        self.assertEqual(advanced.cross_sequence, 10)
+        self.assertEqual(advanced.exchange_at_ms, NOW+80)
+        self.assertEqual(advanced.mark_price, Decimal("100.02"))
+        self.assertEqual(advanced.last_price, initial.last_price)
+        self.assertEqual(advanced.bid_size, Decimal("1.7"))
+        newer = b.ingest(
+            ticker(kind="delta", cs=10, ts=NOW+120,
+                   lastPrice="100.16"),
+            received_at_ms=NOW+130,
+        )
+        self.assertEqual(newer.last_price, Decimal("100.16"))
+        self.assertEqual(newer.mark_price, Decimal("100.02"))
+        self.assertEqual(newer.cross_sequence, 10)
+        self.assertIsNotNone(b.current("BTCUSDT", at_ms=NOW+130))
+        report = b.sanitized_report(at_ms=NOW+130)
+        self.assertEqual(report["snapshots"], 1)
+        self.assertEqual(report["deltas"], 2)
+        self.assertEqual(report["duplicates"], 0)
+        self.assertTrue(report["connected"])
+        self.assertFalse(report["orders_sent"])
+
+    def test_exact_replay_same_cs_and_newer_timestamp_does_not_renew_quote(self):
+        b = book()
+        b.ingest(ticker(cs=10), received_at_ms=NOW)
+        update = ticker(kind="delta", cs=10, ts=NOW+100, lastPrice="100.19")
+        accepted = b.ingest(update, received_at_ms=NOW+110)
+        duplicate = b.ingest(update, received_at_ms=NOW+150)
+        self.assertIs(duplicate, accepted)
+        self.assertEqual(duplicate.received_at_ms, NOW+110)
+        self.assertEqual(b.sanitized_report(at_ms=NOW+150)["duplicates"], 1)
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW+3200))
+
+    def test_same_cs_same_exchange_time_different_payload_still_abstains(self):
+        b = book()
+        b.ingest(ticker(cs=10), received_at_ms=NOW)
+        b.ingest(ticker(kind="delta", cs=10, ts=NOW+20,
+                        lastPrice="100.14"), received_at_ms=NOW+30)
+        with self.assertRaisesRegex(DataGapError,
+                                   "ticker_same_sequence_conflicting_payload"):
+            b.ingest(
+                ticker(kind="delta", cs=10, ts=NOW+20,
+                       markPrice="100.03"),
+                received_at_ms=NOW+40,
+            )
+        self.assertFalse(b.sanitized_report(at_ms=NOW+40)["connected"])
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW+40))
+
+    def test_lower_cs_even_with_higher_exchange_time_stays_rejected(self):
+        b = book()
+        b.ingest(ticker(cs=12), received_at_ms=NOW)
+        with self.assertRaisesRegex(DataGapError,
+                                   "ticker_retrograde_sequence_or_time"):
+            b.ingest(ticker(kind="delta", cs=11, ts=NOW+30,
+                            lastPrice="100.15"), received_at_ms=NOW+60)
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW+60))
+
     def test_reordered_or_conflicting_sequence_fails_and_erases_state(self):
         for change in [
             ticker(kind="delta", cs=9, ts=NOW + 40, lastPrice="100.11"),
