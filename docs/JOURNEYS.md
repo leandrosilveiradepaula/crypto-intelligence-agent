@@ -505,3 +505,8 @@ A saúde completa do N50 orienta seleção/monitoramento de oportunidades, não 
 ## J5 D412 — interface móvel de diagnóstico da sessão de preços
 
 A tela do aplicativo passa a importar o relatório sanitizado da ponte pública N50 → PAPER de D410/D411, mostrando qualidade do universo e processamento de posições separadamente. Sempre rotula a origem como declaração de arquivo não autenticada, sem atualizar posições automaticamente ou afirmar feed 24×7. Proíbe a importação de alegações de stop/ordem/resultado real. Evidência em `docs/J5_PAPER_WS_HEALTH_D412.md`.
+
+
+## J2/J4 D414 — reconstrução segura após ACK no feed público Bybit
+
+A primeira sessão real de teste comprovou que snapshots/deltas podem chegar antes da resposta de confirmação: BTC 7 e N50 263 quadros pré-ACK, ACK=1 e delta posterior sem snapshot local. Corrigir supervisor D386 com quarentena estritamente limitada em memória, reidratação causal *somente* após ACK e nenhum callback de pré-ACK, mantendo a função do diário AUTO4 intacta. Testes sintéticos verificam contratos e limites, mas homologação real depende de nova sessão em VPS autorizada. `docs/J2_REAL_WS_ACK_SNAPSHOT_REHYDRATION_D414.md`.
