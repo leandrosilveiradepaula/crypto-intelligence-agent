@@ -66,8 +66,10 @@ class TickerUniverseEpoch:
         return sha256(payload.encode("ascii")).hexdigest()
 
 
-def _lag_p95_bucket(report: TickerLeaseReport) -> str | None:
-    """Histogram bucket of the P95, NOT a fabricated millisecond estimate."""
+def _lag_quantile_bucket(report: TickerLeaseReport, percentile: int) -> str | None:
+    """Coarse histogram percentile; never an exact latency in milliseconds."""
+    if percentile not in (95, 99):
+        raise DataValidationError("D396 unsupported latency percentile")
     bins = (
         (report.latency_0_to_100ms, "0_to_100ms"),
         (report.latency_101_to_1000ms, "101_to_1000ms"),
@@ -77,7 +79,7 @@ def _lag_p95_bucket(report: TickerLeaseReport) -> str | None:
     count = sum(k for k, _ in bins)
     if count == 0:
         return None
-    threshold = (95 * count + 99) // 100
+    threshold = (percentile * count + 99) // 100
     cumulative = 0
     for n, label in bins:
         cumulative += n
@@ -101,6 +103,7 @@ class TickerEpochCoverage:
     ticker_frames_accepted: int
     reconnects: int
     p95_lag_bucket: str | None
+    p99_lag_bucket: str | None
     status: str
     failure_category: str | None
 
@@ -119,6 +122,7 @@ class TickerEpochCoverage:
             "ticker_frames_accepted": self.ticker_frames_accepted,
             "reconnects": self.reconnects,
             "p95_lag_bucket": self.p95_lag_bucket,
+            "p99_lag_bucket": self.p99_lag_bucket,
             "status": self.status,
             "failure_category": self.failure_category,
         }
@@ -146,7 +150,7 @@ class TickerCoveragePilotReport:
             "live_quote_cache_available_after_lease": False,
             "continuous_24x7_verified": False,
             "marketwide_top50_verified": False,
-            "p95_is_binned_not_exact_ms": True,
+            "p95_p99_are_binned_not_exact_ms": True,
             "no_unbounded_quote_buffer": True,
             "source_authenticated": False,
             "orders_sent": False,
@@ -255,7 +259,8 @@ def run_finite_public_ticker_coverage_pilot(
                 frames_seen=lease.frames_seen,
                 ticker_frames_accepted=lease.ticker_frames_accepted,
                 reconnects=lease.reconnects,
-                p95_lag_bucket=_lag_p95_bucket(lease),
+                p95_lag_bucket=_lag_quantile_bucket(lease, 95),
+                p99_lag_bucket=_lag_quantile_bucket(lease, 99),
                 status=("finite_coverage_observed" if complete
                         else "finite_coverage_insufficient"),
                 failure_category=lease.failure_category,
