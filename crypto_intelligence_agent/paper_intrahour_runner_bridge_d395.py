@@ -165,23 +165,26 @@ def step_paper_intrahour_with_runner(
     b = inspect_paper_position(position_path, position_id).balance
     if (b.venue is not PaperVenue.BYBIT_V5
             or b.symbol != quote.symbol
-            or b.plan_version != target_policy.plan_version
-            or b.confirmed_remaining_units != b.runner_floor_units
-            or b.runner_floor_units <= 0
-            or any(t.filled_units != t.target_units
-                   or t.reserved_unfilled_units != 0
-                   or t.unallocated_units != 0 for t in b.tranches)):
+            or b.plan_version != target_policy.plan_version):
         return outcome()
     runner_orders = tuple(o for o in b.exit_orders if o.tranche_step == 0)
     if len(runner_orders) > 1:
         raise DataValidationError("D395 multiple runner exit orders not supported")
     if runner_orders:
-        # Subsequent ticks must never re-arm/re-trigger the journal.
+        # Existing runner orders must be reconciled BEFORE new-arm eligibility.
+        # A fully FILLED runner has remaining=0, not runner_floor_units,
+        # and its closure must remain visible after process restart.
         close = step_durable_paper_runner_close(
             runner_path, position_path, position_id,
             policy=runner_policy, as_of_ms=cutoff,
         )
         return outcome(_CLOSE_STATES[close.state], close=close)
+    if (b.confirmed_remaining_units != b.runner_floor_units
+            or b.runner_floor_units <= 0
+            or any(t.filled_units != t.target_units
+                   or t.reserved_unfilled_units != 0
+                   or t.unallocated_units != 0 for t in b.tranches)):
+        return outcome()
     if (b.reserved_unfilled_units != 0
             or any(o.snapshot.requires_reconciliation for o in b.exit_orders)
             or any(o.snapshot.status in (
