@@ -55,7 +55,7 @@ Exige booleans estritos:
 - em qualquer estado de abstenção, a referência
   líquida **é obrigatoriamente null**;
 - no estado condicional, a referência deve ser
-  texto decimal finito, com limites, e precisam
+  texto decimal finito (inclusive notação `E` do `Decimal` Python para valores pequenos, com expoente limitado e sem conversão de precisão pelo JavaScript), com limites, e precisam
   existir fills e ticks contabilizados; não pode
   haver terminal discreto;
 - contagens, alavancagem e flags de veto têm
