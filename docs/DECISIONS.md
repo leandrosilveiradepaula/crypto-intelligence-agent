@@ -1901,3 +1901,7 @@ D397/PRE16 conserva 100% das unidades de abertura durante todos os marks; isso p
 ## D399 — J5 exibe veto de risco PAPER como documento separado, não PnL de posição (17/11/2026)
 
 A J5 integra o contrato sanitizado `PaperPartialDeriskRiskResult.sanitized_report()` (J3/D398) pelo importador JSON local já existente, com validador exato de schema, tipos, estados, contagens e flags sempre não autorizadas. Mostra alavancagem na abertura, ticks, FILLs, veto conservador D397, abstenções/condicional em português e **nunca** rotula referência sintética como lucro real. O arquivo fica só na memória; não grava em `localStorage`, não se associa à simulação do navegador, não modifica parciais, margens ou ordens, não exige outro endpoint ou rede. Relatórios ausentes mostram risco indisponível, nunca zero risco. Ver `docs/J5_PAPER_PARTIAL_RISK_D399.md`.
+
+## D400 — J2 mede recursos de replay N50 offline antes de qualquer piloto de rede (17/11/2026)
+
+Em #677, medir custo de CPU de processo, tempo monotônico e pico de alocação Python (`tracemalloc`) da prova D396 repetida, sempre em fixtures sintéticas com 50 contratos por época, 51/52 assinaturas incluindo posições fora do ranking. O resultado é diagnóstico de desenvolvimento, não throughput de socket, RSS VPS, p95/p99 real, SLA, autorização de piloto ou prova de cobertura Bybit. Nenhum hardcoded de limite produtivo a partir de runners da CI. Veja `docs/J2_OFFLINE_RESOURCE_BENCH_D400.md`.
