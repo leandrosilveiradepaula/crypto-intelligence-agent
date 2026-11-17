@@ -969,6 +969,9 @@
         } else if (payload.schema_version === "bybit-public-rest-price-pulse-d403-v1") {
           globalThis.CIAPublicMarket.install(payload);
           warn("Preços REST importados: amostra pontual, não feed ao vivo.", false);
+        } else if (payload.schema_version === "j2-j4-current-n50-paper-lease-d410-v1") {
+          globalThis.CIAPaperWSHealth.install(payload);
+          warn("Saúde WS/PAPER importada: sessão finita, não feed ao vivo.", false);
         } else if (payload.schema_version === "paper_positions_snapshot_v1") {
           globalThis.CIAPersistedPaper.install(payload);
           warn("Diário PAPER importado somente para leitura.", false);
