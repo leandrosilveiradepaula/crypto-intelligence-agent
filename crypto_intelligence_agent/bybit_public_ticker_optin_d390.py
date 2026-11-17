@@ -140,7 +140,8 @@ def run_readonly_bybit_ticker_lease(
             # point-in-time scope; no inferred synthetic/retrospective ticks.
             if (quote.symbol in monitored
                     and quote.exchange_at_ms >= universe_at_ms
-                    and quote.exchange_at_ms <= quote.received_at_ms
+                    and 0 <= quote.received_at_ms - quote.exchange_at_ms
+                           <= MAX_QUOTE_AGE_MS
                     and quote.has_positive_book_depth):
                 seen_this_session[quote.symbol] = quote.received_at_ms
         if paper_router is not None:
