@@ -19,6 +19,10 @@ from .paper_intrahour_coordinator_d389 import (
 from .paper_intrahour_emergency_stop_d388 import PaperEmergencyStopRule
 from .paper_intrahour_target_step_d387 import PaperIntrahourTargetPolicy
 from .paper_position_inspection import inspect_paper_position
+from .paper_runner_trailing import PaperRunnerTrailPolicy
+from .paper_intrahour_runner_bridge_d395 import (
+    PaperIntrahourRunnerStep, step_paper_intrahour_with_runner,
+)
 from .synthetic_order_lifecycle import PaperVenue
 
 MAX_ROUTES = 100
@@ -31,6 +35,8 @@ class PaperQuoteRoute:
     position_id: str
     stop_rule: PaperEmergencyStopRule
     target_policy: PaperIntrahourTargetPolicy
+    runner_policy: PaperRunnerTrailPolicy | None = None
+    runner_path: str | Path | None = None
 
     def __post_init__(self) -> None:
         if (type(self.position_id) is not str or
@@ -38,6 +44,14 @@ class PaperQuoteRoute:
                 type(self.target_policy) is not PaperIntrahourTargetPolicy or
                 self.stop_rule.max_quote_age_ms != self.target_policy.max_quote_age_ms):
             raise DataValidationError("PAPER quote route requires matched typed policies")
+        if (self.runner_policy is None) != (self.runner_path is None):
+            raise DataValidationError("PAPER trailing requires policy and distinct journal path")
+        if self.runner_policy is not None:
+            if (type(self.runner_policy) is not PaperRunnerTrailPolicy
+                    or not isinstance(self.runner_path, (str, Path))
+                    or not str(self.runner_path)
+                    or str(self.runner_path) == ":memory:"):
+                raise DataValidationError("PAPER trailing route configuration invalid")
 
 
 class PaperIntrahourQuoteRouter:
@@ -73,6 +87,11 @@ class PaperIntrahourQuoteRouter:
                     or balance.plan_version != r.target_policy.plan_version
                     or len(balance.tranches) != len(r.target_policy.prices)):
                 raise DataValidationError("PAPER quote route mismatch or duplicate net symbol")
+            if r.runner_path is not None and (
+                Path(r.runner_path).resolve(strict=False)
+                == self._path.resolve(strict=False)
+            ):
+                raise DataValidationError("PAPER runner mark and financial ledgers must be separate")
             self._by_symbol[balance.symbol] = r
         self._last: dict[str, BybitTickerQuote] = {}
         self._max_network_lag_ms = max_network_lag_ms
@@ -81,8 +100,11 @@ class PaperIntrahourQuoteRouter:
         self._duplicates = 0
         self._ignored = 0
         self._decisions: dict[str, int] = {}
+        self._runner_decisions: dict[str, int] = {}
 
-    def process(self, quote: BybitTickerQuote) -> PaperIntrahourCoordinatedStep | None:
+    def process(
+        self, quote: BybitTickerQuote,
+    ) -> PaperIntrahourCoordinatedStep | PaperIntrahourRunnerStep | None:
         if type(quote) is not BybitTickerQuote or quote.source != SOURCE:
             raise DataValidationError("PAPER quote router requires typed unverified public quote")
         if self._seen >= self._max_events:
@@ -106,13 +128,25 @@ class PaperIntrahourQuoteRouter:
                     raise DataGapError("PAPER quote router conflicting replay")
                 self._duplicates += 1
                 return None
-        # No shadow ledger: D389 uses AUTO4 BEGIN IMMEDIATE on each requested
-        # exit and refuses duplicate or competing stop/target reservations.
-        result = step_paper_intrahour_coordinated(
-            self._path, route.position_id,
-            stop_rule=route.stop_rule, target_policy=route.target_policy,
-            quote=quote, as_of_ms=quote.received_at_ms,
-        )
+        # No shadow ledger: D389 and RUNNER3 reuse AUTO4 reservations.
+        # Existing routes without trailing retain their exact D391 behavior.
+        if route.runner_policy is not None:
+            result = step_paper_intrahour_with_runner(
+                self._path, route.runner_path, route.position_id,
+                stop_rule=route.stop_rule, target_policy=route.target_policy,
+                runner_policy=route.runner_policy,
+                quote=quote, as_of_ms=quote.received_at_ms,
+            )
+            runner_state = result.runner_decision.value
+            self._runner_decisions[runner_state] = (
+                self._runner_decisions.get(runner_state, 0) + 1
+            )
+        else:
+            result = step_paper_intrahour_coordinated(
+                self._path, route.position_id,
+                stop_rule=route.stop_rule, target_policy=route.target_policy,
+                quote=quote, as_of_ms=quote.received_at_ms,
+            )
         self._last[quote.symbol] = quote
         decision = result.decision.value
         self._decisions[decision] = self._decisions.get(decision, 0) + 1
@@ -127,6 +161,7 @@ class PaperIntrahourQuoteRouter:
             "exact_duplicates_skipped": self._duplicates,
             "other_symbols_ignored": self._ignored,
             "decision_counts": dict(sorted(self._decisions.items())),
+            "runner_decision_counts": dict(sorted(self._runner_decisions.items())),
             "feed_authenticated": False,
             "marketwide_top50_verified": False,
             "native_stop_verified": False,

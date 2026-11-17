@@ -1772,3 +1772,7 @@ D393 acrescenta `paper_closed_cost_audit_d393.py`, testes e CLI `python -m scrip
 ## J3/J4 D394 — hipótese causal de preenchimento PAPER em BBO (17/11/2026)
 
 O módulo `paper_causal_fill_d394.py` usa o journal AUTO4 já existente e ticker D385 posterior à intenção, não o preço disparador. Limita preenchimentos hipotéticos à profundidade bid/ask observada após latência declarada, saldo da intenção, participação configurável e lote PAPER, com replay idempotente. Bloqueia UNKNOWN/ordens encerradas e livros/cotações obsoletos ou rasos. Testes unitários offline e runbook `docs/J3_CAUSAL_PAPER_FILL_D394.md`. **Não é fill real, não comprova lucro, não libera ordens nem liquidação**. PR/CI/merge verificar no GitHub antes de declarar integração.
+
+## J4 #676 / D395 — trailing/runner conectado ao callback de mercado PAPER (17/11/2026)
+
+Implementados `paper_intrahour_runner_bridge_d395.py` e extensão opt-in de `paper_intrahour_quote_router_d391.py` para completar STOP fixo -> parcial -> trailing LONG/SHORT do residual -> reserva reduce-only, sempre pelo AUTO4. Testes sintéticos incluem 30+20 de parciais confirmadas, residual 50, ratchet/trailing, estado persistido, stop prioritário, UNKNOWN, lacunas e execução pelo mesmo callback D391. Evidência de PR/CI/merge consultar no GitHub antes de declarar concluído; não há deployment VPS ou feed contínuo read-only homologado.
