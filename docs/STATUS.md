@@ -1822,3 +1822,8 @@ Novo painel exclusivo mostra relatórios de posições já persistidas na contab
 ## J2/J3 — comparar observações prospectivas ao longo de várias decisões (D408)
 
 O aplicativo tem um histórico de pesquisa por horizontes 1/4/8 horas com observações maduras, resultados de marcação favoráveis/contrários e custos hipotéticos, alimentado por resumos offline do score J3 existente. Decisões com zero candidatos são contabilizadas sem imputar perda; repetições da mesma decisão/horizonte são recusadas. Nenhuma taxa de ganho financeiro ou previsão está validada, porque dados podem omitir horas, custo não tem identidade homogênea e registro não foi atestado externamente. Importação na UI não altera posições PAPER. Não instalar/operar VPS como parte desta alteração.
+
+
+## J4/J5 D409 — demonstração integrada de saídas PAPER no aplicativo (17/11/2026)
+
+O demonstrador offline D402 ganhou uma opção `--mobile-snapshot` que relê o **mesmo diário AUTO4** após um ciclo de três ticks públicos sintéticos, duas parciais e stop, ou um cenário de ordem UNKNOWN que impede novas reduções. A projeção é gerada pelo leitor existente `inspect_paper_positions` e schema J5 `paper_positions_snapshot_v1`, sem inventar saldo nem construir outro journal. O relatório pode ser importado na seção móvel de posições persistidas. Testes ponta a ponta no Node/Python validam o contrato e mantêm o CLI legado estável. É demonstração sintética sem feed Bybit real, posição real, ordens ou VPS. Ver docs/J4_J5_OFFLINE_PAPER_MOBILE_CYCLE_D409.md.

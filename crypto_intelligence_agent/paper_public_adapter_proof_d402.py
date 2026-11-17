@@ -119,15 +119,15 @@ def _step(store: SQLitePaperPositionJournal, minute: int, decision: str) -> dict
 
 
 def demonstrate_adapter_to_paper_cycle(
-    *, scenario: str = "closed",
+    *, scenario: str = "closed", include_mobile_snapshot: bool = False,
 ) -> dict:
     """Verify two target intents and a stop, or UNKNOWN blocking all later exits.
 
     Position opening and any fill receipts are explicitly injected synthetic
     events. There is NO inference of executions from ticker frames.
     """
-    if scenario not in ("closed", "unknown"):
-        raise DataValidationError("D402 scenario must be closed or unknown")
+    if scenario not in ("closed", "unknown") or type(include_mobile_snapshot) is not bool:
+        raise DataValidationError("D402 requires one valid offline scenario and snapshot choice")
     with TemporaryDirectory(prefix="cia-d402-offline-paper-") as dirname:
         path = Path(dirname) / "paper.sqlite"
         store = _new_position(path, short=False)
@@ -192,7 +192,7 @@ def demonstrate_adapter_to_paper_cycle(
             raise DataValidationError("D402 PAPER ledger reconciliation mismatch")
         if sum(r["ticker_frames_accepted"] for r in reports) != 3:
             raise DataValidationError("D402 market frames missing")
-        return {
+        proof = {
             "schema_version": "cia-paper-public-adapter-proof-d402-v1",
             "status": ("synthetic_cycle_closed" if scenario == "closed"
                        else "unknown_requires_reconciliation"),
@@ -215,3 +215,26 @@ def demonstrate_adapter_to_paper_cycle(
             "orders_sent": False,
             "approved_for_live_use": False,
         }
+        if include_mobile_snapshot:
+            # The SAME durable AUTO4 journal is read back through its
+            # existing J5 inspector. Do not fabricate a mobile balance from
+            # the in-memory decision steps, and never reopen it for writes.
+            from crypto_intelligence_agent.paper_position_inspection import (
+                inspect_paper_positions,
+            )
+            from scripts.inspect_paper_positions import multi_paper_snapshot
+
+            selected = inspect_paper_positions(path, (POSITION_ID,))
+            mobile = multi_paper_snapshot(selected)
+            p = mobile["positions"][0]
+            if (len(mobile["positions"]) != 1
+                    or p["filled_exit_units"] != proof["final_filled_units"]
+                    or p["reserved_unfilled_units"] != proof["final_reserved_units"]
+                    or p["confirmed_remaining_units"] != proof["final_remaining_units"]
+                    or (p["pending_or_unknown_orders"] > 0)
+                    != proof["reconciliation_required"]
+                    or mobile["orders_sent"] is not False
+                    or mobile["approved_for_live_use"] is not False):
+                raise DataValidationError("D409 PAPER ledger/mobile export mismatch")
+            proof["mobile_snapshot"] = mobile
+        return proof

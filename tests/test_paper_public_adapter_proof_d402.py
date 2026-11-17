@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -47,6 +49,100 @@ class PaperPublicAdapterProofTests(unittest.TestCase):
         self.assertEqual(result["final_remaining_units"], "100")
         self.assertTrue(result["reconciliation_required"])
         self.assertFalse(result["orders_sent"])
+
+    @unittest.skipUnless(shutil.which("node"), "Node required for the mobile JSON contract")
+    def test_complete_offline_market_to_auto4_to_mobile_export(self):
+        """Use the real D402 producer and real D407 schema, not a copied fixture."""
+        for scenario, filled, remaining, reserved, pending in (
+            ("closed", "100", "0", "0", False),
+            ("unknown", "0", "100", "30", True),
+        ):
+            with self.subTest(scenario=scenario):
+                with patch("socket.create_connection",
+                           side_effect=AssertionError("no market network")):
+                    result = demonstrate_adapter_to_paper_cycle(
+                        scenario=scenario, include_mobile_snapshot=True)
+                mobile = result["mobile_snapshot"]
+                self.assertEqual(mobile["schema_version"], "paper_positions_snapshot_v1")
+                self.assertEqual(len(mobile["positions"]), 1)
+                pos = mobile["positions"][0]
+                self.assertEqual(pos["filled_exit_units"], filled)
+                self.assertEqual(pos["confirmed_remaining_units"], remaining)
+                self.assertEqual(pos["reserved_unfilled_units"], reserved)
+                self.assertEqual(pos["pending_or_unknown_orders"] > 0, pending)
+                self.assertFalse(mobile["orders_sent"])
+                self.assertFalse(mobile["financial_pnl_available"])
+                self.assertFalse(result["real_market_connected"])
+                self.assertFalse(result["real_fills_verified"])
+                node = r"""
+const fs = require("node:fs");
+const assert = require("node:assert/strict");
+const data = JSON.parse(fs.readFileSync(0, "utf8"));
+const viewer = require("./web/app/persisted-paper.js");
+assert.equal(viewer.validateReport(data), data);
+assert.equal(data.positions.length, 1);
+assert.equal(data.orders_sent, false);
+assert.equal(data.financial_pnl_available, false);
+console.log("D409_OFFLINE_WS_TO_AUTO4_TO_MOBILE_PASS");
+"""
+                response = subprocess.run(
+                    ["node", "-e", node], input=json.dumps(mobile),
+                    text=True, capture_output=True, cwd=ROOT, timeout=15,
+                )
+                self.assertEqual(response.returncode, 0, response.stderr)
+                self.assertIn("D409_OFFLINE_WS_TO_AUTO4_TO_MOBILE_PASS", response.stdout)
+
+    def test_opt_in_is_required_and_legacy_output_does_not_change(self):
+        base = demonstrate_adapter_to_paper_cycle(scenario="unknown")
+        enriched = demonstrate_adapter_to_paper_cycle(
+            scenario="unknown", include_mobile_snapshot=True)
+        self.assertNotIn("mobile_snapshot", base)
+        self.assertEqual({k: v for k, v in enriched.items() if k != "mobile_snapshot"}, base)
+        with self.assertRaises(DataValidationError):
+            demonstrate_adapter_to_paper_cycle(
+                scenario="closed", include_mobile_snapshot=1)
+
+    def test_cli_writes_directly_importable_private_mobile_file_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp) / "paper-mobile.json"
+            command = [
+                sys.executable, "-m",
+                "scripts.run_paper_public_adapter_proof_d402",
+                "--scenario", "unknown", "--mobile-output", str(dest),
+            ]
+            first = subprocess.run(
+                command, cwd=ROOT, capture_output=True, text=True, timeout=25)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertTrue(dest.is_file())
+            self.assertNotIn("mobile_snapshot", json.loads(first.stdout))
+            payload = json.loads(dest.read_text(encoding="ascii"))
+            self.assertEqual(payload["schema_version"], "paper_positions_snapshot_v1")
+            self.assertTrue(payload["positions"][0]["pending_or_unknown_orders"] > 0)
+            if sys.platform != "win32":
+                self.assertEqual(dest.stat().st_mode & 0o777, 0o600)
+            repeated = subprocess.run(
+                command, cwd=ROOT, capture_output=True, text=True, timeout=25)
+            self.assertEqual(repeated.returncode, 65)
+            self.assertNotIn(str(dest), repeated.stderr)
+            self.assertEqual(payload, json.loads(dest.read_text(encoding="ascii")))
+
+    def test_cli_exposes_mobile_snapshot_on_explicit_request_only(self):
+        for scenario in ("closed", "unknown"):
+            with self.subTest(scenario=scenario):
+                base = [sys.executable, "-m",
+                        "scripts.run_paper_public_adapter_proof_d402",
+                        "--scenario", scenario]
+                normal = subprocess.run(
+                    base, cwd=ROOT, capture_output=True, text=True, timeout=25)
+                extra = subprocess.run(
+                    base + ["--mobile-snapshot"], cwd=ROOT,
+                    capture_output=True, text=True, timeout=25)
+                self.assertEqual(normal.returncode, 0, normal.stderr)
+                self.assertEqual(extra.returncode, 0, extra.stderr)
+                self.assertNotIn("mobile_snapshot", json.loads(normal.stdout))
+                self.assertEqual(
+                    json.loads(extra.stdout)["mobile_snapshot"]["positions"][0]
+                    ["filled_exit_units"], "100" if scenario == "closed" else "0")
 
     def test_invalid_scenario_refused_without_any_market_or_db(self):
         with self.assertRaises(DataValidationError):
