@@ -45,3 +45,8 @@ O teste integra o **avaliador J3 existente** ao novo resumo, cobrindo horizontes
 Capturar decisões owner ex-ante em janelas reais (pendência de execução VPS), registrar também **todas as horas sem observação**, fixar política de custos e splits treino/validação/teste com instantes auditáveis, comparar regimes e calcular retorno líquido com simulação intrabar conservadora em J3. Após evidência prospectiva suficiente, usar o scorebook como insumo de avaliação — jamais como gatilho direto de abertura.
 
 Nenhuma função de negociação real, rede, chave, VPS, J1, SQLite, serviço, instalação ou gasto está no escopo desta entrega.
+
+
+## Visualização no aplicativo
+
+O console `web/app` possui painel **Avaliação acumulada das oportunidades**, alimentado pelo resumo D408 exportado. Cada horizonte mostra contagem de decisões com observação, decisões vazias, observações maduras, fechamentos favoráveis/contrários e média de bps **referencial** após custos hipotéticos não comparáveis. Importação pelo mesmo seletor JSON do aplicativo; relatório só em memória durante a sessão, não altera oportunidades/provisões locais e desaparece ao recarregar. O módulo isolado `web/app/research-scorebook.js` rejeita schemas falsificados que tentem alegar `approved_for_signals`, OOS, lucro ou ordens. Não existe atualização automática de research pelo browser, e o servidor loopback serve apenas JS estático adicional, sem acessar owner J2/J3.
