@@ -514,6 +514,10 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "mimeType":"application/json",
                         "buffer":json.dumps(veto).encode(),
                     })
+                    page.wait_for_function(
+                        "() => document.querySelector('#risk-decision').textContent.includes('Possível liquidação')",
+                        timeout=5000,
+                    )
                     if ("Possível liquidação" not in page.locator("#risk-decision").inner_text()
                             or "não disponível" not in page.locator("#risk-value").inner_text()
                             or "3.394" in page.locator("#risk-value").inner_text()):
