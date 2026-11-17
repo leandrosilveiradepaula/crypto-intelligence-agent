@@ -39,7 +39,7 @@ class AppLayoutContractTests(unittest.TestCase):
                      "script-src 'self'", "form-action 'none'", "base-uri 'none'"):
             self.assertIn(rule, csp[0])
         scripts = [a.get("src") for t,a in tags if t=="script"]
-        self.assertEqual(scripts, ["./engine.js", "./public-market.js", "./app.js"])
+        self.assertEqual(scripts, ["./engine.js", "./public-market.js", "./persisted-paper.js", "./app.js"])
         self.assertTrue(any(t=="link" and a.get("href")=="./style.css"
                             for t,a in tags))
         self.assertTrue(any(t=="a" and a.get("href")=="#conteudo"
@@ -78,7 +78,7 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertNotIn("api.bybit.com", html)
 
     def test_browser_code_has_no_transport_or_dynamic_html_execution(self):
-        for filename in ("engine.js", "public-market.js", "app.js"):
+        for filename in ("engine.js", "public-market.js", "persisted-paper.js", "app.js"):
             data=(APP / filename).read_text(encoding="utf-8")
             for dangerous in (
                 "XMLHttpRequest(", "WebSocket(", "sendBeacon(",

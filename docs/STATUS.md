@@ -1812,3 +1812,8 @@ Preparado diagnóstico read-only da conexão WebSocket Bybit de duração limita
 ## J2 — origem dinâmica do escopo WebSocket reaproveita a J1 (D406)
 
 A ferramenta dispõe de uma ponte read-only que carrega o escopo ativo de 50 contratos da coleta J1, com verificação de integridade, validade e rotação, repassando-o ao observador público WebSocket existente e mantendo posições externas ao ranking quando explicitamente informadas. A fonte é provisória, e não houve instalação nem prova de ACK/frames reais de ticker na VPS; execução Python permanece bloqueada pelo executor administrativo. Testes offline e documentação: `docs/J2_CURRENT_J1_N50_WS_SCOPE_D406.md`. Nenhum ranking paralelo, segundo escritor de J1, transação ou custo.
+
+
+## J5 — posições do diário PAPER no celular (D407)
+
+Novo painel exclusivo mostra relatórios de posições já persistidas na contabilidade PAPER AUTO4, incluindo parciais, saldo, reservas, necessidade de reconciliação, estado de runner e comprovante de margem solicitado. Fonte é um JSON de leitura somente local com IDs explícitos; não usa dados de corretora nem substitui os cenários salvos neste navegador. Importação não persiste nem executa ordens. Ver `docs/J5_PERSISTED_PAPER_MOBILE_D407.md`; acompanhar CI e merge antes de declarar entrega incorporada.

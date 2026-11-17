@@ -441,7 +441,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     )
                     if "Importação recusada" not in page.locator("#notice").inner_text():
                         errors.append("untrusted market file not rejected")
-                    if page.locator("img").count() or page.locator("script").count() != 3:
+                    if page.locator("img").count() or page.locator("script").count() != 4:
                         errors.append("HTML injection on invalid market data")
 
                     # D399: exercise the REAL import and renderer in Chrome,
@@ -527,6 +527,78 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                             or not page.locator("#risk-audit-empty").is_visible()
                             or page.locator("#metric-open").inner_text() != "2"):
                         errors.append("transient J3 risk report leaked into local PAPER storage")
+
+                    # D407: persisted AUTO4 view is distinct from browser PAPER lab.
+                    # Quotes, orders, account data and exchange network stay absent.
+                    durable = {
+                        "schema_version":"paper_positions_snapshot_v1",
+                        "mode":"offline_paper",
+                        "quality":"synthetic_journal_replay_only",
+                        "source_provenance":"local_sqlite_digest_not_exchange_authenticated",
+                        "selection":"explicit_ids_same_sqlite_read_transaction",
+                        "no_cross_instrument_quantity_aggregation":True,
+                        "orders_sent":False,
+                        "live_trading_authorized":False,
+                        "approved_for_live_use":False,
+                        "financial_pnl_available":False,
+                        "positions":[{
+                            "position_id":"fixture_d407_unsafe_reconcile",
+                            "venue_candidate":"bybit_v5",
+                            "symbol_fixture":"ETHUSDT",
+                            "side":"LONG",
+                            "checkpoint_utc":"2026-11-16T13:00:00.002Z",
+                            "initial_confirmed_units":"100",
+                            "filled_exit_units":"30",
+                            "reserved_unfilled_units":"20",
+                            "confirmed_remaining_units":"70",
+                            "unreserved_units":"50",
+                            "runner_floor_units":"6",
+                            "runner_filled_units":"0",
+                            "runner_reserved_unfilled_units":"0",
+                            "runner_unallocated_units":"6",
+                            "runner_readiness":"PENDING_EXIT_RECONCILIATION",
+                            "trailing_stop_active":False,
+                            "native_stop_verified":False,
+                            "recovered_runner":None,
+                            "margin_intent_requested":None,
+                            "opening_order_cross_checked":False,
+                            "pending_or_unknown_orders":1,
+                            "unknown_order_count":1
+                        }]
+                    }
+                    page.locator("#import-file").set_input_files({
+                        "name":"d407-durable-fixture.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(durable).encode(),
+                    })
+                    page.locator("#persisted-paper-loaded").wait_for(
+                        state="visible", timeout=5000)
+                    panel_text = page.locator("#persisted-paper-rows").inner_text()
+                    if (page.locator("#persisted-paper-status").inner_text() !=
+                            "Reconciliação pendente"
+                            or "parciais preenchidas: 30" not in panel_text
+                            or "Restante: 70" not in panel_text
+                            or "Saída pendente: reconciliar" not in panel_text
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("D407 durable PAPER balances/reconciliation not displayed")
+                    tampered = dict(durable, orders_sent=True)
+                    page.locator("#import-file").set_input_files({
+                        "name":"d407-forged-live.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(tampered).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        timeout=5000)
+                    if ("Restante: 70" not in page.locator(
+                            "#persisted-paper-rows").inner_text()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("D407 forged live report replaced safe PAPER or local lab")
+                    page.reload(wait_until="load")
+                    if (not page.locator("#persisted-paper-loaded").is_hidden()
+                            or not page.locator("#persisted-paper-empty").is_visible()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("D407 imported durable state persisted across reload")
 
                     # D403: real import path for public REST price samples.
                     # All Chrome test fixtures are synthetic; never fetch Bybit.

@@ -1,5 +1,4 @@
-/* J5/MVP1: interactive PT-BR, local-only PAPER console.
-   No fetch, XMLHttpRequest, WebSocket, beacon, credentials or order endpoints. */
+/* J5 local PAPER research; no exchange orders. */
 (function () {
   "use strict";
   const E = globalThis.CIAEngine;
@@ -13,9 +12,9 @@
   let research = null;
   let researchOrigin = "none";
   let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
-  let prospectiveCapture = null; // One owner decision, session-only; not an OOS attestation.
-  let prospectiveScores = Object.create(null); // 1/4/8h costed references, never fills.
-  let partialRiskReport = null; // D398: session-only.
+  let prospectiveCapture = null;
+  let prospectiveScores = Object.create(null);
+  let partialRiskReport = null;
   let storageAvailable = true;
 
   function el(tag, className, content) {
@@ -967,6 +966,9 @@
         } else if (payload.schema_version === "bybit-public-rest-price-pulse-d403-v1") {
           globalThis.CIAPublicMarket.install(payload);
           warn("Preços REST importados: amostra pontual, não feed ao vivo.", false);
+        } else if (payload.schema_version === "paper_positions_snapshot_v1") {
+          globalThis.CIAPersistedPaper.install(payload);
+          warn("Diário PAPER importado somente para leitura.", false);
         } else if (payload.schema_version === "paper-partial-derisk-risk-d398-v1") {
           partialRiskReport = E.validatePaperPartialRiskReport(payload);
           warn("Risco J3 PAPER importado na sessão: não é lucro nem posição local.", false);
