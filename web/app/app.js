@@ -964,6 +964,9 @@
             "Horizonte já observado nesta sessão; não substituir resultado");
           prospectiveScores[accepted.horizon_bars] = accepted;
           warn("Resultado J3 importado. Marca de referência; não representa execução financeira.", false);
+        } else if (payload.schema_version === "bybit-public-rest-price-pulse-d403-v1") {
+          globalThis.CIAPublicMarket.install(payload);
+          warn("Preços REST importados: amostra pontual, não feed ao vivo.", false);
         } else if (payload.schema_version === "paper-partial-derisk-risk-d398-v1") {
           partialRiskReport = E.validatePaperPartialRiskReport(payload);
           warn("Risco J3 PAPER importado na sessão: não é lucro nem posição local.", false);
