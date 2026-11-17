@@ -142,11 +142,13 @@
       status.dataset.tone = "blocked";
     }
   }
-  async function refreshLocal() {
+  function isLocalOrigin() {
     const loc = global.location;
-    if (!loc || loc.protocol !== "http:" || loc.port !== "8765" ||
-        !["127.0.0.1", "localhost"].includes(loc.hostname) ||
-        hasManualPriority()) return;
+    return Boolean(loc && loc.protocol === "http:" && loc.port === "8765" &&
+      (loc.hostname === "127.0.0.1" || loc.hostname === "localhost"));
+  }
+  async function refreshLocal() {
+    if (!isLocalOrigin() || hasManualPriority()) return;
     try {
       const response = await global.fetch("/api/bybit-public-price", {
         method: "GET", credentials: "omit",
@@ -178,5 +180,25 @@
   if (typeof document !== "undefined") {
     render();
     global.setInterval(render, 5000);
+    if (isLocalOrigin()) {
+      const button = document.getElementById("refresh-public-market-local");
+      if (button) {
+        button.hidden = false;
+        button.addEventListener("click", () => {
+          if (hasManualPriority()) {
+            const notice = document.getElementById("notice");
+            if (notice) {
+              notice.textContent = "A amostra REST importada manualmente tem prioridade nesta sessão. Recarregue a página para retornar à fonte local.";
+              notice.dataset.tone = "info";
+              notice.hidden = false;
+            }
+          } else {
+            void refreshLocal();
+          }
+        });
+      }
+      void refreshLocal();
+      global.setInterval(() => { void refreshLocal(); }, 60000);
+    }
   }
 })(typeof globalThis !== "undefined" ? globalThis : this);
