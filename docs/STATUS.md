@@ -1792,3 +1792,7 @@ Implementada análise `paper_partial_derisk_risk_gate_d398.py` que reusa D397 + 
 ## J5 / D399 — risco pós-parciais exibido no aplicativo PAPER (17/11/2026)
 
 Implementado painel responsivo `Risco de liquidação · auditoria PAPER J3` no `web/app/index.html`, importação local de JSON sanitizado D398 com estados de veto/abstenção/resultado condicional, flags estritas em `web/app/engine.js`, atualização acessível por `textContent` e CSS móvel. Testes Node/Python verificam schema incompleto, alegações falsas de lucro/ordens, contagens e layout. **A apresentação é separada dos cenários criados no navegador; não existe vínculo automático a posições reais ou à VPS.** PR/CI/merge verificar no GitHub antes de declarar concluído; sem publicação da UI, ordens, rede ou custo extra.
+
+## J2 #677 / D400 — benchmark CPU/memória inteiramente offline (17/11/2026)
+
+Branch `work/issue-677-j2-offline-resource-benchmark-d400`: novo comando `python -m scripts.benchmark_public_n50_resources_d400 --runs 5` reusa o replay sintético de duas épocas D396; informa CPU de processo, tempo wall, pico de alocação Python e frames/s exclusivamente das fixtures, sem rede e sem medir RSS de VPS ou latência de WS real. Testes da regra de orçamento e erro de cobertura em `tests/test_benchmark_public_n50_resources_d400.py`. PR/CI e SHA precisam ser conferidos; não habilita feed 24×7 ou ordens. J1 #671 sem alteração.
