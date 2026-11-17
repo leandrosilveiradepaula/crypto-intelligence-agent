@@ -15,6 +15,7 @@
   let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
   let prospectiveCapture = null; // One owner decision, session-only; not an OOS attestation.
   let prospectiveScores = Object.create(null); // 1/4/8h costed references, never fills.
+  let partialRiskReport = null; // D398 sanitized import: session-only, never browser position PnL.
   let storageAvailable = true;
 
   function el(tag, className, content) {
@@ -781,6 +782,57 @@
       "Marcas de fechamento, não fills. Custos são hipotéticos; nenhuma observação habilita ordens.");
   }
 
+  function renderPaperRisk() {
+    $("risk-audit-empty").hidden = !!partialRiskReport;
+    $("risk-audit-loaded").hidden = !partialRiskReport;
+    if (!partialRiskReport) {
+      set("risk-audit-status", "Sem relatório");
+      return;
+    }
+    const r = partialRiskReport;
+    const conditional =
+      r.status === "conditional_closed_after_observed_partial_derisk_proxy";
+    const reasons = {
+      abstain_partial_risk_liquidation_proxy:
+        "Possível liquidação no modelo pós-parcial: resultado bloqueado.",
+      abstain_partial_risk_prior_stop_or_target:
+        "Stop ou alvo teria ocorrido primeiro: resultado bloqueado.",
+      abstain_prior_conditional_stop:
+        "Stop anterior no cenário integral: resultado bloqueado.",
+      abstain_prior_conditional_target:
+        "Alvo anterior no cenário integral: resultado bloqueado.",
+      abstain_open_journal_crosscheck_required:
+        "Falta conferência dos diários PAPER de abertura e posição.",
+      abstain_immutable_open_margin_receipt_missing:
+        "Comprovante da margem e alavancagem na abertura ausente.",
+      abstain_position_open_or_pending_reconciliation:
+        "Posição ou ordens PAPER ainda não reconciliadas.",
+      abstain_pit_maintenance_tiers_missing:
+        "Tiers PIT de manutenção ausentes; risco indisponível.",
+      abstain_mark_path_missing:
+        "Trajetória mark/trade ausente; risco indisponível.",
+      abstain_closed_costs_unavailable:
+        "Custos e preenchimentos não reconciliados."
+    };
+    set("risk-audit-status", conditional ?
+      "Referência condicional" : "Sem resultado líquido");
+    set("risk-leverage", r.leverage_at_open_intent === null ?
+      "—" : r.leverage_at_open_intent + "x");
+    set("risk-ticks", r.mark_ticks_checked);
+    set("risk-fills", r.confirmed_paper_fills_applied);
+    set("risk-baseline", r.full_notional_proxy_vetoed ?
+      "Veto no proxy integral" : "Sem veto no proxy integral");
+    set("risk-decision", conditional ?
+      "Trajetória sintética pós-parcial sem terminal observado. NÃO comprova sobrevivência real." :
+      reasons[r.status]);
+    set("risk-value", conditional ?
+      "Referência líquida condicional: " +
+      r.conditional_net_after_partial_risk_quote +
+      " unidades sintéticas de cotação. NÃO é PnL realizado ou retorno sobre margem." :
+      "Resultado líquido não disponível: nenhum número financeiro será mostrado.");
+    $("risk-decision").dataset.tone = conditional ? "conditional" : "blocked";
+  }
+
   function renderQuality() {
     const recent = feed && feed.slots[23].closed_end_ms >= Date.now() - 2 * HOUR;
     const n50 = !feed ? "N50: fonte indisponível ou sem relatório." :
@@ -806,6 +858,7 @@
     renderResearch();
     renderWatchlist();
     renderProspective();
+    renderPaperRisk();
     renderQuality();
   }
   function bind() {
@@ -911,6 +964,9 @@
             "Horizonte já observado nesta sessão; não substituir resultado");
           prospectiveScores[accepted.horizon_bars] = accepted;
           warn("Resultado J3 importado. Marca de referência; não representa execução financeira.", false);
+        } else if (payload.schema_version === "paper-partial-derisk-risk-d398-v1") {
+          partialRiskReport = E.validatePaperPartialRiskReport(payload);
+          warn("Risco J3 PAPER importado somente nesta sessão. Referências condicionais não são lucros reais, nem pertencem automaticamente aos cenários locais.", false);
         } else if (payload.schema_version === "cia-j5-paper-local-export-v1") {
           const restored = validatePaperBackup(payload);
           if (!window.confirm("Restaurar este backup PAPER? Todos os cenários locais atuais serão substituídos. A VPS e a coleta N50 não serão alteradas.")) {
@@ -924,7 +980,7 @@
             "Backup PAPER restaurado neste navegador. Nenhuma ordem foi enviada." :
             "Backup PAPER aberto nesta sessão, mas não foi possível persistir no navegador. Exporte novamente antes de sair.",
             !storageAvailable);
-        } else throw new Error("Schema JSON desconhecido. Importe relatórios sanitizados N50/J2 ou backup PAPER local.");
+        } else throw new Error("Schema JSON desconhecido. Importe relatórios N50/J2/J3/D398 sanitizados ou backup PAPER local.");
         render();
       } catch (err) {
         warn("Importação recusada: " + err.message, true);
