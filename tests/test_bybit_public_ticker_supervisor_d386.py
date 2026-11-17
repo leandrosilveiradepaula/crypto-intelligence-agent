@@ -138,12 +138,13 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
         self.assertIn("tickers.BTCUSDT", session.sent[0]["args"])
         self.assertEqual(report.subscriptions_acknowledged, 1)
 
-    def test_pre_ack_market_is_discarded_not_replayed(self):
+    def test_pre_ack_market_bootstraps_only_after_ack_no_callback_replay(self):
         clock = FakeClock()
         session = Session(clock, [ticker(), ack(), ticker(cs=2)])
         received = []
         report = run(make_book(), clock, [session], on_quote=received.append)
         self.assertEqual(report.preack_frames_discarded, 1)
+        self.assertEqual(report.preack_frames_bootstrapped_after_ack, 1)
         self.assertEqual(report.ticker_frames_accepted, 1)
         self.assertEqual(received[0].cross_sequence, 2)
 
@@ -423,6 +424,40 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
         self.assertEqual(result.ticker_frames_accepted, 0)
         self.assertEqual(seen, [])
         self.assertTrue(first.closed and second.closed)
+
+    def test_preack_memory_budget_abstains_before_ack_and_no_callback(self):
+        from unittest.mock import patch
+        clock = FakeClock()
+        packet = ticker()
+        sock = Session(clock, [packet, packet, ack(), ticker(cs=2)])
+        received = []
+        # Simulate memory ceiling without constructing an 8 MiB fixture.
+        with patch(
+            "crypto_intelligence_agent.bybit_public_ticker_supervisor_d386."
+            "MAX_PREACK_BOOTSTRAP_BYTES", len(packet.encode("utf-8")) + 1,
+        ):
+            result = run(make_book(), clock, [sock], on_quote=received.append)
+        self.assertEqual(result.status, "lease_abstained")
+        self.assertEqual(result.failure_category, "preack_bootstrap_memory_limit")
+        self.assertEqual(result.subscriptions_acknowledged, 0)
+        self.assertEqual(result.preack_frames_bootstrapped_after_ack, 0)
+        self.assertEqual(result.ticker_frames_accepted, 0)
+        self.assertEqual(received, [])
+        self.assertTrue(sock.closed)
+
+    def test_wrong_ack_with_staged_snapshot_never_rehydrates(self):
+        clock = FakeClock()
+        sock = Session(clock, [
+            ticker(cs=1), ack(req_id="not-our-lease"),
+            ticker(cs=2,kind="delta", lastPrice="101"),
+        ])
+        received = []
+        report = run(make_book(), clock, [sock], on_quote=received.append)
+        self.assertEqual(report.status, "lease_abstained")
+        self.assertEqual(report.failure_category, "invalid_subscription_ack")
+        self.assertEqual(report.preack_frames_bootstrapped_after_ack, 0)
+        self.assertEqual(report.ticker_frames_accepted, 0)
+        self.assertEqual(received, [])
 
     def test_transport_never_opened_when_budget_invalid(self):
         b = make_book()
