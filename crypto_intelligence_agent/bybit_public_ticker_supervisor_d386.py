@@ -141,6 +141,7 @@ def supervise_public_tickers(
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
     on_quote: Callable[[BybitTickerQuote], None] | None = None,
+    on_session_reset: Callable[[], None] | None = None,
 ) -> TickerLeaseReport:
     """Receive real-time ticker data from injected sessions for a finite lease.
 
@@ -153,12 +154,16 @@ def supervise_public_tickers(
 
     The optional callback is strictly a caller-supplied PAPER/monitoring hook,
     not an order/exchange adapter. It runs synchronously with no buffered queue.
+    Optional on_session_reset is called BEFORE every socket attempt, including
+    the first. It must reset ephemeral consumer sequence state while retaining
+    causal timestamp watermarks. Exceptions abort before any socket is opened.
     """
     if (not callable(session_factory) or not callable(clock)
             or not callable(wall_ms) or not callable(sleeper)
             or type(book) is not BybitPublicTickerBook
             or type(budget) is not TickerLeaseBudget
-            or (on_quote is not None and not callable(on_quote))):
+            or (on_quote is not None and not callable(on_quote))
+            or (on_session_reset is not None and not callable(on_session_reset))):
         raise DataValidationError("ticker_ws_injected_dependencies_invalid")
     topics = _topic_args(book)
     allowed = frozenset(topics)
@@ -197,8 +202,12 @@ def supervise_public_tickers(
         if frames >= budget.max_frames:
             book.mark_disconnected()
             return report("lease_abstained", "frame_budget_exceeded")
-        sessions += 1
         book.mark_disconnected()
+        # Session-scoped cross-sequence numbers may restart on reconnect.
+        # Reject a failed reset before constructing any new transport.
+        if on_session_reset is not None:
+            on_session_reset()
+        sessions += 1
         try:
             with closing(session_factory()) as session:
                 session.send(json.dumps({
