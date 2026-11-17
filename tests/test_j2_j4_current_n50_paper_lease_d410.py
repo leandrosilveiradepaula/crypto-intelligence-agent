@@ -142,8 +142,11 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
         self.assertEqual(result["position_contracts_derived_from_existing_auto4_router"], 1)
         self.assertEqual(result["requested_distinct_contracts"], 51)
         self.assertEqual(result["unique_distinct_contracts_observed"], 51)
-        self.assertEqual(result["paper_coverage_gate"]["quote_frames_deferred"], 50)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_deferred"], 0)
         self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
+        self.assertEqual(
+            result["paper_coverage_gate"]["unrelated_market_frames_ignored_for_paper"], 50
+        )
         self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
         self.assertEqual(str(self.store.load(POSITION_ID).reserved_unfilled_units), "30")
         self.assertEqual(str(self.store.load(POSITION_ID).filled_exit_units), "0")
@@ -158,19 +161,21 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
         self.assertNotIn(POSITION_ID, json.dumps(result))
         self.assertNotIn("sensitive-id", json.dumps(result))
 
-    def test_missing_one_contract_blocks_favorable_tick_without_journal_write(self):
+    def test_missing_unrelated_n50_contract_does_not_block_valid_paper_partial(self):
         frames = [ack()] + [ticker(s) for s in N50[:-1]] + [
             ticker("BTCUSDT", bid="101"),
         ]
         result, sock, _ = self.run_once(frames)
         self.assertTrue(sock.closed)
-        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 0)
-        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 0)
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
         self.assertEqual(result["unique_distinct_contracts_observed"], 50)
         self.assertFalse(result["finite_coverage_observed_once"])
         self.assertEqual(result["status"], "finite_paper_lease_degraded_or_incomplete")
+        self.assertFalse(result["universe_health_sufficient_for_new_entries"])
+        self.assertFalse(result["unrelated_n50_silence_blocks_protective_paper_exits"])
 
-    def test_full_coverage_expiring_before_position_tick_blocks_exit(self):
+    def test_stale_unrelated_n50_does_not_block_current_held_quote(self):
         frames = [ack()] + [ticker(s) for s in N50] + [
             ("delay", 4), ticker("BTCUSDT", time_delta=4_000, bid="101"),
         ]
@@ -181,19 +186,50 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
         )
         self.assertTrue(sock.closed)
         self.assertEqual(result["unique_distinct_contracts_observed"], 51)
-        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 0)
-        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 0)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
         self.assertFalse(result["finite_coverage_fresh_at_end"])
+        self.assertFalse(result["universe_health_sufficient_for_new_entries"])
 
-    def test_position_tick_before_full_coverage_does_not_open_until_new_tick(self):
+    def test_held_position_quote_acts_before_n50_completes_without_double_reservation(self):
         frames = [ack(), ticker("BTCUSDT", bid="101")] + [
             ticker(s) for s in N50
         ] + [ticker("BTCUSDT", seq=2, time_delta=1, bid="101")]
         result, sock, _ = self.run_once(frames)
         self.assertTrue(sock.closed)
-        self.assertEqual(result["paper_coverage_gate"]["quote_frames_deferred"], 50)
-        self.assertGreaterEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_deferred"], 0)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 2)
         self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
+
+    def test_stop_remains_prioritized_with_zero_other_n50_messages(self):
+        # Critical safety: a quiet unrelated market must not suppress a
+        # protective hypothetical stop on the held contract's fresh mark.
+        result, _, _ = self.run_once([
+            ack(), ticker("BTCUSDT", bid="98", mark="98"),
+        ])
+        balance = self.store.load(POSITION_ID)
+        self.assertEqual(len(balance.exit_orders), 1)
+        self.assertEqual(balance.exit_orders[0].tranche_step, -1)
+        self.assertEqual(str(balance.protective_reserved_unfilled_units), "100")
+        self.assertEqual(str(balance.filled_exit_units), "0")
+        self.assertFalse(result["finite_coverage_observed_once"])
+        self.assertFalse(result["universe_health_sufficient_for_new_entries"])
+        self.assertTrue(result["existing_paper_position_quote_processed"])
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
+        self.assertFalse(result["orders_sent"])
+
+    def test_stale_held_ticker_never_creates_stop_even_if_n50_fresh(self):
+        # Upstream book and D391 both reject a delayed position price.
+        result, _, _ = self.run_once([
+            ack(), *[ticker(s) for s in N50],
+            ("delay", 4), ticker("BTCUSDT", mark="98", bid="98"),
+        ], budget=TickerLeaseBudget(
+            max_sessions=1, max_frames=200, max_seconds=8,
+        ))
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 0)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 0)
+        self.assertGreaterEqual(result["paper_coverage_gate"]["quote_frames_deferred"], 1)
+        self.assertFalse(result["orders_sent"])
 
     def test_changed_owner_epoch_after_lease_reports_degraded(self):
         rotated = replace(CURRENT, ranked_scope_sha256="c" * 64)
@@ -282,7 +318,7 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
             ticker("BTCUSDT", bid="101", time_delta=20),
         ])
         self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 1)
-        self.assertGreaterEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
+        self.assertEqual(result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 1)
         self.assertEqual(str(self.store.load(POSITION_ID).reserved_unfilled_units), "30")
 
 
