@@ -1792,3 +1792,8 @@ Implementada análise `paper_partial_derisk_risk_gate_d398.py` que reusa D397 + 
 ## J5 / D399 — risco pós-parciais exibido no aplicativo PAPER (17/11/2026)
 
 Implementado painel responsivo `Risco de liquidação · auditoria PAPER J3` no `web/app/index.html`, importação local de JSON sanitizado D398 com estados de veto/abstenção/resultado condicional, flags estritas em `web/app/engine.js`, atualização acessível por `textContent` e CSS móvel. Testes Node/Python verificam schema incompleto, alegações falsas de lucro/ordens, contagens e layout. **A apresentação é separada dos cenários criados no navegador; não existe vínculo automático a posições reais ou à VPS.** PR/CI/merge verificar no GitHub antes de declarar concluído; sem publicação da UI, ordens, rede ou custo extra.
+
+
+## J2/J5 D403 — Painel móvel de amostras REST da Bybit (17/11/2026)
+
+O aplicativo recebeu painel para visualizar preço negociado, mark e bid/ask de contratos selecionados, a partir de amostra pontual pública da Bybit produzida por GET do transport J1. Informações voláteis, indicação de amostra vencida após 30 segundos, sem conexões de browser, ordens, vínculo a posições ou autenticação do arquivo. Testes incluídos; CI/merge devem ser confirmados. Necessária conexão WebSocket contínua e homologação PAPER para qualquer monitoramento intrahora de stops reais. Ver docs/BYBIT_PUBLIC_REST_MARKET_PULSE_D403.md.

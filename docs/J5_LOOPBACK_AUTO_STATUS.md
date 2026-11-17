@@ -36,3 +36,8 @@ No mesmo servidor loopback, `GET /api/j2-research` consulta apenas o **wrapper j
 A seção de pesquisa do aplicativo consulta esse endpoint no carregamento e a cada **5 minutos** somente se aberta em localhost:8765. Uma leitura J2 válida mostra as três contagens (rompimento alta, baixa, dentro da faixa), sempre como observações descritivas, nunca recomendações. Falta de 24h, ausência de acesso owner ou dado adulterado resulta em `503 research_not_available` e interface sem dados atuais; o painel N50 pode continuar funcionando de forma independente. O botão **Atualizar pesquisa local** faz o GET explicitamente. Importação manual de J2 tem prioridade até reload; no modo `file://` ambas as chamadas continuam desativadas.
 
 Não basta o merge: execução em VPS e disponibilização para celular fora da VPS exigem gate de release e um canal privado autenticado, não implementado aqui. Testes Python com wrapper mockado + Chrome localhost mockado e CI 3/3 no head do PR, sem tocar dados reais. Documento operacional permanece `docs/J5_LOOPBACK_AUTO_STATUS.md`.
+
+
+## D403 — ativo público de visualização REST no loopback (17/11/2026)
+
+A lista de arquivos estáticos públicos servidos na mesma origem local inclui /public-market.js, além dos ativos originais. Essa inclusão NÃO cria endpoint de preço, poller, conexão Bybit, ordem ou caminho de escrita: o painel recebe somente arquivo JSON importado manualmente nesta fase. Teste HTTP garante que o novo recurso é servido com headers seguros e que rotas não permitidas continuam 404. O acesso externo por celular permanece sujeito a canal privado autenticado e gate próprio.

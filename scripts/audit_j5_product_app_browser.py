@@ -441,7 +441,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     )
                     if "Importação recusada" not in page.locator("#notice").inner_text():
                         errors.append("untrusted market file not rejected")
-                    if page.locator("img").count() or page.locator("script").count() != 2:
+                    if page.locator("img").count() or page.locator("script").count() != 3:
                         errors.append("HTML injection on invalid market data")
 
                     # D399: exercise the REAL import and renderer in Chrome,
@@ -527,6 +527,80 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                             or not page.locator("#risk-audit-empty").is_visible()
                             or page.locator("#metric-open").inner_text() != "2"):
                         errors.append("transient J3 risk report leaked into local PAPER storage")
+
+                    # D403: real import path for public REST price samples.
+                    # All Chrome test fixtures are synthetic; never fetch Bybit.
+                    observed = int(time.time() * 1000)
+                    pulse = {
+                        "schema_version": "bybit-public-rest-price-pulse-d403-v1",
+                        "status": "rest_snapshot_display_only",
+                        "source": "bybit_v5_public_linear_tickers",
+                        "server_at_ms": observed - 50,
+                        "captured_at_ms": observed,
+                        "observed_symbol_count": 1,
+                        "quotes": [{
+                            "symbol": "BTCUSDT", "last_price": "100.01",
+                            "mark_price": "100", "bid_price": "99.99",
+                            "ask_price": "100.02", "bid_size": "2",
+                            "ask_size": "3", "turnover_24h": "1023.5",
+                        }],
+                        "network_gets_in_this_capture": 1,
+                        "crypto_only_membership_verified": False,
+                        "continuous_websocket_verified": False,
+                        "imported_report_authenticated_by_browser": False,
+                        "paper_positions_linked": False,
+                        "orders_sent": False,
+                        "approved_for_signals": False,
+                        "approved_for_live_use": False,
+                    }
+                    page.locator("#import-file").set_input_files({
+                        "name":"d403-rest-synthetic.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(pulse).encode(),
+                    })
+                    page.locator("#public-market-loaded").wait_for(
+                        state="visible", timeout=5000)
+                    if (page.locator("#public-market-status").inner_text() !=
+                            "Amostra REST recente"
+                            or "Mark: 100" not in page.locator(
+                                "#public-market-rows").inner_text()
+                            or "BTCUSDT" not in page.locator(
+                                "#public-market-rows").inner_text()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("D403 REST price import did not render safely")
+                    forged = dict(pulse, orders_sent=True)
+                    page.locator("#import-file").set_input_files({
+                        "name":"d403-forged-account.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(forged).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        timeout=5000)
+                    if "Mark: 100" not in page.locator(
+                            "#public-market-rows").inner_text():
+                        errors.append("forged D403 quote replaced accepted report")
+                    stale = dict(
+                        pulse, server_at_ms=observed-120050,
+                        captured_at_ms=observed-120000,
+                    )
+                    page.locator("#import-file").set_input_files({
+                        "name":"d403-stale.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(stale).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#public-market-status').textContent.includes('vencida')",
+                        timeout=5000)
+                    if ("preços antigos" not in page.locator(
+                            "#public-market-summary").inner_text()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("old REST sample displayed as current or modified PAPER")
+                    page.reload(wait_until="load")
+                    if (not page.locator("#public-market-loaded").is_hidden()
+                            or not page.locator("#public-market-empty").is_visible()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("public REST quotes persisted after browser reload")
                 if outbound:
                     errors.append("unexpected outbound network activity")
                 if out_dir is not None:
@@ -599,6 +673,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                             route.abort()
                     page.route("**/*", route_local_only)
                     page.goto("http://127.0.0.1:8765/", wait_until="load")
+                    page.wait_for_function("() => Boolean(window.CIAPublicMarket)", timeout=5000)
                     page.wait_for_function(
                         "() => document.querySelector('#n50-ok').textContent === '2 / 24'",
                         timeout=5000,
