@@ -9,6 +9,7 @@
   <title>Crypto Intelligence — Console PAPER</title>
   <link rel="stylesheet" href="./style.css">
   <script src="./engine.js" defer></script>
+  <script src="./public-market.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body data-mode="offline_paper" data-live-orders="disabled">
@@ -128,6 +129,22 @@
               <p class="muted fine">Retorno retrospectivo descritivo, não probabilidade de lucro. Dados importados ficam somente nesta sessão.</p>
             </div>
           </div>
+        </div>
+        <div class="panel market-pulse-panel" aria-labelledby="public-market-title">
+          <div class="panel-heading">
+            <h3 id="public-market-title">Preços públicos da Bybit · amostra REST</h3>
+            <span class="status-label" id="public-market-status">Sem amostra REST</span>
+          </div>
+          <p class="muted fine">Importe pelo seletor JSON uma amostra REST capturada pelo coletor read-only. Preços públicos em horário específico, não WebSocket ou monitor de stop; origem do arquivo não é autenticada pelo navegador.</p>
+          <div id="public-market-empty" class="empty">
+            <strong>Sem preços públicos importados</strong>
+            <p>Nenhuma cotação real é presumida. Esta página não consulta a corretora.</p>
+          </div>
+          <div id="public-market-loaded" hidden>
+            <p id="public-market-summary" class="muted fine" role="status" aria-live="polite"></p>
+            <div id="public-market-rows" class="market-pulse-rows" aria-label="Amostra de preços por contrato"></div>
+          </div>
+          <p class="muted fine">Amostras antigas são sinalizadas. Preços importados não alteram posições PAPER, margem, gatilhos, resultados ou ordens.</p>
         </div>
         <div class="panel watchlist-panel" aria-labelledby="watchlist-title">
           <div class="panel-heading">
@@ -291,7 +308,7 @@
             <label class="file-drop" for="import-file">
               <span aria-hidden="true" class="upload-icon">↓</span>
               <strong>Selecionar arquivo JSON local</strong>
-              <span>Relatórios N50/J2/J3/D398 sanitizados ou backup PAPER</span>
+              <span>Relatórios N50/J2/J3/D398, preços REST ou backup PAPER</span>
               <input type="file" id="import-file" accept=".json,application/json">
             </label>
             <p class="muted fine">O arquivo é lido somente no navegador (até 1 MiB), sem upload. Relatórios N50/J2/J3 e risco D398 não persistem. A restauração de backup PAPER substitui cenários locais somente após sua confirmação.</p>
