@@ -294,13 +294,18 @@ def supervise_public_tickers(
                         # frames, in receive order, to reconstruct snapshot
                         # state for subsequent post-ACK deltas. Do not emit
                         # callback/decisions for any pre-ACK frame.
-                        for staged_raw, staged_at_ms in preack_staged:
-                            book.ingest(staged_raw, received_at_ms=staged_at_ms)
-                            bootstrap_validated += 1
-                        preack_staged.clear()
-                        preack_staged_bytes = 0
+                        # ACK validity is independent of any subsequent
+                        # bootstrap error. Report it even if replay fails.
                         acknowledged = True
                         acks += 1
+                        for staged_raw, staged_at_ms in preack_staged:
+                            book.ingest(staged_raw, received_at_ms=staged_at_ms)
+                        # Count as bootstrapped only when the entire set is
+                        # valid. On any error the book is invalidated and
+                        # no partial state can reach the caller.
+                        bootstrap_validated += len(preack_staged)
+                        preack_staged.clear()
+                        preack_staged_bytes = 0
                         continue
                     if payload.get("op") is not None:
                         raise DataValidationError("ticker_ws_unexpected_control")
