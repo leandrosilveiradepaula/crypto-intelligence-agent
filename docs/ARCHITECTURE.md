@@ -656,3 +656,8 @@ O HTTP local `scripts/serve_j5_local_readonly.py` possui agora `GET /api/j2-rese
 ## J4 / D388 — uma só contabilidade para emergência e parciais (16/11/2026)
 
 Em PAPER, `SQLitePaperPositionJournal` é fonte única dos tamanhos confirmados/reservados para tranches positivas, runner 0 e novo stop de emergência `tranche_step=-1`. Stop pode reservar saldo completo antes da primeira parcial, mas nunca concorrer com saída anterior UNKNOWN/pendente nem gerar fill sem evento explícito. A camada de evento Bybit D385 alimenta a decisão PAPER `paper_intrahour_emergency_stop_d388.py`; futura integração com D387 deve executar stop **primeiro**, sem duas reservas para mesmo tick. Estes contratos **não** implicam API de ordens, proteção nativa, stop garantido, executor real nem migração do SQLite J1. Ver `docs/J4_PAPER_EMERGENCY_STOP_D388.md`.
+
+
+### Conexão entre coorte J1 e supervisão de preços J2 (D406)
+
+Na leitura de pesquisa intrahorária, o adaptador `j2_current_j1_n50_public_scope_d406.py` utiliza o ponteiro privado de época ativa D321 e a admissão imutável D316/D314 da **J1 apenas para leitura**, com revalidação D287 de 50 membros e segunda leitura contra troca de época. A partir dessa coorte fornece os símbolos internamente ao D405 (diagnóstico WS), depois D390/D386/D385, podendo anexar posição PAPER externa ao ranking. O catálogo privado e seus símbolos não são publicados no endpoint de UI; um novo algoritmo de ranking ou autor adicional de candles é proibido nesse caminho. Como a coorte J1 ainda é pesquisa provisória, a ligação não comprova mercado-amplo/crypto-only nem permite sinais ou ordens reais. A gestão de saídas PAPER permanece explicitamente isolada em D391/D401 até validação de feed persistente e gate operacional.
