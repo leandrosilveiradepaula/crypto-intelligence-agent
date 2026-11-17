@@ -77,7 +77,7 @@
         /^fixture_[A-Za-z0-9_-]{1,120}$/.test(p.position_id) &&
         !ids.has(p.position_id));
       ids.add(p.position_id);
-      valid(["BYBIT_V5", "BINANCE_USDM"].includes(p.venue_candidate) &&
+      valid(["bybit_v5", "binance_usdm"].includes(p.venue_candidate) &&
         /^[A-Z0-9]{1,28}USDT$/.test(p.symbol_fixture) &&
         ["LONG", "SHORT"].includes(p.side) &&
         typeof p.checkpoint_utc === "string" &&
