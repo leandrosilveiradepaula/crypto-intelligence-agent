@@ -178,6 +178,70 @@ class CausalPaperFillD394Tests(unittest.TestCase):
             self.assertEqual(result.receipt.reference_exit_price_quote,D(99))
             self.assertEqual(store.load(POSITION_ID).side,SyntheticSide.SHORT)
 
+    def test_entire_post_latency_fill_cycle_connects_to_existing_d393_cost_audit(self):
+        """D389 intents -> D394 hypothetical FILLs -> D393 conditional costs."""
+        from crypto_intelligence_agent.paper_closed_cost_audit_d393 import (
+            audit_closed_paper_costs,
+        )
+        from crypto_intelligence_agent.synthetic_cost_scenarios import SyntheticFundingEvent
+        from crypto_intelligence_agent.synthetic_partial_costed_replay import (
+            SyntheticPartialCostRates,
+        )
+
+        receipts=[]
+        def hypothesize(trigger,intent_id):
+            at=trigger.received_at_ms
+            post=replace(
+                trigger,exchange_at_ms=at+175,
+                received_at_ms=at+200,
+                cross_sequence=trigger.cross_sequence+100,
+                bid_size=D(500),ask_size=D(500),
+            )
+            result=apply_causal_paper_fill_assumption(
+                self.path,POSITION_ID,intent_id,quote=post,
+                as_of_ms=at+200,policy=POLICY,
+                enable_synthetic_ledger_fills=True,
+            )
+            self.assertEqual(result.decision,PaperFillDecision.ASSUMED_FULL)
+            self.assertIsNotNone(result.receipt)
+            receipts.append(result.receipt)
+            return result
+
+        first=hypothesize(self.trigger,self.intent)
+        self.assertEqual(first.recorded_units,D(30))
+        q2=_tick(self.book,minute=19,cs=2,kind="delta",
+                 mark="102.5",bid="103",ask="103.02")
+        target2=self.router.process(q2)
+        self.assertIsNotNone(target2.created_intent_id)
+        second=hypothesize(q2,target2.created_intent_id)
+        self.assertEqual(second.recorded_units,D(20))
+        q3=_tick(self.book,minute=27,cs=3,kind="delta",
+                 mark="98",bid="98",ask="98.02")
+        stop=self.router.process(q3)
+        self.assertIsNotNone(stop.created_intent_id)
+        third=hypothesize(q3,stop.created_intent_id)
+        self.assertEqual(third.recorded_units,D(50))
+        snapshot=self.store.load(POSITION_ID)
+        self.assertEqual(snapshot.filled_exit_units,D(100))
+        self.assertEqual(snapshot.confirmed_remaining_units,D(0))
+        self.assertEqual(len(snapshot.exit_orders),3)
+        funding=(SyntheticFundingEvent(
+            "fixture_funding_d394",T+13*M,D(7000),D(2),
+        ),)
+        audit=audit_closed_paper_costs(
+            self.path,POSITION_ID,
+            entry_reference_price_quote=D(100),
+            fill_references=tuple(receipts),
+            cost_rates=SyntheticPartialCostRates(D(10),D(10),D(5),D(5)),
+            funding_events=funding,
+        )
+        self.assertEqual(
+            audit.conditional_net_after_supplied_costs_quote,D("-41.385"),
+        )
+        self.assertFalse(audit.sanitized_report()["net_pnl_verified"])
+        self.assertFalse(audit.sanitized_report()["liquidation_risk_verified"])
+        self.assertFalse(third.sanitized_report()["venue_fill_verified"])
+
     def test_invalid_settings_abstain_before_any_write(self):
         zero_spread=PaperObservedFillAssumptions(max_spread_bps=D(0))
         self.assertEqual(self.apply(self.later(),policy=zero_spread).decision,
