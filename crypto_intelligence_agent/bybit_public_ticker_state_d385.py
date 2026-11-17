@@ -224,10 +224,21 @@ class BybitPublicTickerBook:
             if seq < old.cross_sequence or exchange_at < old.exchange_at_ms or at < old.received_at_ms:
                 raise DataGapError("ticker_retrograde_sequence_or_time")
             if seq == old.cross_sequence:
-                if fingerprint != self._last_data[symbol]:
+                if fingerprint == self._last_data[symbol]:
+                    # Exact redelivery must not renew the quote's timestamp.
+                    self._duplicates += 1
+                    return old
+                if exchange_at == old.exchange_at_ms:
+                    # CS is a *cross sequence*, not a unique message ID.
+                    # Two different payloads at the exact same exchange
+                    # instant cannot be causally ordered by our contract:
+                    # refuse them rather than invent a market update.
                     raise DataGapError("ticker_same_sequence_conflicting_payload")
-                self._duplicates += 1
-                return old
+                # A later exchange timestamp is a distinct causal ticker
+                # update even if no new trade advanced the cross sequence.
+                # Validate every field and book invariant below before
+                # committing it. The earlier monotonicity checks already
+                # ruled out older timestamps, sequence and receipt times.
         elif kind != "snapshot":
             raise DataGapError("ticker_delta_without_snapshot")
 
