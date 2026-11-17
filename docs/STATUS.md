@@ -1806,4 +1806,4 @@ O painel móvel recebe amostras REST da Bybit via o servidor local loopback exis
 
 ## J2 — diagnóstico de rede pública intrahorária (D405)
 
-Preparado diagnóstico read-only da conexão WebSocket Bybit de duração limitada, com relatório somente de ACK, cobertura por contrato/posição, frescor e faixas de latência. Nenhuma ordem e nenhuma nova coleta J1. O executor Python da VPS está bloqueado por política; só o alcance TLS ao host Bybit foi comprovado, não a recepção real de tickers. Ainda não existe monitor WS 24×7 em produção. Consulte docs/J2_PUBLIC_WS_OPERATIONAL_PROBE_D405.md.
+Preparado diagnóstico read-only da conexão WebSocket Bybit de duração limitada, com relatório somente de ACK, cobertura por contrato/posição, frescor e faixas de latência. Nenhuma ordem e nenhuma nova coleta J1. A VPS confirmou handshake HTTP 101 do WebSocket público Bybit com TLS válido, mas não assinou tópicos nem recebeu tickers; execução do probe Python segue bloqueada pela política do gateway. Ainda não existe monitor WS 24×7 em produção. Consulte docs/J2_PUBLIC_WS_OPERATIONAL_PROBE_D405.md.
