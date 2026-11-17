@@ -39,7 +39,7 @@ class AppLayoutContractTests(unittest.TestCase):
                      "script-src 'self'", "form-action 'none'", "base-uri 'none'"):
             self.assertIn(rule, csp[0])
         scripts = [a.get("src") for t,a in tags if t=="script"]
-        self.assertEqual(scripts, ["./engine.js", "./public-market.js", "./persisted-paper.js", "./research-scorebook.js", "./app.js"])
+        self.assertEqual(scripts, ["./engine.js", "./public-market.js", "./persisted-paper.js", "./research-scorebook.js", "./paper-ws-health.js", "./app.js"])
         self.assertTrue(any(t=="link" and a.get("href")=="./style.css"
                             for t,a in tags))
         self.assertTrue(any(t=="a" and a.get("href")=="#conteudo"
@@ -51,6 +51,8 @@ class AppLayoutContractTests(unittest.TestCase):
         self.assertIn('PAPER · OFFLINE', html)
         self.assertIn('Não conectado', html)
         self.assertIn("50x", html)
+        self.assertIn('id="paper-ws-health-status"', html)
+        self.assertIn('id="paper-ws-health-rows"', html)
         self.assertIn('id="quality-n50"', html)
         self.assertIn('id="quality-j2"', html)
         self.assertIn("Qualidade dos dados", html)

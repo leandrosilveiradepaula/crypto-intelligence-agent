@@ -500,3 +500,8 @@ O monitor finito liga a coorte dinâmica N50 já mantida na J1 ao socket públic
 ## J2/J4 D411 — isolamento da proteção de posições
 
 A saúde completa do N50 orienta seleção/monitoramento de oportunidades, não bloqueia proteção hipotética de posições existentes. O motor PAPER recebe apenas ticker próprio pós-ACK e recente, com stop antes de parcial e idempotência no AUTO4. A avaliação de cobertura ampla segue separada e degradada se qualquer instrumento do N50 estiver ausente. Testes offline; feed real e 24×7 não homologados. `docs/J2_J4_POSITION_EXIT_VS_N50_HEALTH_D411.md`.
+
+
+## J5 D412 — interface móvel de diagnóstico da sessão de preços
+
+A tela do aplicativo passa a importar o relatório sanitizado da ponte pública N50 → PAPER de D410/D411, mostrando qualidade do universo e processamento de posições separadamente. Sempre rotula a origem como declaração de arquivo não autenticada, sem atualizar posições automaticamente ou afirmar feed 24×7. Proíbe a importação de alegações de stop/ordem/resultado real. Evidência em `docs/J5_PAPER_WS_HEALTH_D412.md`.

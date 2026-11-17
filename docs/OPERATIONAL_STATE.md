@@ -2104,3 +2104,8 @@ Branch `work/separate-paper-protection-from-n50-coverage-d411`, base main `3f4aa
 
 
 Nota D411: identificado e corrigido falso positivo de frescor no censo D390/D405 quando um ticker antigo chegava por socket novo. O callback agora só marca contrato observado com diferença exchange→recebimento <=3.000 ms. Adicionado teste de regressão de ticker com 5s de atraso; isso não comprova ticker ao vivo na VPS.
+
+
+## J5 D412 — painel de saúde do feed e de saídas PAPER (17/11/2026)
+
+Branch `work/j5-paper-ws-health-panel-d412`, base main `7a1fde90c119e1828c5aa2d83dab2f99eacfa266`. Adicionado painel móvel para importar **somente JSON de sessão finita D410/D411**, distinguindo qualidade do Top50 de avaliação de saídas de posições com preço próprio fresco. Exibe contagens/idade ao fim, posições AUTO4, ticks PAPER, reconexões e origem declarada (teste sintético x relato real não autenticado). Novo `web/app/paper-ws-health.js` usa validação estrita da projeção e texto seguro; importação volátil, sem rede, sem acesso SQLite, sem ordens/stop nativo. Serviço loopback somente permite novo ativo JS estático. Teste Python usa relatório real do produtor D411 e validador DOM/Node, testando fraude de flags e inconsistência; CI e merge a conferir. Documento `docs/J5_PAPER_WS_HEALTH_D412.md`. Sem feed real comprovado, monitor 24×7 ou deploy.

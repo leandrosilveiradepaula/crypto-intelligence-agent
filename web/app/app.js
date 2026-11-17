@@ -11,7 +11,7 @@
   let feedOrigin = "none"; // local-auto, manual, or none
   let research = null;
   let researchOrigin = "none";
-  let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
+  let watchlist = null;
   let prospectiveCapture = null;
   let prospectiveScores = Object.create(null);
   let partialRiskReport = null;
@@ -150,8 +150,7 @@
     );
     card.append(cells);
     if (position.status === "OPEN") {
-      // A user-provided hypothetical mark is never fetched or persisted.
-      // Replay using PAPER engine.
+       // Replay using PAPER engine.
       const mark = el("section", "mark-reference");
       mark.setAttribute("aria-label", "Variação bruta PAPER de " + position.id);
       const label = el("label", "field", "Mark hipotético (US$)");
@@ -185,8 +184,7 @@
           marginImpact.dataset.severity = impactBps <= -10000n ? "critical" : "normal";
           output.dataset.valid = "true";
         } catch (_) {
-          // Never show an outdated favorable result for malformed input.
-          result.textContent = "Mark inválido: informe preço positivo válido.";
+           result.textContent = "Mark inválido: informe preço positivo válido.";
           marginImpact.textContent = "Impacto na margem indisponível.";
           marginImpact.dataset.severity = "normal";
           output.dataset.valid = "false";
@@ -969,6 +967,9 @@
         } else if (payload.schema_version === "bybit-public-rest-price-pulse-d403-v1") {
           globalThis.CIAPublicMarket.install(payload);
           warn("Preços REST importados: amostra pontual, não feed ao vivo.", false);
+        } else if (payload.schema_version === "j2-j4-current-n50-paper-lease-d410-v1") {
+          globalThis.CIAPaperWSHealth.install(payload);
+          warn("Saúde WS/PAPER importada: sessão finita, não feed ao vivo.", false);
         } else if (payload.schema_version === "paper_positions_snapshot_v1") {
           globalThis.CIAPersistedPaper.install(payload);
           warn("Diário PAPER importado somente para leitura.", false);

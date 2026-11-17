@@ -12,6 +12,7 @@
   <script src="./public-market.js" defer></script>
   <script src="./persisted-paper.js" defer></script>
   <script src="./research-scorebook.js" defer></script>
+  <script src="./paper-ws-health.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body data-mode="offline_paper" data-live-orders="disabled">
@@ -291,6 +292,21 @@
           </div>
           <p class="muted fine">Somente leitura e sessão atual. Sem ordens, preço ao vivo, stop nativo, resultado financeiro ou agregação de unidades diferentes. Os dados importados não alteram o laboratório PAPER.</p>
         </div>
+        <div class="panel" aria-labelledby="paper-ws-health-title">
+          <div class="panel-heading">
+            <h3 id="paper-ws-health-title">Saúde do feed e das saídas PAPER</h3>
+            <span class="status-label" id="paper-ws-health-status">Sem relatório WebSocket</span>
+          </div>
+          <p class="muted fine">Importe pelo mesmo seletor JSON um relatório de sessão J2/J4. A saúde geral do Top 50 e as avaliações das posições são mostradas separadamente.</p>
+          <div id="paper-ws-health-empty" class="empty">
+            <strong>Monitor de mercado sem evidências importadas</strong>
+            <p>Não existe ligação ao WebSocket nem atualização automática nesta página.</p>
+          </div>
+          <div id="paper-ws-health-loaded" hidden>
+            <div id="paper-ws-health-rows" class="market-pulse-rows" role="status" aria-live="polite"></div>
+          </div>
+          <p class="muted fine">Relatório estático, não autenticado externamente e descartado ao recarregar. Sem credenciais, ordens, stops nativos, resultados reais ou liberação de novas entradas.</p>
+        </div>
         <div class="panel risk-audit-panel" aria-labelledby="risk-audit-title">
           <div class="panel-heading">
             <h3 id="risk-audit-title">Risco de liquidação · auditoria PAPER J3</h3>
@@ -343,7 +359,7 @@
             <label class="file-drop" for="import-file">
               <span aria-hidden="true" class="upload-icon">↓</span>
               <strong>Selecionar arquivo JSON local</strong>
-              <span>Relatórios N50/J2/J3, histórico de pesquisa, diário PAPER ou backup</span>
+              <span>Relatórios N50/J2/J3, saúde WS/PAPER, diário PAPER ou backup</span>
               <input type="file" id="import-file" accept=".json,application/json">
             </label>
             <p class="muted fine">O arquivo é lido somente no navegador (até 1 MiB), sem upload. Relatórios N50/J2/J3 e risco D398 não persistem. A restauração de backup PAPER substitui cenários locais somente após sua confirmação.</p>
