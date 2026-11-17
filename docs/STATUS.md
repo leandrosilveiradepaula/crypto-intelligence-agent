@@ -1817,3 +1817,8 @@ A ferramenta dispõe de uma ponte read-only que carrega o escopo ativo de 50 con
 ## J5 — posições do diário PAPER no celular (D407)
 
 Novo painel exclusivo mostra relatórios de posições já persistidas na contabilidade PAPER AUTO4, incluindo parciais, saldo, reservas, necessidade de reconciliação, estado de runner e comprovante de margem solicitado. Fonte é um JSON de leitura somente local com IDs explícitos; não usa dados de corretora nem substitui os cenários salvos neste navegador. Importação não persiste nem executa ordens. Ver `docs/J5_PERSISTED_PAPER_MOBILE_D407.md`; acompanhar CI e merge antes de declarar entrega incorporada.
+
+
+## J2/J3 — comparar observações prospectivas ao longo de várias decisões (D408)
+
+O aplicativo tem um histórico de pesquisa por horizontes 1/4/8 horas com observações maduras, resultados de marcação favoráveis/contrários e custos hipotéticos, alimentado por resumos offline do score J3 existente. Decisões com zero candidatos são contabilizadas sem imputar perda; repetições da mesma decisão/horizonte são recusadas. Nenhuma taxa de ganho financeiro ou previsão está validada, porque dados podem omitir horas, custo não tem identidade homogênea e registro não foi atestado externamente. Importação na UI não altera posições PAPER. Não instalar/operar VPS como parte desta alteração.

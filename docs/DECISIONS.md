@@ -1921,3 +1921,8 @@ A medição WS pública deve exigir gates de rede/região, contrato linear fixo,
 ## D406 — uma só origem dinâmica de ranking para J1/J2, sem segundo escritor (17/11/2026)
 
 O futuro monitor público Bybit deve reutilizar por leitura a época ativa revalidada de N50 da J1, sem algoritmo de seleção concorrente nem reconsulta REST por ciclo. O acesso ao manifesto/cache proprietário exige UID e permissões owner, opt-in explícito, digest de membro e catálogo, validade temporal e releitura do ponteiro para detectar rotação durante a consulta. A fonte continua provisória, não declara Top50 crypto-only independente validado e jamais autoriza trading. Uma posição PAPER fora da coorte deve continuar assinada pelo monitor quando fornecida por fonte reconciliada. Falha de integridade, clock, permissão ou fonte de posição não será substituída por símbolos inventados ou lote fixo de 50. Sem publicar dados privados, escrever na J1, iniciar rede sem os gates ou habilitar ordens reais.
+
+
+## D408 — referência prospectiva agregada não é backtest ou autorização de entrada (17/11/2026)
+
+Agregar somente arquivos de scores existentes J3 validados pelo contrato owner D667, com chaves (hora de decisão,horizonte) únicas e sem referência faltante tratada como perda. Relatar contagens de observações, favoráveis/contrárias e médias de referência com custos individuais, mas **não** declarar que todos os horários foram incluídos ou que premissas de custo são iguais. Viés de seleção, liquidação intrabar, custos verdadeiros e timestamp independente continuam abertos; nenhum sucesso no scorebook autoriza sinal, ordem, operação 50x ou mudança do risco. Browser só lê JSON importado em sessão e não acessa arquivo privado.

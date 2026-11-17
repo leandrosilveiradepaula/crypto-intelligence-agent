@@ -11,6 +11,7 @@
   <script src="./engine.js" defer></script>
   <script src="./public-market.js" defer></script>
   <script src="./persisted-paper.js" defer></script>
+  <script src="./research-scorebook.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body data-mode="offline_paper" data-live-orders="disabled">
@@ -198,6 +199,22 @@
           </div>
           <p class="muted fine">Registro local não é atestação independente. Resultados J3 usam preços de fechamento e custos assumidos, não execução de ordens, PnL realizado ou validação fora da amostra.</p>
         </div>
+        <div class="panel watchlist-panel" aria-labelledby="research-scorebook-title">
+          <div class="panel-heading">
+            <h3 id="research-scorebook-title">Avaliação acumulada das oportunidades</h3>
+            <span id="research-scorebook-status" class="status-label">Sem histórico consolidado</span>
+          </div>
+          <p class="muted fine">Importe um resumo J3 de avaliações posteriores (1, 4 e 8 horas). Compare somente observações já pontuadas, não sinais de negociação.</p>
+          <div id="research-scorebook-empty" class="empty">
+            <strong>Nenhum histórico agregado importado</strong>
+            <p>Sem amostra e sem validação de vantagem estatística. Decisões sem candidatos não contam como perdas.</p>
+          </div>
+          <div id="research-scorebook-loaded" hidden>
+            <p id="research-scorebook-summary" role="status" aria-live="polite" class="muted fine"></p>
+            <div id="research-scorebook-rows" class="market-pulse-rows" aria-label="Referências de pesquisa por horizonte"></div>
+          </div>
+          <p class="muted fine">Custos entre decisões não têm comparabilidade comprovada, e horas sem arquivos não são contabilizadas. Resultados não são ordens, PnL, backtest financeiro ou prova fora da amostra.</p>
+        </div>
       </section>
 
       <section class="group" id="posicoes" aria-labelledby="position-title">
@@ -326,7 +343,7 @@
             <label class="file-drop" for="import-file">
               <span aria-hidden="true" class="upload-icon">↓</span>
               <strong>Selecionar arquivo JSON local</strong>
-              <span>Relatórios N50/J2/J3/D398, diário PAPER, preços REST ou backup</span>
+              <span>Relatórios N50/J2/J3, histórico de pesquisa, diário PAPER ou backup</span>
               <input type="file" id="import-file" accept=".json,application/json">
             </label>
             <p class="muted fine">O arquivo é lido somente no navegador (até 1 MiB), sem upload. Relatórios N50/J2/J3 e risco D398 não persistem. A restauração de backup PAPER substitui cenários locais somente após sua confirmação.</p>

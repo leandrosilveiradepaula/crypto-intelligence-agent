@@ -151,7 +151,7 @@
     card.append(cells);
     if (position.status === "OPEN") {
       // A user-provided hypothetical mark is never fetched or persisted.
-      // Reuse the exact BigInt PAPER engine, after all partial exits.
+      // Replay using PAPER engine.
       const mark = el("section", "mark-reference");
       mark.setAttribute("aria-label", "Variação bruta PAPER de " + position.id);
       const label = el("label", "field", "Mark hipotético (US$)");
@@ -368,7 +368,7 @@
     for (let i = 23; i >= 0 && snapshot.slots[i].state === "ok"; --i) streak++;
     check(streak === snapshot.consecutive_recent_observed_hours,
       "Sequência N50 inconsistente");
-    // v1 legacy imports have no scope metadata; do not invent a cohort.
+    // Legacy file lacks cohort identity.
     const scopeKeys = ["same_scope_recent_50_of_50_hours",
       "scope_evidence_available", "scope_changed_in_window"];
     if (scopeKeys.some(key => Object.hasOwn(snapshot, key))) {
@@ -422,7 +422,7 @@
   }
 
   function exactJ2Metric(raw) {
-    // Decimal-string ordering without rounding any financial quantity to float.
+    // Exact decimals; no float.
     check(typeof raw === "string" &&
       /^-?(?:0|[1-9][0-9]{0,39})(?:\.[0-9]{1,90})?$/.test(raw),
       "Indicador privado J2 fora dos limites");
@@ -438,7 +438,7 @@
     return 0;
   }
   function validateWatchlist(snapshot) {
-    // Private file ONLY: no credentials, URLs, raw OHLC or order authority.
+    // No credentials or raw OHLC.
     check(snapshot && snapshot.schema_version === "j2-n50-ws-descriptive-watchlist-v1" &&
       snapshot.status === "ws_descriptive_watchlist_ready" &&
       snapshot.quality === "private_ws_observations_not_trading_signals" &&
@@ -631,7 +631,7 @@
       render();
     } catch (_) {
       if (feedOrigin === "manual") return;
-      // Never display a stale 50/50 as if the server still responded.
+      // Clear stale 50/50.
       feed = null;
       feedOrigin = "none";
       render();
@@ -955,6 +955,9 @@
           prospectiveCapture = accepted;
           prospectiveScores = Object.create(null);
           warn("Decisão J2 carregada. Não há certificação temporal externa nem sinais.", false);
+        } else if (payload.schema_version === "j3-ws-prospective-evidence-summary-d408-v1") {
+          globalThis.CIAResearchEvidence.install(payload);
+          warn("Histórico J3 importado: pesquisa, não sinal.", false);
         } else if (payload.schema_version === "j3-ws-watchlist-forward-reference-v1") {
           check(prospectiveCapture !== null,
             "Importe primeiro a captura J2 correspondente");

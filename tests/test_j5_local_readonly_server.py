@@ -275,7 +275,7 @@ class LoopbackHTTPTests(unittest.TestCase):
         self.assertIn("connect-src 'self'", headers.get("Content-Security-Policy", ""))
         self.assertNotIn("Access-Control-Allow-Origin", headers)
         self.assertNotIn("Set-Cookie", headers)
-        for asset in ("/app.js", "/engine.js", "/public-market.js", "/persisted-paper.js", "/style.css", "/index.html"):
+        for asset in ("/app.js", "/engine.js", "/public-market.js", "/persisted-paper.js", "/research-scorebook.js", "/style.css", "/index.html"):
             with self.subTest(asset=asset):
                 self.assertEqual(self.get("GET", asset)[0], 200)
         for denied in ("/README.md", "/../docs/DECISIONS.md",

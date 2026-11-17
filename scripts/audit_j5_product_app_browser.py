@@ -441,7 +441,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     )
                     if "Importação recusada" not in page.locator("#notice").inner_text():
                         errors.append("untrusted market file not rejected")
-                    if page.locator("img").count() or page.locator("script").count() != 4:
+                    if page.locator("img").count() or page.locator("script").count() != 5:
                         errors.append("HTML injection on invalid market data")
 
                     # D399: exercise the REAL import and renderer in Chrome,
@@ -599,6 +599,75 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                             or not page.locator("#persisted-paper-empty").is_visible()
                             or page.locator("#metric-open").inner_text() != "2"):
                         errors.append("D407 imported durable state persisted across reload")
+
+                    # D408: scored opportunity history is only reference evidence,
+                    # not a permission to send orders or create PAPER positions.
+                    def horizon(h, records, scored, empty, matured,
+                                good=0, bad=0, neutral=0, total=None, average=None):
+                        return {
+                            "horizon_hours":h, "records":records,
+                            "scored_decisions":scored, "empty_decisions":empty,
+                            "matured_research_observations":matured,
+                            "directionally_favorable":good,
+                            "directionally_contrary":bad, "unchanged":neutral,
+                            "net_reference_bps_sum_under_individual_assumptions":total,
+                            "net_reference_bps_mean_per_observation":average,
+                        }
+                    scorebook = {
+                        "schema_version":"j3-ws-prospective-evidence-summary-d408-v1",
+                        "status":"descriptive_forward_research_not_strategy_validation",
+                        "source":"imported_owner_report_contract_only_not_independently_attested",
+                        "report_records_accepted":2,
+                        "distinct_decision_hours_in_supplied_files":1,
+                        "horizons":[
+                            horizon(1,1,1,0,2,good=1,bad=1,total="5.0",average="2.5000"),
+                            horizon(4,1,0,1,0),
+                            horizon(8,0,0,0,0),
+                        ],
+                        "all_decision_windows_present_verified":False,
+                        "cost_assumptions_consistent_across_decisions_verified":False,
+                        "prospective_registration_independently_verified":False,
+                        "out_of_sample_results_validated":False,
+                        "strategy_profitable_verified":False,
+                        "financial_backtest_approved":False,
+                        "marketwide_top50_verified":False,
+                        "approved_for_signals":False,
+                        "approved_for_live_use":False,
+                        "orders_sent":False,
+                        "network_requests":0,
+                        "database_accessed":False,
+                        "database_mutation_statements":0,
+                    }
+                    page.locator("#import-file").set_input_files({
+                        "name":"d408-research-summary.json", "mimeType":"application/json",
+                        "buffer":json.dumps(scorebook).encode(),
+                    })
+                    page.locator("#research-scorebook-loaded").wait_for(
+                        state="visible", timeout=5000)
+                    if (page.locator("#research-scorebook-status").inner_text()
+                            != "Pesquisa prospectiva · não validada"
+                            or "Horizonte 1h" not in page.locator(
+                                "#research-scorebook-rows").inner_text()
+                            or "sem candidatos: 1" not in page.locator(
+                                "#research-scorebook-rows").inner_text()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("D408 forward research evidence not shown independently")
+                    forged_scorebook = dict(scorebook, approved_for_signals=True)
+                    page.locator("#import-file").set_input_files({
+                        "name":"d408-forged-signal.json", "mimeType":"application/json",
+                        "buffer":json.dumps(forged_scorebook).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        timeout=5000)
+                    if "Horizonte 1h" not in page.locator(
+                            "#research-scorebook-rows").inner_text():
+                        errors.append("forged signal replaced valid J3 research")
+                    page.reload(wait_until="load")
+                    if (not page.locator("#research-scorebook-loaded").is_hidden()
+                            or not page.locator("#research-scorebook-empty").is_visible()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("D408 research imported history persisted after reload")
 
                     # D403: real import path for public REST price samples.
                     # All Chrome test fixtures are synthetic; never fetch Bybit.
