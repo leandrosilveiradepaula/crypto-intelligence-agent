@@ -159,6 +159,24 @@ class LiveWSProbeD405Tests(unittest.TestCase):
         self.assertFalse(result["finite_coverage_fresh_at_end"])
         self.assertTrue(sock.closed)
 
+    def test_n50_129_preack_frames_then_late_ack_report_reality(self):
+        clock = Clock()
+        names = tuple(f"A{i:02d}USDT" for i in range(50))
+        sock = Socket(clock, [quote(names[0])] * 129 + [
+            ack(), quote(names[0], seq=2),
+        ])
+        report = run(clock, [sock], symbols=names, seconds=5)
+        self.assertEqual(report["frames_seen"], 131)
+        self.assertEqual(report["preack_frames_discarded"], 129)
+        self.assertEqual(report["subscription_acks"], 1)
+        self.assertEqual(report["market_frames_accepted"], 1)
+        self.assertEqual(report["received_distinct_contracts"], 1)
+        self.assertFalse(report["finite_coverage_observed_once"])
+        self.assertFalse(report["real_market_frames_verified"])
+        self.assertFalse(report["network_attempted"])
+        self.assertNotIn(names[0], json.dumps(report))
+        self.assertTrue(sock.closed)
+
     def test_50_symbols_are_counted_distinct_no_false_missing(self):
         c = Clock()
         names = tuple(f"A{i:02d}USDT" for i in range(50))
