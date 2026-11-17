@@ -15,7 +15,7 @@
   let watchlist = null; // Volatile imported J2 shortlist; never persisted or uploaded.
   let prospectiveCapture = null; // One owner decision, session-only; not an OOS attestation.
   let prospectiveScores = Object.create(null); // 1/4/8h costed references, never fills.
-  let partialRiskReport = null; // D398 sanitized import: session-only, never browser position PnL.
+  let partialRiskReport = null; // D398: session-only.
   let storageAvailable = true;
 
   function el(tag, className, content) {
@@ -794,25 +794,25 @@
       r.status === "conditional_closed_after_observed_partial_derisk_proxy";
     const reasons = {
       abstain_partial_risk_liquidation_proxy:
-        "Possível liquidação no modelo pós-parcial: resultado bloqueado.",
+        "Possível liquidação pós-parcial: resultado bloqueado.",
       abstain_partial_risk_prior_stop_or_target:
-        "Stop ou alvo teria ocorrido primeiro: resultado bloqueado.",
+        "Stop/alvo anterior: resultado bloqueado.",
       abstain_prior_conditional_stop:
-        "Stop anterior no cenário integral: resultado bloqueado.",
+        "Stop anterior: resultado bloqueado.",
       abstain_prior_conditional_target:
-        "Alvo anterior no cenário integral: resultado bloqueado.",
+        "Alvo anterior: resultado bloqueado.",
       abstain_open_journal_crosscheck_required:
-        "Falta conferência dos diários PAPER de abertura e posição.",
+        "Abertura e posição sem conferência.",
       abstain_immutable_open_margin_receipt_missing:
-        "Comprovante da margem e alavancagem na abertura ausente.",
+        "Comprovante de margem na abertura ausente.",
       abstain_position_open_or_pending_reconciliation:
-        "Posição ou ordens PAPER ainda não reconciliadas.",
+        "Posição ou ordens PAPER pendentes.",
       abstain_pit_maintenance_tiers_missing:
-        "Tiers PIT de manutenção ausentes; risco indisponível.",
+        "Tiers PIT de risco indisponíveis.",
       abstain_mark_path_missing:
-        "Trajetória mark/trade ausente; risco indisponível.",
+        "Trajetória mark/trade ausente.",
       abstain_closed_costs_unavailable:
-        "Custos e preenchimentos não reconciliados."
+        "Custos ou FILLs não conciliados."
     };
     set("risk-audit-status", conditional ?
       "Referência condicional" : "Sem resultado líquido");
@@ -823,13 +823,13 @@
     set("risk-baseline", r.full_notional_proxy_vetoed ?
       "Veto no proxy integral" : "Sem veto no proxy integral");
     set("risk-decision", conditional ?
-      "Trajetória sintética pós-parcial sem terminal observado. NÃO comprova sobrevivência real." :
+      "Mark pós-parcial sem terminal observado. NÃO comprova sobrevivência real." :
       reasons[r.status]);
     set("risk-value", conditional ?
       "Referência líquida condicional: " +
       r.conditional_net_after_partial_risk_quote +
-      " unidades sintéticas de cotação. NÃO é PnL realizado ou retorno sobre margem." :
-      "Resultado líquido não disponível: nenhum número financeiro será mostrado.");
+      " unidades fictícias de cotação. NÃO é PnL realizado." :
+      "Resultado líquido não disponível.");
     $("risk-decision").dataset.tone = conditional ? "conditional" : "blocked";
   }
 
@@ -966,7 +966,7 @@
           warn("Resultado J3 importado. Marca de referência; não representa execução financeira.", false);
         } else if (payload.schema_version === "paper-partial-derisk-risk-d398-v1") {
           partialRiskReport = E.validatePaperPartialRiskReport(payload);
-          warn("Risco J3 PAPER importado somente nesta sessão. Referências condicionais não são lucros reais, nem pertencem automaticamente aos cenários locais.", false);
+          warn("Risco J3 PAPER importado na sessão: não é lucro nem posição local.", false);
         } else if (payload.schema_version === "cia-j5-paper-local-export-v1") {
           const restored = validatePaperBackup(payload);
           if (!window.confirm("Restaurar este backup PAPER? Todos os cenários locais atuais serão substituídos. A VPS e a coleta N50 não serão alteradas.")) {
