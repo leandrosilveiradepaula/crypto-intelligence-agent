@@ -490,3 +490,8 @@ Issue #676: `paper_intrahour_target_step_d387.py` utiliza o journal J4/AUTO4 exi
 ## Evolução funcional J4/J5 — D407
 
 Consumir no aplicativo, em modo volátil, relatório de posições PAPER persistidas exportado pelo leitor existente AUTO4 (sem leitor novo). Exibir por posição reconciliação, quantidades e runner com aviso permanente de que não são fills de corretora, e rejeitar arquivos que tentem alegar modo live/stop nativo/PnL real. O fluxo é de importação manual read-only até existir operador de feed intrabar e acesso privado autorizado. Evidências em `docs/J5_PERSISTED_PAPER_MOBILE_D407.md`.
+
+
+## J2/J4 D410 — escopo automático e gate de segurança do monitor PAPER
+
+O monitor finito liga a coorte dinâmica N50 já mantida na J1 ao socket público e ao router AUTO4, incluindo posições externas ao ranking. Exige cobertura ACK+snapshot válida e recente de todo o escopo antes de qualquer nova reserva de saída PAPER; mantém os mesmos journals e a política stop-first. Testes offline provam bloqueio com 49/50 e manutenção do UNKNOWN, sem atribuir confiabilidade 24×7 ou vantagem estatística. Código ainda não liberado para execução na VPS. `docs/J2_J4_CURRENT_N50_PAPER_SCOPE_GATE_D410.md`.

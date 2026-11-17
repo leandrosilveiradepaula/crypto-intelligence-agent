@@ -1931,3 +1931,8 @@ Agregar somente arquivos de scores existentes J3 validados pelo contrato owner D
 ## D409 — reutilizar o mesmo diário PAPER do motor até o celular (17/11/2026)
 
 Uma demonstração integral de engenharia deve projetar estado móvel somente após leitura real do diário AUTO4 já persistido, jamais reconstruir filled/reserved/remaining de contadores do navegador. `--mobile-snapshot` adiciona relato de posição à prova D402 sem modificar o contrato padrão, escritas, serviço, mercado ou autorização financeira. Um UNKNOWN mantém reserva pendente e impede novas reduções, ao passo que fills só são confirmados por eventos explícitos de simulação. Não usar snapshots sintéticos para alegar realização financeira, live stop, edge ou feed operacional.
+
+
+## D410 — a cobertura completa da sessão precede decisões PAPER intrahora (17/11/2026)
+
+Conectar automaticamente a época owner J1 revalidada e todas as posições AUTO4 monitoradas ao mesmo WebSocket público Bybit, sem duplicar ranking nem journal. Opt-in de cinco gates separa leitura owner, rede pública, pesquisa/região e permissão de reserva sintética PAPER. O router não recebe tick para novas reservas enquanto um único contrato/posição não estiver com cotação fresca da **mesma sessão assinada e confirmada**; reconexão descarta cobertura anterior. Stop continua prioritário, UNKNOWN continua exigindo reconciliação, snapshot expirado não libera ação. Ao fim de cada lease, reler a época owner e degradar status em rotação; reservar decisões não é fill/stop nativo. Padrão fechado e sem instalação 24×7; evidências de mercado real e gate de release permanecem pendentes.

@@ -1827,3 +1827,8 @@ O aplicativo tem um histórico de pesquisa por horizontes 1/4/8 horas com observ
 ## J4/J5 D409 — demonstração integrada de saídas PAPER no aplicativo (17/11/2026)
 
 O demonstrador offline D402 ganhou uma opção `--mobile-snapshot` que relê o **mesmo diário AUTO4** após um ciclo de três ticks públicos sintéticos, duas parciais e stop, ou um cenário de ordem UNKNOWN que impede novas reduções. A projeção é gerada pelo leitor existente `inspect_paper_positions` e schema J5 `paper_positions_snapshot_v1`, sem inventar saldo nem construir outro journal. O relatório pode ser importado na seção móvel de posições persistidas. Testes ponta a ponta no Node/Python validam o contrato e mantêm o CLI legado estável. É demonstração sintética sem feed Bybit real, posição real, ordens ou VPS. Ver docs/J4_J5_OFFLINE_PAPER_MOBILE_CYCLE_D409.md.
+
+
+## J2/J4 — Top 50 e posições PAPER em um feed seguro (D410, 17/11/2026)
+
+Preparada ponte de runtime finito entre coorte dinâmica owner J1 D406, tickers públicos D390/D386 e roteador de parciais/stop AUTO4 D391, sem segundo selecionador nem diário financeiro. A posição PAPER fora do N50 é assinada automaticamente; **nenhuma reserva de saída é feita enquanto qualquer ticker do escopo estiver sem cotação fresca na mesma sessão ACK**, e a desconexão reinicia o gate. Verificação de época J1 antes/depois, orçamento máximo de 60 segundos e cinco flags de permissão. Isto é código PAPER de pesquisa, ainda sem WebSocket real comprovado, sem supervisor contínuo, sem contas ou ordens. Documentação e teste em `docs/J2_J4_CURRENT_N50_PAPER_SCOPE_GATE_D410.md`.
