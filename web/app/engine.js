@@ -554,8 +554,12 @@
        "approved_for_live_use"].every(k => raw[k] === false),
       "Relatório D398 possui risco, contagens ou flags de segurança inválidas");
     const net = raw.conditional_net_after_partial_risk_quote;
+    // Python Decimal.__str__ uses scientific notation for small values.
+    // Keep precision as TEXT (no Number conversion of the net quote).
     const validNet = typeof net === "string" &&
-      /^-?(?:0|[1-9][0-9]{0,39})(?:[.][0-9]{1,90})?$/.test(net);
+      /^-?(?:0|[1-9][0-9]{0,39})(?:[.][0-9]{1,90})?(?:E[+-]?[0-9]{1,3})?$/.test(net) &&
+      (net.indexOf("E") === -1 ||
+        Math.abs(Number(net.slice(net.indexOf("E") + 1))) <= 99);
     if (conditional) {
       requireValid(validNet && raw.leverage_at_open_intent !== null &&
         raw.mark_ticks_checked > 0 && raw.confirmed_paper_fills_applied > 0 &&
