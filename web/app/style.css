@@ -220,3 +220,9 @@ footer { border-top: 1px solid var(--border); color: #8ea4bc; font-size: .73rem;
 @media(prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 .skip { position: fixed; z-index: 50; top: 8px; left: 8px; padding: 9px 14px; border-radius: 9px; background: var(--amber); color: #11242c; transform: translateY(-200%); }
 .skip:focus { transform: none; }
+
+/* D403: public-price snapshot viewer; no automatic PAPER actions. */
+.market-pulse-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 9px; }
+.market-pulse-row { display: grid; gap: 3px; padding: 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-hi); font-size: .82rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.market-pulse-row strong { font-size: .92rem; }
+#public-market-status[data-tone="blocked"] { color: var(--amber); }
