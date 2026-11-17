@@ -130,6 +130,8 @@ def observe_finite_public_ws_once(
         "market_frames_accepted": snapshot["ticker_frames_accepted"],
         "frames_seen": snapshot["frames_seen"],
         "preack_frames_discarded": snapshot["preack_frames_discarded"],
+        "preack_frames_bootstrapped_after_ack":
+            snapshot["preack_frames_bootstrapped_after_ack"],
         "sessions_attempted": snapshot["sessions_attempted"],
         "reconnects": snapshot["reconnects"],
         "ping_frames": snapshot["heartbeat_pings"],
