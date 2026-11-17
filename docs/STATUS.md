@@ -1802,3 +1802,8 @@ O aplicativo recebeu painel para visualizar preço negociado, mark e bid/ask de 
 ## Capacidade J5 — atualização de preços públicos por leitura local (D404)
 
 O painel móvel recebe amostras REST da Bybit via o servidor local loopback existente quando este estiver explicitamente habilitado para pesquisa pública e símbolos revisados. Atualização cada 60s, sem mais de uma chamada remota/min pelo backend, indicação de vencimento, sem operações financeiras ou persistência de cotações. Falha de fonte remove preço automático, arquivo manual tem prioridade até reload. Código não representa implantação na VPS ou feed WebSocket contínuo. Testes e plano em docs/J5_PUBLIC_REST_AUTO_D404.md.
+
+
+## J2 — diagnóstico de rede pública intrahorária (D405)
+
+Preparado diagnóstico read-only da conexão WebSocket Bybit de duração limitada, com relatório somente de ACK, cobertura por contrato/posição, frescor e faixas de latência. Nenhuma ordem e nenhuma nova coleta J1. O executor Python da VPS está bloqueado por política; só o alcance TLS ao host Bybit foi comprovado, não a recepção real de tickers. Ainda não existe monitor WS 24×7 em produção. Consulte docs/J2_PUBLIC_WS_OPERATIONAL_PROBE_D405.md.
