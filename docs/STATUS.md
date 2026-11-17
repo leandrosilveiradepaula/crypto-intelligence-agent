@@ -1837,3 +1837,8 @@ Preparada ponte de runtime finito entre coorte dinâmica owner J1 D406, tickers 
 ## J2/J4 — correção de bloqueio de stop por outro ativo (D411)
 
 Separadas saúde global do Top50 e proteção das posições já abertas. Antes, o silêncio de qualquer altcoin podia travar o stop hipotético de BTC; agora, um preço recente e válido de BTC após ACK pode gerar reserva PAPER pelo coordenador stop-first mesmo se o resto do N50 estiver incompleto. Preço vencido da própria posição continua bloqueando a operação; abertura de posições não foi autorizada. Documento `docs/J2_J4_POSITION_EXIT_VS_N50_HEALTH_D411.md`. Sem deploy/WS real/ordens.
+
+
+## J5 — saúde WebSocket/PAPER no aplicativo (D412)
+
+Implementado importador visual em português para relatório finito do monitor D411: apresenta cobertura do Top50, preços frescos, posições acompanhadas e o contraste entre **mercado degradado** e **saída PAPER avaliada com preço próprio válido**. Mostra claramente quando o arquivo é sintético, alerta que a sessão não está conectada ao celular e não sugere entradas/ordens. Não persiste dados da exchange nem acessa os journals. Ver `docs/J5_PAPER_WS_HEALTH_D412.md`; validar CI/merge antes de declarar em main.
