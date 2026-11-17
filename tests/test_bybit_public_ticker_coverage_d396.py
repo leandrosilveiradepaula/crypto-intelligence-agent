@@ -89,13 +89,16 @@ class TickerCoverageD396Tests(unittest.TestCase):
         self.created = []
 
     def factory(self, symbols, *, only=None, lagged=0, no_ack=False,
-                no_depth=None, disconnect_after=False, extras=()):
+                no_depth=None, disconnect_after=False, extras=(),
+                future_first=False):
         def new_session():
             now = self.clock.wall()
             selected = tuple(sorted(symbols if only is None else only))
             events = ([] if no_ack else [ack()])
             events += [
-                snapshot(sym, now, lag=(2000 if idx < lagged else 50),
+                snapshot(sym, now,
+                         lag=(-200 if future_first and idx == 0
+                              else 2000 if idx < lagged else 50),
                          depth="0" if sym == no_depth else "3")
                 for idx, sym in enumerate(selected)
             ]
@@ -229,13 +232,31 @@ class TickerCoverageD396Tests(unittest.TestCase):
         self.assertFalse(r.all_observed_coverage)
 
     def test_binned_p95_is_honest_not_fabricated_millisecond_value(self):
+        # Deliberately admit the scope BEFORE a 2-second transport lag.
+        # A market observation predating its PIT membership is not usable.
+        earlier_scope = replace(self.a, universe_at_ms=T - 3000)
         r = self.run((
             self.factory(self.a.monitored, lagged=10),
             self.factory(self.b.monitored),
-        ))
+        ), epochs=(earlier_scope, self.b))
         self.assertTrue(r.all_observed_coverage)
         self.assertEqual(r.epochs[0].p95_lag_bucket, "1001_to_5000ms")
         self.assertTrue(r.sanitized_report()["p95_is_binned_not_exact_ms"])
+
+    def test_pre_pit_or_future_exchange_quote_never_proves_coverage(self):
+        for options in ({"lagged": 1}, {"future_first": True}):
+            with self.subTest(options=options):
+                self.setUp()
+                r = self.run((
+                    self.factory(self.a.monitored, **options),
+                    self.factory(self.b.monitored),
+                ))
+                self.assertEqual(r.status, "abstained_incomplete_coverage")
+                self.assertEqual(r.attempted_epochs, 1)
+                self.assertEqual(r.epochs[0].failure_category,
+                                 "invalid_market_data")
+                self.assertLess(r.epochs[0].usable_ranked_observed, 50)
+                self.assertEqual(len(self.created), 1)
 
     def test_invalid_or_future_membership_does_not_open_socket(self):
         with self.assertRaises(DataValidationError):
