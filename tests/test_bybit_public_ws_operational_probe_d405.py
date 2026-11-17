@@ -110,6 +110,9 @@ class LiveWSProbeD405Tests(unittest.TestCase):
                    side_effect=AssertionError("no real network")):
             result = run(c, [sock])
         self.assertEqual(result["status"], "lease_completed")
+        self.assertEqual(result["data_mode"], "injected_offline_fixture")
+        self.assertFalse(result["network_attempted"])
+        self.assertFalse(result["real_market_frames_verified"])
         self.assertTrue(result["finite_coverage_observed_once"])
         self.assertTrue(result["finite_coverage_fresh_at_end"])
         self.assertEqual(result["requested_contracts"], 1)
