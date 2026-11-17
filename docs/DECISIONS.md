@@ -1941,3 +1941,8 @@ Conectar automaticamente a época owner J1 revalidada e todas as posições AUTO
 ## D411 — entradas exigem qualidade de universo; saídas exigem qualidade da posição (17/11/2026)
 
 Substitui o **critério operacional de saídas** estabelecido em D410: exigir todas as cinquenta cotações recentes para reduzir uma posição PAPER existente é inseguro, pois uma falha em ativo não relacionado não deve impedir stop/realização sobre o instrumento com quote válido. Agora o gate J2/J4 escolhe `require_fresh_held_position_for_paper` para PAPER: somente cotações do contrato da posição, validada por D385 após ACK, snapshot, BBO positivo, monotonicidade e atraso <=3 s, chegam ao D391 stop-first; ticker não relacionado permanece diagnóstico de universo. Saúde global degradada continua vedando entrada/alpha e o status de market completeness continua independente. Nenhum preço próprio válido = nenhuma reserva, sem fill inferido. Não ativar ordens reais nem descrever stop PAPER como stop nativo da corretora.
+
+
+## D411 — frescor medido no timestamp da exchange, não só no recebimento (17/11/2026)
+
+Receber frame agora não transforma dado velho em preço atual. O censo público D390/D405 precisa checar a idade exchange→recepção <=3.000 ms antes de contabilizar contrato observado ou fresco; a prova de timestamp não deve ser substituída por `received_at_ms` recente. O report de latência pode contar o frame como aceito para diagnóstico, mas jamais como cobertura válida para oportunidades/PAPER.
