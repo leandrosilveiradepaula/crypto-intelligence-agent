@@ -40,3 +40,7 @@ A suíte usa os componentes originais e **o mesmo diário AUTO4** para demonstra
 Isso corrige o **modelo de isolamento de risco do produto**, não demonstra confiabilidade real da exchange. O usuário nunca deve depender do PAPER para proteção financeira de uma posição real. Próxima capacidade: receber ACK/ticks reais da Bybit no host autorizado, medição de heartbeat, rotatividade do Top 50, idade dos preços por posição, recuperação após falha e sinalização de dados degradados no celular. Antes de um serviço 24×7, verificar concorrência de writers e gate de instalação VPS. O acesso Python VPS segue sujeito à política do executor; não contornar.
 
 Custo adicional: R$ 0,00; ordens reais: zero.
+
+## Correção adicional: horário de recebimento não renova preço velho
+
+A telemetria de cobertura D390/D405 anteriormente podia contar como **fresco** um frame recebido agora, mesmo que seu timestamp da exchange estivesse atrasado vários segundos. D411 passa a admitir no censo de contratos somente observações com `0 <= received_at_ms - exchange_at_ms <= 3.000`, além da origem causal, book positivo e escopo de época. O teste D405 injeta frame antigo recebido no instante atual e exige zero contratos observados/frescos, sem mascarar a latência elevada do histograma. Isso afeta diagnóstico de qualidade de mercado, não altera preços nem faz ordens.
