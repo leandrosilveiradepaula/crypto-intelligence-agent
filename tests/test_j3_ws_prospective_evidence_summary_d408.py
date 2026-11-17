@@ -5,6 +5,7 @@ from copy import deepcopy
 from decimal import Decimal
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -137,6 +138,38 @@ class ProspectiveReferenceSummaryD408Tests(unittest.TestCase):
             self.assertEqual(dest.read_text(encoding="ascii"),
                              json.dumps(actual,sort_keys=True,separators=(",",":"),ensure_ascii=True)+"\n")
             self.assertNotIn(str(p1),retry.stderr)
+
+    @unittest.skipUnless(shutil.which("node"), "Node.js required for scorebook")
+    def test_mobile_scorebook_imports_real_aggregated_result_and_refuses_profit_claim(self):
+        sample=summarize_ws_prospective_references((score(1),score(4,empty=True)))
+        script=r"""
+const fs=require("node:fs");
+const assert=require("node:assert/strict");
+const m=require("./web/app/research-scorebook.js");
+const s=JSON.parse(fs.readFileSync(0,"utf8"));
+assert.equal(m.validateReport(s),s);
+for(const mutate of [
+  r=>{r.orders_sent=true},
+  r=>{r.approved_for_signals=true},
+  r=>{r.out_of_sample_results_validated=true},
+  r=>{r.cost_assumptions_consistent_across_decisions_verified=true},
+  r=>{r.marketwide_top50_verified=true},
+  r=>{r.horizons[0].net_reference_bps_mean_per_observation="Infinity"},
+  r=>{r.horizons[0].records=999},
+  r=>{r.horizons[1].empty_decisions=0},
+  r=>{r.trading_signal="BUY"},
+]) {
+  const wrong=structuredClone(s);
+  mutate(wrong);
+  assert.throws(()=>m.validateReport(wrong));
+}
+console.log("D408_PROSPECTIVE_RESEARCH_MOBILE_PASS");
+"""
+        run=subprocess.run(
+            ["node","-e",script], input=json.dumps(sample),
+            cwd=ROOT,text=True,capture_output=True,timeout=10)
+        self.assertEqual(run.returncode,0,run.stderr)
+        self.assertIn("D408_PROSPECTIVE_RESEARCH_MOBILE_PASS",run.stdout)
 
     def test_cli_rejects_duplicate_score_path_and_bad_json(self):
         with tempfile.TemporaryDirectory() as temp:
