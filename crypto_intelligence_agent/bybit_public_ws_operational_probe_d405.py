@@ -61,7 +61,8 @@ def observe_finite_public_ws_once(
     """
     if (type(symbols) is not tuple or type(position_symbols) is not tuple
             or not 1 <= len(symbols) <= 50
-            or not 5 <= seconds <= MAX_PROBE_SECONDS or type(seconds) is not int
+            or type(seconds) is not int
+            or not 5 <= seconds <= MAX_PROBE_SECONDS
             or type(max_frames) is not int
             or not 1 <= max_frames <= MAX_PROBE_FRAMES
             or type(max_sessions) is not int or not 1 <= max_sessions <= 2
