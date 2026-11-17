@@ -51,7 +51,7 @@ bad(x=>x.native_stop_verified=true);
 bad(x=>x.source_authenticated=true);
 bad(x=>x.approved_for_signals=true);
 bad(x=>x.universe_health_sufficient_for_new_entries=true);
-bad(x=>x.data_mode="real_public_websocket");
+bad(x=>x.data_mode="live_order_execution");
 bad(x=>x.real_market_frames_verified=true);
 bad(x=>x.paper_coverage_gate.full_universe_required_for_existing_exits=true);
 bad(x=>x.paper_coverage_gate.mode="complete_fresh_scope_current_ws_session_only");
