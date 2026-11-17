@@ -443,6 +443,90 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         errors.append("untrusted market file not rejected")
                     if page.locator("img").count() or page.locator("script").count() != 2:
                         errors.append("HTML injection on invalid market data")
+
+                    # D399: exercise the REAL import and renderer in Chrome,
+                    # including risk veto, forged PnL, and volatile lifetime.
+                    risk = {
+                        "schema_version":"paper-partial-derisk-risk-d398-v1",
+                        "status":"conditional_closed_after_observed_partial_derisk_proxy",
+                        "leverage_at_open_intent":50,
+                        "mark_ticks_checked":4,"confirmed_paper_fills_applied":2,
+                        "full_notional_proxy_vetoed":True,"has_discrete_terminal":False,
+                        "conditional_net_after_partial_risk_quote":"3.394",
+                        "partial_derisking_applies_after_explicit_fill_only":True,
+                        "liquidation_checked_before_same_tick_fill":True,
+                        "no_unobserved_intrabar_ticks_assumed":True,
+                        "margin_added_from_fills":False,
+                        "funding_calendar_complete":False,
+                        "risk_tiers_authenticated_by_venue":False,
+                        "venue_leverage_verified":False,
+                        "venue_liquidation_verified":False,
+                        "liquidation_formula_verified":False,
+                        "net_pnl_verified":False,
+                        "orders_sent":False,"order_submission_enabled":False,
+                        "approved_for_live_use":False,
+                    }
+                    page.locator("#import-file").set_input_files({
+                        "name":"d399-synthetic-risk.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(risk).encode(),
+                    })
+                    page.locator("#risk-audit-loaded").wait_for(
+                        state="visible", timeout=5000)
+                    if (page.locator("#risk-audit-status").inner_text() !=
+                            "Referência condicional"
+                            or "3.394" not in page.locator("#risk-value").inner_text()
+                            or "NÃO é PnL" not in page.locator("#risk-value").inner_text()
+                            or page.locator("#risk-leverage").inner_text() != "50x"
+                            or page.locator("#risk-fills").inner_text() != "2"
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("conditional D398 risk report not rendered safely")
+                    if page.evaluate(
+                        "() => document.documentElement.scrollWidth > window.innerWidth + 1"
+                    ):
+                        errors.append("D399 risk panel overflows 320px viewport")
+                    if out_dir is not None:
+                        page.screenshot(
+                            path=str(out_dir / "app-320px-d399-risk.png"),
+                            full_page=True,
+                        )
+                    forged_risk = dict(risk, net_pnl_verified=True)
+                    page.locator("#import-file").set_input_files({
+                        "name":"d399-false-profit.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(forged_risk).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#notice').textContent.includes('Importação recusada')",
+                        timeout=5000,
+                    )
+                    if ("3.394" not in page.locator("#risk-value").inner_text()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("forged J3 profit replaced safe report or local state")
+                    veto = dict(
+                        risk, status="abstain_partial_risk_liquidation_proxy",
+                        mark_ticks_checked=2, confirmed_paper_fills_applied=0,
+                        has_discrete_terminal=True,
+                        conditional_net_after_partial_risk_quote=None,
+                    )
+                    page.locator("#import-file").set_input_files({
+                        "name":"d399-liquidation-veto.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(veto).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#risk-decision').textContent.includes('Possível liquidação')",
+                        timeout=5000,
+                    )
+                    if ("Possível liquidação" not in page.locator("#risk-decision").inner_text()
+                            or "não disponível" not in page.locator("#risk-value").inner_text()
+                            or "3.394" in page.locator("#risk-value").inner_text()):
+                        errors.append("liquidation veto still displayed a financial number")
+                    page.reload(wait_until="load")
+                    if (not page.locator("#risk-audit-loaded").is_hidden()
+                            or not page.locator("#risk-audit-empty").is_visible()
+                            or page.locator("#metric-open").inner_text() != "2"):
+                        errors.append("transient J3 risk report leaked into local PAPER storage")
                 if outbound:
                     errors.append("unexpected outbound network activity")
                 if out_dir is not None:

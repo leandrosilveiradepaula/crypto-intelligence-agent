@@ -497,12 +497,91 @@
     return raw;
   }
 
+  // J5/D399: display-only interpretation of D398's exact sanitized output.
+  // This never computes margin, authorizes trading or joins this research
+  // report to a locally created browser position. Source stays unverified.
+  const PAPER_RISK_FIELDS = Object.freeze([
+    "schema_version", "status", "leverage_at_open_intent",
+    "mark_ticks_checked", "confirmed_paper_fills_applied",
+    "full_notional_proxy_vetoed", "has_discrete_terminal",
+    "conditional_net_after_partial_risk_quote",
+    "partial_derisking_applies_after_explicit_fill_only",
+    "liquidation_checked_before_same_tick_fill",
+    "no_unobserved_intrabar_ticks_assumed",
+    "margin_added_from_fills", "funding_calendar_complete",
+    "risk_tiers_authenticated_by_venue", "venue_leverage_verified",
+    "venue_liquidation_verified", "liquidation_formula_verified",
+    "net_pnl_verified", "orders_sent", "order_submission_enabled",
+    "approved_for_live_use"
+  ]);
+  const PAPER_RISK_CONDITIONAL = "conditional_closed_after_observed_partial_derisk_proxy";
+  const PAPER_RISK_TERMINAL = new Set([
+    "abstain_partial_risk_liquidation_proxy",
+    "abstain_partial_risk_prior_stop_or_target"
+  ]);
+  const PAPER_RISK_ABSTENT = new Set([
+    "abstain_prior_conditional_stop", "abstain_prior_conditional_target",
+    "abstain_open_journal_crosscheck_required",
+    "abstain_immutable_open_margin_receipt_missing",
+    "abstain_position_open_or_pending_reconciliation",
+    "abstain_pit_maintenance_tiers_missing",
+    "abstain_mark_path_missing", "abstain_closed_costs_unavailable"
+  ]);
+  function validatePaperPartialRiskReport(raw) {
+    requireValid(raw && typeof raw === "object" && !Array.isArray(raw) &&
+      Object.keys(raw).length === PAPER_RISK_FIELDS.length &&
+      PAPER_RISK_FIELDS.every(k => Object.hasOwn(raw, k)),
+      "Relatório D398 contém campos desconhecidos ou incompletos");
+    const conditional = raw.status === PAPER_RISK_CONDITIONAL;
+    const terminal = PAPER_RISK_TERMINAL.has(raw.status);
+    requireValid(raw.schema_version === "paper-partial-derisk-risk-d398-v1" &&
+      (conditional || terminal || PAPER_RISK_ABSTENT.has(raw.status)) &&
+      (raw.leverage_at_open_intent === null ||
+        (Number.isSafeInteger(raw.leverage_at_open_intent) &&
+          raw.leverage_at_open_intent >= 1 && raw.leverage_at_open_intent <= 200)) &&
+      boundedCount(raw.mark_ticks_checked, 2048) &&
+      boundedCount(raw.confirmed_paper_fills_applied, 128) &&
+      raw.confirmed_paper_fills_applied <= raw.mark_ticks_checked &&
+      typeof raw.full_notional_proxy_vetoed === "boolean" &&
+      typeof raw.has_discrete_terminal === "boolean" &&
+      ["partial_derisking_applies_after_explicit_fill_only",
+       "liquidation_checked_before_same_tick_fill",
+       "no_unobserved_intrabar_ticks_assumed"].every(k => raw[k] === true) &&
+      ["margin_added_from_fills", "funding_calendar_complete",
+       "risk_tiers_authenticated_by_venue", "venue_leverage_verified",
+       "venue_liquidation_verified", "liquidation_formula_verified",
+       "net_pnl_verified", "orders_sent", "order_submission_enabled",
+       "approved_for_live_use"].every(k => raw[k] === false),
+      "Relatório D398 possui risco, contagens ou flags de segurança inválidas");
+    const net = raw.conditional_net_after_partial_risk_quote;
+    // Python Decimal.__str__ uses scientific notation for small values.
+    // Keep precision as TEXT (no Number conversion of the net quote).
+    const validNet = typeof net === "string" &&
+      /^-?(?:0|[1-9][0-9]{0,39})(?:[.][0-9]{1,90})?(?:E[+-]?[0-9]{1,3})?$/.test(net) &&
+      (net.indexOf("E") === -1 ||
+        Math.abs(Number(net.slice(net.indexOf("E") + 1))) <= 99);
+    if (conditional) {
+      requireValid(validNet && raw.leverage_at_open_intent !== null &&
+        raw.mark_ticks_checked > 0 && raw.confirmed_paper_fills_applied > 0 &&
+        raw.has_discrete_terminal === false,
+        "Resultado D398 não tem fills/mark ou referência condicional válida");
+    } else {
+      requireValid(net === null &&
+        (!terminal || (raw.has_discrete_terminal === true &&
+          raw.mark_ticks_checked > 0)) &&
+        (terminal || raw.has_discrete_terminal === false),
+        "Abstenção D398 jamais pode conter PnL ou terminal inconsistente");
+    }
+    return raw;
+  }
+
   const publicApi = Object.freeze({
     SCALE, BPS, format, fixed, percent, settings, emptyState,
     openPosition, partialExit, closeRunner, grossEntryExposureCents,
     grossMarkPnlCents, grossHypotheticalMarginImpactBps,
     adversePaperShockLossCents, applyAutoPaperStep, replayAutoPaperMarks, validateState,
-    validateProspectiveCapture, validateProspectiveScore
+    validateProspectiveCapture, validateProspectiveScore,
+    validatePaperPartialRiskReport
   });
   global.CIAEngine = publicApi;
   if (typeof module === "object" && module && module.exports) module.exports = publicApi;
