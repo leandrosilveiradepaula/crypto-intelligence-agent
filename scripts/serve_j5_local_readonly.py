@@ -18,7 +18,10 @@ import sys
 import time
 from typing import Any
 
-from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.market_data import DataValidationError, DataGapError
+from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
+from crypto_intelligence_agent.bybit_public_rest_price_pulse_d403 import capture_public_rest_price_pulse
+from crypto_intelligence_agent.bybit_public_j1_transport import _SYMBOL
 from crypto_intelligence_agent.j2_n50_ws_private_screen import (
     observe_active_private_ws_n50_24closed,
 )
@@ -150,6 +153,29 @@ def read_j2_descriptive() -> dict[str, Any]:
     return {key: source[key] for key in sorted(_RESEARCH_OUTPUT_KEYS)}
 
 
+def read_public_market_prices(*, symbols: tuple[str, ...]) -> dict[str, Any]:
+    """One public HTTPS market snapshot, isolated from J1 owner data and PAPER.
+
+    The caller (the opt-in loopback handler) enforces a 60s request budget,
+    so the client is used for no more than one public GET per minute.
+    """
+    try:
+        value = capture_public_rest_price_pulse(symbols=symbols)
+    except (J1BybitCaptureError, DataValidationError, DataGapError,
+            OSError, ValueError, TypeError):
+        raise SourceNotReady("D404 public REST source unavailable") from None
+    if (type(value) is not dict or
+            value.get("schema_version") != "bybit-public-rest-price-pulse-d403-v1"
+            or value.get("status") != "rest_snapshot_display_only"
+            or value.get("observed_symbol_count") != len(symbols)
+            or value.get("orders_sent") is not False
+            or value.get("approved_for_signals") is not False
+            or value.get("approved_for_live_use") is not False
+            or value.get("paper_positions_linked") is not False):
+        raise SourceNotReady("D404 unsafe public REST projection")
+    return value
+
+
 def _static_file(path: str) -> tuple[bytes, str] | None:
     spec = _STATIC_FILES.get(path)
     if spec is None:
@@ -169,6 +195,9 @@ def _static_file(path: str) -> tuple[bytes, str] | None:
 
 class LoopbackPanelHandler(BaseHTTPRequestHandler):
     """No CORS and no state mutations. Host check blocks DNS rebinding."""
+    market_symbols: tuple[str, ...] = ()  # disabled unless explicit server opt-in
+    market_last_attempt_ms = 0
+    market_cached: dict[str, Any] | None = None
     protocol_version = "HTTP/1.1"
     server_version = "CIA-Local-ReadOnly"
     sys_version = ""
@@ -232,6 +261,36 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
         if not self._request_allowed():
             self._json(403, {"status": "loopback_host_required"})
             return
+        if self.path == "/api/bybit-public-price":
+            cls = type(self)
+            if not cls.market_symbols:
+                self._json(503, {"status": "public_market_not_enabled",
+                                 "orders_sent": False})
+                return
+            now_ms = time.time_ns() // 1_000_000
+            # Never poll more than once per minute per foreground server.
+            if cls.market_last_attempt_ms and (
+                now_ms - cls.market_last_attempt_ms < 60_000
+            ):
+                cached = cls.market_cached
+                if (cached is None or
+                        now_ms - cached["captured_at_ms"] > 45_000):
+                    self._json(503, {"status": "public_market_stale",
+                                     "orders_sent": False})
+                else:
+                    self._json(200, cached)
+                return
+            cls.market_last_attempt_ms = now_ms
+            cls.market_cached = None
+            try:
+                report = read_public_market_prices(symbols=cls.market_symbols)
+            except SourceNotReady:
+                self._json(503, {"status": "public_market_unavailable",
+                                 "orders_sent": False})
+                return
+            cls.market_cached = report
+            self._json(200, report)
+            return
         if self.path == "/api/j2-research":
             try:
                 report = read_j2_descriptive()
@@ -283,6 +342,8 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--allow-loopback-readonly-http", action="store_true")
+    parser.add_argument("--allow-public-rest-samples", action="store_true")
+    parser.add_argument("--market-symbols", default="", help="1..50 reviewed USDT symbols")
     args = parser.parse_args(argv)
     if not args.allow_loopback_readonly_http:
         print(json.dumps({
@@ -290,12 +351,31 @@ def main(argv: list[str] | None = None) -> int:
             "network_public": False, "orders_sent": False,
         }, sort_keys=True))
         return 65
+    # Public REST network is an independent opt-in, never inferred from
+    # enabling the existing loopback N50/J2 read-only endpoints.
+    if args.market_symbols and not args.allow_public_rest_samples:
+        print(json.dumps({"status": "public_rest_optin_required",
+                          "orders_sent": False}, sort_keys=True))
+        return 65
+    names = tuple(args.market_symbols.split(",")) if args.market_symbols else ()
+    if args.allow_public_rest_samples and (
+        not 1 <= len(names) <= 50 or
+        len(set(names)) != len(names) or
+        any(type(x) is not str or _SYMBOL.fullmatch(x) is None for x in names)
+    ):
+        print(json.dumps({"status": "invalid_public_rest_membership",
+                          "orders_sent": False}, sort_keys=True))
+        return 65
+    LoopbackPanelHandler.market_symbols = tuple(sorted(names)) if args.allow_public_rest_samples else ()
+    LoopbackPanelHandler.market_last_attempt_ms = 0
+    LoopbackPanelHandler.market_cached = None
     try:
         with HTTPServer((HOST, PORT), LoopbackPanelHandler) as server:
             print(json.dumps({
                 "status": "loopback_readonly_panel_serving",
                 "address": f"http://{HOST}:{PORT}/",
                 "external_access_enabled": False,
+                "public_rest_opted_in": bool(LoopbackPanelHandler.market_symbols),
                 "orders_sent": False,
             }, sort_keys=True), flush=True)
             server.serve_forever(poll_interval=0.5)
