@@ -1852,3 +1852,8 @@ A VPS comprovou transporte e recebimento de 129 frames para N50 em 3,657s, mas n
 ## J2 — confirmação Bybit real obtida; bootstrap pós-ACK em correção D414 (17/11/2026)
 
 Probes reais BTC e N50 **obtiveram ACK=1**, porém encerraram por `snapshot_required` depois de descartar respectivamente 7 e 263 quadros anteriores ao ACK. Nenhuma cotação aceita: não considerar feed homologado. A correção D414 mantém snapshots/deltas iniciais em memória limitada e só tenta reconstruí-los após validar ACK, sem callback financeiro de pré-ACK. Regressões 7/263, ausência de ACK, reconexão, delta sem snapshot e UI sanitizada adicionadas. Ação restante é CI/merge e nova medição real curta a partir de tarball GitHub SHA exato. Sem operação financeira, custo ou intervenção J1. `docs/J2_REAL_WS_ACK_SNAPSHOT_REHYDRATION_D414.md`.
+
+
+## J2 — conexão Bybit real validada para BTC; N50 parcial em investigação D415
+
+O primeiro teste público BTCUSDT com ACK, snapshot, 65 cotações pós-ACK e preço fresco terminou com sucesso na VPS. O N50 não terminou: 73 ticks reais, 33 instrumentos distintos e erro `conflicting_replay`. Ajuste D415 corrige comparação excessiva de `cs` como ID único quando o `ts` avança; com mesmo `ts`/conteúdo divergente continua rejeitando. Pendente CI/merge e nova prova real 50/50; não há monitor 24x7 em VPS e nenhuma negociação real. `docs/J2_REAL_N50_CROSS_SEQUENCE_D415.md`.
