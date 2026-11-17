@@ -244,6 +244,29 @@ class J2CurrentJ1N50D406Tests(unittest.TestCase):
                             allow_private_pointer_read=True,
                         )
 
+    def test_bad_positions_or_duration_refused_before_owner_file(self):
+        for positions, seconds in (
+            (("INVALID",), 20),
+            (("BTCUSDT", "BTCUSDT"), 20),
+            (["BTCUSDT"], 20),
+            ((), 0),
+            ((), 61),
+            ((), True),
+        ):
+            with self.subTest(positions=positions, seconds=seconds), patch.object(
+                bridge, "read_current_j1_n50_scope",
+                side_effect=AssertionError("must reject before reading J1 owner"),
+            ), self.assertRaises(DataValidationError):
+                bridge.probe_current_j1_n50_ws_once(
+                    state_directory=PRIVATE,
+                    allow_private_pointer_read=True,
+                    allow_public_websocket=True,
+                    confirm_personal_readonly_research=True,
+                    confirm_region_eligible=True,
+                    position_symbols=positions, seconds=seconds,
+                    wall_ms=lambda: NOW,
+                )
+
     def test_cli_no_explicit_permissions_cannot_access_private_scope(self):
         args = [
             sys.executable, "-m",
