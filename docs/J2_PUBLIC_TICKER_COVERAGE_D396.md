@@ -47,6 +47,10 @@ Para cada época, a função
   sem uma prova externa de fechamento/reconciliação
   (essa prova ainda não faz parte do piloto);
 - assinatura ACK válida e snapshots aceitos por D385;
+- timestamp de exchange **não anterior ao PIT admitido**
+  e **não posterior ao recebimento local**; caso contrário,
+  interromper a lease, mesmo que o D385 tolere pequenos
+  desvios de relógio de rede;
 - **uma cotação utilizável, com BBO positivo, por
   instrumento ranqueado E por posição aberta**, inclusive
   posições fora do ranking;
