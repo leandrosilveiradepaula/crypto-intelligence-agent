@@ -640,6 +640,31 @@
     }
   }
 
+  async function refreshLocalPublicMarket() {
+    // Same-origin loopback only. Server-side public REST is independently
+    // opt-in; file:// or remote hosts can never call the endpoint.
+    if (!isLocalReadOnlyOrigin() ||
+        globalThis.CIAPublicMarket.hasManualPriority()) return;
+    try {
+      const response = await window.fetch("/api/bybit-public-price", {
+        method: "GET", credentials: "omit",
+        cache: "no-store", redirect: "error"
+      });
+      check(response.ok && response.status === 200 &&
+        (response.headers.get("content-type") || "").startsWith("application/json"),
+        "Fonte pública local indisponível");
+      const raw = await response.text();
+      check(raw.length > 0 && raw.length < MAX_SNAPSHOT,
+        "Amostra REST fora do limite");
+      if (globalThis.CIAPublicMarket.hasManualPriority()) return;
+      globalThis.CIAPublicMarket.installLocal(JSON.parse(raw));
+    } catch (_) {
+      // Do not leave the previous quotation visible as though a new
+      // observation had succeeded. A manually imported file is exempt.
+      globalThis.CIAPublicMarket.clearLocal();
+    }
+  }
+
   async function refreshLocalResearch() {
     // Reuse the exact private J2 50×24 readonly schema, never a trading signal.
     // No request occurs for file://, remote hosts or manual J2 imports.
@@ -862,6 +887,13 @@
     renderQuality();
   }
   function bind() {
+    $("refresh-public-market-local").addEventListener("click", () => {
+      if (globalThis.CIAPublicMarket.hasManualPriority()) {
+        warn("A amostra REST importada manualmente tem prioridade nesta sessão. Recarregue a página para usar a fonte local.", false);
+      } else {
+        void refreshLocalPublicMarket();
+      }
+    });
     $("refresh-research-local").addEventListener("click", () => {
       if (researchOrigin === "manual") {
         warn("O JSON J2 importado tem prioridade nesta sessão. Recarregue a página para voltar à pesquisa local.", false);
@@ -1022,8 +1054,11 @@
   if (isLocalReadOnlyOrigin()) {
     $("refresh-local").hidden = false;
     $("refresh-research-local").hidden = false;
+    $("refresh-public-market-local").hidden = false;
+    void refreshLocalPublicMarket();
     void refreshLocalFeed();
     void refreshLocalResearch();
+    window.setInterval(() => { void refreshLocalPublicMarket(); }, 60_000);
     window.setInterval(() => { void refreshLocalFeed(); }, 60_000);
     window.setInterval(() => { void refreshLocalResearch(); }, 300_000);
   }
