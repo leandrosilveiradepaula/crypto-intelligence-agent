@@ -45,6 +45,7 @@ def run_readonly_bybit_ticker_lease(
     session_factory: Callable[[], StreamSession] | None = None,
     paper_router: PaperIntrahourQuoteRouter | None = None,
     measure_public_coverage: bool = False,
+    require_complete_fresh_scope_for_paper: bool = False,
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
@@ -60,11 +61,16 @@ def run_readonly_bybit_ticker_lease(
     D405 can optionally count unique, causal positive-depth quotes from the
     LAST subscription session. This is bounded in memory to the monitored
     set and never persists symbols, prices, position IDs or snapshots.
+    D410: optionally fail closed on all unobserved/stale N50+position
+    subscriptions: a PAPER callback can receive a tick only after every
+    monitored contract has a fresh causal positive-book observation in
+    the CURRENT acknowledged WS session. Default behavior is unchanged.
     """
     if (type(allow_public_websocket) is not bool
             or type(confirm_personal_readonly_research) is not bool
             or type(confirm_region_eligible) is not bool
-            or type(measure_public_coverage) is not bool):
+            or type(measure_public_coverage) is not bool
+            or type(require_complete_fresh_scope_for_paper) is not bool):
         raise DataValidationError("public_ws_gate_type_invalid")
     if (allow_public_websocket is not True
             or confirm_personal_readonly_research is not True
@@ -98,9 +104,15 @@ def run_readonly_bybit_ticker_lease(
         set(ranked_symbols) | set(position_symbols)
     ):
         raise DataValidationError("public_ws_paper_position_outside_subscription")
+    if require_complete_fresh_scope_for_paper and (
+        paper_router is None or not measure_public_coverage
+    ):
+        raise DataValidationError("public_ws_paper_coverage_gate_requires_monitor")
     rank_set, position_set = set(ranked_symbols), set(position_symbols)
     monitored = rank_set | position_set
     seen_this_session: dict[str, int] = {}
+    paper_frames_deferred = 0
+    paper_frames_routed = 0
 
     def session_reset() -> None:
         # A previous socket's quotes cannot prove a new socket's coverage.
@@ -109,6 +121,7 @@ def run_readonly_bybit_ticker_lease(
             paper_router.begin_new_market_session()
 
     def observed_quote(quote: BybitTickerQuote) -> None:
+        nonlocal paper_frames_deferred, paper_frames_routed
         if measure_public_coverage:
             # The exchange clock must be causal relative to the supplied
             # point-in-time scope; no inferred synthetic/retrospective ticks.
@@ -118,7 +131,19 @@ def run_readonly_bybit_ticker_lease(
                     and quote.has_positive_book_depth):
                 seen_this_session[quote.symbol] = quote.received_at_ms
         if paper_router is not None:
+            if require_complete_fresh_scope_for_paper and (
+                not monitored.issubset(seen_this_session)
+                or any(
+                    not 0 <= quote.received_at_ms - seen_this_session[symbol]
+                    <= MAX_QUOTE_AGE_MS for symbol in monitored
+                )
+            ):
+                # No incomplete coverage can dispatch a synthetic financial
+                # reservation; the next fresh tick must re-establish the gate.
+                paper_frames_deferred += 1
+                return
             paper_router.process(quote)
+            paper_frames_routed += 1
 
     needs_callback = measure_public_coverage or paper_router is not None
     try:
@@ -141,6 +166,14 @@ def run_readonly_bybit_ticker_lease(
         if paper_router is not None:
             # Only count-only metadata; never include instrument, price or IDs.
             values["paper_monitoring"] = paper_router.sanitized_report()
+            if require_complete_fresh_scope_for_paper:
+                values["paper_coverage_gate"] = {
+                    "mode": "complete_fresh_scope_current_ws_session_only",
+                    "quote_frames_deferred": paper_frames_deferred,
+                    "quote_frames_delivered_to_paper": paper_frames_routed,
+                    "orders_sent": False,
+                    "approved_for_live_use": False,
+                }
         if measure_public_coverage:
             stop_ms = wall_ms()
             if type(stop_ms) is not int or stop_ms < universe_at_ms:
