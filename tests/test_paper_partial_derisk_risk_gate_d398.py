@@ -17,14 +17,16 @@ from crypto_intelligence_agent.paper_partial_derisk_risk_gate_d398 import (
 )
 from crypto_intelligence_agent.synthetic_cost_scenarios import SyntheticFundingEvent
 from crypto_intelligence_agent.synthetic_mark_replay import SyntheticMarkTick
-from test_paper_mark_risk_cost_gate_d397 import (
-    J3PaperMarkRiskGateD397Tests, POSITION, RATES, T,
-)
+import test_paper_mark_risk_cost_gate_d397 as fixture_d397
+
+POSITION = fixture_d397.POSITION
+RATES = fixture_d397.RATES
+T = fixture_d397.T
 
 
 class J3PartialDeriskD398Tests(unittest.TestCase):
     def make(self, *, leverage=50, short=False, with_margin=True, close=True):
-        self.fixture=J3PaperMarkRiskGateD397Tests(
+        self.fixture=fixture_d397.J3PaperMarkRiskGateD397Tests(
             "test_no_network_and_unchanged_durable_journals"
         )
         self.fixture.build(leverage=leverage, short=short, with_margin=with_margin)
