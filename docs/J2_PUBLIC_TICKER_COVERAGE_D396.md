@@ -68,9 +68,9 @@ substituem os anteriores. Leases desconectam e invalidam
 o cache entre épocas; novos snapshots são obrigatórios.
 
 A diferença entre tempo de exchange e recebimento é
-apresentada como **faixa do percentil 95 (P95) pela
-histograma existente do D386**, e nunca como um número
-exato em milissegundos. Sem buffer de preços ou amostras
+apresentada como **faixas dos percentis P95 e P99
+do histograma existente no D386**, nunca como números
+exatos em milissegundos. Sem buffer de preços ou amostras
 ilimitadas; máximo de quatro épocas, 60 segundos, 100 mil
 frames e limite de sessões do D386 em cada etapa.
 
