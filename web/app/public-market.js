@@ -16,6 +16,7 @@
   const DECIMAL = /^(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?$/;
   const SCALE = 10n ** 24n;
   let current = null;
+  let origin = "none"; // manual, local-auto, none; never persisted
 
   function insist(ok) {
     if (!ok) throw new Error("Amostra Bybit inválida ou incompleta");
@@ -85,7 +86,11 @@
     if (!empty || !loaded || !status || !summary || !rows) return;
     empty.hidden = current !== null;
     loaded.hidden = current === null;
-    if (!current) { status.textContent = "Sem amostra REST"; return; }
+    if (!current) {
+      status.textContent = "Sem amostra REST";
+      status.dataset.tone = "blocked";
+      return;
+    }
     const age = Date.now() - current.captured_at_ms;
     const recent = age >= -5000 && age <= 30000;
     status.textContent = recent ? "Amostra REST recente" : "Amostra REST vencida";
@@ -113,10 +118,33 @@
   }
   function install(raw) {
     const accepted = validateReport(raw);
-    current = accepted; // Volatile for this tab only.
+    current = accepted;
+    origin = "manual"; // Explicit operator import wins during this tab.
     render();
   }
-  const api = Object.freeze({ validateReport, install });
+  function hasManualPriority() { return origin === "manual"; }
+  function installLocal(raw) {
+    const accepted = validateReport(raw);
+    if (hasManualPriority()) return;
+    current = accepted;
+    origin = "local-auto";
+    render();
+  }
+  function clearLocal() {
+    if (hasManualPriority()) return;
+    current = null;
+    origin = "none";
+    render();
+    const status = typeof document !== "undefined" &&
+      document.getElementById("public-market-status");
+    if (status) {
+      status.textContent = "Fonte REST indisponível";
+      status.dataset.tone = "blocked";
+    }
+  }
+  const api = Object.freeze({
+    validateReport, install, installLocal, clearLocal, hasManualPriority
+  });
   global.CIAPublicMarket = api;
   if (typeof module === "object" && module && module.exports) {
     module.exports = api;
