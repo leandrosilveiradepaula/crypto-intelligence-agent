@@ -1847,3 +1847,8 @@ Implementado importador visual em português para relatório finito do monitor D
 ## J2 — correção orientada pela primeira sessão real de 129 frames (D413)
 
 A VPS comprovou transporte e recebimento de 129 frames para N50 em 3,657s, mas nenhum ACK ou cotação aceito. Identificado bug no supervisor D386: abortava ao ultrapassar 128 frames pré-ACK e ocultava categoria. Correção amplia descarte finito proporcional ao escopo, mantém fail-closed e apresenta contagem pré-ACK. **Ainda não significa ticker ao vivo validado**: faltam novo ACK, snapshots pós-ACK e cobertura com o código atualizado na VPS. Nenhuma ordem/serviço alterado. `docs/J2_N50_REAL_PREACK_BURST_D413.md`.
+
+
+## J2 — confirmação Bybit real obtida; bootstrap pós-ACK em correção D414 (17/11/2026)
+
+Probes reais BTC e N50 **obtiveram ACK=1**, porém encerraram por `snapshot_required` depois de descartar respectivamente 7 e 263 quadros anteriores ao ACK. Nenhuma cotação aceita: não considerar feed homologado. A correção D414 mantém snapshots/deltas iniciais em memória limitada e só tenta reconstruí-los após validar ACK, sem callback financeiro de pré-ACK. Regressões 7/263, ausência de ACK, reconexão, delta sem snapshot e UI sanitizada adicionadas. Ação restante é CI/merge e nova medição real curta a partir de tarball GitHub SHA exato. Sem operação financeira, custo ou intervenção J1. `docs/J2_REAL_WS_ACK_SNAPSHOT_REHYDRATION_D414.md`.
