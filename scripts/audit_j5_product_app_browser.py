@@ -651,9 +651,35 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
             }
             external = []
             local_errors = []
+            public_fixture = {
+                "schema_version": "bybit-public-rest-price-pulse-d403-v1",
+                "status": "rest_snapshot_display_only",
+                "source": "bybit_v5_public_linear_tickers",
+                "server_at_ms": now - 50,
+                "captured_at_ms": now,
+                "observed_symbol_count": 1,
+                "network_gets_in_this_capture": 1,
+                "quotes": [{
+                    "symbol": "BTCUSDT", "last_price": "50000",
+                    "mark_price": "50001", "bid_price": "49999",
+                    "ask_price": "50002", "bid_size": "2",
+                    "ask_size": "3", "turnover_24h": "123456",
+                }],
+                "crypto_only_membership_verified": False,
+                "continuous_websocket_verified": False,
+                "imported_report_authenticated_by_browser": False,
+                "paper_positions_linked": False,
+                "orders_sent": False, "approved_for_signals": False,
+                "approved_for_live_use": False,
+            }
+            local.LoopbackPanelHandler.market_symbols = ("BTCUSDT",)
+            local.LoopbackPanelHandler.market_last_attempt_ms = 0
+            local.LoopbackPanelHandler.market_cached = None
             with patch.object(local, "read_n50_progress", return_value=fixture) as source, patch.object(
                 local, "read_j2_descriptive", return_value=j2_fixture
-            ) as j2_source:
+            ) as j2_source, patch.object(
+                local, "read_public_market_prices", return_value=public_fixture
+            ) as public_source:
                 server = HTTPServer((local.HOST, local.PORT), local.LoopbackPanelHandler)
                 worker = Thread(target=server.serve_forever, daemon=True)
                 worker.start()
@@ -690,6 +716,52 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "() => document.querySelector('#research-count').textContent === '50'",
                         timeout=5000,
                     )
+                    # D404: same-origin automatic REAL public REST schema,
+                    # with a fully injected fixture: zero internet in Chrome.
+                    page.wait_for_function(
+                        "() => document.querySelector('#public-market-status').textContent === 'Amostra REST recente'",
+                        timeout=5000,
+                    )
+                    if ("Mark: 50001" not in page.locator("#public-market-rows").inner_text()
+                            or public_source.call_count != 1
+                            or page.locator("#refresh-public-market-local").is_hidden()):
+                        local_errors.append("public REST auto pulse not surfaced in loopback")
+                    with patch.object(
+                        local, "read_public_market_prices",
+                        side_effect=local.SourceNotReady("never leak private paths"),
+                    ) as missing:
+                        # Force a fresh server attempt after synthetic outage.
+                        local.LoopbackPanelHandler.market_last_attempt_ms = 0
+                        local.LoopbackPanelHandler.market_cached = None
+                        page.locator("#refresh-public-market-local").click()
+                        page.wait_for_function(
+                            "() => document.querySelector('#public-market-status').textContent === 'Fonte REST indisponível'",
+                            timeout=5000,
+                        )
+                        if (not page.locator("#public-market-loaded").is_hidden()
+                                or not page.locator("#public-market-empty").is_visible()
+                                or page.locator("#metric-open").inner_text() != "0"
+                                or missing.call_count != 1):
+                            local_errors.append("failed local market refresh left stale quote")
+                    # Manual import takes priority and never gets clobbered by
+                    # later background or button refresh while this tab lives.
+                    page.locator("#import-file").set_input_files({
+                        "name":"manually-reviewed-pulse.json",
+                        "mimeType":"application/json",
+                        "buffer":json.dumps(public_fixture).encode(),
+                    })
+                    page.wait_for_function(
+                        "() => document.querySelector('#public-market-rows').textContent.includes('Mark: 50001')",
+                        timeout=5000,
+                    )
+                    with patch.object(
+                        local, "read_public_market_prices",
+                        side_effect=AssertionError("manual priority must not fetch"),
+                    ) as forbidden:
+                        page.locator("#refresh-public-market-local").click()
+                        if (forbidden.call_count > 0 or
+                                page.locator("#public-market-loaded").is_hidden()):
+                            local_errors.append("manual REST import lost its priority")
                     if j2_source.call_count < 1:
                         local_errors.append("loopback J2 GET did not read research summary")
                     if page.locator("#research-status").inner_text() != "Descritivo · fonte local":
@@ -730,6 +802,9 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     server.shutdown()
                     server.server_close()
                     worker.join(timeout=3)
+                    local.LoopbackPanelHandler.market_symbols = ()
+                    local.LoopbackPanelHandler.market_last_attempt_ms = 0
+                    local.LoopbackPanelHandler.market_cached = None
             problems.extend("loopback: " + x for x in local_errors)
             records.append({
                 "width": 390, "mode": "loopback_auto_status",

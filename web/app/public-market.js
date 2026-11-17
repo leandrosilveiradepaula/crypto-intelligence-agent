@@ -16,6 +16,7 @@
   const DECIMAL = /^(?:0|[1-9][0-9]{0,29})(?:\.[0-9]{1,24})?$/;
   const SCALE = 10n ** 24n;
   let current = null;
+  let origin = "none"; // manual, local-auto, none; never persisted
 
   function insist(ok) {
     if (!ok) throw new Error("Amostra Bybit inválida ou incompleta");
@@ -85,7 +86,11 @@
     if (!empty || !loaded || !status || !summary || !rows) return;
     empty.hidden = current !== null;
     loaded.hidden = current === null;
-    if (!current) { status.textContent = "Sem amostra REST"; return; }
+    if (!current) {
+      status.textContent = "Sem amostra REST";
+      status.dataset.tone = "blocked";
+      return;
+    }
     const age = Date.now() - current.captured_at_ms;
     const recent = age >= -5000 && age <= 30000;
     status.textContent = recent ? "Amostra REST recente" : "Amostra REST vencida";
@@ -113,10 +118,61 @@
   }
   function install(raw) {
     const accepted = validateReport(raw);
-    current = accepted; // Volatile for this tab only.
+    current = accepted;
+    origin = "manual"; // Explicit operator import wins during this tab.
     render();
   }
-  const api = Object.freeze({ validateReport, install });
+  function hasManualPriority() { return origin === "manual"; }
+  function installLocal(raw) {
+    const accepted = validateReport(raw);
+    if (hasManualPriority()) return;
+    current = accepted;
+    origin = "local-auto";
+    render();
+  }
+  function clearLocal() {
+    if (hasManualPriority()) return;
+    current = null;
+    origin = "none";
+    render();
+    const status = typeof document !== "undefined" &&
+      document.getElementById("public-market-status");
+    if (status) {
+      status.textContent = "Fonte REST indisponível";
+      status.dataset.tone = "blocked";
+    }
+  }
+  function isLocalOrigin() {
+    const loc = global.location;
+    return Boolean(loc && loc.protocol === "http:" && loc.port === "8765" &&
+      (loc.hostname === "127.0.0.1" || loc.hostname === "localhost"));
+  }
+  async function refreshLocal() {
+    if (!isLocalOrigin() || hasManualPriority()) return;
+    try {
+      const response = await global.fetch("/api/bybit-public-price", {
+        method: "GET", credentials: "omit",
+        cache: "no-store", redirect: "error"
+      });
+      if (!response.ok || response.status !== 200 ||
+          !(response.headers.get("content-type") || "").startsWith("application/json")) {
+        throw new Error("Fonte pública local indisponível");
+      }
+      const raw = await response.text();
+      if (raw.length === 0 || raw.length >= 1048576) {
+        throw new Error("Amostra REST fora do limite");
+      }
+      if (hasManualPriority()) return;
+      installLocal(JSON.parse(raw));
+    } catch (_) {
+      // A failed refresh cannot leave an old automatic quote looking fresh.
+      clearLocal();
+    }
+  }
+  const api = Object.freeze({
+    validateReport, install, installLocal, clearLocal, hasManualPriority,
+    refreshLocal
+  });
   global.CIAPublicMarket = api;
   if (typeof module === "object" && module && module.exports) {
     module.exports = api;
@@ -124,5 +180,25 @@
   if (typeof document !== "undefined") {
     render();
     global.setInterval(render, 5000);
+    if (isLocalOrigin()) {
+      const button = document.getElementById("refresh-public-market-local");
+      if (button) {
+        button.hidden = false;
+        button.addEventListener("click", () => {
+          if (hasManualPriority()) {
+            const notice = document.getElementById("notice");
+            if (notice) {
+              notice.textContent = "A amostra REST importada manualmente tem prioridade nesta sessão. Recarregue a página para retornar à fonte local.";
+              notice.dataset.tone = "info";
+              notice.hidden = false;
+            }
+          } else {
+            void refreshLocal();
+          }
+        });
+      }
+      void refreshLocal();
+      global.setInterval(() => { void refreshLocal(); }, 60000);
+    }
   }
 })(typeof globalThis !== "undefined" ? globalThis : this);

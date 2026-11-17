@@ -135,7 +135,8 @@
             <h3 id="public-market-title">Preços públicos da Bybit · amostra REST</h3>
             <span class="status-label" id="public-market-status">Sem amostra REST</span>
           </div>
-          <p class="muted fine">Importe pelo seletor JSON uma amostra REST capturada pelo coletor read-only. Preços públicos em horário específico, não WebSocket ou monitor de stop; origem do arquivo não é autenticada pelo navegador.</p>
+          <div class="actions"><button id="refresh-public-market-local" class="secondary" type="button" hidden>Atualizar amostra pública</button></div>
+          <p class="muted fine">Importe uma amostra REST em JSON ou, no servidor local autorizado, visualize atualizações periódicas. Dados públicos em horário específico, não WebSocket nem proteção de stop; origem do arquivo importado não é autenticada pelo navegador.</p>
           <div id="public-market-empty" class="empty">
             <strong>Sem preços públicos importados</strong>
             <p>Nenhuma cotação real é presumida. Esta página não consulta a corretora.</p>

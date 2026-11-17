@@ -173,6 +173,73 @@ class ResearchProjectionTests(unittest.TestCase):
         self.assertNotIn("private path", str(error.exception))
 
 
+class PublicMarketOptinTests(unittest.TestCase):
+    def pulse(self, at=NOW):
+        return {
+            "schema_version": "bybit-public-rest-price-pulse-d403-v1",
+            "status": "rest_snapshot_display_only",
+            "source": "bybit_v5_public_linear_tickers",
+            "server_at_ms": at - 50,
+            "captured_at_ms": at,
+            "observed_symbol_count": 1,
+            "quotes": [{
+                "symbol": "BTCUSDT", "last_price": "100",
+                "mark_price": "100", "bid_price": "99.9",
+                "ask_price": "100.1", "bid_size": "2",
+                "ask_size": "3", "turnover_24h": "100000",
+            }],
+            "network_gets_in_this_capture": 1,
+            "crypto_only_membership_verified": False,
+            "continuous_websocket_verified": False,
+            "imported_report_authenticated_by_browser": False,
+            "paper_positions_linked": False,
+            "orders_sent": False,
+            "approved_for_signals": False,
+            "approved_for_live_use": False,
+        }
+
+    def test_public_rest_is_separate_optin_before_socket_or_bind(self):
+        for argv in (
+            ["--allow-loopback-readonly-http", "--market-symbols", "BTCUSDT"],
+            ["--allow-loopback-readonly-http", "--allow-public-rest-samples"],
+            ["--allow-loopback-readonly-http", "--allow-public-rest-samples",
+             "--market-symbols", "BTCUSD"],
+            ["--allow-loopback-readonly-http", "--allow-public-rest-samples",
+             "--market-symbols", "BTCUSDT,BTCUSDT"],
+        ):
+            with self.subTest(argv=argv), patch.object(
+                panel, "HTTPServer", side_effect=AssertionError("no bind")
+            ), patch("sys.stdout", new_callable=io.StringIO) as out:
+                self.assertEqual(panel.main(argv), 65)
+                self.assertFalse(json.loads(out.getvalue())["orders_sent"])
+
+    def test_producer_allowlist_no_secret_price_tamper_or_trading_flag(self):
+        valid = self.pulse()
+        with patch.object(
+            panel, "capture_public_rest_price_pulse", return_value=valid
+        ) as producer:
+            observed = panel.read_public_market_prices(symbols=("BTCUSDT",))
+            self.assertEqual(observed, valid)
+            producer.assert_called_once_with(symbols=("BTCUSDT",))
+        for changed in (
+            {**valid, "credentials": "SECRET"},
+            {**valid, "approved_for_signals": True},
+            {**valid, "network_gets_in_this_capture": 2},
+            {**valid, "quotes": [{**valid["quotes"][0], "private_path": "/secret"}]},
+            {**valid, "quotes": [{**valid["quotes"][0], "symbol": "ETHUSDT"}]},
+        ):
+            with self.subTest(keys=list(changed)), patch.object(
+                panel, "capture_public_rest_price_pulse", return_value=changed
+            ), self.assertRaises(panel.SourceNotReady):
+                panel.read_public_market_prices(symbols=("BTCUSDT",))
+        with patch.object(panel, "capture_public_rest_price_pulse",
+                          side_effect=OSError("sensitive tokens")), self.assertRaises(
+            panel.SourceNotReady
+        ) as err:
+            panel.read_public_market_prices(symbols=("BTCUSDT",))
+        self.assertNotIn("sensitive", str(err.exception))
+
+
 class LoopbackHTTPTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -240,6 +307,66 @@ class LoopbackHTTPTests(unittest.TestCase):
         self.assertEqual(json.loads(body)["status"],"research_not_available")
         self.assertNotIn(b"secret", body)
         self.assertNotIn("Access-Control-Allow-Origin", headers)
+
+    def test_public_price_endpoint_disabled_by_default(self):
+        cls = panel.LoopbackPanelHandler
+        self.assertEqual(cls.market_symbols, ())
+        with patch.object(panel, "read_public_market_prices",
+                          side_effect=AssertionError("no outbound GET")):
+            code, headers, body = self.get("GET", "/api/bybit-public-price")
+            self.assertEqual(code, 503)
+            self.assertEqual(json.loads(body)["status"], "public_market_not_enabled")
+            self.assertNotIn("Access-Control-Allow-Origin", headers)
+            self.assertEqual(self.get("POST", "/api/bybit-public-price")[0], 405)
+            self.assertEqual(self.get("GET", "/api/bybit-public-price?symbol=BTCUSDT")[0], 404)
+            self.assertEqual(self.get("GET", "/api/bybit-public-price", "evil.example:8765")[0], 403)
+
+    def test_public_price_throttled_cleared_on_failure_and_never_leaks_secret(self):
+        cls = panel.LoopbackPanelHandler
+        cls.market_symbols = ("BTCUSDT",)
+        cls.market_cached = None
+        cls.market_last_attempt_ms = 0
+        fixture = PublicMarketOptinTests()
+        try:
+            with patch.object(
+                panel, "read_public_market_prices", side_effect=[
+                    fixture.pulse(NOW), fixture.pulse(NOW + 61_000),
+                    panel.SourceNotReady("/secret/REST"),
+                ]
+            ) as source, patch.object(
+                panel.time, "time_ns", side_effect=[
+                    NOW * 1_000_000,
+                    (NOW + 1_000) * 1_000_000,
+                    (NOW + 47_000) * 1_000_000,
+                    (NOW + 61_000) * 1_000_000,
+                    (NOW + 122_000) * 1_000_000,
+                    (NOW + 123_000) * 1_000_000,
+                ]
+            ):
+                first = self.get("GET", "/api/bybit-public-price")
+                self.assertEqual(first[0], 200)
+                self.assertEqual(json.loads(first[2])["quotes"][0]["symbol"], "BTCUSDT")
+                self.assertEqual(source.call_count, 1)
+                self.assertEqual(self.get("GET", "/api/bybit-public-price")[0], 200)
+                self.assertEqual(source.call_count, 1)
+                stale = self.get("GET", "/api/bybit-public-price")
+                self.assertEqual(stale[0], 503)
+                self.assertEqual(json.loads(stale[2])["status"], "public_market_stale")
+                self.assertEqual(source.call_count, 1)
+                refreshed = self.get("GET", "/api/bybit-public-price")
+                self.assertEqual(refreshed[0], 200)
+                self.assertEqual(json.loads(refreshed[2])["captured_at_ms"], NOW + 61_000)
+                self.assertEqual(source.call_count, 2)
+                failed = self.get("GET", "/api/bybit-public-price")
+                self.assertEqual(failed[0], 503)
+                self.assertNotIn(b"secret", failed[2])
+                self.assertEqual(source.call_count, 3)
+                self.assertEqual(self.get("GET", "/api/bybit-public-price")[0], 503)
+                self.assertEqual(source.call_count, 3)
+        finally:
+            cls.market_symbols = ()
+            cls.market_last_attempt_ms = 0
+            cls.market_cached = None
 
     def test_api_count_only_and_no_order_methods(self):
         synthetic = project_n50_ws_log_progress([], now_ms=NOW)

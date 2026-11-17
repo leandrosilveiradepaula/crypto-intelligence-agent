@@ -1906,3 +1906,8 @@ A J5 integra o contrato sanitizado `PaperPartialDeriskRiskResult.sanitized_repor
 ## D403 — Preço REST público no aplicativo não é monitor contínuo (17/11/2026)
 
 Uma consulta pública HTTPS Bybit V5 linear por captura, usando cliente GET J1 existente, permite exportar last/mark/bid/ask de até 50 contratos previamente selecionados para painel J5. Fonte de arquivo não autenticada, horário e prazo de validade explícitos, rejeição de payload obsoleto, BBO inconsistente ou flags de trading e nenhum vínculo a PAPER. Essa capacidade permite visualizar amostras de preços reais, mas NÃO é monitor de stop, WebSocket 24×7, ranking crypto-only homologado ou produto financeiro. Ver docs/BYBIT_PUBLIC_REST_MARKET_PULSE_D403.md.
+
+
+## D404 — atualizar preços do painel sem confundir REST com motor de operações (17/11/2026)
+
+Leitura automática pontual de preços públicos é permitida somente via servidor HTTP local opt-in preexistente, com lista de símbolos fornecida, até uma chamada REST/min no servidor e nenhuma consulta do browser à corretora. Dados expirados, ausentes ou inválidos nunca atualizam posições PAPER, stops, estratégias ou ordens. O operador 24×7 será WebSocket separado e exige piloto e gate de release. REST local não amplia o acesso aos dados privados da J1 e não deve ser publicado sem autenticação.
