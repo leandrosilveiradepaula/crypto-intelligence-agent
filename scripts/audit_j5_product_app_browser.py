@@ -441,7 +441,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     )
                     if "Importação recusada" not in page.locator("#notice").inner_text():
                         errors.append("untrusted market file not rejected")
-                    if page.locator("img").count() or page.locator("script").count() != 2:
+                    if page.locator("img").count() or page.locator("script").count() != 3:
                         errors.append("HTML injection on invalid market data")
 
                     # D399: exercise the REAL import and renderer in Chrome,
