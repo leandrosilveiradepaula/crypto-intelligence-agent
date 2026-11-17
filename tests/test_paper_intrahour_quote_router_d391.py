@@ -130,6 +130,21 @@ class RouterD391Tests(unittest.TestCase):
             self.router.process(tick(t+3,seq=2,bid="110",lag=3500))
         self.assertEqual(len(self.store.load(self.position_id).exit_orders),0)
 
+    def test_reconnect_restarts_sequence_not_time_or_paper_reservations(self):
+        earlier = tick(T + 12 * MIN, seq=99, bid="101")
+        original = self.router.process(earlier)
+        self.assertEqual(original.decision, PaperIntrahourDecision.TARGET_RESERVED)
+        self.router.begin_new_market_session()
+        # A delayed replay from a previous socket cannot be admitted just
+        # because the Bybit cross-sequence counter restarted.
+        with self.assertRaises(DataGapError):
+            self.router.process(tick(T + 12 * MIN, seq=1, bid="101"))
+        self.assertEqual(len(self.store.load(self.position_id).exit_orders), 1)
+        newer = self.router.process(tick(T + 12 * MIN + 1000, seq=1, bid="101"))
+        self.assertIsNotNone(newer)
+        self.assertEqual(len(self.store.load(self.position_id).exit_orders), 1)
+        self.assertFalse(self.router.sanitized_report()["orders_sent"])
+
     def test_unrelated_symbol_does_not_change_position(self):
         self.assertIsNone(self.router.process(tick(T+12*MIN,symbol="ETHUSDT",bid="110")))
         self.assertEqual(self.router.sanitized_report()["other_symbols_ignored"],1)
