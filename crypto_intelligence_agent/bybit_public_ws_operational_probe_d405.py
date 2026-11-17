@@ -107,7 +107,15 @@ def observe_finite_public_ws_once(
     result = {
         "schema_version": "bybit-public-ws-network-probe-d405-v1",
         "status": snapshot["status"],
-        "network_attempted": True,
+        # Injected sockets are synthetic even when ACK/frames are accepted.
+        # Never present an offline fixture as real Bybit network evidence.
+        "data_mode": ("real_public_websocket" if session_factory is None
+                      else "injected_offline_fixture"),
+        "network_attempted": session_factory is None,
+        "real_market_frames_verified": (
+            session_factory is None
+            and snapshot["subscriptions_acknowledged"] >= 1
+            and snapshot["ticker_frames_accepted"] > 0),
         "scope_source": "operator_supplied_symbols_not_independently_ranked",
         "requested_contracts": snapshot["requested_distinct_contracts"],
         "ranked_input_count": snapshot["requested_ranked_contracts"],
