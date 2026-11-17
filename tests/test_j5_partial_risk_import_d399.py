@@ -84,6 +84,11 @@ assert.strictEqual(E.validatePaperPartialRiskReport(R),R);
 assert.equal(E.validatePaperPartialRiskReport(
   {...R,conditional_net_after_partial_risk_quote:"-2.4500"}
 ).conditional_net_after_partial_risk_quote,"-2.4500");
+for (const exact of ["1E-7", "1.2E-19", "-2.50E+3", "0E-8"]) {
+  assert.equal(E.validatePaperPartialRiskReport(
+    {...R,conditional_net_after_partial_risk_quote:exact}
+  ).conditional_net_after_partial_risk_quote,exact);
+}
 const B = {...R,status:"abstain_partial_risk_liquidation_proxy",
   mark_ticks_checked:2,confirmed_paper_fills_applied:0,
   has_discrete_terminal:true,conditional_net_after_partial_risk_quote:null};
@@ -112,6 +117,9 @@ for (const bad of [
   {...R,confirmed_paper_fills_applied:129},
   {...R,conditional_net_after_partial_risk_quote:"NaN"},
   {...R,conditional_net_after_partial_risk_quote:"Infinity"},
+  {...R,conditional_net_after_partial_risk_quote:"1E+100"},
+  {...R,conditional_net_after_partial_risk_quote:"1e-7"},
+  {...R,conditional_net_after_partial_risk_quote:"1E+9999"},
   {...R,conditional_net_after_partial_risk_quote:3.394},
   {...R,conditional_net_after_partial_risk_quote:null},
   {...R,has_discrete_terminal:true},
