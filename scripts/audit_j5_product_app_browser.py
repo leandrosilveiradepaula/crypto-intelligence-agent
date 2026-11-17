@@ -578,7 +578,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                             "Reconciliação pendente"
                             or "parciais preenchidas: 30" not in panel_text
                             or "Restante: 70" not in panel_text
-                            or "sem stop nativo" in panel_text.lower()
+                            or "Saída pendente: reconciliar" not in panel_text
                             or page.locator("#metric-open").inner_text() != "2"):
                         errors.append("D407 durable PAPER balances/reconciliation not displayed")
                     tampered = dict(durable, orders_sent=True)
