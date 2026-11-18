@@ -26,6 +26,9 @@ global.document = {
 };
 const panel = require("./web/app/paper-ws-health.js");
 const report = JSON.parse(fs.readFileSync(0, "utf8"));
+assert.equal(panel.acceptsSchema(report.schema_version), true);
+assert.equal(panel.acceptsSchema("j2-j4-current-n50-paper-lease-d410-v1"), true);
+assert.equal(panel.acceptsSchema("unknown_report"), false);
 assert.equal(panel.validateReport(report), report);
 panel.install(report);
 assert.equal(elements["paper-ws-health-status"].textContent,
@@ -153,9 +156,13 @@ class J5PublicN50HealthD417Tests(unittest.TestCase):
         self.assertIn('src="./paper-ws-health.js"', html)
         self.assertIn('id="paper-ws-health-rows"', html)
         self.assertIn('id="import-file"', html)
-        self.assertIn("j2-current-owner-n50-ws-probe-d406-v1", script)
+        self.assertIn("j2-current-owner-n50-ws-probe-d406-v1", display)
         self.assertIn("globalThis.CIAPaperWSHealth.install(payload)", script)
-        self.assertIn("j2-j4-current-n50-paper-lease-d410-v1", script)
+        self.assertIn("globalThis.CIAPaperWSHealth.acceptsSchema(payload.schema_version)", script)
+        # Preserve the 50 KiB-ish Windows source budget even if checkout CRLF
+        # expands each LF into two bytes.
+        self.assertLess(len(script.encode("utf-8")) + script.count("\n"), 50_000)
+        self.assertIn("j2-j4-current-n50-paper-lease-d410-v1", display)
         self.assertIn("j2-j4-current-n50-paper-lease-d410-v1", display)
         self.assertIn("validatePublicProbe", display)
         self.assertIn("fetch(", script)  # unrelated existing browser market read
