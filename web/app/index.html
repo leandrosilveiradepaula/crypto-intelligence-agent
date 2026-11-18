@@ -297,15 +297,15 @@
             <h3 id="paper-ws-health-title">Saúde do N50 e das saídas PAPER</h3>
             <span class="status-label" id="paper-ws-health-status">Sem relatório WebSocket</span>
           </div>
-          <p class="muted fine">Importe pelo mesmo seletor JSON uma amostra pública N50 da Bybit (J2/D406) ou um relatório separado de saídas PAPER (J2/J4). Dados do mercado não comprovam monitoramento de posições.</p>
+          <p class="muted fine">O resumo N50 pode ser atualizado pelo servidor local de leitura autorizado (127.0.0.1:8765). Na prévia offline, importe o JSON pelo mesmo seletor. Os dados do mercado não comprovam monitoramento de posições PAPER.</p>
           <div id="paper-ws-health-empty" class="empty">
             <strong>Monitor de mercado sem evidências importadas</strong>
-            <p>Não existe ligação ao WebSocket nem atualização automática nesta página.</p>
+            <p>Sem amostra carregada. A atualização automática só funciona quando esta página é aberta pelo servidor local autorizado; o arquivo offline requer importação.</p>
           </div>
           <div id="paper-ws-health-loaded" hidden>
             <div id="paper-ws-health-rows" class="market-pulse-rows" role="status" aria-live="polite"></div>
           </div>
-          <p class="muted fine">Relatório estático, não autenticado externamente e descartado ao recarregar. Sem credenciais, ordens, stops nativos, resultados reais ou liberação de novas entradas.</p>
+          <p class="muted fine">Amostra finita e não autenticada externamente; o resumo local é atualizado periodicamente, nunca por WebSocket direto no navegador. Sem credenciais, ordens, stops nativos, resultados reais ou liberação de entradas.</p>
         </div>
         <div class="panel risk-audit-panel" aria-labelledby="risk-audit-title">
           <div class="panel-heading">
