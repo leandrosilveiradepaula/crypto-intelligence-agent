@@ -60,6 +60,20 @@ def source(*, fresh=45, mode="real_public_websocket") -> dict:
 
 
 class PublicHealthProjectionD421Tests(unittest.TestCase):
+    def test_d418_producer_uses_subscriptions_acknowledged_not_d406_alias(self):
+        # The first real pilot of D421 failed closed because the new adapter
+        # accidentally expected D406's subscription_acks. D418 actually
+        # produces subscriptions_acknowledged; this is the exact producer key.
+        raw = source()
+        self.assertIn("subscriptions_acknowledged", raw)
+        self.assertNotIn("subscription_acks", raw)
+        report = project_public_health(raw, sampled_at_ms=NOW, cycle=1)
+        self.assertEqual(report["subscription_acks"], 1)
+        wrong = dict(raw)
+        wrong["subscription_acks"] = wrong.pop("subscriptions_acknowledged")
+        with self.assertRaises(DataValidationError):
+            project_public_health(wrong, sampled_at_ms=NOW, cycle=1)
+
     def test_real_45_of_50_degraded_not_approved(self):
         r = project_public_health(source(), sampled_at_ms=NOW, cycle=1)
         self.assertEqual(r["status"], "finite_sample_degraded_or_partial")
