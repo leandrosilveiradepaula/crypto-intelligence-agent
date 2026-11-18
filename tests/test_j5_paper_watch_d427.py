@@ -165,6 +165,41 @@ class D427OwnerFileTests(unittest.TestCase):
             publish_paper_watch(home, failure)
             self.assertEqual(read_paper_watch(directory=home, now_ms=now), failure)
 
+    def test_existing_d425_cli_can_publish_count_only_then_fail_closed(self):
+        with tempfile.TemporaryDirectory() as d:
+            home = Path(d)
+            home.chmod(0o700)
+            flags = [
+                "--state-directory", "/owner/d410-scope-unused-by-test",
+                "--private-paper-directory", "/owner/auto4-unused-by-test",
+                "--allow-private-pointer-read", "--allow-public-websocket",
+                "--confirm-personal-readonly-research", "--confirm-region-eligible",
+                "--allow-synthetic-paper-reservations",
+                "--allow-local-paper-watch-output",
+                "--paper-watch-directory", str(home),
+            ]
+            with patch.object(
+                operator, "observe_existing_paper_positions_once",
+                return_value=fake_source(),
+            ), redirect_stdout(io.StringIO()):
+                self.assertEqual(operator.main(flags), 2)
+            now = time.time_ns() // 1_000_000
+            observed = read_paper_watch(directory=home, now_ms=now)
+            self.assertEqual(observed["hypothetical_reservations_observed"], 1)
+            self.assertEqual(observed["reconciliation_events_observed"], 241)
+            self.assertNotIn("BTCUSDT", json.dumps(observed))
+            with patch.object(
+                operator, "observe_existing_paper_positions_once",
+                side_effect=DataValidationError("private-account-secret"),
+            ), redirect_stdout(io.StringIO()):
+                self.assertEqual(operator.main(flags), 65)
+            failed = read_paper_watch(
+                directory=home, now_ms=time.time_ns() // 1_000_000,
+            )
+            self.assertEqual(failed["status"], "finite_paper_lease_failed_closed")
+            self.assertEqual(failed["hypothetical_reservations_observed"], 0)
+            self.assertFalse(failed["orders_sent"])
+
     def test_dac_symlink_hardlink_and_stale_target_fail_closed(self):
         with tempfile.TemporaryDirectory() as d:
             home = Path(d)
