@@ -447,7 +447,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "./engine.js", "./public-market.js", "./persisted-paper.js",
                         "./integrated-paper-cycle.js",
                         "./research-scorebook.js", "./paper-ws-health.js",
-                        "./paper-watch.js", "./app.js",
+                        "./paper-watch.js", "./prospective-research.js", "./app.js",
                     )
                     actual_scripts = page.locator("script[src]").evaluate_all(
                         "(nodes) => nodes.map(n => n.getAttribute('src')).sort()"
