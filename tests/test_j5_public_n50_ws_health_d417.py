@@ -59,7 +59,7 @@ bad(x=>x.private_state_modified=true);
 bad(x=>x.fresh_contracts_at_end=50);
 bad(x=>x.eligible_quote_expired_at_end_contracts=0);
 bad(x=>x.never_received_validated_quote_contracts=1);
-bad(x=>x.exchange_lagged_quote_callbacks=999);
+bad(x=>x.exchange_lagged_quote_callbacks=x.market_frames_accepted+1);
 bad(x=>x.ranked_scope_sha256="invalid");
 bad(x=>x.owner_scope_members=49);
 bad(x=>x.preack_frames_bootstrapped_after_ack=999);
