@@ -1,5 +1,9 @@
 # Decisões do produto
 
+## D436 — operador finito de pesquisa prospectiva sobre closes Bybit (18/11/2026)
+
+`j2_prospective_bybit_research_d436.consume_confirmed_close_batch` compõe o ingestor estrito de `kline.60` confirmado, o journal SQLite isolado e a fronteira D434/D435, sem criar parser, journal ou classificador paralelo. Receipts explícitos tornam replay/restart idempotentes; gap, PIT inválido, staleness ou frame contraditório retornam abstenção. O relatório sanitizado declara hipótese LONG/SHORT não autorizada, nenhuma hipótese, dados insuficientes ou feed indisponível; nunca chama RiskGate, AUTO2 ou AUTO4. `python -m scripts.demo_j2_prospective_bybit_research_d436` é replay sem rede que cria/descarta seu SQLite e não importa JSON. WS público real continua opt-in, sob receptor supervisionado e gate operacional; não acessa J1/VPS nem instala serviço.
+
 Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente. **Para destino de execução, D383 (Bybit exclusiva) prevalece sobre a escolha aberta de Binance/Bybit da D77 histórica; D77 (operação automática) permanece vigente.**
 
 ## D435 — avaliação J2 sobre candles Bybit observados, sem sinal (18/11/2026)

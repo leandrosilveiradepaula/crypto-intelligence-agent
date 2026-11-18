@@ -1,5 +1,9 @@
 # STATUS — Crypto Intelligence Agent
 
+## J2 #677 / D436 — replay determinístico integrado localmente (18/11/2026)
+
+A branch `codex/issue-677-prospective-research-feed` compõe close confirmado → SQLite isolado → D434 → D435. `python -m scripts.demo_j2_prospective_bybit_research_d436` gera hipótese LONG pública não autorizada com digest auditável e flags de ordem/RiskGate/AUTO2/AUTO4 falsas. É replay descartável; não é observação Bybit real, Console J5 atualizado, serviço 24×7, PAPER ou release. O próximo incremento é acoplar o consumidor ao receptor WebSocket supervisionado opt-in e publicar a projeção J5; J1/VPS, segredos e ordens seguem intocados.
+
 ## D435 — pesquisa causal sobre candles observados (ainda sem autorização de sinais)
 
 A D435 avalia compressão, rompimento, ATR e volume da série D434 confirmada usando Decimal. O resultado é somente uma hipótese no **último candle fechado** (`observed_hypothesis_not_authorized`) ou abstenção (`observed_no_hypothesis`), com digest de origem; jamais passa por RiskGate/AUTO2, não opera ou modela lucro. A revisão corrigiu propagação da EMA ao motor J2 e preservou reconciliação com a D434 existente. Testes LONG/SHORT/no-signal, cooldown, clocks e paridade com referência sintética. **Integrada na main pela PR #732, SHA caf9fcfc688434b0b2f47d0ae1fc67b933f48503**, após CI Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS** no HEAD revisado `66aa214d65d64e9929b46624ce676ab10c634d91`. Não equivale a feed público real contínuo, aprovação de sinais ou resultado financeiro validado.
