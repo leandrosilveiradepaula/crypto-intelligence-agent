@@ -1025,7 +1025,9 @@
     $("refresh-research-local").hidden = false;
     void refreshLocalFeed();
     void refreshLocalResearch();
+    void globalThis.CIAProspectiveResearch.refreshLocal();
     window.setInterval(() => { void refreshLocalFeed(); }, 60_000);
     window.setInterval(() => { void refreshLocalResearch(); }, 300_000);
+    window.setInterval(() => { void globalThis.CIAProspectiveResearch.refreshLocal(); }, 15_000);
   }
 })();

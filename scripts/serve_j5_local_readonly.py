@@ -28,6 +28,7 @@ from crypto_intelligence_agent.j5_local_health_reader_d422 import (
 from crypto_intelligence_agent.j5_paper_watch_d427 import (
     PaperWatchUnavailable, read_paper_watch,
 )
+from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import read_projection
 from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
 from crypto_intelligence_agent.bybit_public_rest_price_pulse_d403 import capture_public_rest_price_pulse
 from crypto_intelligence_agent.bybit_public_j1_transport import _SYMBOL
@@ -51,6 +52,7 @@ _STATIC_FILES: dict[str, tuple[str, str]] = {
     "/research-scorebook.js": ("research-scorebook.js", "text/javascript; charset=utf-8"),
     "/paper-ws-health.js": ("paper-ws-health.js", "text/javascript; charset=utf-8"),
     "/paper-watch.js": ("paper-watch.js", "text/javascript; charset=utf-8"),
+    "/prospective-research.js": ("prospective-research.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
 }
 _ALLOWED_HOST_HEADERS = frozenset((f"{HOST}:{PORT}", f"localhost:{PORT}"))
@@ -284,6 +286,7 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
     # OFF by default; only a same-owner POSIX 0700 directory can enable it.
     public_health_directory: Path | None = None
     paper_watch_directory: Path | None = None  # separate opt-in; 0700/0600, count-only
+    prospective_research_directory: Path | None = None
     protocol_version = "HTTP/1.1"
     server_version = "CIA-Local-ReadOnly"
     sys_version = ""
@@ -440,6 +443,16 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
                 return
             self._json(200, report)
             return
+        if self.path == "/api/j2-prospective-research":
+            directory = type(self).prospective_research_directory
+            if directory is None:
+                self._json(503, {"status": "prospective_research_not_enabled", "orders_sent": False})
+                return
+            try:
+                self._json(200, read_projection(directory, now_ms=time.time_ns() // 1_000_000))
+            except (OSError, ValueError, UnicodeError, DataValidationError):
+                self._json(503, {"status": "prospective_research_not_fresh_or_available", "orders_sent": False})
+            return
         if self.path == "/api/n50-progress":
             try:
                 report = read_n50_progress(now_ms=time.time_ns() // 1_000_000)
@@ -483,6 +496,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--private-health-directory", type=Path)
     parser.add_argument("--allow-paper-watch-loopback", action="store_true")
     parser.add_argument("--paper-watch-directory", type=Path)
+    parser.add_argument("--allow-prospective-research-loopback", action="store_true")
+    parser.add_argument("--prospective-research-directory", type=Path)
     parser.add_argument("--market-symbols", default="", help="1..50 reviewed USDT symbols")
     args = parser.parse_args(argv)
     if not args.allow_loopback_readonly_http:
@@ -509,6 +524,15 @@ def main(argv: list[str] | None = None) -> int:
             "orders_sent": False,
         }, sort_keys=True))
         return 65
+    if args.allow_prospective_research_loopback != (args.prospective_research_directory is not None):
+        print(json.dumps({"status": "prospective_research_explicit_optin_and_directory_required", "orders_sent": False}, sort_keys=True))
+        return 65
+    if args.allow_prospective_research_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({"status": "prospective_research_unprivileged_owner_required", "orders_sent": False}, sort_keys=True)); return 65
+        try: _owned_directory(args.prospective_research_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({"status": "prospective_research_owner_directory_unavailable", "orders_sent": False}, sort_keys=True)); return 65
     if args.allow_paper_watch_loopback:
         if os.name != "posix" or os.geteuid() == 0:
             print(json.dumps({
@@ -556,6 +580,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     LoopbackPanelHandler.paper_watch_directory = (
         args.paper_watch_directory if args.allow_paper_watch_loopback else None
+    )
+    LoopbackPanelHandler.prospective_research_directory = (
+        args.prospective_research_directory if args.allow_prospective_research_loopback else None
     )
     try:
         with HTTPServer((HOST, PORT), LoopbackPanelHandler) as server:

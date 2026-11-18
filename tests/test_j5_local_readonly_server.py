@@ -13,6 +13,7 @@ import unittest
 from unittest.mock import patch
 
 from crypto_intelligence_agent.bybit_closed_stream_cache import HOUR_MS
+from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.j5_n50_ws_hour_progress import (
     project_n50_ws_log_progress,
 )
@@ -275,7 +276,7 @@ class LoopbackHTTPTests(unittest.TestCase):
         self.assertIn("connect-src 'self'", headers.get("Content-Security-Policy", ""))
         self.assertNotIn("Access-Control-Allow-Origin", headers)
         self.assertNotIn("Set-Cookie", headers)
-        for asset in ("/app.js", "/engine.js", "/public-market.js", "/persisted-paper.js", "/research-scorebook.js", "/paper-ws-health.js", "/style.css", "/index.html"):
+        for asset in ("/app.js", "/engine.js", "/public-market.js", "/persisted-paper.js", "/research-scorebook.js", "/paper-ws-health.js", "/prospective-research.js", "/style.css", "/index.html"):
             with self.subTest(asset=asset):
                 self.assertEqual(self.get("GET", asset)[0], 200)
         for denied in ("/README.md", "/../docs/DECISIONS.md",
@@ -367,6 +368,31 @@ class LoopbackHTTPTests(unittest.TestCase):
             cls.market_symbols = ()
             cls.market_last_attempt_ms = 0
             cls.market_cached = None
+
+    def test_prospective_research_endpoint_default_denied_and_fail_closed(self):
+        handler = panel.LoopbackPanelHandler
+        old = handler.prospective_research_directory
+        handler.prospective_research_directory = None
+        try:
+            status, _, body = self.get("GET", "/api/j2-prospective-research")
+            self.assertEqual(status, 503)
+            self.assertEqual(json.loads(body)["status"],
+                             "prospective_research_not_enabled")
+            handler.prospective_research_directory = Path("/private-owner")
+            with patch.object(panel, "read_projection",
+                              side_effect=DataValidationError("SECRET DATABASE")):
+                code, _, data = self.get("GET", "/api/j2-prospective-research")
+            self.assertEqual(code, 503)
+            self.assertNotIn(b"SECRET", data)
+            self.assertEqual(
+                self.get("GET", "/api/j2-prospective-research",
+                         "attacker.invalid:8765")[0], 403,
+            )
+            self.assertEqual(
+                self.get("POST", "/api/j2-prospective-research")[0], 405,
+            )
+        finally:
+            handler.prospective_research_directory = old
 
     def test_api_count_only_and_no_order_methods(self):
         synthetic = project_n50_ws_log_progress([], now_ms=NOW)

@@ -1,4 +1,12 @@
 # STATUS — Crypto Intelligence Agent
+## D436 — sessão supervisionada de pesquisa J2→J5 em validação (18/11/2026 UTC)
+
+Na branch `codex/issue-677-prospective-research-feed`, a pesquisa de closes públicos Bybit confirmados foi conectada ao supervisor WS injetável existente, D434/D435 e projeção owner-only 0700/0600 no J5. A demonstração `python -m scripts.demo_j2_prospective_bybit_research_d436` executa agora um **socket FAKE sem rede**, com ACK, frame aberto, close confirmado, journal, hipótese LONG/SHORT/sem hipótese, projeção terminal explícita e retransmissão sem duplicação. Browser J5 usa módulo `prospective-research.js` com validação estrita v2, polling somente loopback, revogação em HTTP 503, resposta atrasada e sessão encerrada. Testes de regressão backend/Node foram acrescentados; **CI e revisão de PR ainda precisam comprovar a entrega**. Não alegar observação pública real, 24×7, entrada PAPER, PnL, stop nativo, ordem, credencial ou liberação do RiskGate. Nenhum serviço J1 owner/VPS foi alterado. Custo R$0.
+
+
+## J2 #677 / D436 — replay determinístico integrado localmente (18/11/2026)
+
+A branch `codex/issue-677-prospective-research-feed` compõe close confirmado → SQLite isolado → D434 → D435. `python -m scripts.demo_j2_prospective_bybit_research_d436` gera hipótese LONG pública não autorizada com digest auditável e flags de ordem/RiskGate/AUTO2/AUTO4 falsas. É replay descartável; não é observação Bybit real, Console J5 atualizado, serviço 24×7, PAPER ou release. O próximo incremento é acoplar o consumidor ao receptor WebSocket supervisionado opt-in e publicar a projeção J5; J1/VPS, segredos e ordens seguem intocados.
 
 ## D435 — pesquisa causal sobre candles observados (ainda sem autorização de sinais)
 
