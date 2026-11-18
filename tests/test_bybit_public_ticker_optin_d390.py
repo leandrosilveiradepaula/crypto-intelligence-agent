@@ -141,6 +141,29 @@ class BybitPublicTickerOptinD390Tests(unittest.TestCase):
                             **kwargs,
                         )
 
+    def test_freshness_diagnosis_optin_requires_coverage_and_bool(self):
+        clock = FakeClock()
+        calls = []
+        def forbidden():
+            calls.append(True)
+            raise AssertionError("invalid diagnostic cannot open transport")
+        for kwargs in (
+            {"diagnose_public_freshness": True},
+            {"diagnose_public_freshness": 1, "measure_public_coverage": True},
+            {"diagnose_public_freshness": "yes", "measure_public_coverage": True},
+        ):
+            with self.subTest(kwargs=kwargs), self.assertRaises(DataValidationError):
+                run_readonly_bybit_ticker_lease(
+                    ranked_symbols=("BTCUSDT",), universe_at_ms=T-1000,
+                    allow_public_websocket=True,
+                    confirm_personal_readonly_research=True,
+                    confirm_region_eligible=True,
+                    session_factory=forbidden,
+                    clock=clock.mono, wall_ms=clock.wall, sleeper=clock.sleep,
+                    **kwargs,
+                )
+        self.assertEqual(calls, [])
+
     def test_invalid_universe_refuses_factory_before_network(self):
         clock=FakeClock()
         called=[]

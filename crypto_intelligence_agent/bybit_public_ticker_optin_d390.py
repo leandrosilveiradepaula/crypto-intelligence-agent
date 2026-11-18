@@ -45,6 +45,7 @@ def run_readonly_bybit_ticker_lease(
     session_factory: Callable[[], StreamSession] | None = None,
     paper_router: PaperIntrahourQuoteRouter | None = None,
     measure_public_coverage: bool = False,
+    diagnose_public_freshness: bool = False,
     require_complete_fresh_scope_for_paper: bool = False,
     require_fresh_held_position_for_paper: bool = False,
     clock: Callable[[], float] = time.monotonic,
@@ -68,6 +69,9 @@ def run_readonly_bybit_ticker_lease(
     the CURRENT acknowledged WS session. Default behavior is unchanged.
     D411: a safer opt-in for managing EXISTING PAPER positions dispatches a
     quote only when that held contract itself has a current valid quote.
+    D416: optional count-only breakdown distinguishes a never-delivered valid
+    quote, an ineligible arrival, and an eligible quote expired at lease end.
+    The exchange timestamp governs final freshness; receipt does not renew it.
     Global N50 freshness remains a separate research/entry health metric:
     missing unrelated assets must never disable protective position exits.
     """
@@ -75,6 +79,7 @@ def run_readonly_bybit_ticker_lease(
             or type(confirm_personal_readonly_research) is not bool
             or type(confirm_region_eligible) is not bool
             or type(measure_public_coverage) is not bool
+            or type(diagnose_public_freshness) is not bool
             or type(require_complete_fresh_scope_for_paper) is not bool
             or type(require_fresh_held_position_for_paper) is not bool):
         raise DataValidationError("public_ws_gate_type_invalid")
@@ -93,6 +98,8 @@ def run_readonly_bybit_ticker_lease(
             "order_submission_enabled": False,
             "approved_for_live_use": False,
         }
+    if diagnose_public_freshness and not measure_public_coverage:
+        raise DataValidationError("public_ws_freshness_diagnostic_requires_coverage")
     # No fork/daemon in this method. The only allowed real transport is
     # the public, fixed URL, and the dependency remains lazily imported.
     if os.name != "posix" and session_factory is None:
@@ -121,21 +128,36 @@ def run_readonly_bybit_ticker_lease(
         raise DataValidationError("public_ws_held_position_gate_requires_monitor")
     rank_set, position_set = set(ranked_symbols), set(position_symbols)
     monitored = rank_set | position_set
-    seen_this_session: dict[str, int] = {}
+    # The causal exchange timestamp, NOT only the socket receipt timestamp,
+    # determines whether the quote is still fresh at the end of the lease.
+    seen_this_session: dict[str, tuple[int, int]] = {}
+    validated_this_session: set[str] = set()
+    exchange_lagged_this_session: set[str] = set()
+    exchange_lagged_callbacks = 0
     paper_frames_deferred = 0
     paper_frames_routed = 0
     unrelated_frames_ignored_for_paper = 0
 
     def session_reset() -> None:
+        nonlocal exchange_lagged_callbacks
         # A previous socket's quotes cannot prove a new socket's coverage.
         seen_this_session.clear()
+        validated_this_session.clear()
+        exchange_lagged_this_session.clear()
+        exchange_lagged_callbacks = 0
         if paper_router is not None:
             paper_router.begin_new_market_session()
 
     def observed_quote(quote: BybitTickerQuote) -> None:
         nonlocal paper_frames_deferred, paper_frames_routed
-        nonlocal unrelated_frames_ignored_for_paper
+        nonlocal unrelated_frames_ignored_for_paper, exchange_lagged_callbacks
         if measure_public_coverage:
+            if diagnose_public_freshness:
+                validated_this_session.add(quote.symbol)
+                if (quote.received_at_ms - quote.exchange_at_ms >
+                        MAX_QUOTE_AGE_MS):
+                    exchange_lagged_callbacks += 1
+                    exchange_lagged_this_session.add(quote.symbol)
             # The exchange clock must be causal relative to the supplied
             # point-in-time scope; no inferred synthetic/retrospective ticks.
             if (quote.symbol in monitored
@@ -143,7 +165,9 @@ def run_readonly_bybit_ticker_lease(
                     and 0 <= quote.received_at_ms - quote.exchange_at_ms
                            <= MAX_QUOTE_AGE_MS
                     and quote.has_positive_book_depth):
-                seen_this_session[quote.symbol] = quote.received_at_ms
+                seen_this_session[quote.symbol] = (
+                    quote.received_at_ms, quote.exchange_at_ms,
+                )
         if paper_router is not None:
             if require_fresh_held_position_for_paper:
                 # Monitoring N50 is NOT a condition for protecting a held
@@ -154,7 +178,7 @@ def run_readonly_bybit_ticker_lease(
                     unrelated_frames_ignored_for_paper += 1
                     return
                 if (quote.symbol not in seen_this_session
-                        or seen_this_session[quote.symbol] != quote.received_at_ms
+                        or seen_this_session[quote.symbol][0] != quote.received_at_ms
                         or not quote.has_positive_book_depth
                         or not 0 <= quote.received_at_ms - quote.exchange_at_ms
                                <= MAX_QUOTE_AGE_MS):
@@ -163,7 +187,7 @@ def run_readonly_bybit_ticker_lease(
             if require_complete_fresh_scope_for_paper and (
                 not monitored.issubset(seen_this_session)
                 or any(
-                    not 0 <= quote.received_at_ms - seen_this_session[symbol]
+                    not 0 <= quote.received_at_ms - seen_this_session[symbol][1]
                     <= MAX_QUOTE_AGE_MS for symbol in monitored
                 )
             ):
@@ -220,8 +244,8 @@ def run_readonly_bybit_ticker_lease(
                 raise DataValidationError("public_ws_measurement_clock_invalid")
             sampled = set(seen_this_session)
             fresh = {
-                symbol for symbol, recv in seen_this_session.items()
-                if 0 <= stop_ms - recv <= MAX_QUOTE_AGE_MS
+                symbol for symbol, (_, exchange_ms) in seen_this_session.items()
+                if 0 <= stop_ms - exchange_ms <= MAX_QUOTE_AGE_MS
             }
             # "complete" here covers ONLY this finite lease; no assertion
             # about future delivery, publisher reliability, orders or stops.
@@ -245,6 +269,23 @@ def run_readonly_bybit_ticker_lease(
                 "scope_independently_verified": False,
                 "continuous_24x7_verified": False,
             })
+            if diagnose_public_freshness:
+                # Four disjoint count-only cohorts cover the final session.
+                # Validated callbacks may be ineligible due to exchange age,
+                # nonpositive depth or the prior point-in-time scope.
+                values.update({
+                    "freshness_evaluated_by_exchange_timestamp": True,
+                    "validated_quote_contracts": len(validated_this_session),
+                    "never_received_validated_quote_contracts": len(
+                        monitored - validated_this_session),
+                    "received_no_eligible_quote_contracts": len(
+                        validated_this_session - sampled),
+                    "eligible_quote_expired_at_end_contracts": len(
+                        sampled - fresh),
+                    "exchange_lagged_quote_callbacks": exchange_lagged_callbacks,
+                    "exchange_lagged_quote_contracts": len(
+                        exchange_lagged_this_session),
+                })
         return values
     finally:
         # Even a completed finite lease is now closed, not a live source for
