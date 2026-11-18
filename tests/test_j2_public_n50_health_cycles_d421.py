@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 import stat
 import subprocess
@@ -176,6 +177,82 @@ class PublicHealthProjectionD421Tests(unittest.TestCase):
         self.assertFalse(report["network_attempted"])
         self.assertFalse(report["health_file_written"])
         self.assertFalse(report["orders_sent"])
+
+
+@unittest.skipUnless(shutil.which("node"), "Node required for mobile JS renderer test")
+class MobileHealthImportD421Tests(unittest.TestCase):
+    def test_same_mobile_import_displays_finite_health_and_rejects_fraud(self):
+        js = r"""
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const ids = ["paper-ws-health-empty", "paper-ws-health-loaded",
+             "paper-ws-health-status", "paper-ws-health-rows"];
+const el = {};
+for (const key of ids) {
+  el[key] = {textContent:"", hidden:false, children:[],
+    replaceChildren(){this.children=[]},
+    append(x){this.children.push(x)}};
+}
+global.document = {
+  getElementById:key=>el[key]||null,
+  createElement:tag=>({tag,textContent:"",className:""})
+};
+const health = require("./web/app/paper-ws-health.js");
+const r = JSON.parse(fs.readFileSync(0, "utf8"));
+assert.equal(health.acceptsSchema(r.schema_version), true);
+assert.equal(health.acceptsSchema("j2-current-owner-n50-ws-probe-d406-v1"), true);
+assert.equal(health.acceptsSchema("j2-j4-current-n50-paper-lease-d410-v1"), true);
+assert.equal(health.acceptsSchema("not-a-contract"), false);
+assert.equal(health.validateReport(r), r);
+health.install(r);
+assert.equal(el["paper-ws-health-empty"].hidden, true);
+assert.equal(el["paper-ws-health-loaded"].hidden, false);
+assert.ok(el["paper-ws-health-status"].textContent.includes("frescor insuficiente"));
+const display = el["paper-ws-health-rows"].children.map(x=>x.textContent).join("\n");
+for(const phrase of [
+  "Cobertura observada: 50 de 50 contratos",
+  "Frescos no encerramento: 45 de 50 contratos",
+  "Antes elegíveis, agora expirados: 5",
+  "Estado das entradas: Não autorizadas",
+  "não é dado ao vivo", "não está conectado à VPS",
+  "Posições e saídas PAPER: Não avaliadas"
+]) assert.ok(display.includes(phrase), phrase);
+for(const secret of ["secret-account", "BTCUSDT", "aaaaaaaaaaaa", "mark_price"])
+  assert.ok(!display.includes(secret));
+function bad(change) {
+  const sample = structuredClone(r); change(sample);
+  assert.throws(()=>health.validateReport(sample), /inválido/);
+}
+bad(x=>x.orders_sent=true);
+bad(x=>x.signals_authorized=true);
+bad(x=>x.continuous_24x7_verified=true);
+bad(x=>x.source_authenticated=true);
+bad(x=>x.sampled_at_ms=0);
+bad(x=>x.fresh_at_sample_end=50);
+bad(x=>x.expired_at_sample_end=0);
+bad(x=>x.status="finite_sample_all_fresh_at_end");
+bad(x=>x.heartbeat_pongs=100);
+bad(x=>x.data_mode="private_account");
+bad(x=>x.owner_extra_field="secret-account");
+bad(x=>delete x.source_authenticated);
+console.log("D421_MOBILE_IMPORT_PASS");
+"""
+        report = project_public_health(source(), sampled_at_ms=NOW, cycle=1)
+        run = subprocess.run(
+            ["node", "-e", js], input=json.dumps(report), text=True,
+            cwd=ROOT, capture_output=True, timeout=20,
+        )
+        self.assertEqual(run.returncode, 0, run.stderr)
+        self.assertIn("D421_MOBILE_IMPORT_PASS", run.stdout)
+
+    def test_existing_file_import_route_needs_no_extra_network_or_bundles(self):
+        app = (ROOT / "web" / "app" / "app.js").read_text(encoding="utf-8")
+        display = (ROOT / "web" / "app" / "paper-ws-health.js").read_text(encoding="utf-8")
+        self.assertIn("globalThis.CIAPaperWSHealth.acceptsSchema(payload.schema_version)", app)
+        self.assertIn("j2-public-n50-finite-health-d421-v1", display)
+        for forbidden in ("innerHTML", "new WebSocket", "XMLHttpRequest",
+                          "localStorage.", "sessionStorage.", "eval(", "fetch("):
+            self.assertNotIn(forbidden, display)
 
 
 @unittest.skipUnless(os.name == "posix", "owner-only file privacy needs POSIX")
