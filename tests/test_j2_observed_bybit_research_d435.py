@@ -17,7 +17,7 @@ from crypto_intelligence_agent.synthetic_feature_engine import FeatureConfig
 from crypto_intelligence_agent.synthetic_position_state import SyntheticSide
 
 HOUR = 3_600_000
-FIRST = 1_793_000_400_000  # UTC hour grid
+FIRST = 1_792_998_000_000  # UTC hour grid
 JOURNAL_DIGEST = "a" * 64
 REGISTRY_DIGEST = "b" * 64
 CONFIG = CompressionBreakoutConfig(
