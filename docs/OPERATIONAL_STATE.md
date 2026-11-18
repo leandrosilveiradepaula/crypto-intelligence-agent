@@ -1,5 +1,9 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D434 — bridge J2 de closes confirmados, somente pesquisa
+
+Branch `codex/prospective-paper-vertical`: a ponte reutiliza `SQLiteOfflineClosedStreamJournal` e sua auditoria antes de expor 24 candles 1h Bybit confirmados a pesquisa. Teste integrado cobre persistência/replay do cache e comprova qualidade distinta de fixture, `approved_for_signals=false` e zero ordens. Ainda falta conectar kline WS finito injetado, cursor temporal prospectivo e os gates J2→RiskGate→AUTO2/AUTO4; não houve VPS, socket real, J1 owner ou ordem.
+
 ## D433 — D391 para D394 sem bloqueio de SQLite
 
 Na branch `codex/prospective-paper-operator`, a investigação com `faulthandler` armado não reproduziu travamento: D391 oficial completou em 0,47s e D394 em 0,59s. A integração opt-in percorre reservas AUTO4 já confirmadas após cada callback D391 e chama D394 sem lock do SQLite mantido pelo roteador. Regressão cobre reserva no primeiro tick, fill hipotético limitado pelo BBO somente em tick posterior (+200ms), e replay idêntico sem duplicação. Ainda não há serviço prospectivo, WSS real executado, VPS ou ordens.

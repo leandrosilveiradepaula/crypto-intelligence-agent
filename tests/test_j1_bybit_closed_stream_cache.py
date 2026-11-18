@@ -11,6 +11,7 @@ from pathlib import Path
 import sqlite3
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from crypto_intelligence_agent.bybit_closed_stream_cache import (
     HOUR_MS, OfflineReviewedStreamScope, SQLiteOfflineClosedStreamJournal,
@@ -155,6 +156,73 @@ class OfflineBybitClosedStreamTests(unittest.TestCase):
                 as_of_ms=DECISION+4000,
             ), a,
         )
+
+    def test_j2_readonly_boundary_preserves_public_unverified_quality(self):
+        from crypto_intelligence_agent.j2_bybit_closed_research_bridge import (
+            read_bybit_closed_research_series,
+        )
+        self.seed()
+        series = read_bybit_closed_research_series(
+            self.path, scope=self.scope, symbol="BTCUSDT",
+            decision_at_ms=DECISION, as_of_ms=DECISION + 4000,
+        )
+        self.assertEqual(len(series.candles), 24)
+        self.assertTrue(all(c.quality == "bybit_public_ws_confirmed_unverified"
+                            for c in series.candles))
+        self.assertFalse(series.approved_for_signals)
+        self.assertFalse(series.orders_sent)
+
+    def test_j2_research_rows_share_one_verified_audit_snapshot(self):
+        from crypto_intelligence_agent.j2_bybit_closed_research_bridge import (
+            read_bybit_closed_research_series,
+        )
+        self.seed()
+        original_audit = SQLiteOfflineClosedStreamJournal.audit
+
+        def mutate_after_audit(journal, **kwargs):
+            audited = original_audit(journal, **kwargs)
+            # Simulate another writer changing the DB AFTER audit returns,
+            # but before the bridge would have opened a second connection.
+            with closing(sqlite3.connect(self.path)) as db, db:
+                db.execute(
+                    "UPDATE confirmed SET payload='tampered',digest=? "
+                    "WHERE symbol='BTCUSDT' AND open_ms=?",
+                    ("0" * 64, self.first),
+                )
+            return audited
+
+        with patch.object(SQLiteOfflineClosedStreamJournal, "audit",
+                          autospec=True, side_effect=mutate_after_audit):
+            series = read_bybit_closed_research_series(
+                self.path, scope=self.scope, symbol="BTCUSDT",
+                decision_at_ms=DECISION, as_of_ms=DECISION + 4000,
+            )
+        self.assertEqual(len(series.candles), 24)
+        self.assertEqual(series.candles[0].open_time_ms, self.first)
+        self.assertFalse(series.approved_for_signals)
+        # The next read must detect the now-corrupted file; the first result
+        # was an internally consistent, frozen snapshot, not unaudited bytes.
+        with self.assertRaises(DataGapError):
+            read_bybit_closed_research_series(
+                self.path, scope=self.scope, symbol="BTCUSDT",
+                decision_at_ms=DECISION, as_of_ms=DECISION + 4000,
+            )
+
+    def test_j2_research_membership_and_asof_fail_closed(self):
+        from crypto_intelligence_agent.j2_bybit_closed_research_bridge import (
+            read_bybit_closed_research_series,
+        )
+        self.seed()
+        with self.assertRaises(DataValidationError):
+            read_bybit_closed_research_series(
+                self.path, scope=self.scope, symbol="DOGEUSDT",
+                decision_at_ms=DECISION, as_of_ms=DECISION + 4000,
+            )
+        with self.assertRaises(DataGapError):
+            read_bybit_closed_research_series(
+                self.path, scope=self.scope, symbol="BTCUSDT",
+                decision_at_ms=DECISION, as_of_ms=DECISION + 1000,
+            )
 
     def test_missing_candle_or_unreviewed_member_never_yields_partial_ranking(self):
         self.seed(("BTCUSDT",))

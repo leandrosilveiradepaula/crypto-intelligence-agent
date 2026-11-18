@@ -1,5 +1,9 @@
 # STATUS — Crypto Intelligence Agent
 
+## D434 — candles confirmados disponíveis para pesquisa J2 não autorizante
+
+O journal Bybit de closes confirmados agora tem uma fronteira tipada para pesquisa J2. É replay read-only, separado da J1 owner, com qualidade pública não autenticada e sem sinal/ordem. Esta entrega não é operador prospectivo completo nem valida dados live.
+
 ## D433 — fills PAPER automáticos sob hipótese explícita
 
 O caminho intrahorário D391 pode agora aplicar D394 de forma opt-in sobre intenções AUTO4 pendentes. Não representa fill Bybit: requer cotação causal posterior, latência configurada, BBO válido e liquidez limitada. O comportamento padrão continua abster-se; UNKNOWN e duplicatas permanecem bloqueados.

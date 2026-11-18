@@ -368,6 +368,11 @@ class OfflineStreamAudit:
     private_missing_hour_members: tuple[str, ...] = field(
         default_factory=tuple, repr=False, compare=False,
     )
+    # D434: exact validated bytes from the SAME immutable BEGIN snapshot.
+    # Never include these private candle rows in sanitized reports or repr.
+    private_j2_confirmed_rows: tuple[tuple[int, int, str, str], ...] = field(
+        default_factory=tuple, repr=False, compare=False,
+    )
 
     def sanitized_report(self) -> dict:
         result = {
@@ -548,6 +553,7 @@ class SQLiteOfflineClosedStreamJournal:
               decision_at_ms: int, as_of_ms: int,
               historical_scopes: tuple[OfflineReviewedStreamScope, ...] | None = None,
               hour_evidence_symbols: tuple[str, ...] | None = None,
+              research_symbol: str | None = None,
               ) -> OfflineStreamAudit:
         if (type(scope) is not OfflineReviewedStreamScope
                 or type(decision_at_ms) is not int
@@ -555,6 +561,13 @@ class SQLiteOfflineClosedStreamJournal:
                 or decision_at_ms % HOUR_MS
                 or not decision_at_ms + 1000 <= as_of_ms < decision_at_ms + HOUR_MS):
             raise DataValidationError("offline ranking requires closed UTC decision clock")
+        # J2 may request a private, audited research snapshot of one member.
+        # The rows must come from this exact audit transaction, not a new
+        # read-only connection opened after its digest has been calculated.
+        if research_symbol is not None:
+            if type(research_symbol) is not str:
+                raise DataValidationError("J2 research symbol must be explicit")
+            scope.member(research_symbol)
         # The optional N50 proof is a *selected* set of exactly 50 symbols
         # already present in this reviewed WS scope. Reject duplications and
         # wrong membership before reading private SQLite data.
@@ -735,6 +748,12 @@ class SQLiteOfflineClosedStreamJournal:
                     hour_evidence_confirmed=hour_confirmed,
                     hour_evidence_sha256=hour_digest,
                     private_missing_hour_members=hour_missing,
+                    private_j2_confirmed_rows=(
+                        tuple((open_ms, received_ms, raw, digest)
+                              for row_symbol, open_ms, received_ms, _, raw, digest in rows
+                              if row_symbol == research_symbol)
+                        if research_symbol is not None else ()
+                    ),
                 )
         except sqlite3.DatabaseError:
             raise DataGapError("offline journal read-only audit failed") from None
