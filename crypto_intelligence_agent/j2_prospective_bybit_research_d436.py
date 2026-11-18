@@ -165,9 +165,12 @@ def _validate_projection(value: object, *, now_ms: int) -> dict:
     if type(value) is not dict or set(value) != _projection_fields():
         raise DataValidationError("D436 projection keys invalid")
     if (value["schema_version"] != _PROJECTION_SCHEMA
+            or type(value["status"]) is not str
             or value["status"] not in _STATUSES
+            or type(value["source"]) is not str
             or value["source"] not in _SOURCES
             or value["data_quality"] != "bybit_public_ws_confirmed_unverified"
+            or type(value["failure_category"]) not in (str, type(None))
             or value["failure_category"] not in _FAILURES
             or type(value["network_attempted"]) is not bool
             or value["network_attempted"] is not (

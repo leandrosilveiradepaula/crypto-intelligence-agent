@@ -237,7 +237,10 @@ class D436OwnerProjectionTests(unittest.TestCase):
             for key, value in (("orders_sent", True),
                                ("auto4_called", True),
                                ("status", "trading_live"),
-                               ("network_attempted", True)):
+                               ("network_attempted", True),
+                               ("status", []),
+                               ("source", []),
+                               ("failure_category", [])):
                 with self.subTest(key=key):
                     mutated = dict(content, **{key:value})
                     target.write_text(json.dumps(mutated), encoding="ascii")
