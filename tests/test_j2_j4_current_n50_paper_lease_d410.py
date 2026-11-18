@@ -342,6 +342,49 @@ class J2J4CurrentN50PaperD410Tests(unittest.TestCase):
             )
         self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 0)
 
+    def test_global_paper_gate_requires_fresh_exchange_clock_not_receipt(self):
+        # A market quote can arrive less than one second ago but already
+        # have a 2.51s exchange lag; at the next decision it is over 3s
+        # old by the exchange clock. Never unlock another position's exit
+        # merely because the transport just delivered the older quote.
+        from crypto_intelligence_agent.bybit_public_ticker_optin_d390 import (
+            run_readonly_bybit_ticker_lease,
+        )
+        sock = Socket(self.clock, [
+            ack(), ticker("ALT00USDT", time_delta=-2_500),
+            ("delay", 1),
+            ticker("BTCUSDT", time_delta=1_000, bid="101"),
+        ])
+        result = run_readonly_bybit_ticker_lease(
+            ranked_symbols=("ALT00USDT",),
+            position_symbols=("BTCUSDT",),
+            universe_at_ms=HOUR_START_MS,
+            allow_public_websocket=True,
+            confirm_personal_readonly_research=True,
+            confirm_region_eligible=True,
+            measure_public_coverage=True,
+            require_complete_fresh_scope_for_paper=True,
+            paper_router=self.router,
+            budget=TickerLeaseBudget(
+                max_sessions=1, max_frames=20, max_seconds=5,
+            ),
+            session_factory=lambda: sock,
+            clock=self.clock.mono, wall_ms=self.clock.wall,
+            sleeper=self.clock.sleep,
+        )
+        self.assertEqual(result["status"], "lease_completed")
+        self.assertEqual(result["unique_distinct_contracts_observed"], 2)
+        self.assertEqual(
+            result["paper_coverage_gate"]["quote_frames_delivered_to_paper"], 0,
+        )
+        self.assertGreaterEqual(
+            result["paper_coverage_gate"]["quote_frames_deferred"], 2,
+        )
+        self.assertEqual(len(self.store.load(POSITION_ID).exit_orders), 0)
+        self.assertFalse(result["finite_coverage_fresh_at_end"])
+        self.assertFalse(result["orders_sent"])
+        self.assertTrue(sock.closed)
+
     def test_d390_default_paper_behavior_kept_for_legacy_callers(self):
         from crypto_intelligence_agent.bybit_public_ticker_optin_d390 import (
             run_readonly_bybit_ticker_lease,
