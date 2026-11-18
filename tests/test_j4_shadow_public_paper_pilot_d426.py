@@ -39,7 +39,9 @@ def frame(*, bid="100", ask="100.02", mark="100", seq=1, delta=0):
 
 class ShadowPAPERPublicD426Tests(unittest.TestCase):
     def policy(self, *, side=SyntheticSide.LONG, **kw):
-        return ShadowPaperPolicy(symbol=_SYMBOL, side=side, **kw)
+        options = {"symbol": _SYMBOL, "side": side}
+        options.update(kw)
+        return ShadowPaperPolicy(**options)
 
     def run_once(self, frames, *, policy=None, gate=True):
         clock = Clock()
