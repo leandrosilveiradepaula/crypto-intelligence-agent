@@ -17,6 +17,35 @@ class D436Tests(unittest.TestCase):
         self.assertEqual(result["status"], "explicit_public_research_optin_required")
         self.assertFalse(result["network_attempted"])
         self.assertIsNone(update)
+    def test_real_public_transport_refuses_fake_owner_and_clock(self):
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from unittest.mock import patch
+        import crypto_intelligence_agent.j2_prospective_bybit_research_d436 as module
+        from scripts.demo_j2_prospective_bybit_research_d436 import _scope, CONFIG
+        from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
+        flags = {
+            "allow_public_network": True, "allow_public_websocket": True,
+            "confirm_personal_readonly_research": True,
+            "confirm_region_eligible": True,
+        }
+        with TemporaryDirectory() as root:
+            args = dict(journal_path=Path(root) / "never-created.sqlite",
+                        scope=_scope(), symbol="BTCUSDT", config=CONFIG,
+                        budget=WSRunBudget(1, 2, 1), **flags)
+            for injected in ({"owner_check": lambda: True},
+                             {"wall_ms": lambda: 1_792_998_000_000}):
+                with self.subTest(hooks=tuple(injected)):
+                    result, update = module.run_authorized_public_kline_session(**args, **injected)
+                    self.assertEqual(result["status"], "public_test_hooks_forbidden")
+                    self.assertFalse(result["network_attempted"])
+                    self.assertIsNone(update)
+            with patch.object(module.os, "geteuid", return_value=0, create=True):
+                result, update = module.run_authorized_public_kline_session(**args)
+                self.assertEqual(result["status"], "unprivileged_owner_required")
+                self.assertFalse(result["network_attempted"])
+                self.assertIsNone(update)
+
     def test_gated_injected_socket_stays_offline_even_with_all_flags_true(self):
         import json
         from pathlib import Path
