@@ -61,11 +61,15 @@ class D437CommandTests(TestCase):
                     self.assertEqual(result["status"], "explicit_public_research_optin_required")
                     self.assertFalse(result["network_attempted"])
 
-    def test_root_owner_always_blocked(self):
+    def test_unsupported_platform_or_root_owner_always_blocked(self):
         with tempfile.TemporaryDirectory() as root:
-            with patch("scripts.run_j2_public_kline_session_d437_once.os.geteuid", return_value=0):
-                result = run_once(_args(Path(root), **{k: True for k in _OPTINS}))
-            self.assertEqual(result["status"], "unprivileged_owner_required")
+            args = _args(Path(root), **{k: True for k in _OPTINS})
+            if os.name != "posix":
+                # Windows has no os.geteuid; the platform gate must stop first.
+                self.assertEqual(run_once(args)["status"], "unprivileged_owner_required")
+            else:
+                with patch("scripts.run_j2_public_kline_session_d437_once.os.geteuid", return_value=0):
+                    self.assertEqual(run_once(args)["status"], "unprivileged_owner_required")
 
     def test_manifest_rejects_future_expired_and_duplicate(self):
         old = _manifest(1_792_998_000_000)
