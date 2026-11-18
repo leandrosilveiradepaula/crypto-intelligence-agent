@@ -184,7 +184,7 @@ class D436SupervisedSessionTests(unittest.TestCase):
             ), clock)
             self.assertEqual(report.closed_events_appended, 1)
             self.assertEqual(latest.status, "observed_data_insufficient")
-            self.assertFalse(latest.approved_for_signals)
+            self.assertFalse(latest.sanitized_report()["approved_for_signals"])
 
     def test_bad_ack_and_conflicting_duplicate_fail_closed(self):
         with TemporaryDirectory() as root:
