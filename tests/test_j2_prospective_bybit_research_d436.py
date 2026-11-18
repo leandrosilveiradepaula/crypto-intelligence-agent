@@ -3,6 +3,20 @@ import unittest
 from scripts.demo_j2_prospective_bybit_research_d436 import run
 
 class D436Tests(unittest.TestCase):
+    def test_public_launcher_requires_all_gates_before_transport(self):
+        from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import run_authorized_public_kline_session
+        from scripts.demo_j2_prospective_bybit_research_d436 import _scope, CONFIG
+        from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
+        from tempfile import TemporaryDirectory
+        from pathlib import Path
+        with TemporaryDirectory() as root:
+            result, update = run_authorized_public_kline_session(
+                journal_path=Path(root) / "never.sqlite", scope=_scope(), symbol="BTCUSDT",
+                config=CONFIG, budget=WSRunBudget(max_seconds=1, max_frames=1),
+                session_factory=lambda: (_ for _ in ()).throw(AssertionError("network")))
+        self.assertEqual(result["status"], "explicit_public_research_optin_required")
+        self.assertFalse(result["network_attempted"])
+        self.assertIsNone(update)
     def test_replay_is_end_to_end_and_never_calls_financial_paths(self):
         first, restarted = run(), run()
         self.assertEqual(first, restarted)

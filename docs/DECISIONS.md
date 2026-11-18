@@ -1,4 +1,8 @@
 # Decisões do produto
+
+## D437 — sessão pública Bybit finita somente sob opt-in de pesquisa (18/11/2026)
+
+`run_authorized_public_kline_session` reusa o supervisor D436 para uma única sessão Bybit V5 linear de `kline.60`, limitada por orçamento e isolada do SQLite J1. Quatro booleans explícitos — rede pública, WebSocket público, pesquisa pessoal read-only e elegibilidade regional — e owner não-root POSIX são necessários antes de construir o transporte real. Socket injetado nunca pode afirmar observação pública: continua `offline_protocol_replay`; apenas a factory pública lazy é rotulada `public_ws_observed_unverified`. Falta de 24 closes mantém abstenção; não há bootstrap REST nesta decisão, credencial, ordem, PAPER, serviço ou deploy.
 ## D436 — projeção temporal do operador de pesquisa, não trading (18/11/2026)
 
 Decisão de contrato: dados confirmados `kline.60` sob ACK do supervisor alimentam D434/D435 somente após append no journal de pesquisa separado. Sessão injetável declara `offline_protocol_replay` por padrão; `public_ws_observed_unverified` exige opt-in explícito e não prova autenticidade comercial. O relatório J5 `j2-prospective-bybit-research-d436-v2` tem fonte/timestamps, estado `observed_session_ended`, TTL owner-only 0700/0600 e leitura no loopback com `O_NOFOLLOW`. UI distingue hipóteses *não autorizadas*, ausência de hipótese, abstenção, sessão encerrada e indisponibilidade. Nenhuma pesquisa D436 autoriza RiskGate/AUTO2/AUTO4, ordem real, PnL ou modificação na J1/VPS.

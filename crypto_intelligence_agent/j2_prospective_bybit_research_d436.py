@@ -374,3 +374,46 @@ def supervise_prospective_research(
     if projection_directory is not None:
         publish_projection(projection_directory, terminal)
     return report, (last if last is not None else None)
+
+
+def run_authorized_public_kline_session(
+    *, journal_path: str | Path, scope: OfflineReviewedStreamScope, symbol: str,
+    config: CompressionBreakoutConfig, budget: WSRunBudget,
+    allow_public_network: bool = False, allow_public_websocket: bool = False,
+    confirm_personal_readonly_research: bool = False,
+    confirm_region_eligible: bool = False, projection_directory: Path | None = None,
+    session_factory=None, owner_check=None, **clock_args,
+):
+    """Open one bounded Bybit public session only after four explicit gates.
+
+    An injected transport is always labelled offline protocol replay.  Only the
+    lazy approved Bybit transport can label a session public-observed; neither
+    outcome authenticates the source or authorizes a signal/order.
+    """
+    flags = (allow_public_network, allow_public_websocket,
+             confirm_personal_readonly_research, confirm_region_eligible)
+    if any(type(x) is not bool for x in flags):
+        raise DataValidationError("D436 public opt-in flags invalid")
+    if not all(flags):
+        return {"status": "explicit_public_research_optin_required",
+                "network_attempted": False, "orders_sent": False}, None
+    if owner_check is None:
+        owner_check = lambda: os.name == "posix" and os.geteuid() != 0
+    if not callable(owner_check) or not owner_check():
+        return {"status": "unprivileged_owner_required", "network_attempted": False,
+                "orders_sent": False}, None
+    real_transport = session_factory is None
+    if real_transport:
+        from .bybit_public_ws_once import ENDPOINT, _real_session_factory
+        if ENDPOINT != "wss://stream.bybit.com/v5/public/linear":
+            raise DataValidationError("D436 Bybit endpoint changed")
+        session_factory = _real_session_factory
+    report, update = supervise_prospective_research(
+        session_factory=session_factory, journal_path=journal_path, scope=scope,
+        symbol=symbol, config=config, budget=budget,
+        projection_directory=projection_directory,
+        data_mode=("public_ws_observed_unverified" if real_transport
+                   else "offline_protocol_replay"),
+        public_session_opted_in=real_transport, **clock_args,
+    )
+    return report, update
