@@ -56,6 +56,114 @@
     "position_contracts_derived_from_existing_auto4_router",
     "positions_outside_n50_subscribed"
   ];
+  // D417 accepts the exact D406 count-only research sample in the SAME
+  // import UI, without pretending it is a D410 PAPER-position report.
+  const PUBLIC = [
+    "approved_for_live_use", "approved_for_signals",
+    "continuous_24x7_verified", "crypto_identity_independently_verified",
+    "data_mode", "elapsed_seconds", "eligible_quote_expired_at_end_contracts",
+    "exchange_lagged_quote_callbacks", "exchange_lagged_quote_contracts",
+    "failure_category", "finite_coverage_fresh_at_end",
+    "finite_coverage_observed_once", "frames_seen", "fresh_contracts_at_end",
+    "freshness_evaluated_by_exchange_timestamp", "market_frames_accepted",
+    "marketwide_top50_verified", "metadata_sha256", "network_attempted",
+    "never_received_validated_quote_contracts", "no_service_installed",
+    "orders_sent", "owner_scope_members", "p95_event_lag_bucket",
+    "p99_event_lag_bucket", "paper_position_state_changed", "ping_frames",
+    "pong_frames", "position_input_count", "preack_frames_bootstrapped_after_ack",
+    "preack_frames_discarded", "private_state_modified", "private_state_read",
+    "quotes_persisted", "ranked_input_count", "ranked_scope_sha256",
+    "real_market_frames_verified", "received_distinct_contracts",
+    "received_no_eligible_quote_contracts", "received_position_input_count",
+    "received_ranked_input_count", "reconnects", "requested_contracts",
+    "schema_version", "scope_independently_verified", "scope_source",
+    "sessions_attempted", "status", "subscription_acks",
+    "validated_quote_contracts"
+  ];
+  const PUBLIC_COUNTS = [
+    "eligible_quote_expired_at_end_contracts",
+    "exchange_lagged_quote_callbacks", "exchange_lagged_quote_contracts",
+    "frames_seen", "fresh_contracts_at_end", "market_frames_accepted",
+    "never_received_validated_quote_contracts", "owner_scope_members",
+    "ping_frames", "pong_frames", "position_input_count",
+    "preack_frames_bootstrapped_after_ack", "preack_frames_discarded",
+    "ranked_input_count", "received_distinct_contracts",
+    "received_no_eligible_quote_contracts", "received_position_input_count",
+    "received_ranked_input_count", "reconnects", "requested_contracts",
+    "sessions_attempted", "subscription_acks", "validated_quote_contracts"
+  ];
+  function validatePublicProbe(r) {
+    exact(r, PUBLIC);
+    valid(r.schema_version === "j2-current-owner-n50-ws-probe-d406-v1" &&
+      ["lease_completed", "lease_abstained",
+       "public_market_frames_not_verified"].includes(r.status));
+    valid(["real_public_websocket", "injected_offline_fixture"].includes(r.data_mode));
+    valid(r.scope_source === "owner_j1_revalidated_provisional_n50_not_marketwide");
+    allFalse(r, [
+      "approved_for_live_use", "approved_for_signals",
+      "continuous_24x7_verified", "crypto_identity_independently_verified",
+      "marketwide_top50_verified", "paper_position_state_changed",
+      "private_state_modified", "quotes_persisted", "orders_sent",
+      "scope_independently_verified"
+    ]);
+    valid(r.freshness_evaluated_by_exchange_timestamp === true &&
+      r.no_service_installed === true && r.private_state_read === true);
+    for (const key of [
+      "finite_coverage_fresh_at_end", "finite_coverage_observed_once",
+      "network_attempted", "real_market_frames_verified"
+    ]) valid(typeof r[key] === "boolean");
+    for (const key of PUBLIC_COUNTS) count(r[key], 5000000);
+    valid(Number.isFinite(r.elapsed_seconds) &&
+      r.elapsed_seconds >= 0 && r.elapsed_seconds <= 80);
+    valid(/^[0-9a-f]{64}$/.test(r.ranked_scope_sha256) &&
+      /^[0-9a-f]{64}$/.test(r.metadata_sha256));
+    const buckets = [null, "0_to_100ms", "101_to_1000ms",
+      "1001_to_5000ms", "over_5000ms"];
+    valid(buckets.includes(r.p95_event_lag_bucket) &&
+      buckets.includes(r.p99_event_lag_bucket));
+    valid(r.failure_category === null ||
+      (typeof r.failure_category === "string" &&
+       /^[a-z_]{1,80}$/.test(r.failure_category)));
+    valid(r.owner_scope_members === 50 && r.ranked_input_count === 50 &&
+      r.requested_contracts >= 50 && r.requested_contracts <= 100 &&
+      r.position_input_count <= 100 &&
+      r.received_position_input_count <= r.position_input_count &&
+      r.received_ranked_input_count <= 50 &&
+      r.received_distinct_contracts <= r.requested_contracts &&
+      r.validated_quote_contracts <= r.requested_contracts &&
+      r.market_frames_accepted <= r.frames_seen &&
+      r.exchange_lagged_quote_callbacks <= r.market_frames_accepted &&
+      r.exchange_lagged_quote_contracts <= r.validated_quote_contracts &&
+      r.preack_frames_bootstrapped_after_ack <= r.preack_frames_discarded &&
+      r.subscription_acks <= r.sessions_attempted &&
+      r.reconnects <= r.sessions_attempted);
+    valid(r.never_received_validated_quote_contracts +
+      r.received_no_eligible_quote_contracts +
+      r.eligible_quote_expired_at_end_contracts +
+      r.fresh_contracts_at_end === r.requested_contracts);
+    valid(r.validated_quote_contracts ===
+      r.requested_contracts - r.never_received_validated_quote_contracts);
+    valid(r.received_distinct_contracts ===
+      r.eligible_quote_expired_at_end_contracts + r.fresh_contracts_at_end);
+    if (r.subscription_acks === 0) {
+      valid(r.preack_frames_bootstrapped_after_ack === 0);
+    }
+    if (r.finite_coverage_observed_once) {
+      valid(r.status === "lease_completed" &&
+        r.received_distinct_contracts === r.requested_contracts &&
+        r.subscription_acks >= 1);
+    }
+    if (r.finite_coverage_fresh_at_end) {
+      valid(r.finite_coverage_observed_once &&
+        r.fresh_contracts_at_end === r.requested_contracts);
+    }
+    if (r.status === "lease_completed") valid(r.failure_category === null);
+    valid(r.network_attempted === (r.data_mode === "real_public_websocket"));
+    valid(r.real_market_frames_verified ===
+      (r.network_attempted && r.subscription_acks >= 1 &&
+       r.market_frames_accepted > 0));
+    return r;
+  }
   let current = null;
   function valid(check) {
     if (!check) throw new Error("Diagnóstico WS/PAPER inválido ou sem origem verificável");
@@ -79,7 +187,16 @@
       count(n);
     }
   }
+  function acceptsSchema(version) {
+    return version === "j2-j4-current-n50-paper-lease-d410-v1" ||
+      version === "j2-current-owner-n50-ws-probe-d406-v1";
+  }
   function validateReport(report) {
+    if (report !== null && typeof report === "object" &&
+        !Array.isArray(report) &&
+        report.schema_version === "j2-current-owner-n50-ws-probe-d406-v1") {
+      return validatePublicProbe(report);
+    }
     // Keep earlier, already-importable D410 reports readable. Only the
     // newer D414 producer includes count-only post-ACK bootstrap evidence.
     const hasBootstrap = report !== null && typeof report === "object" &&
@@ -224,13 +341,42 @@
     }
     const r = current;
     const isFixture = r.data_mode === "injected_offline_fixture";
+    const add = (label, value) => rows.append(span(
+      "p", label + ": " + value, "muted fine"
+    ));
+    if (r.schema_version === "j2-current-owner-n50-ws-probe-d406-v1") {
+      const full = r.finite_coverage_fresh_at_end;
+      tag.textContent = full ? "Amostra N50 completa (finita)" :
+        "Amostra N50 com frescor incompleto";
+      add("Origem do arquivo", isFixture ?
+        "Dados sintéticos de testes offline" :
+        "Declara sessão pública Bybit; origem do arquivo não autenticada");
+      add("Cobertura observada", r.received_distinct_contracts +
+        " de " + r.requested_contracts + " contratos");
+      add("Preços recentes no encerramento", r.fresh_contracts_at_end +
+        " de " + r.requested_contracts + " contratos");
+      add("Antes elegíveis, agora expirados",
+        r.eligible_quote_expired_at_end_contracts);
+      add("Contratos sem cotação validada pós-ACK",
+        r.never_received_validated_quote_contracts);
+      add("Recebidos sem cotação elegível",
+        r.received_no_eligible_quote_contracts);
+      add("Callbacks com atraso da exchange superior a 3 s",
+        r.exchange_lagged_quote_callbacks);
+      add("Reconexões", r.reconnects);
+      add("Estado do universo", full ?
+        "Apenas completo nesta amostra finita; entradas não autorizadas" :
+        "Incompleto ao término; não liberar entradas");
+      add("Posições e stops PAPER",
+        "Não avaliados por este relatório de mercado público");
+      rows.append(span("strong",
+        "Arquivo estático de pesquisa. O celular não está conectado à VPS nem à Bybit."));
+      return;
+    }
     const degraded = !r.finite_coverage_fresh_at_end ||
       !r.owner_scope_unchanged_after_lease ||
       r.underlying_ws_status !== "lease_completed";
     tag.textContent = degraded ? "Amostra degradada" : "Amostra finita encerrada";
-    const add = (label, value) => rows.append(span(
-      "p", label + ": " + value, "muted fine"
-    ));
     add("Origem do arquivo", isFixture ?
       "Dados sintéticos de testes offline" :
       "Declara sessão pública Bybit; não autenticado externamente");
@@ -265,7 +411,7 @@
     current = validateReport(data);
     render();
   }
-  global.CIAPaperWSHealth = Object.freeze({ validateReport, install });
+  global.CIAPaperWSHealth = Object.freeze({ validateReport, acceptsSchema, install });
   if (typeof module === "object" && module && module.exports) {
     module.exports = global.CIAPaperWSHealth;
   }

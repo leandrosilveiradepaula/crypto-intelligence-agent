@@ -294,10 +294,10 @@
         </div>
         <div class="panel" aria-labelledby="paper-ws-health-title">
           <div class="panel-heading">
-            <h3 id="paper-ws-health-title">Saúde do feed e das saídas PAPER</h3>
+            <h3 id="paper-ws-health-title">Saúde do N50 e das saídas PAPER</h3>
             <span class="status-label" id="paper-ws-health-status">Sem relatório WebSocket</span>
           </div>
-          <p class="muted fine">Importe pelo mesmo seletor JSON um relatório de sessão J2/J4. A saúde geral do Top 50 e as avaliações das posições são mostradas separadamente.</p>
+          <p class="muted fine">Importe pelo mesmo seletor JSON uma amostra pública N50 da Bybit (J2/D406) ou um relatório separado de saídas PAPER (J2/J4). Dados do mercado não comprovam monitoramento de posições.</p>
           <div id="paper-ws-health-empty" class="empty">
             <strong>Monitor de mercado sem evidências importadas</strong>
             <p>Não existe ligação ao WebSocket nem atualização automática nesta página.</p>
@@ -359,7 +359,7 @@
             <label class="file-drop" for="import-file">
               <span aria-hidden="true" class="upload-icon">↓</span>
               <strong>Selecionar arquivo JSON local</strong>
-              <span>Relatórios N50/J2/J3, saúde WS/PAPER, diário PAPER ou backup</span>
+              <span>Relatórios N50/J2/J3, cotação pública Bybit, saúde WS/PAPER, diário PAPER ou backup</span>
               <input type="file" id="import-file" accept=".json,application/json">
             </label>
             <p class="muted fine">O arquivo é lido somente no navegador (até 1 MiB), sem upload. Relatórios N50/J2/J3 e risco D398 não persistem. A restauração de backup PAPER substitui cenários locais somente após sua confirmação.</p>
