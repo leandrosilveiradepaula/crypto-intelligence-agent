@@ -227,6 +227,12 @@
   let current = null;
   let origin = "none"; // local-auto | manual | none
   let refreshInFlight = false;
+  // D424: count-only history in memory for THIS tab only, not an uptime proof.
+  const localHistory = [];
+  const MAX_LOCAL_HISTORY = 24;
+  let lastLocalSampleMs = null;
+  let lastLocalPayload = null;
+  let localUnavailable = false;
   function valid(check) {
     if (!check) throw new Error("Diagnóstico WS/PAPER inválido ou sem origem verificável");
   }
@@ -393,6 +399,41 @@
     el.textContent = String(message);
     return el;
   }
+  function renderLocalHistory() {
+    if (typeof document === "undefined") return;
+    const container = document.getElementById("paper-ws-history-box");
+    const summary = document.getElementById("paper-ws-history-summary");
+    const rows = document.getElementById("paper-ws-history-rows");
+    if (!container || !summary || !rows) return;
+    container.hidden = localHistory.length === 0 || origin === "manual";
+    rows.replaceChildren();
+    if (container.hidden) {
+      summary.textContent = "";
+      return;
+    }
+    const fresh = localHistory.map(item => item.fresh);
+    const lowest = Math.min(...fresh);
+    const highest = Math.max(...fresh);
+    let gaps = 0;
+    for (let i = 1; i < localHistory.length; i++) {
+      if (localHistory[i].sampledAtMs - localHistory[i - 1].sampledAtMs > 180000)
+        gaps++;
+    }
+    summary.textContent = localHistory.length +
+      " amostras recebidas nesta aba; frescor ao fim: " + lowest +
+      "–" + highest + " contratos; intervalos acima de 3 min: " + gaps +
+      (localUnavailable ? ". Leitura atual indisponível." : ".") +
+      " Não comprova feed contínuo nem libera entradas.";
+    for (const item of localHistory) {
+      const label = new Date(item.sampledAtMs).toISOString()
+        .slice(0, 16).replace("T", " ") + " UTC — " +
+        item.fresh + "/" + item.requested + " frescos; " +
+        item.expired + " expirados";
+      rows.append(span("li", label, item.fresh === item.requested ?
+        "health-history-item health-history-full" :
+        "health-history-item health-history-degraded"));
+    }
+  }
   function render() {
     if (typeof document === "undefined") return;
     const empty = document.getElementById("paper-ws-health-empty");
@@ -513,6 +554,7 @@
     current = accepted;
     origin = "manual";
     render();
+    renderLocalHistory();
   }
   function hasManualPriority() { return origin === "manual"; }
   function installLocal(data) {
@@ -523,15 +565,37 @@
     const age = Date.now() - accepted.sampled_at_ms;
     valid(Number.isFinite(age) && age >= 0 && age <= 180000);
     if (hasManualPriority()) return;
+    // A server restart, replay or bad clock must not regress the displayed
+    // timeline, even when the old report is still inside the 180s TTL.
+    const payload = JSON.stringify(accepted);
+    valid(lastLocalSampleMs === null ||
+      accepted.sampled_at_ms > lastLocalSampleMs ||
+      (accepted.sampled_at_ms === lastLocalSampleMs &&
+       payload === lastLocalPayload));
+    if (accepted.sampled_at_ms !== lastLocalSampleMs) {
+      localHistory.push({
+        sampledAtMs: accepted.sampled_at_ms,
+        requested: accepted.requested_contracts,
+        fresh: accepted.fresh_at_sample_end,
+        expired: accepted.expired_at_sample_end
+      });
+      if (localHistory.length > MAX_LOCAL_HISTORY) localHistory.shift();
+    }
+    lastLocalSampleMs = accepted.sampled_at_ms;
+    lastLocalPayload = payload;
+    localUnavailable = false;
     current = accepted;
     origin = "local-auto";
     render();
+    renderLocalHistory();
   }
   function clearLocal() {
     if (hasManualPriority()) return;
     current = null;
     origin = "none";
+    localUnavailable = true;
     render();
+    renderLocalHistory();
     if (typeof document !== "undefined") {
       const tag = document.getElementById("paper-ws-health-status");
       if (tag) tag.textContent = "Saúde local indisponível";
