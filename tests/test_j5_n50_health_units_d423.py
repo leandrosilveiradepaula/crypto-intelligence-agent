@@ -60,8 +60,8 @@ class HealthSchedulerD423Tests(unittest.TestCase):
         self.assertIn("--allow-local-health-write", s["ExecStart"])
         self.assertIn("--state-directory /home/cia-probe/agent/j1-n50-ws-epochs/active", s["ExecStart"])
         self.assertIn("observe_j2_public_n50_health_cycles_d421", s["ExecStart"])
-        self.assertIn("j5-health-release", s["WorkingDirectory"])
-        self.assertLessEqual(int(s["TimeoutStartSec"]), 150)
+        self.assertEqual(s["WorkingDirectory"], "/opt/crypto-intelligence-agent/releases/d423")
+        self.assertLessEqual(int(s["TimeoutStartSec"]), 115)
         self.assertLessEqual(int(s["MemoryMax"].removesuffix("M")), 512)
         self.assertLessEqual(int(s["CPUQuota"].removesuffix("%")), 30)
         self.assertNotIn("Install", data)
@@ -76,9 +76,9 @@ class HealthSchedulerD423Tests(unittest.TestCase):
         data = unit(TIMER)
         self.assertEqual(set(data), {"Unit", "Timer", "Install"})
         t = data["Timer"]
-        self.assertEqual(t["OnBootSec"], "2min")
-        self.assertEqual(t["OnUnitInactiveSec"], "45s")
-        self.assertEqual(t["OnCalendar"], "*-*-* *:0/5:30 UTC")
+        self.assertNotIn("OnBootSec", t)
+        self.assertNotIn("OnUnitInactiveSec", t)
+        self.assertEqual(t["OnCalendar"], "*-*-* *:03..55/2:30 UTC")
         self.assertEqual(t["Unit"], "cia-j2-n50-health.service")
         self.assertEqual(t["Persistent"], "false")
         self.assertEqual(data["Install"]["WantedBy"], "timers.target")
@@ -91,6 +91,7 @@ class HealthSchedulerD423Tests(unittest.TestCase):
         s = data["Service"]
         self.assertEqual(s["Type"], "simple")
         self.assertEqual(s["User"], "cia-probe")
+        self.assertEqual(s["WorkingDirectory"], "/opt/crypto-intelligence-agent/releases/d423")
         self.assertEqual(s["ReadOnlyPaths"],
                          "/home/cia-probe/agent/j5-n50-health-private")
         self.assertEqual(s["ProtectSystem"], "strict")

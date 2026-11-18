@@ -9,7 +9,7 @@ After=network-online.target
 Type=simple
 User=cia-probe
 Group=cia-probe
-WorkingDirectory=/home/cia-probe/agent/j5-health-release
+WorkingDirectory=/opt/crypto-intelligence-agent/releases/d423
 UMask=0077
 Environment=PYTHONDONTWRITEBYTECODE=1
 ExecStart=/home/cia-probe/agent/ws-venv/bin/python -m scripts.serve_j5_local_readonly --allow-loopback-readonly-http --allow-private-health-loopback --private-health-directory /home/cia-probe/agent/j5-n50-health-private

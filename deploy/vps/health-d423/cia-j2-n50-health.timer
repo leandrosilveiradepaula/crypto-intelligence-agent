@@ -1,13 +1,11 @@
 # D423 RELEASE CANDIDATE ONLY. Never enable as part of a code merge.
-# OnUnitInactiveSec avoids self-overlap; calendar retry recovers failed units.
+# J1 owns XX:59:30 pre-close; no health jobs 57-03 UTC. Calendar-only.
 [Unit]
 Description=CIA research - periodic bounded public N50 health checks (no orders)
 
 [Timer]
-OnBootSec=2min
-OnUnitInactiveSec=45s
-OnCalendar=*-*-* *:0/5:30 UTC
-AccuracySec=20s
+OnCalendar=*-*-* *:03..55/2:30 UTC
+AccuracySec=10s
 RandomizedDelaySec=0
 Persistent=false
 Unit=cia-j2-n50-health.service

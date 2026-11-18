@@ -11,13 +11,14 @@ StartLimitBurst=5
 Type=oneshot
 User=cia-probe
 Group=cia-probe
-WorkingDirectory=/home/cia-probe/agent/j5-health-release
+WorkingDirectory=/opt/crypto-intelligence-agent/releases/d423
 UMask=0077
 Environment=PYTHONDONTWRITEBYTECODE=1
 ExecStart=/home/cia-probe/agent/ws-venv/bin/python -m scripts.observe_j2_public_n50_health_cycles_d421 --state-directory /home/cia-probe/agent/j1-n50-ws-epochs/active --output-directory /home/cia-probe/agent/j5-n50-health-private --cycles 1 --seconds 60 --allow-private-pointer-read --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible --allow-local-health-write
-TimeoutStartSec=150
+TimeoutStartSec=115
 SuccessExitStatus=2
 Restart=no
+TimeoutStopSec=10
 Nice=10
 IOSchedulingClass=idle
 CPUQuota=30%
