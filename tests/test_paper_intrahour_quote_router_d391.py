@@ -20,6 +20,7 @@ from crypto_intelligence_agent.paper_intrahour_target_step_d387 import PaperIntr
 from crypto_intelligence_agent.paper_intrahour_quote_router_d391 import (
     PaperQuoteRoute, PaperIntrahourQuoteRouter,
 )
+from crypto_intelligence_agent.paper_causal_fill_d394 import PaperObservedFillAssumptions
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
 from crypto_intelligence_agent.synthetic_order_lifecycle import (
     PaperOrderIntent, PaperOrderEvent, PaperOrderEventKind,
@@ -118,6 +119,79 @@ class RouterD391Tests(unittest.TestCase):
         self.assertEqual(len(self.store.load(self.position_id).exit_orders),1)
         self.assertEqual(self.router.sanitized_report()["exact_duplicates_skipped"],1)
         self.assertEqual(a.decision,PaperIntrahourDecision.TARGET_RESERVED)
+
+    def test_opt_in_fill_waits_for_later_quote_and_never_retries_unknown(self):
+        router = PaperIntrahourQuoteRouter(
+            position_path=self.path, routes=(self.route,),
+            fill_assumptions=PaperObservedFillAssumptions(
+                min_quote_after_intent_ms=150,
+                max_top_level_participation_bps=D(10000),
+            ), enable_synthetic_ledger_fills=True,
+        )
+        first = router.process(tick(T + 12 * MIN, seq=1, bid="101"))
+        self.assertEqual(first.decision, PaperIntrahourDecision.TARGET_RESERVED)
+        # The quote that created the reservation is never a fill witness.
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(0))
+        later = router.process(tick(T + 12 * MIN + 200, seq=2, bid="101"))
+        self.assertEqual(later.decision, PaperIntrahourDecision.TARGET_PENDING)
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(2))
+        # A byte-identical replay cannot append a second assumed fill.
+        self.assertIsNone(router.process(tick(T + 12 * MIN + 200, seq=2, bid="101")))
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(2))
+
+    def test_default_and_optin_keep_existing_d391_health_report_contract(self):
+        # D412's strict mobile reader consumes exactly the legacy D391 fields.
+        # A simulated FILL must not silently mutate the D391 report schema v1.
+        normal = self.router.sanitized_report()
+        self.assertEqual(normal["schema_version"], "paper-intrahour-quote-router-d391-v1")
+        expected = {
+            "schema_version", "status", "configured_positions", "events_seen",
+            "exact_duplicates_skipped", "other_symbols_ignored",
+            "decision_counts", "runner_decision_counts", "feed_authenticated",
+            "marketwide_top50_verified", "native_stop_verified",
+            "order_submission_enabled", "orders_sent", "approved_for_live_use",
+        }
+        self.assertEqual(set(normal), expected)
+        opted_in = PaperIntrahourQuoteRouter(
+            position_path=self.path, routes=(self.route,),
+            fill_assumptions=PaperObservedFillAssumptions(
+                min_quote_after_intent_ms=150,
+                max_top_level_participation_bps=D(10000),
+            ), enable_synthetic_ledger_fills=True,
+        )
+        t = T + 12 * MIN
+        opted_in.process(tick(t, seq=1, bid="101"))
+        opted_in.process(tick(t + 200, seq=2, bid="101"))
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(2))
+        report = opted_in.sanitized_report()
+        self.assertEqual(set(report), expected)
+        self.assertFalse(report["orders_sent"])
+
+    def test_router_optin_unknown_remains_unresolved_and_never_assumes_fill(self):
+        router = PaperIntrahourQuoteRouter(
+            position_path=self.path, routes=(self.route,),
+            fill_assumptions=PaperObservedFillAssumptions(
+                min_quote_after_intent_ms=150,
+                max_top_level_participation_bps=D(10000),
+            ), enable_synthetic_ledger_fills=True,
+        )
+        t = T + 12 * MIN
+        reserved = router.process(tick(t, seq=1, bid="101"))
+        self.store.append_exit_events(
+            self.position_id, reserved.created_intent_id,
+            (PaperOrderEvent(
+                "fixture_d433_unknown_exit", PaperOrderEventKind.UNKNOWN, t + 1,
+            ),), as_of_ms=t + 1,
+        )
+        router.process(tick(t + 200, seq=2, bid="101"))
+        before = self.store.load(self.position_id)
+        self.assertEqual(before.filled_exit_units, D(0))
+        self.assertEqual(before.reserved_unfilled_units, D(30))
+        self.assertEqual(len(before.exit_orders), 1)
+        self.assertIsNone(router.process(tick(t + 200, seq=2, bid="101")))
+        after = self.store.load(self.position_id)
+        self.assertEqual(after.filled_exit_units, D(0))
+        self.assertEqual(len(after.exit_orders), 1)
 
     def test_conflicting_sequence_and_stale_transport_fail_before_write(self):
         t=T+12*MIN

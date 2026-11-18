@@ -19,6 +19,10 @@ from .paper_intrahour_coordinator_d389 import (
 from .paper_intrahour_emergency_stop_d388 import PaperEmergencyStopRule
 from .paper_intrahour_target_step_d387 import PaperIntrahourTargetPolicy
 from .paper_position_inspection import inspect_paper_position
+from .paper_causal_fill_d394 import (
+    PaperObservedFillAssumptions, apply_causal_paper_fill_assumption,
+)
+from .synthetic_order_lifecycle import PaperOrderStatus
 from .paper_runner_trailing import PaperRunnerTrailPolicy
 from .paper_intrahour_runner_bridge_d395 import (
     PaperIntrahourRunnerStep, step_paper_intrahour_with_runner,
@@ -66,13 +70,18 @@ class PaperIntrahourQuoteRouter:
 
     def __init__(self, *, position_path: str | Path,
                  routes: tuple[PaperQuoteRoute, ...],
+                 fill_assumptions: PaperObservedFillAssumptions | None = None,
+                 enable_synthetic_ledger_fills: bool = False,
                  max_network_lag_ms: int = MAX_NETWORK_LAG_MS,
                  max_events: int = MAX_EVENTS):
         if (type(routes) is not tuple or not 1 <= len(routes) <= MAX_ROUTES
                 or any(type(r) is not PaperQuoteRoute for r in routes)
                 or type(max_network_lag_ms) is not int
                 or not 100 <= max_network_lag_ms <= 30_000
-                or type(max_events) is not int or not 1 <= max_events <= MAX_EVENTS):
+                or type(max_events) is not int or not 1 <= max_events <= MAX_EVENTS
+                or (fill_assumptions is not None and type(fill_assumptions) is not PaperObservedFillAssumptions)
+                or type(enable_synthetic_ledger_fills) is not bool
+                or (enable_synthetic_ledger_fills and fill_assumptions is None)):
             raise DataValidationError("PAPER quote router bounded configuration invalid")
         self._path = Path(position_path)
         self._by_symbol: dict[str, PaperQuoteRoute] = {}
@@ -99,11 +108,39 @@ class PaperIntrahourQuoteRouter:
         self._last_exchange_at_ms: dict[str, int] = {}
         self._max_network_lag_ms = max_network_lag_ms
         self._max_events = max_events
+        self._fill_assumptions = fill_assumptions
+        self._enable_synthetic_ledger_fills = enable_synthetic_ledger_fills
         self._seen = 0
         self._duplicates = 0
         self._ignored = 0
         self._decisions: dict[str, int] = {}
         self._runner_decisions: dict[str, int] = {}
+        self._fill_decisions: dict[str, int] = {}
+
+    def _apply_later_fill_hypotheses(self, route: PaperQuoteRoute,
+                                     quote: BybitTickerQuote) -> None:
+        """Apply D394 only to pre-existing reconciliable AUTO4 reservations.
+
+        The triggering quote is deliberately not special-cased: D394 itself
+        enforces post-intent latency, BBO depth and idempotent event identity.
+        UNKNOWN is never passed through this loop and remains reserved.
+        """
+        if not self._enable_synthetic_ledger_fills:
+            return
+        balance = inspect_paper_position(self._path, route.position_id).balance
+        for order in balance.exit_orders:
+            if order.snapshot.status not in (
+                    PaperOrderStatus.PENDING, PaperOrderStatus.ACKNOWLEDGED,
+                    PaperOrderStatus.PARTIALLY_FILLED):
+                continue
+            outcome = apply_causal_paper_fill_assumption(
+                self._path, route.position_id, order.intent.intent_id,
+                quote=quote, as_of_ms=quote.received_at_ms,
+                policy=self._fill_assumptions,
+                enable_synthetic_ledger_fills=True,
+            )
+            self._fill_decisions[outcome.decision.value] = (
+                self._fill_decisions.get(outcome.decision.value, 0) + 1)
 
     @property
     def monitored_symbols(self) -> frozenset[str]:
@@ -189,6 +226,7 @@ class PaperIntrahourQuoteRouter:
                 stop_rule=route.stop_rule, target_policy=route.target_policy,
                 quote=quote, as_of_ms=quote.received_at_ms,
             )
+        self._apply_later_fill_hypotheses(route, quote)
         self._last[quote.symbol] = quote
         self._last_exchange_at_ms[quote.symbol] = quote.exchange_at_ms
         decision = result.decision.value

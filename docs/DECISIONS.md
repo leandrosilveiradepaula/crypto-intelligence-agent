@@ -2,6 +2,10 @@
 
 Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente. **Para destino de execução, D383 (Bybit exclusiva) prevalece sobre a escolha aberta de Binance/Bybit da D77 histórica; D77 (operação automática) permanece vigente.**
 
+## D433 — hipótese de fill posterior no roteador intrahorário PAPER (18/11/2026)
+
+O roteador D391 pode receber, apenas por opt-in explícito, `PaperObservedFillAssumptions` D394. Depois de D389 reservar uma intenção AUTO4, uma cotação posterior e independente pode registrar um fill estritamente hipotético se satisfizer latência, BBO, spread, profundidade e limite de participação. O tick que cria a reserva não pode preenchê-la; `UNKNOWN`, terminal e replay idêntico nunca são reenviados. AUTO4 permanece o único writer e o padrão continua sem fills automáticos. O relatório sanitizado **D391-v1 mantém o formato preexistente**, porque o painel de saúde D412 o verifica por campos exatos; métricas adicionais de fills hipotéticos exigirão contrato/versionamento separado, sem declarar fills reais.
+
 - D01: mercado inicial de futuros perpétuos de criptomoedas. Universo dinâmico, referência inicial nos 50 contratos elegíveis de maior volume.
 - D02: alavancagem global inicial 50x, configurável. Mudanças afetam apenas novas posições; cada posição preserva a alavancagem de abertura.
 - D03: margem configurável por posição; US$ 1 a US$ 5 são exemplos, não limites. Quantidade de posições é variável, sem meta fixa.
