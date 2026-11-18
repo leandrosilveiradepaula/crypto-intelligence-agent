@@ -110,6 +110,28 @@ class PaperIntrahourQuoteRouter:
         """Read-only ticker membership required by the D401 public bridge."""
         return frozenset(self._by_symbol)
 
+    def fresh_held_contract_count(
+        self, *, at_ms: int, max_age_ms: int = MAX_NETWORK_LAG_MS,
+    ) -> int:
+        """Number of configured PAPER contracts fresh AT the observation end.
+
+        Count only validated D391 quotes from the most recent ACKed socket
+        session; begin_new_market_session clears this set on reconnect.
+        This is NOT a claim of native stop, account protection or that the
+        now CLOSED lease is still supervising. Return counts, never IDs.
+        """
+        if (type(at_ms) is not int
+                or not 1_600_000_000_000 <= at_ms <= 4_102_444_800_000
+                or type(max_age_ms) is not int
+                or not 100 <= max_age_ms <= MAX_NETWORK_LAG_MS):
+            raise DataValidationError("PAPER fresh held contracts clock invalid")
+        return sum(
+            1 for symbol in self._by_symbol
+            if (symbol in self._last
+                and 0 <= at_ms - self._last[symbol].exchange_at_ms <= max_age_ms
+                and 0 <= at_ms - self._last[symbol].received_at_ms <= max_age_ms)
+        )
+
     def begin_new_market_session(self) -> None:
         """Invalidate transport-specific sequence baselines, not PAPER state.
 
