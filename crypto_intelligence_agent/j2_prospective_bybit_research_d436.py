@@ -116,10 +116,18 @@ def evaluate_persisted_confirmed_close(*, journal_path: str | Path,
     data_mode: str = "offline_protocol_replay") -> ProspectiveResearchUpdate:
     """Causal post-append callback: no parser, reingest or synthetic clock."""
     if (type(open_ms) is not int or open_ms <= 0 or open_ms % HOUR_MS
-            or type(received_ms) is not int or received_ms < open_ms + HOUR_MS + 1000
+            or type(received_ms) is not int or received_ms < open_ms + HOUR_MS
             or data_mode not in ("offline_protocol_replay", "public_ws_observed_unverified")):
         raise DataValidationError("D436 callback close clock invalid")
     decision = open_ms + HOUR_MS
+    # The WS journal accepts a genuinely confirmed close immediately at the
+    # boundary; the research audit intentionally enforces a 1000-ms safety
+    # window. Never terminate the active WS feed for this benign timing gap.
+    if received_ms < decision + 1000:
+        return ProspectiveResearchUpdate(
+            "observed_data_insufficient", decision, None, None, 1, 0,
+            "close_safety_not_elapsed", data_mode, received_ms,
+        )
     try:
         series = read_bybit_closed_research_series(journal_path, scope=scope, symbol=symbol,
             decision_at_ms=decision, as_of_ms=received_ms)
@@ -143,7 +151,7 @@ _STATUSES = frozenset((
 ))
 _FAILURES = frozenset((
     None, "gap_or_stale", "invalid_frame_or_scope",
-    "session_finished", "session_abstained",
+    "session_finished", "session_abstained", "close_safety_not_elapsed",
 ))
 _SOURCES = frozenset(("offline_protocol_replay", "public_ws_observed_unverified"))
 _PROJECTION_TTL_MS = 120_000
