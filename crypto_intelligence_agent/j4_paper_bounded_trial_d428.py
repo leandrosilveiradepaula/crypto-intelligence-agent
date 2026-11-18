@@ -257,6 +257,13 @@ def run_bounded_paper_trial(
                 observation = project_finite_paper_lease(
                     sanitized, sampled_at_ms=end_ms,
                 )
+                # D410's overall N50 health is not the held-position
+                # liveness criterion. Check EVERY configured position had
+                # a recent validated quote in the FINAL ACKed WS session.
+                # A quote delivered early and then silent for 15s is unsafe.
+                end_fresh_held = router.fresh_held_contract_count(at_ms=end_ms)
+                if end_fresh_held != observation["configured_position_routes"]:
+                    return abort("held_paper_feed_not_fresh_at_end")
                 previous_decisions = dict(current)
                 publish_paper_watch(watch_directory, observation)
                 last_watch_ms = end_ms
