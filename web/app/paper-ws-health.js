@@ -92,6 +92,66 @@
     "received_ranked_input_count", "reconnects", "requested_contracts",
     "sessions_attempted", "subscription_acks", "validated_quote_contracts"
   ];
+  // D421: separate finite owner health samples; NOT a live WS connection.
+  const HEALTH = [
+    "schema_version", "status", "sampled_at_ms", "cycle", "data_mode",
+    "requested_contracts", "observed_contracts", "fresh_at_sample_end",
+    "expired_at_sample_end", "never_received", "received_ineligible",
+    "subscription_acks", "reconnects", "heartbeat_pings", "heartbeat_pongs",
+    "frames_accepted", "exchange_lagged_callbacks", "sample_seconds",
+    "owner_scope_unchanged", "full_finite_duration_observed",
+    "finite_sample_only", "freshness_limit_ms", "signals_authorized",
+    "orders_sent", "continuous_24x7_verified", "source_authenticated"
+  ];
+  function validateFiniteHealth(r) {
+    exact(r, HEALTH);
+    valid(r.schema_version === "j2-public-n50-finite-health-d421-v1" &&
+      ["finite_sample_all_fresh_at_end", "finite_sample_degraded_or_partial",
+       "source_unavailable"].includes(r.status));
+    allFalse(r, ["signals_authorized", "orders_sent",
+      "continuous_24x7_verified", "source_authenticated"]);
+    valid(r.finite_sample_only === true && r.freshness_limit_ms === 3000 &&
+      typeof r.owner_scope_unchanged === "boolean" &&
+      typeof r.full_finite_duration_observed === "boolean");
+    count(r.sampled_at_ms, 4102444800000);
+    valid(r.sampled_at_ms >= 1600000000000);
+    count(r.cycle, 1000000);
+    valid(r.cycle > 0);
+    for (const key of [
+      "requested_contracts", "observed_contracts", "fresh_at_sample_end",
+      "expired_at_sample_end", "never_received", "received_ineligible"
+    ]) count(r[key], 100);
+    for (const key of ["subscription_acks", "reconnects"]) count(r[key], 2);
+    for (const key of ["heartbeat_pings", "heartbeat_pongs"]) count(r[key], 10000);
+    for (const key of ["frames_accepted", "exchange_lagged_callbacks"])
+      count(r[key], 200000);
+    valid(Number.isFinite(r.sample_seconds) &&
+      r.sample_seconds >= 0 && r.sample_seconds <= 930);
+    valid(r.observed_contracts ===
+      r.fresh_at_sample_end + r.expired_at_sample_end &&
+      r.requested_contracts === r.observed_contracts +
+        r.never_received + r.received_ineligible &&
+      r.heartbeat_pongs <= r.heartbeat_pings &&
+      r.frames_accepted >= r.observed_contracts &&
+      r.exchange_lagged_callbacks <= r.frames_accepted);
+    if (r.status === "source_unavailable") {
+      valid(r.data_mode === "unavailable" && r.requested_contracts === 0 &&
+        r.sample_seconds === 0 && r.subscription_acks === 0 &&
+        r.frames_accepted === 0 && !r.owner_scope_unchanged &&
+        !r.full_finite_duration_observed);
+    } else {
+      valid(["real_public_websocket",
+        "injected_offline_fixture"].includes(r.data_mode) &&
+        r.requested_contracts >= 50);
+    }
+    if (r.status === "finite_sample_all_fresh_at_end") {
+      valid(r.data_mode === "real_public_websocket" &&
+        r.fresh_at_sample_end === r.requested_contracts &&
+        r.owner_scope_unchanged && r.full_finite_duration_observed &&
+        r.subscription_acks > 0);
+    }
+    return r;
+  }
   function validatePublicProbe(r) {
     exact(r, PUBLIC);
     valid(r.schema_version === "j2-current-owner-n50-ws-probe-d406-v1" &&
@@ -189,9 +249,15 @@
   }
   function acceptsSchema(version) {
     return version === "j2-j4-current-n50-paper-lease-d410-v1" ||
-      version === "j2-current-owner-n50-ws-probe-d406-v1";
+      version === "j2-current-owner-n50-ws-probe-d406-v1" ||
+      version === "j2-public-n50-finite-health-d421-v1";
   }
   function validateReport(report) {
+    if (report !== null && typeof report === "object" &&
+        !Array.isArray(report) &&
+        report.schema_version === "j2-public-n50-finite-health-d421-v1") {
+      return validateFiniteHealth(report);
+    }
     if (report !== null && typeof report === "object" &&
         !Array.isArray(report) &&
         report.schema_version === "j2-current-owner-n50-ws-probe-d406-v1") {
@@ -344,6 +410,33 @@
     const add = (label, value) => rows.append(span(
       "p", label + ": " + value, "muted fine"
     ));
+    if (r.schema_version === "j2-public-n50-finite-health-d421-v1") {
+      const missing = r.status === "source_unavailable";
+      const full = r.status === "finite_sample_all_fresh_at_end";
+      tag.textContent = missing ? "Última tentativa sem dados" :
+        full ? "Amostra encerrada com cobertura fresca" :
+          "Amostra encerrada com frescor insuficiente";
+      add("Amostra UTC", new Date(r.sampled_at_ms).toISOString());
+      add("Ciclo local", r.cycle);
+      add("Origem declarada", missing ? "Indisponível" :
+        isFixture ? "Dados sintéticos offline" :
+          "Bybit pública, arquivo sem autenticação externa");
+      add("Cobertura observada", r.observed_contracts +
+        " de " + r.requested_contracts + " contratos");
+      add("Frescos no encerramento", r.fresh_at_sample_end +
+        " de " + r.requested_contracts + " contratos");
+      add("Antes elegíveis, agora expirados", r.expired_at_sample_end);
+      add("Nunca recebidos", r.never_received);
+      add("Recebidos sem cotação elegível", r.received_ineligible);
+      add("Heartbeat ping/pong", r.heartbeat_pings + "/" + r.heartbeat_pongs);
+      add("Reconexões", r.reconnects);
+      add("Época J1 inalterada", r.owner_scope_unchanged ? "Sim" : "Não");
+      add("Estado das entradas", "Não autorizadas por este relatório");
+      add("Posições e saídas PAPER", "Não avaliadas por este arquivo");
+      rows.append(span("strong",
+        "Última amostra finita: não é dado ao vivo. O celular não está conectado à VPS."));
+      return;
+    }
     if (r.schema_version === "j2-current-owner-n50-ws-probe-d406-v1") {
       const full = r.finite_coverage_fresh_at_end;
       tag.textContent = full ? "Amostra N50 completa (finita)" :
