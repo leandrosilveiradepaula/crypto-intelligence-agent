@@ -23,7 +23,9 @@ from .paper_intrahour_emergency_stop_d388 import PaperEmergencyStopRule
 from .paper_intrahour_quote_router_d391 import (
     PaperIntrahourQuoteRouter, PaperQuoteRoute,
 )
-from .paper_intrahour_target_step_d387 import PaperIntrahourTargetPolicy
+from .paper_intrahour_target_step_d387 import (
+    PaperIntrahourTargetPolicy, _levels_valid,
+)
 from .paper_position_inspection import inspect_paper_position
 from .paper_runner_trailing import PaperRunnerTrailPolicy
 
@@ -31,7 +33,7 @@ _SCHEMA = "j4-private-paper-routes-d425-v1"
 _MANIFEST = "paper-routes.json"
 _JOURNAL = "paper-positions.sqlite"
 _LOCK = ".paper-ws-operator.lock"
-_RUNNER_NAME = re.compile(r"runner-[A-Za-z0-9_-]{1,48}\\.sqlite\\Z")
+_RUNNER_NAME = re.compile(r"runner-[A-Za-z0-9_-]{1,48}\.sqlite\Z")
 _LIMIT = 32_768
 _MAX_POSITIONS = 50
 
@@ -80,7 +82,7 @@ def _decimal(value: object) -> Decimal:
         raise DataValidationError("D425 invalid Decimal price") from None
     if (not amount.is_finite() or amount <= 0
             or len(amount.as_tuple().digits) > 40
-            or amount.as_tuple().exponent < -24):
+            or not -24 <= amount.as_tuple().exponent <= 24):
         raise DataValidationError("D425 invalid positive Decimal")
     return amount
 
@@ -153,7 +155,8 @@ def load_private_paper_routes(directory: Path) -> PaperIntrahourQuoteRouter:
             # is absent, not Bybit PAPER, has wrong plan or target direction.
             balance = inspect_paper_position(journal, item["position_id"]).balance
             if (balance.plan_version != targets.plan_version
-                    or len(balance.tranches) != len(targets.prices)):
+                    or len(balance.tranches) != len(targets.prices)
+                    or not _levels_valid(targets.prices, balance.side)):
                 raise DataValidationError("D425 private PAPER position plan mismatch")
             runner_policy = None
             runner_path = None
