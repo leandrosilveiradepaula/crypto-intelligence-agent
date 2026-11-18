@@ -20,6 +20,7 @@ from crypto_intelligence_agent.paper_intrahour_target_step_d387 import PaperIntr
 from crypto_intelligence_agent.paper_intrahour_quote_router_d391 import (
     PaperQuoteRoute, PaperIntrahourQuoteRouter,
 )
+from crypto_intelligence_agent.paper_causal_fill_d394 import PaperObservedFillAssumptions
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
 from crypto_intelligence_agent.synthetic_order_lifecycle import (
     PaperOrderIntent, PaperOrderEvent, PaperOrderEventKind,
@@ -118,6 +119,25 @@ class RouterD391Tests(unittest.TestCase):
         self.assertEqual(len(self.store.load(self.position_id).exit_orders),1)
         self.assertEqual(self.router.sanitized_report()["exact_duplicates_skipped"],1)
         self.assertEqual(a.decision,PaperIntrahourDecision.TARGET_RESERVED)
+
+    def test_opt_in_fill_waits_for_later_quote_and_never_retries_unknown(self):
+        router = PaperIntrahourQuoteRouter(
+            position_path=self.path, routes=(self.route,),
+            fill_assumptions=PaperObservedFillAssumptions(
+                min_quote_after_intent_ms=150,
+                max_top_level_participation_bps=D(10000),
+            ), enable_synthetic_ledger_fills=True,
+        )
+        first = router.process(tick(T + 12 * MIN, seq=1, bid="101"))
+        self.assertEqual(first.decision, PaperIntrahourDecision.TARGET_RESERVED)
+        # The quote that created the reservation is never a fill witness.
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(0))
+        later = router.process(tick(T + 12 * MIN + 200, seq=2, bid="101"))
+        self.assertEqual(later.decision, PaperIntrahourDecision.TARGET_PENDING)
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(2))
+        # A byte-identical replay cannot append a second assumed fill.
+        self.assertIsNone(router.process(tick(T + 12 * MIN + 200, seq=2, bid="101")))
+        self.assertEqual(self.store.load(self.position_id).filled_exit_units, D(2))
 
     def test_conflicting_sequence_and_stale_transport_fail_before_write(self):
         t=T+12*MIN

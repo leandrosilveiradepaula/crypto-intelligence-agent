@@ -1,5 +1,9 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D433 — D391 para D394 sem bloqueio de SQLite
+
+Na branch `codex/prospective-paper-operator`, a investigação com `faulthandler` armado não reproduziu travamento: D391 oficial completou em 0,47s e D394 em 0,59s. A integração opt-in percorre reservas AUTO4 já confirmadas após cada callback D391 e chama D394 sem lock do SQLite mantido pelo roteador. Regressão cobre reserva no primeiro tick, fill hipotético limitado pelo BBO somente em tick posterior (+200ms), e replay idêntico sem duplicação. Ainda não há serviço prospectivo, WSS real executado, VPS ou ordens.
+
 ## D432 — Console autoatualizável com projeção offline
 
 Branch `codex/bybit-paper-console-vertical`: D431 permanece o contrato visual estrito, mas o Console servido em `127.0.0.1:8765` passa a buscar a projeção somente de diretório owner 0700/arquivo 0600, no endpoint GET local. O comando produtor é seguro e offline; valida a lifecycle PRE9, os cenários D392 LONG/SHORT/UNKNOWN e as flags negativas antes de publicar. O leitor usa descritor NOFOLLOW com conferência 0600; o navegador invalida a projeção exibida quando o GET falha. Não há daemon instalado, WSS real, serviço VPS, feed contínuo, PnL, credencial ou ordem. Próximo valor: conectar um operador prospectivo autorizado a esta projeção após teste completo de stale/reconexão e gates J6.
