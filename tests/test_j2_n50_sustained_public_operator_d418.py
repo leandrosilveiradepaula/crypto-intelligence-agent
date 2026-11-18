@@ -161,6 +161,83 @@ class SustainedPublicN50D418Tests(unittest.TestCase):
         self.assertFalse(result["network_attempted"])
         self.assertFalse(result["orders_sent"])
 
+    def test_clock_nan_blocks_owner_before_any_network(self):
+        c = Clock()
+        with patch.object(
+            operator, "read_current_j1_n50_scope",
+            side_effect=AssertionError("invalid clock must not read owner"),
+        ), self.assertRaises(DataValidationError):
+            operator.observe_current_n50_sustained_once(
+                state_directory=STATE,
+                allow_private_pointer_read=True,
+                allow_public_websocket=True,
+                confirm_personal_readonly_research=True,
+                confirm_region_eligible=True,
+                session_factory=lambda: (_ for _ in ()).throw(
+                    AssertionError("invalid clock must not open socket")),
+                clock=lambda: float("nan"), wall_ms=c.wall,
+                sleeper=c.sleep,
+            )
+
+    def test_recent_owner_epoch_activation_sets_causal_lower_bound(self):
+        c = Clock()
+        recent = replace(SCOPE, activated_at_ms=BASE - 10_000)
+        def lease(**params):
+            self.assertEqual(params["universe_at_ms"], BASE - 10_000)
+            self.assertEqual(params["ranked_symbols"], N50)
+            self.assertNotIn("paper_router", params)
+            c.sleep(60)
+            return {
+                "status": "lease_completed",
+                "subscriptions_acknowledged": 1,
+                "ticker_frames_accepted": 50,
+                "finite_coverage_observed_once": True,
+            }
+        with patch.object(operator, "read_current_j1_n50_scope",
+                          side_effect=(recent, recent)), patch.object(
+            operator, "run_readonly_bybit_ticker_lease",
+            side_effect=lease,
+        ):
+            report = operator.observe_current_n50_sustained_once(
+                state_directory=STATE,
+                allow_private_pointer_read=True,
+                allow_public_websocket=True,
+                confirm_personal_readonly_research=True,
+                confirm_region_eligible=True,
+                seconds=60, max_frames=10_000, max_sessions=1,
+                session_factory=lambda: None,
+                clock=c.mono, wall_ms=c.wall, sleeper=c.sleep,
+            )
+        self.assertTrue(report["full_finite_duration_observed"])
+        self.assertTrue(report["finite_current_owner_scope_observed_once"])
+        self.assertFalse(report["approved_for_signals"])
+
+    def test_fast_fake_completion_cannot_claim_prolonged_observation(self):
+        c = Clock()
+        with patch.object(operator, "read_current_j1_n50_scope",
+                          side_effect=(SCOPE, SCOPE)), patch.object(
+            operator, "run_readonly_bybit_ticker_lease",
+            return_value={
+                "status": "lease_completed",
+                "subscriptions_acknowledged": 1,
+                "ticker_frames_accepted": 50,
+                "finite_coverage_observed_once": True,
+            },
+        ):
+            report = operator.observe_current_n50_sustained_once(
+                state_directory=STATE,
+                allow_private_pointer_read=True,
+                allow_public_websocket=True,
+                confirm_personal_readonly_research=True,
+                confirm_region_eligible=True,
+                seconds=60, max_frames=10_000, max_sessions=1,
+                session_factory=lambda: None,
+                clock=c.mono, wall_ms=c.wall, sleeper=c.sleep,
+            )
+        self.assertFalse(report["full_finite_duration_observed"])
+        self.assertFalse(report["finite_current_owner_scope_observed_once"])
+        self.assertEqual(report["status"], "sustained_market_degraded_or_partial")
+
     def test_invalid_inputs_block_before_owner_read(self):
         args = {
             "state_directory": STATE,
