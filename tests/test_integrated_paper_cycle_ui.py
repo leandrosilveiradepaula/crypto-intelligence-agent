@@ -64,7 +64,7 @@ class IntegratedPaperCycleUiTests(unittest.TestCase):
             "restart_duplicate_orders === 0", "Ciclo integrado reproduzido",
         ):
             self.assertIn(required, renderer)
-        self.assertNotIn("fetch(", renderer)
+        self.assertIn('"/api/integrated-paper-cycle"', renderer)
         self.assertNotIn("innerHTML", renderer)
 
     @unittest.skipUnless(shutil.which("node"), "Node is required for DOM-only import")

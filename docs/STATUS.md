@@ -1,5 +1,9 @@
 # STATUS — Crypto Intelligence Agent
 
+## D432 — projeção automática local do ciclo PAPER (18/11/2026)
+
+O Console loopback passa a consultar `/api/integrated-paper-cycle` quando configurado no modo local já restrito. O produtor `python -m scripts.publish_integrated_paper_cycle_d432 --directory DIRETORIO_0700` gera atomicamente a projeção owner-only 0600 a partir da prova J2/AUTO2/AUTO4/runner e também exige a prova intrahorária Bybit-shaped D392. Não abre socket, não cria ordens, não substitui o feed prospectivo ou serviço PAPER; ausência/arquivo inseguro resulta em 503, nunca em estado atual inventado.
+
 ## D431 — visualização local do ciclo PAPER integrado (18/11/2026)
 
 O Console PAPER local agora aceita, pelo seletor JSON já existente, o relatório estrito de `python -m scripts.demo_full_offline_paper_lifecycle`. A visualização resume a sequência causal J2/RiskGate → intenção AUTO2 → FILL fictício explícito → AUTO4 → três parciais → runner → reinício/auditoria e o bloqueio de proteção simulada. O navegador valida flags negativas (`orders_sent=false`, sem mercado real, sem PnL financeiro validado, sem autorização live) e não faz rede adicional. Esta é evidência reprodutível offline; não é serviço PAPER contínuo, feed real, proteção nativa, conta ou homologação J6.

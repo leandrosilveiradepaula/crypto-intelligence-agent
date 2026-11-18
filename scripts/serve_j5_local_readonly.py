@@ -13,6 +13,7 @@ import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import re
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -46,6 +47,7 @@ _STATIC_FILES: dict[str, tuple[str, str]] = {
     "/engine.js": ("engine.js", "text/javascript; charset=utf-8"),
     "/public-market.js": ("public-market.js", "text/javascript; charset=utf-8"),
     "/persisted-paper.js": ("persisted-paper.js", "text/javascript; charset=utf-8"),
+    "/integrated-paper-cycle.js": ("integrated-paper-cycle.js", "text/javascript; charset=utf-8"),
     "/research-scorebook.js": ("research-scorebook.js", "text/javascript; charset=utf-8"),
     "/paper-ws-health.js": ("paper-ws-health.js", "text/javascript; charset=utf-8"),
     "/paper-watch.js": ("paper-watch.js", "text/javascript; charset=utf-8"),
@@ -57,10 +59,30 @@ _JOURNALCTL_ARGV = (
     "--since=26 hours ago", "--output=json", "--no-pager",
     "--grep=j1-n50-ws-cached-owner-window-v1", "--lines=128",
 )
+_INTEGRATED_CYCLE_FILE = "latest-integrated-paper-cycle.json"
 
 
 class SourceNotReady(Exception):
     """Only a bounded, sanitized 503 is allowed to escape to the UI."""
+
+
+def read_integrated_cycle(*, directory: Path) -> dict[str, Any]:
+    """Read a bounded owner-only D431 report; browser revalidates its contract."""
+    _owned_directory(directory)
+    path = directory / _INTEGRATED_CYCLE_FILE
+    info = path.stat()
+    if (path.is_symlink() or not stat.S_ISREG(info.st_mode)
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_uid != os.geteuid() or not 2 <= info.st_size <= 32_768):
+        raise SourceNotReady("integrated cycle artifact unavailable")
+    with path.open("rb") as source:
+        raw = source.read(32_769)
+    if len(raw) != info.st_size:
+        raise SourceNotReady("integrated cycle artifact unstable")
+    report = json.loads(raw.decode("utf-8"))
+    if type(report) is not dict or report.get("schema_version") != "j6_full_offline_paper_lifecycle_v1":
+        raise SourceNotReady("integrated cycle contract unavailable")
+    return report
 
 
 def read_n50_progress(*, now_ms: int) -> dict[str, Any]:
@@ -347,6 +369,16 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
                 })
                 return
             self._json(200, report)
+            return
+        if self.path == "/api/integrated-paper-cycle":
+            directory = type(self).paper_watch_directory
+            if directory is None:
+                self._json(503, {"status": "integrated_cycle_not_enabled", "orders_sent": False})
+                return
+            try:
+                self._json(200, read_integrated_cycle(directory=directory))
+            except (OSError, ValueError, UnicodeError, SourceNotReady, DataValidationError):
+                self._json(503, {"status": "integrated_cycle_not_available", "orders_sent": False})
             return
         if self.path == "/api/n50-public-health":
             directory = type(self).public_health_directory

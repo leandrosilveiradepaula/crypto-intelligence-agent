@@ -57,5 +57,26 @@
     box.append(title, detail, failure);
     box.hidden = false;
   }
-  global.CIAIntegratedPaperCycle = Object.freeze({ install });
+  function localPanel() {
+    const loc = global.location;
+    return Boolean(loc && loc.protocol === "http:" && loc.port === "8765" &&
+      (loc.hostname === "127.0.0.1" || loc.hostname === "localhost"));
+  }
+  async function refreshLocal() {
+    if (!localPanel()) return;
+    try {
+      const response = await global.fetch("/api/integrated-paper-cycle", {
+        method: "GET", credentials: "omit", cache: "no-store", redirect: "error"
+      });
+      if (!response.ok || !(response.headers.get("content-type") || "").startsWith("application/json")) throw new Error();
+      const raw = await response.text();
+      if (raw.length < 2 || raw.length > 32768) throw new Error();
+      install(JSON.parse(raw));
+    } catch (_) { /* Absence is not current PAPER supervision. */ }
+  }
+  global.CIAIntegratedPaperCycle = Object.freeze({ install, refreshLocal });
+  if (typeof document !== "undefined" && localPanel()) {
+    void refreshLocal();
+    global.setInterval(() => { void refreshLocal(); }, 30000);
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

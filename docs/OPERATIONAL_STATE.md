@@ -1,5 +1,9 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D432 — Console autoatualizável com projeção offline
+
+Branch `codex/bybit-paper-console-vertical`: D431 permanece o contrato visual estrito, mas o Console servido em `127.0.0.1:8765` passa a buscar a projeção somente de diretório owner 0700/arquivo 0600, no endpoint GET local. O comando produtor é seguro e offline; valida a lifecycle PRE9 e a prova D392 antes de publicar. Não há daemon instalado, WSS real, serviço VPS, feed contínuo, PnL, credencial ou ordem. Próximo valor: conectar um operador prospectivo autorizado a esta projeção após teste completo de stale/reconexão e gates J6.
+
 ## D431 — Console: relatório do ciclo integrado PAPER
 
 Na branch `codex/integrated-paper-cycle`, o relatório sanitizado `j6_full_offline_paper_lifecycle_v1` é conectado ao Console J5 como painel exclusivamente de leitura. Para reproduzir: executar `python -m scripts.demo_full_offline_paper_lifecycle`, salvar a saída JSON e importar pelo seletor local de `web/app/index.html`. O relatório é uma fixture integral e determinística, com FILLs explicitamente hipotéticos; não conserva arquivos, não acessa rede, não publica na VPS e não usa credenciais. Próxima ação autorizada de maior valor: revisar/validar a mudança, depois tratar #676/#677 para supervisão prospectiva sem confundir ensaios finitos com serviço contínuo.
