@@ -2,7 +2,7 @@
 
 ## D435 — pesquisa causal sobre candles observados (ainda sem autorização de sinais)
 
-A D435 avalia compressão, rompimento, ATR e volume da série D434 confirmada usando Decimal. O resultado é somente uma hipótese no **último candle fechado** (`observed_hypothesis_not_authorized`) ou abstenção (`observed_no_hypothesis`), com digest de origem; jamais passa por RiskGate/AUTO2, não opera ou modela lucro. A revisão corrigiu propagação da EMA ao motor J2 e preservou reconciliação com a D434 existente. Testes LONG/SHORT/no-signal, cooldown, clocks e paridade com referência sintética; integração de código depende da CI exata e não equivale a feed público real contínuo.
+A D435 avalia compressão, rompimento, ATR e volume da série D434 confirmada usando Decimal. O resultado é somente uma hipótese no **último candle fechado** (`observed_hypothesis_not_authorized`) ou abstenção (`observed_no_hypothesis`), com digest de origem; jamais passa por RiskGate/AUTO2, não opera ou modela lucro. A revisão corrigiu propagação da EMA ao motor J2 e preservou reconciliação com a D434 existente. Testes LONG/SHORT/no-signal, cooldown, clocks e paridade com referência sintética. **Integrada na main pela PR #732, SHA caf9fcfc688434b0b2f47d0ae1fc67b933f48503**, após CI Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS** no HEAD revisado `66aa214d65d64e9929b46624ce676ab10c634d91`. Não equivale a feed público real contínuo, aprovação de sinais ou resultado financeiro validado.
 
 
 ## D434 — candles confirmados disponíveis para pesquisa J2 não autorizante

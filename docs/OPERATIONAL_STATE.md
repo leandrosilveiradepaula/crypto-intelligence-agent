@@ -1,8 +1,8 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
-## D435 — PR #732 sob revisão; código somente pesquisa (18/11/2026)
+## D435 — PR #732 integrada, código somente pesquisa (18/11/2026)
 
-Branch `codex/prospective-paper-vertical` reconciliada sem force com a main D434. A versão inicial D435 usava `ema_close=None` na estrutura de features, impossibilitando emitir hipóteses apesar de calcular a EMA. Revisão propaga o valor verdadeiro, verifica a paridade com o J2 sintético em LONG/SHORT, impede hipótese histórica como presente e valida clocks, inputs e abstenção. Não houve execução de mercado real, ordem, feed contínuo, testnet, deploy, ou mudança VPS. Testes/CI do head atualizado são gate obrigatório; o objetivo final #677 permanece aberto até validação prospectiva completa.
+Branch `codex/prospective-paper-vertical` reconciliada sem force com a main D434. A versão inicial D435 usava `ema_close=None` na estrutura de features, impossibilitando emitir hipóteses apesar de calcular a EMA. Revisão propaga o valor verdadeiro, verifica a paridade com o J2 sintético em LONG/SHORT, impede hipótese histórica como presente e valida clocks, inputs e abstenção. Não houve execução de mercado real, ordem, feed contínuo, testnet, deploy, ou mudança VPS. A PR #732 foi integrada em `main` SHA `caf9fcfc688434b0b2f47d0ae1fc67b933f48503`, head revisado `66aa214d65d64e9929b46624ce676ab10c634d91`, após CI de PR Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS**, merge confirmado sem threads/reviews impeditivas. CI pós-merge é gate separado. O objetivo final #677 permanece aberto até integração de feed público prospectivo real e gate da operação PAPER.
 
 
 ## D434 — bridge J2 de closes confirmados, somente pesquisa

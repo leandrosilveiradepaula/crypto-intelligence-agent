@@ -534,4 +534,4 @@ A PR #731 foi integrada à main SHA `cd54ea7ed8e720d6214f41f83cefe899c774547b` a
 
 ## J2 D435 — pesquisa sobre candles públicos confirmados
 
-Foi integrada como proposta uma avaliação de hipóteses causal para dados observados D434, sem permissão de sinal, ordem ou PnL. O aceite da J2/J6 exige passagem de replay por testes e CI, e ainda não prova receptor Bybit prospectivo nem serviço PAPER. Próximo marco #677: execução finita do feed confirmado para pesquisa e cronologia end-to-end, depois gates AUTO2/J4 separados.
+A avaliação causal de hipóteses sobre dados observados D434 foi integrada pela PR #732, SHA `caf9fcfc688434b0b2f47d0ae1fc67b933f48503`, CI Linux/Windows/Chrome verde no HEAD `66aa214d65d64e9929b46624ce676ab10c634d91`. Evidencia LONG/SHORT/abstenção e matemática J2 sem permissão de sinal, ordem ou PnL. **Não prova receptor Bybit prospectivo nem serviço PAPER.** Próximo marco #677: execução finita real/isolada do feed confirmado para pesquisa e cronologia end-to-end; somente após gates técnicos e financeiros permitir cenário PAPER, sem ordens reais.
