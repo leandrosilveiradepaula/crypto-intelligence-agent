@@ -1,5 +1,10 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D435 — PR #732 sob revisão; código somente pesquisa (18/11/2026)
+
+Branch `codex/prospective-paper-vertical` reconciliada sem force com a main D434. A versão inicial D435 usava `ema_close=None` na estrutura de features, impossibilitando emitir hipóteses apesar de calcular a EMA. Revisão propaga o valor verdadeiro, verifica a paridade com o J2 sintético em LONG/SHORT, impede hipótese histórica como presente e valida clocks, inputs e abstenção. Não houve execução de mercado real, ordem, feed contínuo, testnet, deploy, ou mudança VPS. Testes/CI do head atualizado são gate obrigatório; o objetivo final #677 permanece aberto até validação prospectiva completa.
+
+
 ## D434 — bridge J2 de closes confirmados, somente pesquisa
 
 Branch `codex/prospective-paper-vertical`: a ponte reutiliza `SQLiteOfflineClosedStreamJournal` e sua auditoria antes de expor 24 candles 1h Bybit confirmados a pesquisa. Teste integrado cobre persistência/replay do cache e comprova qualidade distinta de fixture, `approved_for_signals=false` e zero ordens. Ainda falta conectar kline WS finito injetado, cursor temporal prospectivo e os gates J2→RiskGate→AUTO2/AUTO4; não houve VPS, socket real, J1 owner ou ordem.

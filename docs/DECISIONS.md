@@ -2,7 +2,12 @@
 
 Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente. **Para destino de execução, D383 (Bybit exclusiva) prevalece sobre a escolha aberta de Binance/Bybit da D77 histórica; D77 (operação automática) permanece vigente.**
 
-## D434 — fronteira J2 para candles públicos Bybit confirmados (18/11/2026)
+## D435 — avaliação J2 sobre candles Bybit observados, sem sinal (18/11/2026)
+
+A pesquisa D435 preserva a qualidade `bybit_public_ws_confirmed_unverified` dos candles e calcula EMA SMA-seeded, Wilder ATR, rompimentos e volume com Decimal sem tocar AUTO2. Uma hipótese só é reportada para o **último candle fechado** da decisão causal; cooldown e janelas anteriores seguem o contrato J2 sintético, com regressão matemática comparativa LONG/SHORT e abstenção em mercado lateral. O retorno permanece `approved_for_signals=false` e `orders_sent=false`; não é sinal financeiro, fonte autenticada, edge ou execução de venue. Branch reconciliada com a D434 merge sem duplicar patches antigos.
+
+## D434 — fronteira J2 para candles públicos Bybit confirmados (18/11/2026) 
+
 
 `j2_bybit_closed_research_bridge` lê somente o journal confirmado já existente, executa a auditoria de integridade e converte série contínua em `ClosedCandle` com qualidade `bybit_public_ws_confirmed_unverified`. A fronteira exige 24 horas completas, escopo PIT e digest válidos; gaps, receipts tardios, corrupção e membresia divergente bloqueiam a série. O resultado declara `approved_for_signals=false`, não chama AUTO2 e não pode ser convertido silenciosamente em `synthetic_fixture`. A extração de candles foi consolidada **no mesmo snapshot SQLite** e digest da auditoria existente, via campo privado não serializado `private_j2_confirmed_rows`; duas conexões sequenciais deixariam uma janela de mudança da base entre auditoria e consulta. Regressão cobre writer concorrente posterior à auditoria, corrupção e escopo inválido.
 

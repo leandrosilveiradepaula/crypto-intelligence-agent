@@ -1,5 +1,10 @@
 # STATUS — Crypto Intelligence Agent
 
+## D435 — pesquisa causal sobre candles observados (ainda sem autorização de sinais)
+
+A D435 avalia compressão, rompimento, ATR e volume da série D434 confirmada usando Decimal. O resultado é somente uma hipótese no **último candle fechado** (`observed_hypothesis_not_authorized`) ou abstenção (`observed_no_hypothesis`), com digest de origem; jamais passa por RiskGate/AUTO2, não opera ou modela lucro. A revisão corrigiu propagação da EMA ao motor J2 e preservou reconciliação com a D434 existente. Testes LONG/SHORT/no-signal, cooldown, clocks e paridade com referência sintética; integração de código depende da CI exata e não equivale a feed público real contínuo.
+
+
 ## D434 — candles confirmados disponíveis para pesquisa J2 não autorizante
 
 O journal Bybit de closes confirmados agora tem uma fronteira tipada para pesquisa J2. É replay read-only, separado da J1 owner, com qualidade pública não autenticada e sem sinal/ordem. Esta entrega não é operador prospectivo completo nem valida dados live.
