@@ -35,3 +35,7 @@ O ponte D410 encaminha explicitamente o opt-in. O ensaio de múltiplas leases **
 Integração somente após gates Linux/docs/Python, Windows offline e Chrome no SHA exato e revisão das alterações. Merge de código sem publicação da VPS é permitido; **não instala supervisor contínuo**. Execução do processo owner no servidor exige gate operacional próprio e isolamento POSIX, que não deve ser contornado pelo gateway administrativo. Custo extra R$0.
 
 **Próximo marco J6:** watchdog realmente independente do processo PAPER (detecta travamento/crash mesmo sem callback), reconciliador durável de intenções UNKNOWN, alarme mobile de falta de atualização, piloto owner não root com SLO; somente depois avaliar custos, slippage/funding/liquidação J3 e execução financeira real sob autorização separada.
+
+## Integração e evidência final do código (18/11/2026)
+
+Head revisado `f7ca365d1f19564011fb5bfa1045bd4a847a9175`, CI PR Linux/docs/Python com **3.357 testes**, Windows/offline SUCCESS e Chrome/mobile SUCCESS. Integrado por squash em `main` SHA `9c5d31631bc4a1330c2cf9f621b48b1be64f7b9f`; verificação de head/base, reviews e gate no SHA exato. Sem alterações de deploy ou VPS. A prova de mercado real registrada nesta documentação ocorreu **ANTES** do D429 e terminou incompleta; não constitui aceite de produção. O operador owner, watchdog externo ao processo e auditoria de stop real continuam separados.
