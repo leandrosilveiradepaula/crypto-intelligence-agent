@@ -8,7 +8,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-import sqlite3
 
 from .bybit_closed_stream_cache import (
     HOUR_MS, OfflineReviewedStreamScope, SQLiteOfflineClosedStreamJournal,
@@ -44,19 +43,19 @@ def read_bybit_closed_research_series(
     if type(symbol) is not str or not symbol.endswith("USDT"):
         raise DataValidationError("explicit Bybit USDT research symbol required")
     journal = SQLiteOfflineClosedStreamJournal(Path(path))
-    audit = journal.audit(scope=scope, decision_at_ms=decision_at_ms, as_of_ms=as_of_ms)
+    audit = journal.audit(scope=scope, decision_at_ms=decision_at_ms,
+                          as_of_ms=as_of_ms, research_symbol=symbol)
     if audit.status != "offline_reviewed_24h_complete_not_top50":
         raise DataGapError("confirmed public closed series incomplete: abstain")
-    try:
-        db = sqlite3.connect(f"file:{Path(path).absolute().as_posix()}?mode=ro", uri=True)
-        rows = db.execute("SELECT payload,digest FROM confirmed WHERE symbol=? ORDER BY open_ms", (symbol,)).fetchall()
-        db.close()
-    except sqlite3.DatabaseError as exc:
-        raise DataGapError("confirmed public series unreadable") from exc
+    # These bytes were verified in the SAME SQLite read snapshot as the digest
+    # and PIT/clock/gap checks. A second database connection would create
+    # an audit/read time-of-check-time-of-use window.
     values = []
-    for raw, digest in rows:
+    for open_ms, received_ms, raw, digest in audit.private_j2_confirmed_rows:
         item = _validated_payload(raw, digest)
-        if item["received_ms"] > as_of_ms or item["open_ms"] >= decision_at_ms:
+        if item["open_ms"] != open_ms or item["received_ms"] != received_ms:
+            raise DataGapError("research snapshot identity mismatch")
+        if received_ms > as_of_ms or open_ms >= decision_at_ms:
             continue
         values.append(ClosedCandle(
             exchange="bybit_v5_public", market="linear_perpetual", symbol=symbol,

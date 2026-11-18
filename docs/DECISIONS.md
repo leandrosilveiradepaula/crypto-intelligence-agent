@@ -4,7 +4,7 @@ Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas 
 
 ## D434 — fronteira J2 para candles públicos Bybit confirmados (18/11/2026)
 
-`j2_bybit_closed_research_bridge` lê somente o journal confirmado já existente, executa a auditoria de integridade e converte série contínua em `ClosedCandle` com qualidade `bybit_public_ws_confirmed_unverified`. A fronteira exige 24 horas completas, escopo PIT e digest válidos; gaps, receipts tardios, corrupção e membresia divergente bloqueiam a série. O resultado declara `approved_for_signals=false`, não chama AUTO2 e não pode ser convertido silenciosamente em `synthetic_fixture`.
+`j2_bybit_closed_research_bridge` lê somente o journal confirmado já existente, executa a auditoria de integridade e converte série contínua em `ClosedCandle` com qualidade `bybit_public_ws_confirmed_unverified`. A fronteira exige 24 horas completas, escopo PIT e digest válidos; gaps, receipts tardios, corrupção e membresia divergente bloqueiam a série. O resultado declara `approved_for_signals=false`, não chama AUTO2 e não pode ser convertido silenciosamente em `synthetic_fixture`. A extração de candles foi consolidada **no mesmo snapshot SQLite** e digest da auditoria existente, via campo privado não serializado `private_j2_confirmed_rows`; duas conexões sequenciais deixariam uma janela de mudança da base entre auditoria e consulta. Regressão cobre writer concorrente posterior à auditoria, corrupção e escopo inválido.
 
 ## D433 — hipótese de fill posterior no roteador intrahorário PAPER (18/11/2026)
 
