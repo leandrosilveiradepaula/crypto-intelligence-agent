@@ -305,6 +305,12 @@
           <div id="paper-ws-health-loaded" hidden>
             <div id="paper-ws-health-rows" class="market-pulse-rows" role="status" aria-live="polite"></div>
           </div>
+          <div id="paper-ws-history-box" class="health-history" hidden>
+            <h4>Últimas amostras desta aba</h4>
+            <p id="paper-ws-history-summary" class="muted fine" aria-live="polite"></p>
+            <ol id="paper-ws-history-rows" class="health-history-rows" aria-label="Amostras locais cronológicas da Bybit"></ol>
+            <p class="muted fine">Histórico somente em memória enquanto esta aba permanecer aberta; falhas e intervalos não são preenchidos. Não mede a disponibilidade 24×7.</p>
+          </div>
           <p class="muted fine">Amostra finita e não autenticada externamente; o resumo local é atualizado periodicamente, nunca por WebSocket direto no navegador. Sem credenciais, ordens, stops nativos, resultados reais ou liberação de entradas.</p>
         </div>
         <div class="panel risk-audit-panel" aria-labelledby="risk-audit-title">
