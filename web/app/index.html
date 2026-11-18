@@ -13,6 +13,7 @@
   <script src="./persisted-paper.js" defer></script>
   <script src="./research-scorebook.js" defer></script>
   <script src="./paper-ws-health.js" defer></script>
+  <script src="./paper-watch.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body data-mode="offline_paper" data-live-orders="disabled">
@@ -312,6 +313,23 @@
             <p class="muted fine">Histórico somente em memória enquanto esta aba permanecer aberta; falhas e intervalos não são preenchidos. Não mede a disponibilidade 24×7.</p>
           </div>
           <p class="muted fine">Amostra finita e não autenticada externamente; o resumo local é atualizado periodicamente, nunca por WebSocket direto no navegador. Sem credenciais, ordens, stops nativos, resultados reais ou liberação de entradas.</p>
+        </div>
+        <div class="panel" aria-labelledby="paper-watch-title">
+          <div class="panel-heading">
+            <h3 id="paper-watch-title">Acompanhamento das posições PAPER</h3>
+            <span id="paper-watch-status" class="status-label">Sem supervisão PAPER ativa</span>
+          </div>
+          <p class="muted fine">Leitura da última sessão finita, somente quando o operador e o servidor local estiverem explicitamente configurados. Diferente da saúde N50: aqui aparecem eventos efetivamente entregues ao motor de saídas PAPER.</p>
+          <div id="paper-watch-empty" class="empty">
+            <strong>Nenhum acompanhamento PAPER disponível</strong>
+            <p>O monitor de mercado pode estar funcionando sem que exista uma sessão PAPER configurada. Isso não significa que stops estejam protegidos.</p>
+          </div>
+          <div id="paper-watch-loaded" hidden>
+            <p id="paper-watch-summary" class="muted fine" role="status" aria-live="polite"></p>
+            <div id="paper-watch-rows" class="market-pulse-rows" aria-label="Contagem da última sessão PAPER"></div>
+            <p id="paper-watch-warning" class="muted fine" role="status" aria-live="polite"></p>
+          </div>
+          <p class="muted fine">Sempre encerra como sessão FINITA; desaparece após três minutos ou falha de leitura. Não garante vigilância 24×7, proteção nativa, FILL, lucro, posição verdadeira ou execução automática de ordens.</p>
         </div>
         <div class="panel risk-audit-panel" aria-labelledby="risk-audit-title">
           <div class="panel-heading">
