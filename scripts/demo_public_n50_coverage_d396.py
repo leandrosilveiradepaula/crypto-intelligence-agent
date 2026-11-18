@@ -84,7 +84,7 @@ def run_demo() -> dict:
     report = run_finite_public_ticker_coverage_pilot(
         epochs=epochs,
         session_factories=factories,
-        budget=TickerLeaseBudget(max_sessions=1, max_frames=256, max_seconds=3),
+        budget=TickerLeaseBudget(max_sessions=1, max_frames=256, max_seconds=2),
         clock=clock.mono, wall_ms=clock.wall, sleeper=clock.sleep,
     )
     if not report.all_observed_coverage:
