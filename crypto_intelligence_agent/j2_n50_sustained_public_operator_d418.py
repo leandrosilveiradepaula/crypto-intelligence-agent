@@ -82,7 +82,8 @@ def observe_current_n50_sustained_once(
             or not 1_600_000_000_000 <= before_ms < _MAX_UTC_MS):
         raise DataValidationError("D418 wall clock invalid")
     before_clock = clock()
-    if type(before_clock) not in (float, int):
+    if (type(before_clock) not in (float, int)
+            or not 0 <= before_clock < 1_000_000_000_000):
         raise DataValidationError("D418 monotonic clock invalid")
     # J1 owner scope/metadata admission is loaded read-only, exactly once
     # before network. This function does not re-rank or query REST.
@@ -97,7 +98,7 @@ def observe_current_n50_sustained_once(
     report = run_readonly_bybit_ticker_lease(
         ranked_symbols=before.symbols,
         position_symbols=position_symbols,
-        universe_at_ms=before_ms - 60_000,
+        universe_at_ms=max(before.activated_at_ms, before_ms - 60_000),
         allow_public_websocket=True,
         confirm_personal_readonly_research=True,
         confirm_region_eligible=True,
@@ -115,6 +116,7 @@ def observe_current_n50_sustained_once(
     if (type(after_ms) is not int or after_ms < before_ms
             or after_ms >= _MAX_UTC_MS
             or type(after_clock) not in (float, int)
+            or not 0 <= after_clock < 1_000_000_000_000
             or not 0 <= after_clock - before_clock <= seconds + 30):
         raise DataValidationError("D418 observation clock invalid")
     unchanged = False
