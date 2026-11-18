@@ -421,7 +421,7 @@
     }
     summary.textContent = localHistory.length +
       " amostras recebidas nesta aba; frescor ao fim: " + lowest +
-      "–" + highest + " de 50; intervalos acima de 3 min: " + gaps +
+      "–" + highest + " contratos; intervalos acima de 3 min: " + gaps +
       (localUnavailable ? ". Leitura atual indisponível." : ".") +
       " Não comprova feed contínuo nem libera entradas.";
     for (const item of localHistory) {
