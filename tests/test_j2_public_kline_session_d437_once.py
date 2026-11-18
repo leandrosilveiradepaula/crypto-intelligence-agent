@@ -6,7 +6,8 @@ from unittest.mock import patch
 
 from crypto_intelligence_agent.market_data import DataValidationError
 from scripts.run_j2_public_kline_session_d437_once import (
-    _OPTINS, build_reviewed_scope, read_private_manifest, run_once,
+    _OPTINS, _successful_finite_public_close, build_reviewed_scope,
+    read_private_manifest, run_once,
 )
 from scripts.demo_j2_prospective_bybit_research_d436 import _scope
 import json
@@ -70,6 +71,25 @@ class D437CommandTests(TestCase):
             else:
                 with patch("scripts.run_j2_public_kline_session_d437_once.os.geteuid", return_value=0):
                     self.assertEqual(run_once(args)["status"], "unprivileged_owner_required")
+
+
+    def test_only_completed_acknowledged_public_lease_can_claim_close(self):
+        good = {"status": "ws_budget_ended_research_only",
+                "sessions_fully_acknowledged": 1,
+                "subscriptions_acknowledged": 1,
+                "closed_events_appended": 1}
+        self.assertTrue(_successful_finite_public_close(good))
+        for key, value in (
+            ("status", "ws_fail_closed_abstain"),
+            ("status", "ws_frame_budget_exhausted_abstain"),
+            ("status", "ws_reconnect_budget_exhausted_abstain"),
+            ("sessions_fully_acknowledged", 0),
+            ("subscriptions_acknowledged", 0),
+            ("closed_events_appended", 0),
+        ):
+            with self.subTest(key=key, value=value):
+                self.assertFalse(_successful_finite_public_close({**good, key: value}))
+        self.assertFalse(_successful_finite_public_close({"status": "ws_budget_ended_research_only"}))
 
     def test_manifest_rejects_future_expired_and_duplicate(self):
         old = _manifest(1_792_998_000_000)
