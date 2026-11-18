@@ -20,7 +20,7 @@ python -m scripts.run_j2_public_kline_session_d437_once \
   --confirm-personal-readonly-research --confirm-region-eligible
 ```
 
-O arquivo precisa ser um snapshot de pesquisa revisado, atual e privado, não um sample fabricado. Os diretórios devem ser de pesquisa isolada do owner. O programa cria um diretório novo, um journal SQLite separado e uma projeção J5 privada terminal. A ausência de candle confirmado/ACK mantém abstenção. Não preencher as 24 horas exigidas com dados fictícios.
+O arquivo precisa ser um snapshot de pesquisa revisado, atual e privado, não um sample fabricado. Os diretórios devem ser de pesquisa isolada do owner. O programa cria um diretório novo, um journal SQLite separado e uma projeção J5 privada terminal. Um ACK genuíno sem fechamento produz somente `public_subscription_ack_observed_unverified`; com atualizações abertas, `public_open_updates_observed_unverified`; um close só é declarado quando o supervisor conclui a sessão sem erro. Falhas posteriores a closes causam `public_session_abstained`. Nenhuma dessas evidências equivale a fonte autenticada ou sinal autorizado. Não preencher as 24 horas exigidas com dados fictícios.
 
 ## Evidências e próximos passos
 
