@@ -83,7 +83,8 @@ class MobilePreviewBundleD419Tests(unittest.TestCase):
         self.assertEqual(
             expected - incomplete,
             {"public-market.js", "persisted-paper.js",
-             "research-scorebook.js", "paper-ws-health.js"},
+             "research-scorebook.js", "paper-ws-health.js",
+             "paper-watch.js"},
         )
         self.assertNotEqual(expected, incomplete)
 
