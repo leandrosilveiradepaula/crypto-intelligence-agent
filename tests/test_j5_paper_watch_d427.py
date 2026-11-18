@@ -200,6 +200,33 @@ class D427OwnerFileTests(unittest.TestCase):
             self.assertEqual(failed["hypothetical_reservations_observed"], 0)
             self.assertFalse(failed["orders_sent"])
 
+    def test_public_watch_never_writes_into_j1_or_paper_journal_path(self):
+        with tempfile.TemporaryDirectory() as d:
+            owner = Path(d)
+            owner.chmod(0o700)
+            args = [
+                "--state-directory", str(owner),
+                "--private-paper-directory", "/somewhere/separate-paper",
+                "--allow-private-pointer-read", "--allow-public-websocket",
+                "--confirm-personal-readonly-research", "--confirm-region-eligible",
+                "--allow-synthetic-paper-reservations",
+                "--allow-local-paper-watch-output",
+                "--paper-watch-directory", str(owner),
+            ]
+            with patch.object(
+                operator, "observe_existing_paper_positions_once",
+                side_effect=AssertionError("must not read financial file"),
+            ), redirect_stdout(io.StringIO()):
+                self.assertEqual(operator.main(args), 65)
+            args[1] = "/somewhere/another-j1"
+            args[3] = str(owner)
+            with patch.object(
+                operator, "observe_existing_paper_positions_once",
+                side_effect=AssertionError("must not read financial file"),
+            ), redirect_stdout(io.StringIO()):
+                self.assertEqual(operator.main(args), 65)
+            self.assertFalse((owner / "latest-paper-watch.json").exists())
+
     def test_dac_symlink_hardlink_and_stale_target_fail_closed(self):
         with tempfile.TemporaryDirectory() as d:
             home = Path(d)
