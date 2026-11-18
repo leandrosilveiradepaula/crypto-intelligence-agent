@@ -1,5 +1,9 @@
 # Jornadas — plano de execução
 
+## J5/J6 D432 — projeção local sem importação manual
+
+Uma execução offline pode publicar o relatório integrado para o Console loopback já existente, que o lê automaticamente com `fetch` somente em `127.0.0.1`. O artefato é uma projeção de leitura, owner-only e fail-closed; não transforma a demo em supervisão contínua nem em PAPER prospectivo.
+
 ## J5/J6 — leitura do ciclo PAPER integrado
 
 O Console J5 pode importar o artefato sanitizado da demo J6 PRE9 (`j6_full_offline_paper_lifecycle_v1`) e expor em PT-BR o ciclo de abertura, parciais, runner, reinício e a falha de proteção. A tela é uma projeção local, sem writer, sem WebSocket, sem PnL financeiro e sem alegação de supervisão contínua.
