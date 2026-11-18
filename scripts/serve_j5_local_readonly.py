@@ -70,17 +70,44 @@ def read_integrated_cycle(*, directory: Path) -> dict[str, Any]:
     """Read a bounded owner-only D431 report; browser revalidates its contract."""
     _owned_directory(directory)
     path = directory / _INTEGRATED_CYCLE_FILE
-    info = path.stat()
-    if (path.is_symlink() or not stat.S_ISREG(info.st_mode)
-            or stat.S_IMODE(info.st_mode) != 0o600
-            or info.st_uid != os.geteuid() or not 2 <= info.st_size <= 32_768):
-        raise SourceNotReady("integrated cycle artifact unavailable")
-    with path.open("rb") as source:
+    # Open first with NOFOLLOW and verify the actual descriptor; stat()+open()
+    # can otherwise follow a symlink switched between the two operations.
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as source:
+        info = os.fstat(source.fileno())
+        if (not stat.S_ISREG(info.st_mode)
+                or stat.S_IMODE(info.st_mode) != 0o600
+                or info.st_uid != os.geteuid()
+                or not 2 <= info.st_size <= 32_768):
+            raise SourceNotReady("integrated cycle artifact unavailable")
         raw = source.read(32_769)
-    if len(raw) != info.st_size:
+        after = os.fstat(source.fileno())
+    if (len(raw) != info.st_size or after.st_size != info.st_size
+            or after.st_mtime_ns != info.st_mtime_ns
+            or after.st_ino != info.st_ino):
         raise SourceNotReady("integrated cycle artifact unstable")
-    report = json.loads(raw.decode("utf-8"))
-    if type(report) is not dict or report.get("schema_version") != "j6_full_offline_paper_lifecycle_v1":
+    def no_duplicate_fields(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise SourceNotReady("duplicate integrated cycle field")
+            result[key] = value
+        return result
+    report = json.loads(
+        raw.decode("utf-8"), object_pairs_hook=no_duplicate_fields,
+        parse_constant=lambda value: (_ for _ in ()).throw(
+            SourceNotReady("invalid integrated cycle numeric field")),
+    )
+    if (type(report) is not dict
+            or report.get("schema_version") != "j6_full_offline_paper_lifecycle_v1"
+            or report.get("mode") != "offline_paper"
+            or report.get("orders_sent") is not False
+            or report.get("live_trading_authorized") is not False
+            or report.get("approved_for_live_use") is not False
+            or report.get("market_data_real") is not False
+            or report.get("financial_pnl_available") is not False
+            or report.get("native_stop_verified") is not False
+            or report.get("network_requests") != 0):
         raise SourceNotReady("integrated cycle contract unavailable")
     return report
 

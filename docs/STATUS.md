@@ -2,7 +2,7 @@
 
 ## D432 — projeção automática local do ciclo PAPER (18/11/2026)
 
-O Console loopback passa a consultar `/api/integrated-paper-cycle` quando configurado no modo local já restrito. O produtor `python -m scripts.publish_integrated_paper_cycle_d432 --directory DIRETORIO_0700` gera atomicamente a projeção owner-only 0600 a partir da prova J2/AUTO2/AUTO4/runner e também exige a prova intrahorária Bybit-shaped D392. Não abre socket, não cria ordens, não substitui o feed prospectivo ou serviço PAPER; ausência/arquivo inseguro resulta em 503, nunca em estado atual inventado.
+O Console loopback passa a consultar `/api/integrated-paper-cycle` quando configurado no modo local já restrito. Se consulta posterior falhar, limpa a projeção antiga e exibe indisponibilidade; não afirma atualização atual. O produtor `python -m scripts.publish_integrated_paper_cycle_d432 --directory DIRETORIO_0700` gera atomicamente a projeção owner-only 0600 a partir da prova J2/AUTO2/AUTO4/runner e também exige a prova intrahorária Bybit-shaped D392. Não abre socket, não cria ordens, não substitui o feed prospectivo ou serviço PAPER; ausência/arquivo inseguro resulta em 503, nunca em estado atual inventado.
 
 ## D431 — visualização local do ciclo PAPER integrado (18/11/2026)
 

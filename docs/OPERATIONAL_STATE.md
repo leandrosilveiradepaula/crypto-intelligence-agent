@@ -2,7 +2,7 @@
 
 ## D432 — Console autoatualizável com projeção offline
 
-Branch `codex/bybit-paper-console-vertical`: D431 permanece o contrato visual estrito, mas o Console servido em `127.0.0.1:8765` passa a buscar a projeção somente de diretório owner 0700/arquivo 0600, no endpoint GET local. O comando produtor é seguro e offline; valida a lifecycle PRE9 e a prova D392 antes de publicar. Não há daemon instalado, WSS real, serviço VPS, feed contínuo, PnL, credencial ou ordem. Próximo valor: conectar um operador prospectivo autorizado a esta projeção após teste completo de stale/reconexão e gates J6.
+Branch `codex/bybit-paper-console-vertical`: D431 permanece o contrato visual estrito, mas o Console servido em `127.0.0.1:8765` passa a buscar a projeção somente de diretório owner 0700/arquivo 0600, no endpoint GET local. O comando produtor é seguro e offline; valida a lifecycle PRE9, os cenários D392 LONG/SHORT/UNKNOWN e as flags negativas antes de publicar. O leitor usa descritor NOFOLLOW com conferência 0600; o navegador invalida a projeção exibida quando o GET falha. Não há daemon instalado, WSS real, serviço VPS, feed contínuo, PnL, credencial ou ordem. Próximo valor: conectar um operador prospectivo autorizado a esta projeção após teste completo de stale/reconexão e gates J6.
 
 ## D431 — Console: relatório do ciclo integrado PAPER
 

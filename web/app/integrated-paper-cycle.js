@@ -62,8 +62,19 @@
     return Boolean(loc && loc.protocol === "http:" && loc.port === "8765" &&
       (loc.hostname === "127.0.0.1" || loc.hostname === "localhost"));
   }
+  let lastRequest = 0;
+  function unavailable() {
+    const box = document.getElementById("integrated-cycle");
+    if (!box) return;
+    box.replaceChildren();
+    const status = document.createElement("p");
+    status.textContent = "Projeção PAPER offline indisponível ou desatualizada; nenhuma supervisão contínua está comprovada.";
+    box.append(status);
+    box.hidden = false;
+  }
   async function refreshLocal() {
     if (!localPanel()) return;
+    const request = ++lastRequest;
     try {
       const response = await global.fetch("/api/integrated-paper-cycle", {
         method: "GET", credentials: "omit", cache: "no-store", redirect: "error"
@@ -71,8 +82,11 @@
       if (!response.ok || !(response.headers.get("content-type") || "").startsWith("application/json")) throw new Error();
       const raw = await response.text();
       if (raw.length < 2 || raw.length > 32768) throw new Error();
+      if (request !== lastRequest) return; // A late old poll cannot replace fresher evidence.
       install(JSON.parse(raw));
-    } catch (_) { /* Absence is not current PAPER supervision. */ }
+    } catch (_) {
+      if (request === lastRequest) unavailable();
+    }
   }
   global.CIAIntegratedPaperCycle = Object.freeze({ install, refreshLocal });
   if (typeof document !== "undefined" && localPanel()) {
