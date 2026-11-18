@@ -267,6 +267,7 @@ def supervise_ws_research(
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
+    on_confirmed_frame: Callable[[str | bytes, int], None] | None = None,
     allow_declared_gaps: bool = False,
     allow_temporal_discard: bool = False,
     allow_server_bounded_trade_clock: bool = False,
@@ -289,6 +290,7 @@ def supervise_ws_research(
             or type(allow_declared_gaps) is not bool
             or type(allow_temporal_discard) is not bool
             or type(allow_server_bounded_trade_clock) is not bool
+            or (on_confirmed_frame is not None and not callable(on_confirmed_frame))
             or (allow_server_bounded_trade_clock and not allow_temporal_discard)):
         raise DataValidationError("injected WS research capabilities required")
     groups = _topic_batches(scope)
@@ -361,6 +363,11 @@ def supervise_ws_research(
                         raise DataValidationError("WS temporal discard budget exceeded")
                     appended += batch.appended
                     replayed += batch.identical_replays
+                    # The callback runs only after the established parser and
+                    # isolated journal transaction accepted a confirmed close.
+                    # It never sees pre-ACK/open/rejected frames.
+                    if batch.appended and on_confirmed_frame is not None:
+                        on_confirmed_frame(frame, at_ms)
 
                 subscribe(0)
                 while True:
