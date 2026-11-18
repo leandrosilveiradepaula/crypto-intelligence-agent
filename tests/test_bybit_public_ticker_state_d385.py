@@ -76,6 +76,32 @@ class BybitTickerStateD385Tests(unittest.TestCase):
         self.assertNotIn("BTCUSDT", json.dumps(report))
         self.assertNotIn("100.15", json.dumps(report))
 
+
+    def test_exchange_clock_expires_quote_before_recent_receipt_clock(self):
+        # Real D418 probe reported 49 book-fresh versus 45 exchange-fresh:
+        # a 2.5s-old exchange event received just now is invalid after
+        # another 0.501s, even though its TCP receipt is very recent.
+        b = book()
+        q = b.ingest(ticker(ts=NOW - 2500), received_at_ms=NOW)
+        self.assertIsNotNone(q)
+        self.assertIsNotNone(b.current("BTCUSDT", at_ms=NOW + 500))
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW + 501))
+        state = b.sanitized_report(at_ms=NOW + 501)
+        self.assertEqual(state["fresh_quotes"], 0)
+        self.assertEqual(state["unavailable_quotes"], 2)
+        self.assertFalse(state["orders_sent"])
+
+    def test_future_exchange_timestamp_never_masquerades_as_current_quote(self):
+        # A publisher timestamp within the allowed skew is parseable but
+        # should not be usable as a fresh price before its event time.
+        b = book()
+        quote = b.ingest(ticker(ts=NOW + 500), received_at_ms=NOW)
+        self.assertEqual(quote.exchange_at_ms, NOW + 500)
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW))
+        self.assertEqual(b.sanitized_report(at_ms=NOW)["fresh_quotes"], 0)
+        self.assertIsNotNone(b.current("BTCUSDT", at_ms=NOW + 500))
+        self.assertFalse(b.sanitized_report(at_ms=NOW + 500)["orders_sent"])
+
     def test_duplicate_exact_sequence_does_not_refresh_market_time(self):
         b = book()
         raw = ticker()
