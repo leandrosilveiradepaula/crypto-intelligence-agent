@@ -118,6 +118,12 @@ class LiveWSProbeD405Tests(unittest.TestCase):
         self.assertEqual(result["requested_contracts"], 1)
         self.assertEqual(result["received_distinct_contracts"], 1)
         self.assertEqual(result["fresh_contracts_at_end"], 1)
+        self.assertTrue(result["freshness_evaluated_by_exchange_timestamp"])
+        self.assertEqual(result["validated_quote_contracts"], 1)
+        self.assertEqual(result["never_received_validated_quote_contracts"], 0)
+        self.assertEqual(result["received_no_eligible_quote_contracts"], 0)
+        self.assertEqual(result["eligible_quote_expired_at_end_contracts"], 0)
+        self.assertEqual(result["exchange_lagged_quote_callbacks"], 0)
         self.assertEqual(result["p95_event_lag_bucket"], "0_to_100ms")
         self.assertEqual(result["p99_event_lag_bucket"], "0_to_100ms")
         self.assertEqual(result["subscription_acks"], 1)
@@ -147,6 +153,10 @@ class LiveWSProbeD405Tests(unittest.TestCase):
         self.assertFalse(result["finite_coverage_fresh_at_end"])
         self.assertFalse(result["orders_sent"])
         self.assertEqual(result["p95_event_lag_bucket"], "over_5000ms")
+        self.assertEqual(result["validated_quote_contracts"], 1)
+        self.assertEqual(result["received_no_eligible_quote_contracts"], 1)
+        self.assertEqual(result["exchange_lagged_quote_callbacks"], 1)
+        self.assertEqual(result["exchange_lagged_quote_contracts"], 1)
 
     def test_real_btc_shape_preack_snapshot_and_deltas_then_ack_then_delta(self):
         c = Clock()
@@ -243,6 +253,58 @@ class LiveWSProbeD405Tests(unittest.TestCase):
         self.assertEqual(result["received_distinct_contracts"], 1)
         self.assertFalse(result["finite_coverage_observed_once"])
         self.assertTrue(first.closed and second.closed)
+
+
+    def test_count_only_partition_never_received_ineligible_expired_fresh(self):
+        c = Clock()
+        # BTC is validated but too old on arrival, ETH was fresh only at
+        # session start, SOL has no post-ACK callback, XRP arrives near end.
+        scope = ("BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT")
+        sock = Socket(c, [ack(), quote("BTCUSDT", utc=BASE-5_000),
+                          quote("ETHUSDT")],
+                      late=quote("XRPUSDT", utc=BASE + 4_000))
+        report = run(c, [sock], symbols=scope)
+        self.assertEqual(report["status"], "lease_completed")
+        self.assertEqual(report["requested_contracts"], 4)
+        self.assertEqual(report["validated_quote_contracts"], 3)
+        self.assertEqual(report["never_received_validated_quote_contracts"], 1)
+        self.assertEqual(report["received_no_eligible_quote_contracts"], 1)
+        self.assertEqual(report["eligible_quote_expired_at_end_contracts"], 1)
+        self.assertEqual(report["fresh_contracts_at_end"], 1)
+        self.assertEqual(report["exchange_lagged_quote_callbacks"], 1)
+        self.assertEqual(report["exchange_lagged_quote_contracts"], 1)
+        self.assertEqual(
+            sum(report[k] for k in (
+                "never_received_validated_quote_contracts",
+                "received_no_eligible_quote_contracts",
+                "eligible_quote_expired_at_end_contracts",
+                "fresh_contracts_at_end",
+            )), 4,
+        )
+        self.assertEqual(report["received_distinct_contracts"], 2)
+        self.assertFalse(report["finite_coverage_observed_once"])
+        self.assertFalse(report["finite_coverage_fresh_at_end"])
+        self.assertFalse(report["orders_sent"])
+        for symbol in scope:
+            self.assertNotIn(symbol, json.dumps(report))
+        self.assertTrue(sock.closed)
+
+    def test_exchange_timestamp_expires_even_when_socket_receipt_is_recent(self):
+        c = Clock()
+        # Received at +4s. Exchange time is +1.45s, so it passed the
+        # 3s ingest gate (+2.55s) but expired by the +5s end (+3.55s).
+        sock = Socket(c, [ack()], late=quote("BTCUSDT", utc=BASE+1_500))
+        report = run(c, [sock])
+        self.assertEqual(report["status"], "lease_completed")
+        self.assertEqual(report["received_distinct_contracts"], 1)
+        self.assertEqual(report["eligible_quote_expired_at_end_contracts"], 1)
+        self.assertEqual(report["fresh_contracts_at_end"], 0)
+        self.assertEqual(report["never_received_validated_quote_contracts"], 0)
+        self.assertEqual(report["received_no_eligible_quote_contracts"], 0)
+        self.assertEqual(report["exchange_lagged_quote_callbacks"], 0)
+        self.assertTrue(report["finite_coverage_observed_once"])
+        self.assertFalse(report["finite_coverage_fresh_at_end"])
+        self.assertTrue(sock.closed)
 
     def test_missing_flags_do_not_even_open_injected_socket(self):
         calls = []
