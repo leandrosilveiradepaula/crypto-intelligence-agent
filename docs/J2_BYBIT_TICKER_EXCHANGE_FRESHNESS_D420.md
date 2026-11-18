@@ -53,3 +53,30 @@ implantado; não instalar serviço como parte dessa correção.
 
 Feed público continua read-only, não homologado 24×7, sem autorização
 para sinais/ordens reais. Custo adicional R$ 0,00.
+
+
+## Regressão integral D396 e correção do gerador sintético
+
+A primeira execução de CI D420, com a nova política causal, identificou
+que **o próprio exemplo sintético antigo** D396 encerrava leases de 3 s
+com uma cotação emitida 50 ms antes do começo. Pelo relógio da exchange,
+sua idade final era **3.050 ms**, enquanto o teste ainda a declarava
+fresca usando o relógio da recepção. A falha era correta e foi mantida
+como sinal de regressão legítima, não suprimida.
+
+Ajustes de fixture, sem mudança do limite de 3 s no produto:
+
+- O demo D396 e os testes positivos usam uma janela **de 2 s** com
+  timestamp `T-50ms`, ainda fresco ao final (`2.050ms`).
+- O teste de bucket de lag de 2.000 ms usa janela **de 1 s**, total
+  exatamente no limite de 3.000 ms. Avança o relógio sintético 100 ms
+  antes do primeiro lease para que a época seguinte comece com dados
+  posteriores ao próprio PIT, sem aceitar dado retroativo.
+- Casos negativos — pré-PIT, snapshot futuro, cobertura incompleta,
+  desconexão e falta de profundidade — continuam rejeitados.
+
+Reexecução VPS com código pinado em
+`9db557310a300690f3329d87c3140a444907e91a`,
+job `8cf4640dd2c9453a840b2cee4cc9bbbd`: 11 testes D396,
+18 D385, 24 D386, 11 D418 e CLI demo D396 **PASS**. CI
+integral Linux/Windows/Chrome sobre o novo SHA ainda é o gate final.
