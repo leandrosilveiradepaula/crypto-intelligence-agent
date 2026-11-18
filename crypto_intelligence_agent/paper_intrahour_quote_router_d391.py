@@ -243,7 +243,6 @@ class PaperIntrahourQuoteRouter:
             "other_symbols_ignored": self._ignored,
             "decision_counts": dict(sorted(self._decisions.items())),
             "runner_decision_counts": dict(sorted(self._runner_decisions.items())),
-            "synthetic_fill_decision_counts": dict(sorted(self._fill_decisions.items())),
             "feed_authenticated": False,
             "marketwide_top50_verified": False,
             "native_stop_verified": False,
