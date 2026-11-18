@@ -7,7 +7,10 @@ Output is a single private, count-only, point-in-time local JSON snapshot.
 """
 from __future__ import annotations
 
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows CI: pure projection is portable; file lock is POSIX.
+    fcntl = None
 import json
 import math
 import os
@@ -96,6 +99,7 @@ def project_public_health(
                 "real_public_websocket", "injected_offline_fixture",
             )
             or any(source.get(k) is not False for k in must_false)
+            or source.get("source_authenticated") is not False
             or source.get("no_service_installed") is not True
             or type(source.get("owner_scope_unchanged_after_lease")) is not bool
             or type(source.get("full_finite_duration_observed")) is not bool
@@ -105,6 +109,7 @@ def project_public_health(
     num_limits = {
         "requested_distinct_contracts": 100,
         "unique_distinct_contracts_observed": 100,
+        "validated_quote_contracts": 100,
         "fresh_distinct_contracts_at_end": 100,
         "eligible_quote_expired_at_end_contracts": 100,
         "never_received_validated_quote_contracts": 100,
@@ -131,6 +136,10 @@ def project_public_health(
             or not 50 <= total <= 100
             or fresh + expired != observed
             or fresh + expired + never + ineligible != total
+            or source["validated_quote_contracts"] != total - never
+            or type(source.get("finite_coverage_fresh_at_end")) is not bool
+            or source["finite_coverage_fresh_at_end"] is True and (
+                fresh != total or not source["full_finite_duration_observed"])
             or source["subscription_acks"] < 1 and observed > 0
             or source["heartbeat_pongs"] > source["heartbeat_pings"]
             or source["reconnects"] > 1
@@ -179,7 +188,7 @@ def project_public_health(
 
 
 def _owned_directory(directory: Path) -> None:
-    if (os.name != "posix" or not isinstance(directory, Path)
+    if (os.name != "posix" or fcntl is None or not isinstance(directory, Path)
             or not directory.is_absolute()
             or directory.is_symlink()):
         raise DataValidationError("D421 private output directory invalid")
