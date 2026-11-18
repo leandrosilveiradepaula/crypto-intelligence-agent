@@ -187,6 +187,10 @@
       count(n);
     }
   }
+  function acceptsSchema(version) {
+    return version === "j2-j4-current-n50-paper-lease-d410-v1" ||
+      version === "j2-current-owner-n50-ws-probe-d406-v1";
+  }
   function validateReport(report) {
     if (report !== null && typeof report === "object" &&
         !Array.isArray(report) &&
@@ -407,7 +411,7 @@
     current = validateReport(data);
     render();
   }
-  global.CIAPaperWSHealth = Object.freeze({ validateReport, install });
+  global.CIAPaperWSHealth = Object.freeze({ validateReport, acceptsSchema, install });
   if (typeof module === "object" && module && module.exports) {
     module.exports = global.CIAPaperWSHealth;
   }
