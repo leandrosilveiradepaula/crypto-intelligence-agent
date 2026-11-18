@@ -15,6 +15,8 @@ NODE = r"""
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const base = JSON.parse(fs.readFileSync(0, "utf8"));
+let clockMs = base.sampled_at_ms + 1000;
+Date.now = () => clockMs;
 const ids = ["paper-ws-health-empty", "paper-ws-health-loaded",
   "paper-ws-health-status", "paper-ws-health-rows",
   "paper-ws-history-box", "paper-ws-history-summary", "paper-ws-history-rows"];
@@ -35,6 +37,7 @@ assert.equal(els["paper-ws-history-box"].hidden, true);
 function report(i, fresh=49) {
   const r = structuredClone(base);
   r.sampled_at_ms = base.sampled_at_ms + i * 1000;
+  clockMs = r.sampled_at_ms + 1000;
   r.fresh_at_sample_end = fresh;
   r.expired_at_sample_end = 50 - fresh;
   r.status = fresh === 50 ? "finite_sample_all_fresh_at_end" :
@@ -66,6 +69,7 @@ assert.ok(history.children[0].textContent.includes(
   new Date(base.sampled_at_ms + 2000).toISOString().slice(0,16).replace("T", " ")));
 const gap = report(26, 48);
 gap.sampled_at_ms += 200000;
+clockMs = gap.sampled_at_ms + 1000;
 panel.installLocal(gap);
 assert.equal(history.children.length, 24);
 assert.ok(summary.textContent.includes("intervalos acima de 3 min: 1"));
