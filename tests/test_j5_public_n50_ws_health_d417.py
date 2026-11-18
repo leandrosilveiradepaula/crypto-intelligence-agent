@@ -166,8 +166,11 @@ class J5PublicN50HealthD417Tests(unittest.TestCase):
         self.assertIn("j2-j4-current-n50-paper-lease-d410-v1", display)
         self.assertIn("validatePublicProbe", display)
         self.assertIn("fetch(", script)  # unrelated existing browser market read
+        self.assertEqual(display.count('global.fetch("/api/n50-public-health"'), 1)
+        self.assertIn('loc.port === "8765"', display)
+        # The only permitted new fetch is same-origin read-only D421 health.
         for forbidden in (
-            "innerHTML", "document.write", "fetch(", "XMLHttpRequest",
+            "innerHTML", "document.write", "XMLHttpRequest",
             "localStorage.", "sessionStorage.", "indexedDB.",
             "new WebSocket", "sendBeacon", "eval(",
         ):
