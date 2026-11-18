@@ -10,12 +10,19 @@ from contextlib import redirect_stdout
 import io
 import json
 import os
+from decimal import Decimal
 from pathlib import Path
 import tempfile
 import time
 import unittest
 from unittest.mock import patch
 
+from crypto_intelligence_agent.bybit_public_ticker_state_d385 import (
+    BybitTickerQuote,
+)
+from crypto_intelligence_agent.paper_intrahour_quote_router_d391 import (
+    PaperIntrahourQuoteRouter,
+)
 from crypto_intelligence_agent.j4_paper_bounded_trial_d428 import (
     PaperTrialBudget, run_bounded_paper_trial,
 )
@@ -90,7 +97,33 @@ class D428PolicyTests(unittest.TestCase):
             self.assertIn("seven_explicit_owner_optins_required", stdout.getvalue())
 
 
-@unittest.skipUnless(os.name == "posix" and hasattr(os, "geteuid")
+class D428HeldPositionFreshnessTests(unittest.TestCase):
+    def test_liveness_requires_fresh_price_for_each_held_contract_and_new_ack(self):
+        now = time.time_ns() // 1_000_000
+        q = BybitTickerQuote(
+            symbol="BTCUSDT", exchange_at_ms=now-1000,
+            received_at_ms=now-900, cross_sequence=5,
+            last_price=Decimal("100"), mark_price=Decimal("100"),
+            index_price=Decimal("100"), bid_price=Decimal("99"),
+            ask_price=Decimal("101"), bid_size=Decimal("1"),
+            ask_size=Decimal("1"), turnover_24h=None,
+            volume_24h=None, funding_rate=None,
+        )
+        # Construct an in-memory router shell solely for testing the count
+        # method. The financial journal constructor is covered elsewhere.
+        router = object.__new__(PaperIntrahourQuoteRouter)
+        router._by_symbol = {"BTCUSDT": None, "ETHUSDT": None}
+        router._last = {"BTCUSDT": q}
+        router._last_exchange_at_ms = {"BTCUSDT": q.exchange_at_ms}
+        self.assertEqual(router.fresh_held_contract_count(at_ms=now), 1)
+        self.assertEqual(router.fresh_held_contract_count(at_ms=now+4000), 0)
+        with self.assertRaises(DataValidationError):
+            router.fresh_held_contract_count(at_ms=True)
+        router.begin_new_market_session()
+        self.assertEqual(router.fresh_held_contract_count(at_ms=now), 0)
+
+
+@unittest.skipUnless(os.name == "posix" and hasattr(os, "geteuid"
                      and os.geteuid() != 0, "unprivileged POSIX owner required")
 class D428OwnerTrialTests(unittest.TestCase):
     def setUp(self):
@@ -104,8 +137,13 @@ class D428OwnerTrialTests(unittest.TestCase):
             p.mkdir()
             p.chmod(0o700)
 
-    def run_trial(self, source_reports, *, budget=None, clock=None):
-        fake_router = object()
+    def run_trial(self, source_reports, *, budget=None, clock=None,
+                  fresh_held=1):
+        class FakeRouter:
+            def fresh_held_contract_count(self, *, at_ms):
+                return fresh_held
+
+        fake_router = FakeRouter()
         with patch(
             MODULE + ".load_private_paper_routes",
             return_value=fake_router,
@@ -224,6 +262,15 @@ class D428OwnerTrialTests(unittest.TestCase):
         self.assertEqual(backend.call_count, 1)
         self.assertEqual(result["leases_with_fresh_position_quotes"], 1)
         self.assertFalse(result["active_position_supervision_verified"])
+        self.assertEqual(read_paper_watch(
+            directory=self.watch, now_ms=time.time_ns() // 1_000_000,
+        )["status"], "finite_paper_lease_failed_closed")
+
+    def test_stale_held_contract_at_end_stops_even_if_some_ticks_were_routed(self):
+        result, backend, _, _ = self.run_trial(reports(), fresh_held=0)
+        self.assertEqual(result["status"], "held_paper_feed_not_fresh_at_end")
+        self.assertEqual(backend.call_count, 1)
+        self.assertEqual(result["leases_with_fresh_position_quotes"], 0)
         self.assertEqual(read_paper_watch(
             directory=self.watch, now_ms=time.time_ns() // 1_000_000,
         )["status"], "finite_paper_lease_failed_closed")
