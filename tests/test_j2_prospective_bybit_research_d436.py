@@ -80,6 +80,38 @@ class D436Tests(unittest.TestCase):
         self.assertFalse(update.sanitized_report()["network_attempted"])
         self.assertFalse(report.sanitized_report()["orders_sent"])
 
+    def test_confirmed_close_inside_safety_window_does_not_abort_supervisor(self):
+        import json
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from crypto_intelligence_agent.bybit_closed_stream_cache import SQLiteOfflineClosedStreamJournal, HOUR_MS
+        from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
+        from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import supervise_prospective_research
+        from scripts.demo_j2_prospective_bybit_research_d436 import (
+            _scope, _frame, _fake_ack, CONFIG, FakeClock, FakeSession, FIRST,
+        )
+        raw, _ = _frame(0)
+        payload = json.loads(raw)
+        payload["ts"] = FIRST + HOUR_MS + 100
+        received_ms = FIRST + HOUR_MS + 250
+        clock = FakeClock(received_ms)
+        fake = FakeSession(clock, ((_fake_ack(), received_ms), (payload, received_ms)))
+        with TemporaryDirectory() as root:
+            journal = Path(root) / "isolated.sqlite"
+            SQLiteOfflineClosedStreamJournal.create(journal)
+            report, update = supervise_prospective_research(
+                session_factory=lambda: fake, journal_path=journal,
+                scope=_scope(), symbol="BTCUSDT", config=CONFIG,
+                budget=WSRunBudget(1, 12, 2),
+                clock=clock.clock, wall_ms=clock.wall_ms, sleeper=clock.sleeper,
+            )
+        self.assertEqual(report.status, "ws_budget_ended_research_only")
+        self.assertEqual(report.closed_events_appended, 1)
+        self.assertIsNotNone(update)
+        self.assertEqual(update.status, "observed_data_insufficient")
+        self.assertEqual(update.failure_category, "close_safety_not_elapsed")
+        self.assertFalse(update.sanitized_report()["approved_for_signals"])
+
     def test_replay_is_end_to_end_and_never_calls_financial_paths(self):
         first, restarted = run(), run()
         self.assertEqual(first, restarted)
