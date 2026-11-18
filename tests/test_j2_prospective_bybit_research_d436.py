@@ -17,6 +17,40 @@ class D436Tests(unittest.TestCase):
         self.assertEqual(result["status"], "explicit_public_research_optin_required")
         self.assertFalse(result["network_attempted"])
         self.assertIsNone(update)
+    def test_gated_injected_socket_stays_offline_even_with_all_flags_true(self):
+        import json
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from crypto_intelligence_agent.bybit_closed_stream_cache import SQLiteOfflineClosedStreamJournal
+        from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
+        from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import run_authorized_public_kline_session
+        from scripts.demo_j2_prospective_bybit_research_d436 import (
+            _scope, _frame, _fake_ack, CONFIG, FakeClock, FakeSession,
+        )
+
+        candle, received_ms = _frame(0)
+        clock = FakeClock(received_ms)
+        fake = FakeSession(clock, ((_fake_ack(), received_ms), (candle, received_ms)))
+        with TemporaryDirectory() as root:
+            journal = Path(root) / "isolated.sqlite"
+            SQLiteOfflineClosedStreamJournal.create(journal)
+            report, update = run_authorized_public_kline_session(
+                journal_path=journal, scope=_scope(), symbol="BTCUSDT",
+                config=CONFIG, budget=WSRunBudget(1, 12, 2),
+                allow_public_network=True, allow_public_websocket=True,
+                confirm_personal_readonly_research=True, confirm_region_eligible=True,
+                session_factory=lambda: fake, owner_check=lambda: True,
+                clock=clock.clock, wall_ms=clock.wall_ms, sleeper=clock.sleeper,
+            )
+        self.assertTrue(fake.closed)
+        self.assertEqual(report.subscriptions_acknowledged, 1)
+        self.assertEqual(report.closed_events_appended, 1)
+        self.assertIsNotNone(update)
+        self.assertEqual(update.status, "observed_data_insufficient")
+        self.assertEqual(update.data_mode, "offline_protocol_replay")
+        self.assertFalse(update.sanitized_report()["network_attempted"])
+        self.assertFalse(report.sanitized_report()["orders_sent"])
+
     def test_replay_is_end_to_end_and_never_calls_financial_paths(self):
         first, restarted = run(), run()
         self.assertEqual(first, restarted)
