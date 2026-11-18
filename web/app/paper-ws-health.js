@@ -225,6 +225,8 @@
     return r;
   }
   let current = null;
+  let origin = "none"; // local-auto | manual | none
+  let refreshInFlight = false;
   function valid(check) {
     if (!check) throw new Error("Diagnóstico WS/PAPER inválido ou sem origem verificável");
   }
@@ -433,8 +435,14 @@
       add("Época J1 inalterada", r.owner_scope_unchanged ? "Sim" : "Não");
       add("Estado das entradas", "Não autorizadas por este relatório");
       add("Posições e saídas PAPER", "Não avaliadas por este arquivo");
+      if (origin === "local-auto") {
+        add("Fonte do painel",
+          "Servidor local de leitura, sem conexão externa do celular");
+      }
       rows.append(span("strong",
-        "Última amostra finita: não é dado ao vivo. O celular não está conectado à VPS."));
+        origin === "local-auto" ?
+          "Atualização periódica do último relatório local. Não são cotações ao vivo nem ordens." :
+          "Última amostra finita: não é dado ao vivo. O celular não está conectado à VPS."));
       return;
     }
     if (r.schema_version === "j2-current-owner-n50-ws-probe-d406-v1") {
@@ -501,12 +509,76 @@
       "Importação pontual. O navegador não está conectado ao WebSocket e não acompanha a VPS."));
   }
   function install(data) {
-    current = validateReport(data);
+    const accepted = validateReport(data);
+    current = accepted;
+    origin = "manual";
     render();
   }
-  global.CIAPaperWSHealth = Object.freeze({ validateReport, acceptsSchema, install });
+  function hasManualPriority() { return origin === "manual"; }
+  function installLocal(data) {
+    const accepted = validateReport(data);
+    valid(accepted.schema_version === "j2-public-n50-finite-health-d421-v1" &&
+      accepted.data_mode === "real_public_websocket" &&
+      accepted.status !== "source_unavailable");
+    const age = Date.now() - accepted.sampled_at_ms;
+    valid(Number.isFinite(age) && age >= 0 && age <= 180000);
+    if (hasManualPriority()) return;
+    current = accepted;
+    origin = "local-auto";
+    render();
+  }
+  function clearLocal() {
+    if (hasManualPriority()) return;
+    current = null;
+    origin = "none";
+    render();
+    if (typeof document !== "undefined") {
+      const tag = document.getElementById("paper-ws-health-status");
+      if (tag) tag.textContent = "Saúde local indisponível";
+    }
+  }
+  function isLocalOrigin() {
+    const loc = global.location;
+    return Boolean(loc && loc.protocol === "http:" && loc.port === "8765" &&
+      (loc.hostname === "127.0.0.1" || loc.hostname === "localhost"));
+  }
+  async function refreshLocal() {
+    if (!isLocalOrigin() || hasManualPriority() || refreshInFlight) return;
+    refreshInFlight = true;
+    try {
+      const response = await global.fetch("/api/n50-public-health", {
+        method: "GET", credentials: "omit",
+        cache: "no-store", redirect: "error"
+      });
+      if (!response.ok || response.status !== 200 ||
+          !(response.headers.get("content-type") || "").startsWith("application/json")) {
+        throw new Error("N50 local indisponível");
+      }
+      const raw = await response.text();
+      if (raw.length < 2 || raw.length > 4096) {
+        throw new Error("Relatório de saúde fora do limite");
+      }
+      if (hasManualPriority()) return;
+      installLocal(JSON.parse(raw));
+    } catch (_) {
+      // No old green report survives a failed or stale GET.
+      clearLocal();
+    } finally {
+      refreshInFlight = false;
+    }
+  }
+  global.CIAPaperWSHealth = Object.freeze({
+    validateReport, acceptsSchema, install, installLocal, clearLocal,
+    refreshLocal, hasManualPriority
+  });
   if (typeof module === "object" && module && module.exports) {
     module.exports = global.CIAPaperWSHealth;
   }
-  if (typeof document !== "undefined") render();
+  if (typeof document !== "undefined") {
+    render();
+    if (isLocalOrigin()) {
+      void refreshLocal();
+      global.setInterval(() => { void refreshLocal(); }, 30000);
+    }
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

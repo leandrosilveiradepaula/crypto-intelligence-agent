@@ -100,12 +100,15 @@ class PaperWSHealthMobileD412Tests(unittest.TestCase):
     def test_view_has_no_network_or_browser_storage_primitives(self):
         src = (ROOT/"web/app/paper-ws-health.js").read_text(encoding="utf-8")
         for forbidden in (
-            "innerHTML", "document.write", "fetch(", "XMLHttpRequest",
+            "innerHTML", "document.write", "XMLHttpRequest",
             "localStorage.", "sessionStorage.", "indexedDB.",
             "new WebSocket", "sendBeacon", "eval(",
         ):
             self.assertNotIn(forbidden,src)
         html=(ROOT/"web/app/index.html").read_text(encoding="utf-8")
+        # D422 permits exactly one SAME-ORIGIN readonly loopback GET.
+        self.assertEqual(src.count('global.fetch("/api/n50-public-health"'), 1)
+        self.assertIn('loc.port === "8765"', src)
         app=(ROOT/"web/app/app.js").read_text(encoding="utf-8")
         self.assertIn('id="paper-ws-health-status"',html)
         self.assertIn('id="paper-ws-health-rows"',html)
