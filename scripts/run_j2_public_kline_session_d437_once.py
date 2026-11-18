@@ -159,6 +159,18 @@ def read_private_manifest(path: Path, *, now_ms: int) -> OfflineReviewedStreamSc
     return build_reviewed_scope(raw, now_ms=now_ms)
 
 
+def _successful_finite_public_close(session: dict) -> bool:
+    """A post-close failure is NOT a successful finite public lease."""
+    return (type(session) is dict
+            and session.get("status") == "ws_budget_ended_research_only"
+            and type(session.get("sessions_fully_acknowledged")) is int
+            and session["sessions_fully_acknowledged"] == 1
+            and type(session.get("subscriptions_acknowledged")) is int
+            and session["subscriptions_acknowledged"] == 1
+            and type(session.get("closed_events_appended")) is int
+            and session["closed_events_appended"] >= 1)
+
+
 def run_once(args: argparse.Namespace) -> dict:
     """No file or network action until every human gate and owner gate pass."""
     if any(type(getattr(args, key, None)) is not bool for key in _OPTINS):
@@ -196,8 +208,7 @@ def run_once(args: argparse.Namespace) -> dict:
         )
         terminal = read_projection(projection, now_ms=time.time_ns() // 1_000_000)
         session = report.sanitized_report()
-        observed_close = (session["sessions_fully_acknowledged"] > 0
-                          and session["closed_events_appended"] > 0)
+        observed_close = _successful_finite_public_close(session)
         return {
             "status": ("public_confirmed_close_observed_unverified"
                        if observed_close else "public_close_not_demonstrated"),
