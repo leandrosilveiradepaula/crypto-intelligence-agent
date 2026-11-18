@@ -48,3 +48,7 @@ Para aceitar integração: CI Linux/docs/Python, Windows/offline e navegador no 
 ## O que ainda falta para um supervisor real
 
 D428 tem poucos minutos de cobertura e **não** garante proteção durante a troca de socket, lacunas intralease, reinício do processo, queda da VPS ou fora do teste. Para um serviço PAPER 24×7 é necessário liveness por posição ao longo de todo o tempo, indicadores de disponibilidade com SLO, alerta de parada independente, política segura de reinício/lock único, reconciliação explícita de intents UNKNOWN, circuit-breaker de novas entradas, teste de custos/slippage/funding/liquidação no J3 e gate operacional J6. A autorização de ordens financeiras reais é **outro gate futuro**, nunca implicado por PAPER.
+
+## Evidência de integração (18/11/2026)
+
+PR #725 integrada por squash em `main` SHA `e7db6732aa0a665adb7bd5f30c3d239147a7de21`, head revisto `4c5e65a1121b96c47dfd57d63992fdcfb88b25bc`, três gates verdes: 3.350 testes Linux, Windows offline e Chrome mobile. Sem threads abertas ou bloqueios de revisão; sem arquivos de deploy/.github alterados. Um erro de sintaxe em decorador de teste do primeiro head foi corrigido antes do aceite, com suíte integral repetida. Código não foi instalado na VPS e nenhuma prova de 24×7 ou execução de stop real foi reivindicada.
