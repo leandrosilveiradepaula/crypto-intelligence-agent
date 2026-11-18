@@ -43,3 +43,7 @@ CI Linux + Windows + navegador precisa passar no SHA exato antes de integração
 ## Próxima fronteira funcional
 
 Depois do status de última sessão, homologar supervisor de posições PAPER com janela contínua, reentrada/reconciliação segura e **liveness confiável por posição mantida**, com limiares de atraso, alertas reais e reconciliação de intents persistidas. Sem uma fonte persistente assim, nenhuma interface deve exibir "posição protegida". Evoluir J3 com taxas, spread, slippage, funding, exposição e liquidação, e avaliar retorno líquido ajustado ao risco; os thresholds artificiais usados na prova D426 jamais entram numa estratégia produtiva.
+
+## Integração de código comprovada (18/11/2026)
+
+Mudança integrada em `main` SHA `75c1a374a5ca3aadc3c655d196ff8d0a608541de` com head revisado `121d35dcaa90c9ce7e8a660163bdd128fe8f1881`. CI de PR Linux 3.338 testes PASS, Windows/offline SUCCESS, mobile Chrome SUCCESS; sem threads ou bloqueios de revisão. O auditor browser verificou a allowlist dos sete scripts do painel e a prévia offline passou a incluir `paper-watch.js`. A publicação de status exige pasta owner isolada dos diretórios J1 e AUTO4, conforme testes de permissão e caminho. O merge não alterou o serviço instalado da VPS; qualquer novo release exige gate operacional separado.
