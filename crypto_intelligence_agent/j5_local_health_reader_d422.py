@@ -56,7 +56,7 @@ def validate_local_health(data: object, *, now_ms: int) -> dict[str, Any]:
             or type(r.get("owner_scope_unchanged")) is not bool
             or type(r.get("full_finite_duration_observed")) is not bool
             or not _count(r.get("sampled_at_ms"), 4_102_444_800_000)
-            or not 1 <= now_ms - r["sampled_at_ms"] <= _MAX_AGE_MS
+            or not 0 <= now_ms - r["sampled_at_ms"] <= _MAX_AGE_MS
             or not _count(r.get("cycle"), 1_000_000)
             or r["cycle"] == 0):
         raise HealthUnavailable("count-only sample expired or denied")
