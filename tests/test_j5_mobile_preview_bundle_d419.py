@@ -74,7 +74,7 @@ class MobilePreviewBundleD419Tests(unittest.TestCase):
             self.assertIn(asset, readme)
         self.assertIn("Nenhuma conta ou API", readme)
         self.assertIn("Simulação offline", readme)
-        self.assertIn("não conecta à VPS", readme)
+        self.assertIn("nem conecta à VPS", readme)
 
     def test_parser_would_catch_the_real_missing_four_dependencies(self):
         html = (APP / "index.html").read_text(encoding="utf-8")
