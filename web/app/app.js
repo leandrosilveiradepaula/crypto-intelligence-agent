@@ -519,8 +519,6 @@
       "Backup PAPER com campos desconhecidos");
   }
   function validatePaperBackup(backup) {
-    // The exported PAPER fixture has no permission to mutate market data,
-    // execute orders, or carry arbitrary fields into persistent local state.
     exactBackupKeys(backup, ["schema_version", "simulation_only",
       "orders_sent", "exported_at", "state"]);
     check(backup.schema_version === "cia-j5-paper-local-export-v1" &&
@@ -608,8 +606,6 @@
   }
 
   async function refreshLocalFeed() {
-    // file:// previews and ANY external host have no runtime transport.
-    // A manually selected N50 snapshot stays in control for this session.
     if (!isLocalReadOnlyOrigin() || feedOrigin === "manual") return;
     try {
       const response = await window.fetch("/api/n50-progress", {
@@ -638,8 +634,6 @@
   }
 
   async function refreshLocalResearch() {
-    // Reuse the exact private J2 50×24 readonly schema, never a trading signal.
-    // No request occurs for file://, remote hosts or manual J2 imports.
     if (!isLocalReadOnlyOrigin() || researchOrigin === "manual") return;
     try {
       const response = await window.fetch("/api/j2-research", {
@@ -662,7 +656,6 @@
       renderQuality();
     } catch (_) {
       if (researchOrigin === "manual") return;
-      // Do not retain a once-valid breakout as a current observation.
       research = null;
       researchOrigin = "none";
       renderResearch();
@@ -948,7 +941,6 @@
           watchlist = validateWatchlist(payload);
           warn("Watchlist J2 importada somente nesta sessão; observações não são sinais nem ordens.", false);
         } else if (payload.schema_version === "j2-ws-owner-ledger-status-v1") {
-          // Captures replace the displayed horizon set; never persist market data.
           const accepted = E.validateProspectiveCapture(payload);
           prospectiveCapture = accepted;
           prospectiveScores = Object.create(null);
@@ -973,6 +965,9 @@
         } else if (payload.schema_version === "paper_positions_snapshot_v1") {
           globalThis.CIAPersistedPaper.install(payload);
           warn("Diário PAPER importado somente para leitura.", false);
+        } else if (payload.schema_version === "j6_full_offline_paper_lifecycle_v1") {
+          globalThis.CIAIntegratedPaperCycle.install(payload);
+          warn("Ciclo integrado PAPER importado somente para leitura.", false);
         } else if (payload.schema_version === "paper-partial-derisk-risk-d398-v1") {
           partialRiskReport = E.validatePaperPartialRiskReport(payload);
           warn("Risco J3 PAPER importado na sessão: não é lucro nem posição local.", false);

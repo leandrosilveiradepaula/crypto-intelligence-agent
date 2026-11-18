@@ -1,5 +1,9 @@
 # STATUS — Crypto Intelligence Agent
 
+## D431 — visualização local do ciclo PAPER integrado (18/11/2026)
+
+O Console PAPER local agora aceita, pelo seletor JSON já existente, o relatório estrito de `python -m scripts.demo_full_offline_paper_lifecycle`. A visualização resume a sequência causal J2/RiskGate → intenção AUTO2 → FILL fictício explícito → AUTO4 → três parciais → runner → reinício/auditoria e o bloqueio de proteção simulada. O navegador valida flags negativas (`orders_sent=false`, sem mercado real, sem PnL financeiro validado, sem autorização live) e não faz rede adicional. Esta é evidência reprodutível offline; não é serviço PAPER contínuo, feed real, proteção nativa, conta ou homologação J6.
+
 ## J0 — Fundação
 Concluída; issue #1 e PRs #10/#11 integradas. Requisitos, arquitetura, autonomia, jornadas e decisões versionados.
 

@@ -3,8 +3,8 @@ CRYPTO INTELLIGENCE AGENT — APLICATIVO PAPER (PT-BR)
 
 1) Extraia TODOS os arquivos na mesma pasta, sem renomear: index.html,
    style.css, engine.js, app.js, public-market.js, persisted-paper.js,
-   research-scorebook.js, paper-ws-health.js, paper-watch.js e
-   LEIA-ME.txt. Se faltar
+   integrated-paper-cycle.js, research-scorebook.js,
+   paper-ws-health.js, paper-watch.js e LEIA-ME.txt. Se faltar
    algum script, a interface pode abrir parcialmente e omitir relatórios.
 2) Abra index.html no Chrome, Edge, Firefox ou navegador moderno.
 3) Em "Posições PAPER", crie um cenário hipotético. Abra "Parciais, runner
@@ -12,7 +12,8 @@ CRYPTO INTELLIGENCE AGENT — APLICATIVO PAPER (PT-BR)
 4) Em "Configurações", altere a alavancagem para novos cenários, guarde ou
    exporte seu laboratório local. Nenhuma conta ou API é necessária.
 5) Opcional: importe um relatório sanitizado de cotações públicas
-   Bybit/N50 ou um relatório separado de posições PAPER pelo seletor JSON.
+   Bybit/N50, um diário de posições PAPER ou o ciclo J6 determinístico
+   (python -m scripts.demo_full_offline_paper_lifecycle) pelo seletor JSON.
    Arquivos só são lidos localmente. Sem relatório, a UI indica desconectado.
 
 IMPORTANTE

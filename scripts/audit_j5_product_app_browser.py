@@ -442,9 +442,10 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     if "Importação recusada" not in page.locator("#notice").inner_text():
                         errors.append("untrusted market file not rejected")
                     # Exact script allowlist catches injected HTML while
-                    # accepting D427's reviewed local PAPER watch renderer.
+                    # accepting reviewed local PAPER read-only renderers.
                     allowed_scripts = (
                         "./engine.js", "./public-market.js", "./persisted-paper.js",
+                        "./integrated-paper-cycle.js",
                         "./research-scorebook.js", "./paper-ws-health.js",
                         "./paper-watch.js", "./app.js",
                     )
