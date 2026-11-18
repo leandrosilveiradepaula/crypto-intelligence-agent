@@ -2,6 +2,10 @@
 
 Estas decisões foram confirmadas pelo Product Owner e não podem ser alteradas silenciosamente. **Para destino de execução, D383 (Bybit exclusiva) prevalece sobre a escolha aberta de Binance/Bybit da D77 histórica; D77 (operação automática) permanece vigente.**
 
+## D434 — fronteira J2 para candles públicos Bybit confirmados (18/11/2026)
+
+`j2_bybit_closed_research_bridge` lê somente o journal confirmado já existente, executa a auditoria de integridade e converte série contínua em `ClosedCandle` com qualidade `bybit_public_ws_confirmed_unverified`. A fronteira exige 24 horas completas, escopo PIT e digest válidos; gaps, receipts tardios, corrupção e membresia divergente bloqueiam a série. O resultado declara `approved_for_signals=false`, não chama AUTO2 e não pode ser convertido silenciosamente em `synthetic_fixture`.
+
 ## D433 — hipótese de fill posterior no roteador intrahorário PAPER (18/11/2026)
 
 O roteador D391 pode receber, apenas por opt-in explícito, `PaperObservedFillAssumptions` D394. Depois de D389 reservar uma intenção AUTO4, uma cotação posterior e independente pode registrar um fill estritamente hipotético se satisfizer latência, BBO, spread, profundidade e limite de participação. O tick que cria a reserva não pode preenchê-la; `UNKNOWN`, terminal e replay idêntico nunca são reenviados. AUTO4 permanece o único writer e o padrão continua sem fills automáticos. O relatório sanitizado **D391-v1 mantém o formato preexistente**, porque o painel de saúde D412 o verifica por campos exatos; métricas adicionais de fills hipotéticos exigirão contrato/versionamento separado, sem declarar fills reais.

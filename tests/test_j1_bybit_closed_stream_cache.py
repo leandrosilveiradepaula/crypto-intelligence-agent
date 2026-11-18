@@ -156,6 +156,21 @@ class OfflineBybitClosedStreamTests(unittest.TestCase):
             ), a,
         )
 
+    def test_j2_readonly_boundary_preserves_public_unverified_quality(self):
+        from crypto_intelligence_agent.j2_bybit_closed_research_bridge import (
+            read_bybit_closed_research_series,
+        )
+        self.seed()
+        series = read_bybit_closed_research_series(
+            self.path, scope=self.scope, symbol="BTCUSDT",
+            decision_at_ms=DECISION, as_of_ms=DECISION + 4000,
+        )
+        self.assertEqual(len(series.candles), 24)
+        self.assertTrue(all(c.quality == "bybit_public_ws_confirmed_unverified"
+                            for c in series.candles))
+        self.assertFalse(series.approved_for_signals)
+        self.assertFalse(series.orders_sent)
+
     def test_missing_candle_or_unreviewed_member_never_yields_partial_ranking(self):
         self.seed(("BTCUSDT",))
         result = self.audit()
