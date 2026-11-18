@@ -171,6 +171,22 @@ def _successful_finite_public_close(session: dict) -> bool:
             and session["closed_events_appended"] >= 1)
 
 
+def _pilot_public_outcome(session: dict) -> str:
+    """Classify evidence conservatively, never hide a failed lease behind an ACK."""
+    if type(session) is not dict or session.get("status") != "ws_budget_ended_research_only":
+        return "public_session_abstained"
+    if (type(session.get("sessions_fully_acknowledged")) is not int
+            or session["sessions_fully_acknowledged"] != 1
+            or type(session.get("subscriptions_acknowledged")) is not int
+            or session["subscriptions_acknowledged"] != 1):
+        return "public_session_abstained"
+    if _successful_finite_public_close(session):
+        return "public_confirmed_close_observed_unverified"
+    if (type(session.get("open_updates")) is int and session["open_updates"] > 0):
+        return "public_open_updates_observed_unverified"
+    return "public_subscription_ack_observed_unverified"
+
+
 def run_once(args: argparse.Namespace) -> dict:
     """No file or network action until every human gate and owner gate pass."""
     if any(type(getattr(args, key, None)) is not bool for key in _OPTINS):
@@ -208,11 +224,11 @@ def run_once(args: argparse.Namespace) -> dict:
         )
         terminal = read_projection(projection, now_ms=time.time_ns() // 1_000_000)
         session = report.sanitized_report()
-        observed_close = _successful_finite_public_close(session)
+        outcome = _pilot_public_outcome(session)
         return {
-            "status": ("public_confirmed_close_observed_unverified"
-                       if observed_close else "public_close_not_demonstrated"),
+            "status": outcome,
             "source": "public_ws_observed_unverified",
+            "network_attempted": True,
             "session": session,
             "research": update.sanitized_report() if update is not None else None,
             "terminal": terminal,
@@ -240,7 +256,11 @@ def main(argv: list[str] | None = None) -> int:
         parser.add_argument("--" + field.replace("_", "-"), action="store_true")
     result = run_once(parser.parse_args(argv))
     print(json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False))
-    return 0 if result["status"] == "public_confirmed_close_observed_unverified" else 2
+    return 0 if result["status"] in (
+        "public_confirmed_close_observed_unverified",
+        "public_open_updates_observed_unverified",
+        "public_subscription_ack_observed_unverified",
+    ) else 2
 
 
 if __name__ == "__main__":
