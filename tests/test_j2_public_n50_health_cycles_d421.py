@@ -37,6 +37,7 @@ def source(*, fresh=45, mode="real_public_websocket") -> dict:
         "owner_scope_unchanged_after_lease": True,
         "full_finite_duration_observed": True,
         "finite_current_owner_scope_observed_once": True,
+        "finite_coverage_fresh_at_end": fresh == 50,
         "real_market_frames_verified": mode == "real_public_websocket",
         "requested_distinct_contracts": 50,
         "unique_distinct_contracts_observed": 50,
