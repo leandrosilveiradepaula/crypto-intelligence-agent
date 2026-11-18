@@ -293,7 +293,9 @@ class BybitPublicTickerBook:
         quote = self._quotes.get(symbol) if self._connected else None
         if (quote is None or now < self._universe_at_ms
                 or now < quote.received_at_ms
+                or now < quote.exchange_at_ms
                 or now - quote.received_at_ms > self._max_quote_age_ms
+                or now - quote.exchange_at_ms > self._max_quote_age_ms
                 or not quote.has_positive_book_depth):
             return None
         return quote

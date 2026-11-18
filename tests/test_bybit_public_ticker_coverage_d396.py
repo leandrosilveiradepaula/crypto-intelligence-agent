@@ -110,7 +110,7 @@ class TickerCoverageD396Tests(unittest.TestCase):
             return sock
         return new_session
 
-    def run_pilot(self, factories, *, epochs=None, seconds=3, sessions=1):
+    def run_pilot(self, factories, *, epochs=None, seconds=2, sessions=1):
         return run_finite_public_ticker_coverage_pilot(
             epochs=(self.a, self.b) if epochs is None else epochs,
             session_factories=tuple(factories),
@@ -238,10 +238,14 @@ class TickerCoverageD396Tests(unittest.TestCase):
         # Deliberately admit the scope BEFORE a 2-second transport lag.
         # A market observation predating its PIT membership is not usable.
         earlier_scope = replace(self.a, universe_at_ms=T - 3000)
+        # A 2s-old exchange frame plus a 3s lease is 5s old at closure.
+        # Use a bounded 1s lease and start 100ms after the next PIT boundary,
+        # so the second epoch's data is not backdated before its admission.
+        self.clock.sleep(0.1)
         r = self.run_pilot((
             self.factory(self.a.monitored, lagged=10),
             self.factory(self.b.monitored),
-        ), epochs=(earlier_scope, self.b))
+        ), epochs=(earlier_scope, self.b), seconds=1)
         self.assertTrue(r.all_observed_coverage)
         self.assertEqual(r.epochs[0].p95_lag_bucket, "1001_to_5000ms")
         self.assertEqual(r.epochs[0].p99_lag_bucket, "1001_to_5000ms")
