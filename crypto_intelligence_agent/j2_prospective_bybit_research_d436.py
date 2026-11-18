@@ -18,6 +18,8 @@ import tempfile
 
 from .bybit_closed_stream_cache import HOUR_MS, OfflineReviewedStreamScope, SQLiteOfflineClosedStreamJournal
 from .bybit_ws_offline_pipeline import ingest_offline_ws_batch
+from .bybit_public_ws_once import _bounded_json, StreamSession
+from .bybit_ws_supervisor import WSRunBudget, supervise_ws_research
 from .j2_bybit_closed_research_bridge import read_bybit_closed_research_series
 from .j2_observed_bybit_research import evaluate_observed_bybit_research
 from .market_data import DataGapError, DataValidationError
@@ -159,3 +161,28 @@ def read_projection(directory: Path, *, now_ms: int) -> dict:
             or type(value.get("evaluated_at_ms")) is not int or now_ms - value["evaluated_at_ms"] > 120_000):
         raise DataValidationError("D436 projection stale or invalid")
     return value
+
+
+def supervise_prospective_research(*, session_factory, journal_path: str | Path,
+    scope: OfflineReviewedStreamScope, symbol: str, config: CompressionBreakoutConfig,
+    budget: WSRunBudget, projection_directory: Path | None = None, **clock_args):
+    """Tie the existing bounded supervisor to D436 after each committed close."""
+    journal = SQLiteOfflineClosedStreamJournal(Path(journal_path))
+    latest: list[ProspectiveResearchUpdate] = []
+    def after(raw, received_ms):
+        payload = _bounded_json(raw)
+        rows = payload.get("data") if type(payload) is dict else None
+        # Supervisor/parser already validated this frame and append; this is
+        # only the causal decision clock extraction, never a second parser.
+        if type(rows) is not list or len(rows) != 1 or rows[0].get("confirm") is not True:
+            return
+        row = rows[0]
+        if payload.get("topic") != "kline.60." + symbol or type(row.get("start")) is not int:
+            return
+        update = evaluate_persisted_confirmed_close(journal_path=journal_path, scope=scope,
+            symbol=symbol, open_ms=row["start"], received_ms=received_ms, config=config)
+        latest[:] = [update]
+        if projection_directory is not None: publish_projection(projection_directory, update)
+    report = supervise_ws_research(session_factory=session_factory, scope=scope, journal=journal,
+        budget=budget, on_confirmed_frame=after, **clock_args)
+    return report, (latest[0] if latest else None)
