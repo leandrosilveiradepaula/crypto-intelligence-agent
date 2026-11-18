@@ -11,6 +11,7 @@
   <script src="./engine.js" defer></script>
   <script src="./public-market.js" defer></script>
   <script src="./persisted-paper.js" defer></script>
+  <script src="./integrated-paper-cycle.js" defer></script>
   <script src="./research-scorebook.js" defer></script>
   <script src="./paper-ws-health.js" defer></script>
   <script src="./paper-watch.js" defer></script>
@@ -292,6 +293,11 @@
             <div id="persisted-paper-rows" class="market-pulse-rows" aria-label="Posições fictícias persistidas"></div>
           </div>
           <p class="muted fine">Somente leitura e sessão atual. Sem ordens, preço ao vivo, stop nativo, resultado financeiro ou agregação de unidades diferentes. Os dados importados não alteram o laboratório PAPER.</p>
+        </div>
+        <div class="panel" aria-label="Demonstração integrada PAPER">
+          <div class="panel-heading"><h3>Ciclo PAPER integrado</h3><span class="status-label">Leitura</span></div>
+          <p class="muted fine">Importe o JSON do comando de demonstração para conferir sinal, risco, fills fictícios, parciais, runner, reinício e bloqueio de proteção. Não é mercado real nem resultado financeiro.</p>
+          <div id="integrated-cycle" class="market-pulse-rows" hidden></div>
         </div>
         <div class="panel" aria-labelledby="paper-ws-health-title">
           <div class="panel-heading">

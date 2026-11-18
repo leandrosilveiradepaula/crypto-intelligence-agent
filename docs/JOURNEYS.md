@@ -1,5 +1,9 @@
 # Jornadas — plano de execução
 
+## J5/J6 — leitura do ciclo PAPER integrado
+
+O Console J5 pode importar o artefato sanitizado da demo J6 PRE9 (`j6_full_offline_paper_lifecycle_v1`) e expor em PT-BR o ciclo de abertura, parciais, runner, reinício e a falha de proteção. A tela é uma projeção local, sem writer, sem WebSocket, sem PnL financeiro e sem alegação de supervisão contínua.
+
 | Jornada | Entrega verificável | Dependências | Issue |
 | --- | --- | --- | --- |
 | J0 Fundação | Especificações, decisões, arquitetura, backlog e CI documental | Repositório | #1 |
