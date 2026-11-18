@@ -57,7 +57,7 @@ class MobilePreviewBundleD419Tests(unittest.TestCase):
         expected = required_local_assets(html)
         listed = packaged_local_assets(workflow)
         self.assertEqual(listed, expected)
-        self.assertEqual(len(listed), 9)
+        self.assertEqual(len(listed), 10)
         self.assertGreater(len([x for x in listed if x.endswith(".js")]), 4)
         for asset in listed:
             with self.subTest(asset=asset):
