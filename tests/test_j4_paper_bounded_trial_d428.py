@@ -124,7 +124,7 @@ class D428HeldPositionFreshnessTests(unittest.TestCase):
         self.assertEqual(router.fresh_held_contract_count(at_ms=now), 0)
 
 
-@unittest.skipUnless(os.name == "posix" and hasattr(os, "geteuid"
+@unittest.skipUnless(os.name == "posix" and hasattr(os, "geteuid")
                      and os.geteuid() != 0, "unprivileged POSIX owner required")
 class D428OwnerTrialTests(unittest.TestCase):
     def setUp(self):
