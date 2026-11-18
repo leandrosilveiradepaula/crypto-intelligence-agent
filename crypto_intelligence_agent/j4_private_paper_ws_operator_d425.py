@@ -8,7 +8,10 @@ authenticates a venue or sends financial orders.
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
-import fcntl
+try:
+    import fcntl  # POSIX-only private PAPER owner lock
+except ImportError:  # Windows offline CI imports this module but never runs it
+    fcntl = None
 import json
 import os
 from pathlib import Path
