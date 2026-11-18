@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from crypto_intelligence_agent.market_data import DataValidationError
 from scripts.run_j2_public_kline_session_d437_once import (
-    _OPTINS, _successful_finite_public_close, build_reviewed_scope,
+    _OPTINS, _successful_finite_public_close, _pilot_public_outcome, build_reviewed_scope,
     read_private_manifest, run_once,
 )
 from scripts.demo_j2_prospective_bybit_research_d436 import _scope
@@ -90,6 +90,27 @@ class D437CommandTests(TestCase):
             with self.subTest(key=key, value=value):
                 self.assertFalse(_successful_finite_public_close({**good, key: value}))
         self.assertFalse(_successful_finite_public_close({"status": "ws_budget_ended_research_only"}))
+
+
+    def test_public_session_evidence_levels_never_pretend_close(self):
+        ack = {"status": "ws_budget_ended_research_only",
+               "sessions_fully_acknowledged": 1,
+               "subscriptions_acknowledged": 1,
+               "closed_events_appended": 0,
+               "open_updates": 0}
+        self.assertEqual(_pilot_public_outcome(ack),
+                         "public_subscription_ack_observed_unverified")
+        self.assertEqual(_pilot_public_outcome({**ack, "open_updates": 3}),
+                         "public_open_updates_observed_unverified")
+        self.assertEqual(_pilot_public_outcome({**ack, "closed_events_appended": 1}),
+                         "public_confirmed_close_observed_unverified")
+        for failing in (
+            {**ack, "status": "ws_fail_closed_abstain", "closed_events_appended": 1},
+            {**ack, "status": "ws_frame_budget_exhausted_abstain", "open_updates": 4},
+            {**ack, "sessions_fully_acknowledged": 0},
+            {**ack, "subscriptions_acknowledged": 0},
+        ):
+            self.assertEqual(_pilot_public_outcome(failing), "public_session_abstained")
 
     def test_manifest_rejects_future_expired_and_duplicate(self):
         old = _manifest(1_792_998_000_000)
