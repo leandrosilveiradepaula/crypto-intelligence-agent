@@ -114,7 +114,7 @@ def project_public_health(
         "eligible_quote_expired_at_end_contracts": 100,
         "never_received_validated_quote_contracts": 100,
         "received_no_eligible_quote_contracts": 100,
-        "subscription_acks": 2,
+        "subscriptions_acknowledged": 2,
         "reconnects": 2,
         "heartbeat_pings": 10000,
         "heartbeat_pongs": 10000,
@@ -140,7 +140,7 @@ def project_public_health(
             or type(source.get("finite_coverage_fresh_at_end")) is not bool
             or source["finite_coverage_fresh_at_end"] is True and (
                 fresh != total or not source["full_finite_duration_observed"])
-            or source["subscription_acks"] < 1 and observed > 0
+            or source["subscriptions_acknowledged"] < 1 and observed > 0
             or source["heartbeat_pongs"] > source["heartbeat_pings"]
             or source["reconnects"] > 1
             or source["ticker_frames_accepted"] < observed
@@ -170,7 +170,7 @@ def project_public_health(
         "requested_contracts": total, "observed_contracts": observed,
         "fresh_at_sample_end": fresh, "expired_at_sample_end": expired,
         "never_received": never, "received_ineligible": ineligible,
-        "subscription_acks": source["subscription_acks"],
+        "subscription_acks": source["subscriptions_acknowledged"],
         "reconnects": source["reconnects"],
         "heartbeat_pings": source["heartbeat_pings"],
         "heartbeat_pongs": source["heartbeat_pongs"],
