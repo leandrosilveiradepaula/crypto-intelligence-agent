@@ -1,5 +1,9 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D435 — avaliação J2 de série Bybit observada, não autorizante
+
+`j2_observed_bybit_research` aplica a matemática Decimal da configuração de compressão/breakout a `bybit_public_ws_confirmed_unverified` D434 sem alterar o motor sintético nem chamar AUTO2. O resultado mostra `observed_no_hypothesis` ou `observed_hypothesis_not_authorized`, preserva o digest do journal e fixa `approved_for_signals=false`/`orders_sent=false`. Regressão cobre persistência, replay, gaps e avaliação. Falta WS kline finito injetado e um gate explícito de pesquisa prospectiva antes de RiskGate/AUTO2; nenhuma VPS, credencial ou ordem.
+
 ## D434 — bridge J2 de closes confirmados, somente pesquisa
 
 Branch `codex/prospective-paper-vertical`: a ponte reutiliza `SQLiteOfflineClosedStreamJournal` e sua auditoria antes de expor 24 candles 1h Bybit confirmados a pesquisa. Teste integrado cobre persistência/replay do cache e comprova qualidade distinta de fixture, `approved_for_signals=false` e zero ordens. Ainda falta conectar kline WS finito injetado, cursor temporal prospectivo e os gates J2→RiskGate→AUTO2/AUTO4; não houve VPS, socket real, J1 owner ou ordem.

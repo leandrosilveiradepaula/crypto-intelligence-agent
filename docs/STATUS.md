@@ -1,5 +1,9 @@
 # STATUS — Crypto Intelligence Agent
 
+## D435 — hipóteses J2 sobre closes Bybit observados
+
+Séries D434 completas podem agora ser avaliadas com fórmulas J2 em modo pesquisa. A hipótese resultante não é sinal financeiro, intenção PAPER ou validação de edge; dados ausentes ou inválidos continuam em abstenção.
+
 ## D434 — candles confirmados disponíveis para pesquisa J2 não autorizante
 
 O journal Bybit de closes confirmados agora tem uma fronteira tipada para pesquisa J2. É replay read-only, separado da J1 owner, com qualidade pública não autenticada e sem sinal/ordem. Esta entrega não é operador prospectivo completo nem valida dados live.
