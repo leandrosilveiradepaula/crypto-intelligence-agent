@@ -52,6 +52,7 @@ _STATIC_FILES: dict[str, tuple[str, str]] = {
     "/research-scorebook.js": ("research-scorebook.js", "text/javascript; charset=utf-8"),
     "/paper-ws-health.js": ("paper-ws-health.js", "text/javascript; charset=utf-8"),
     "/paper-watch.js": ("paper-watch.js", "text/javascript; charset=utf-8"),
+    "/prospective-research.js": ("prospective-research.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
 }
 _ALLOWED_HOST_HEADERS = frozenset((f"{HOST}:{PORT}", f"localhost:{PORT}"))

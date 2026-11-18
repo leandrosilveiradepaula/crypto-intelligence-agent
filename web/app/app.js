@@ -33,21 +33,6 @@
     box.hidden = false;
   }
   function check(test, message) { if (!test) throw new Error(message); }
-  function renderProspectiveResearch(value) {
-    const label = $("live-research-status"), detail = $("live-research-detail");
-    if (!value || value.schema_version !== "j2-prospective-bybit-research-d436-v1" || value.approved_for_signals !== false || value.orders_sent !== false) {
-      label.textContent = "Indisponível"; detail.textContent = "Dados ausentes, vencidos ou recusados; nenhuma hipótese anterior é mantida."; return;
-    }
-    label.textContent = value.status === "observed_data_insufficient" ? "Abstenção" : "Pesquisa não autorizada";
-    detail.textContent = value.source === "offline_protocol_replay" ? "Replay offline; não é sessão pública." : "Sessão pública observada sem autenticação; hipótese não autorizada e sem ordens.";
-  }
-  async function refreshProspectiveResearch() {
-    try {
-      const response = await fetch("/api/j2-prospective-research", {cache:"no-store", credentials:"same-origin"});
-      if (!response.ok) throw new Error("unavailable");
-      renderProspectiveResearch(await response.json());
-    } catch (_) { renderProspectiveResearch(null); }
-  }
 
   function load() {
     try {
@@ -1040,9 +1025,9 @@
     $("refresh-research-local").hidden = false;
     void refreshLocalFeed();
     void refreshLocalResearch();
-    void refreshProspectiveResearch();
+    void globalThis.CIAProspectiveResearch.refreshLocal();
     window.setInterval(() => { void refreshLocalFeed(); }, 60_000);
     window.setInterval(() => { void refreshLocalResearch(); }, 300_000);
-    window.setInterval(() => { void refreshProspectiveResearch(); }, 15_000);
+    window.setInterval(() => { void globalThis.CIAProspectiveResearch.refreshLocal(); }, 15_000);
   }
 })();
