@@ -10,7 +10,7 @@ an authorized production service.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation, ROUND_DOWN, localcontext
+from decimal import Decimal, ROUND_DOWN, localcontext
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -101,7 +101,12 @@ def _eligible_anchor(quote: BybitTickerQuote, policy: ShadowPaperPolicy,
         return False
     with localcontext(_EXACT_CONTEXT):
         spread_bps = (quote.ask_price - quote.bid_price) * _10000 / quote.mark_price
-    return spread_bps <= policy.max_entry_spread_bps
+        max_mark_deviation_bps = max(
+            abs(quote.bid_price - quote.mark_price),
+            abs(quote.ask_price - quote.mark_price),
+        ) * _10000 / quote.mark_price
+    return (spread_bps <= policy.max_entry_spread_bps
+            and max_mark_deviation_bps <= Decimal("500"))
 
 
 def _seed_paper_at_quote(
@@ -228,7 +233,8 @@ def observe_shadow_paper_once(
             or budget.max_sessions > 2
             or not all(callable(c) for c in (clock, wall_ms, sleeper))
             or (session_factory is not None and not callable(session_factory))
-            or (os.name != "posix" and session_factory is None)):
+            or (session_factory is None
+                and (os.name != "posix" or os.geteuid() == 0))):
         raise DataValidationError("D426 scope, budget or platform invalid")
     started_ms = wall_ms()
     current = read_current_j1_n50_scope(
@@ -307,6 +313,8 @@ def observe_shadow_paper_once(
             reserved = 0
         status = (
             "owner_scope_changed_or_unavailable" if not owner_unchanged
+            else "public_lease_degraded_or_abstained"
+                if result.status != "lease_completed"
             else "no_valid_shadow_anchor" if not shadow_seeded
             else "shadow_opened_no_followup_quote" if followed == 0
             else "shadow_public_quote_routed_paper_only"
