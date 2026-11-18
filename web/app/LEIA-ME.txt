@@ -1,14 +1,18 @@
 CRYPTO INTELLIGENCE AGENT — APLICATIVO PAPER (PT-BR)
 ==================================================
 
-1) Extraia a pasta inteira preservando index.html, app.js, engine.js e style.css.
+1) Extraia TODOS os arquivos na mesma pasta, sem renomear: index.html,
+   style.css, engine.js, app.js, public-market.js, persisted-paper.js,
+   research-scorebook.js, paper-ws-health.js e LEIA-ME.txt. Se faltar
+   algum script, a interface pode abrir parcialmente e omitir relatórios.
 2) Abra index.html no Chrome, Edge, Firefox ou navegador moderno.
 3) Em "Posições PAPER", crie um cenário hipotético. Abra "Parciais, runner
    e histórico" para registrar saídas fictícias 50%, 60%, 70%.
 4) Em "Configurações", altere a alavancagem para novos cenários, guarde ou
    exporte seu laboratório local. Nenhuma conta ou API é necessária.
-5) Opcional: em "Mercado N50", importe relatórios JSON sanitizados já obtidos
-   localmente dos módulos J5/J2. Sem arquivo, o painel indica desconectado.
+5) Opcional: importe um relatório sanitizado de cotações públicas
+   Bybit/N50 ou um relatório separado de posições PAPER pelo seletor JSON.
+   Arquivos só são lidos localmente. Sem relatório, a UI indica desconectado.
 
 IMPORTANTE
 - Simulação offline e local. Não executa trading automático, ordens reais,
