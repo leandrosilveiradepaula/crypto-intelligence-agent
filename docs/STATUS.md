@@ -1,8 +1,9 @@
 # STATUS — Crypto Intelligence Agent
 
-## D435 — hipóteses J2 sobre closes Bybit observados
+## D435 — pesquisa causal sobre candles observados (ainda sem autorização de sinais)
 
-Séries D434 completas podem agora ser avaliadas com fórmulas J2 em modo pesquisa. A hipótese resultante não é sinal financeiro, intenção PAPER ou validação de edge; dados ausentes ou inválidos continuam em abstenção.
+A D435 avalia compressão, rompimento, ATR e volume da série D434 confirmada usando Decimal. O resultado é somente uma hipótese no **último candle fechado** (`observed_hypothesis_not_authorized`) ou abstenção (`observed_no_hypothesis`), com digest de origem; jamais passa por RiskGate/AUTO2, não opera ou modela lucro. A revisão corrigiu propagação da EMA ao motor J2 e preservou reconciliação com a D434 existente. Testes LONG/SHORT/no-signal, cooldown, clocks e paridade com referência sintética; integração de código depende da CI exata e não equivale a feed público real contínuo.
+
 
 ## D434 — candles confirmados disponíveis para pesquisa J2 não autorizante
 
@@ -1961,3 +1962,7 @@ O Console J5 pode buscar automaticamente **uma projeção OFFLINE determinístic
 
 A D391→D394 foi integrada na `main` SHA `74008194a4ab07af70e7de3837bbc9b5a2e50d39` via PR #730, com HEAD revisado `72d1e0bffd423849994a214547a0f9d7f339d7e9`. CI da PR nesse HEAD: Linux/Python/docs **SUCCESS**, Windows/offline **SUCCESS**, Chrome/mobile **SUCCESS**. Em revisão, foi preservado o schema D391-v1 consumido pelo J5 D412, evitando quebra do painel; adicionados testes de regressão de `UNKNOWN` e compatibilidade. O código implementa fills **hipotéticos opt-in**, posteriores a reservas e sujeitos a latência e BBO, sem ordens ou fills reais. Continua faltando operador PAPER prospectivo conectado ao WebSocket Bybit e projeção temporal real no J5; nenhum deploy VPS, 24×7 ou PnL confiável foi homologado. Próximo objetivo em #677 e #676: execução PAPER event-driven isolada, sem reutilizar a demo PRE9 como sinal/estado atual.
 
+
+## J2 D434 — ponte causal read-only integrada (18/11/2026 UTC)
+
+PR #731 incorporada à main SHA `cd54ea7ed8e720d6214f41f83cefe899c774547b` após revisão do head `76856a663c06722343e0e8db358454cc936a9232` e CI Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS**. A fronteira lê 24h+ candles Bybit `kline.60` confirmados do journal offline já existente e entrega `ClosedCandle` de qualidade `bybit_public_ws_confirmed_unverified`, sem acesso J1 owner ou autorização para sinais. Revisão corrigiu risco de duas transações: os candles agora saem **do mesmo snapshot SQLite** auditado (digest/PIT/gaps). Regressão verifica alteração concorrente posterior ao snapshot, escopo e atraso. Sem ingestão prospectiva real nem J2 quantitative live, ordens, testnet, VPS ou 24×7. Próximo marco: fluxo público Bybit WS isolado com candles observados + avaliação de pesquisa J2 causal sem autorização AUTO2 e estado temporal observável; depois gates de risco para PAPER. Custo R$0.

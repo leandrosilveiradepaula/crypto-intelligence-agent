@@ -1,8 +1,9 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
-## D435 — avaliação J2 de série Bybit observada, não autorizante
+## D435 — PR #732 sob revisão; código somente pesquisa (18/11/2026)
 
-`j2_observed_bybit_research` aplica a matemática Decimal da configuração de compressão/breakout a `bybit_public_ws_confirmed_unverified` D434 sem alterar o motor sintético nem chamar AUTO2. O resultado mostra `observed_no_hypothesis` ou `observed_hypothesis_not_authorized`, preserva o digest do journal e fixa `approved_for_signals=false`/`orders_sent=false`. Regressão cobre persistência, replay, gaps e avaliação. Falta WS kline finito injetado e um gate explícito de pesquisa prospectiva antes de RiskGate/AUTO2; nenhuma VPS, credencial ou ordem.
+Branch `codex/prospective-paper-vertical` reconciliada sem force com a main D434. A versão inicial D435 usava `ema_close=None` na estrutura de features, impossibilitando emitir hipóteses apesar de calcular a EMA. Revisão propaga o valor verdadeiro, verifica a paridade com o J2 sintético em LONG/SHORT, impede hipótese histórica como presente e valida clocks, inputs e abstenção. Não houve execução de mercado real, ordem, feed contínuo, testnet, deploy, ou mudança VPS. Testes/CI do head atualizado são gate obrigatório; o objetivo final #677 permanece aberto até validação prospectiva completa.
+
 
 ## D434 — bridge J2 de closes confirmados, somente pesquisa
 
@@ -2325,3 +2326,7 @@ Código integrado na `main` SHA `f86ae1c939175ea686dadfd9cc20abb77582d04d` pela 
 
 `main` recebeu `74008194a4ab07af70e7de3837bbc9b5a2e50d39`, após revisão do head `72d1e0bffd423849994a214547a0f9d7f339d7e9` e CI Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS**, sem thread/review impeditiva. O antigo travamento da suíte direcionada não se reproduziu com faulthandler; isso não prova causa da invocação inicial. A primeira CI remota identificou incompatibilidade do novo campo no relatório D391 contra o renderer J5/D412 exato; correção manteve o schema v1 intacto. A regressão UNKNOWN inicialmente utilizava ID fora do contrato `fixture_`; corrigida e validada nos três gates. D394 fica OFF por padrão, usa feed simulado e política de BBO/latência e grava FILLs *hipotéticos* no AUTO4; não há serviço PAPER prospectivo real implantado, estratégia automática habilitada, execução live, credencial, testnet ou alteração de serviços VPS. Próximo passo: construir e validar a integração contínua pública Bybit→estratégia/RiskGate→AUTO4/PAPER→J5, com abort/restart e estados honestos, sem emissão de ordens reais. Evidência: PR #730; CI pós-merge separada da CI de PR.
 
+
+## J2 D434 — bridge auditada integrada, ainda não é sinal prospectivo (18/11/2026 UTC)
+
+PR #731 **merged** SHA `cd54ea7ed8e720d6214f41f83cefe899c774547b`; head de revisão e CI verde Linux/Windows/Chrome: `76856a663c06722343e0e8db358454cc936a9232`. Base owner J1 intocada. Fix de segurança da mesma PR: `SQLiteOfflineClosedStreamJournal.audit(research_symbol=...)` opcional entrega `private_j2_confirmed_rows` não serializado, validado na **mesma transação BEGIN** do relatório/digest; antes havia segunda conexão e janela TOCTOU. Agora J2 recebe série pura `ClosedCandle` com qualidade pública não autenticada e `approved_for_signals=false`. Não há conexão WS prospectiva, reinterpretação de dados sintéticos, port J2 para indicadores reais, AUTO2/AUTO4 executando entradas, lançamento/serviço na VPS ou prova de rentabilidade. CI pós-merge é gate separado e foi iniciada. **Próxima ação #677:** integrar coleta pública finita/injetável `kline.60` + checkpoint pesquisável + motor de hipóteses read-only causal com qualidade explícita sem habilitar abertura PAPER. Gate posterior: admissão de sinais prospectivos e supervisor PAPER contínuo isolado. Nenhuma ordem real; custo R$0.

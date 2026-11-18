@@ -527,3 +527,11 @@ BTCUSDT em feed público verdadeiro recebeu 65 quotes frescas pós-ACK; N50 rece
 
 PR #730 integrada em `main` SHA `74008194a4ab07af70e7de3837bbc9b5a2e50d39` após CI Linux/Windows/Chrome verde. O roteador D391 pode aplicar política D394 a reservas de saída AUTO4 usando ticks posteriores e hipóteses explícitas de latência e liquidez; não há fill de exchange, sinal prospectivo, feed live continuamente acoplado ou release VPS. A jornada J4/J6 continua incompleta: próximas capacidades verificáveis incluem operador PAPER event-driven isolado, recuperação/UNKNOWN, feed Bybit público com frescor e observabilidade J5 temporal sem demo fixa, com gate operacional para qualquer instalação. Ver issues #676, #677 e #7.
 
+
+## J2/J6 D434 — candles Bybit confirmados alcançam fronteira J2 de pesquisa
+
+A PR #731 foi integrada à main SHA `cd54ea7ed8e720d6214f41f83cefe899c774547b` após CI Linux/Windows/Chrome verde. Reutiliza parser e journal Bybit de closes confirmados, entrega `ClosedCandle` de qualidade pública **não verificada** e mesma transação auditada, com proteção contra gaps, replay inconsistente e concorrência. **Aceite parcial de integração de dados** apenas: sem autorização de sinais, sem RiskGate/AUTO2, sem operador PAPER prospectivo conectado ao WS, sem implantação ou ordem real. Próximo marco nas issues #677 e #676: pesquisa J2 causal sobre dados observados + feed público isolado, depois integração de PAPER sob gates próprios.
+
+## J2 D435 — pesquisa sobre candles públicos confirmados
+
+Foi integrada como proposta uma avaliação de hipóteses causal para dados observados D434, sem permissão de sinal, ordem ou PnL. O aceite da J2/J6 exige passagem de replay por testes e CI, e ainda não prova receptor Bybit prospectivo nem serviço PAPER. Próximo marco #677: execução finita do feed confirmado para pesquisa e cronologia end-to-end, depois gates AUTO2/J4 separados.
