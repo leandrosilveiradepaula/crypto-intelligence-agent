@@ -76,7 +76,7 @@ class MobilePreviewBundleD419Tests(unittest.TestCase):
         self.assertIn("Simulação offline", readme)
         self.assertIn("nem conecta à VPS", readme)
 
-    def test_parser_would_catch_the_real_missing_four_dependencies(self):
+    def test_parser_would_catch_the_real_missing_five_dependencies(self):
         html = (APP / "index.html").read_text(encoding="utf-8")
         expected = required_local_assets(html)
         incomplete = {"index.html", "style.css", "engine.js", "app.js", "LEIA-ME.txt"}
