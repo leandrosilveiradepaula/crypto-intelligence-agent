@@ -29,6 +29,7 @@ def run_current_n50_paper_lease_once(
     confirm_personal_readonly_research: bool = False,
     confirm_region_eligible: bool = False,
     allow_synthetic_paper_reservations: bool = False,
+    guard_held_feed_during_lease: bool = False,
     budget: TickerLeaseBudget = _BUDGET,
     session_factory: Callable[[], StreamSession] | None = None,
     clock: Callable[[], float] = time.monotonic,
@@ -55,7 +56,7 @@ def run_current_n50_paper_lease_once(
     if any(type(g) is not bool for g in (
         allow_private_pointer_read, allow_public_websocket,
         confirm_personal_readonly_research, confirm_region_eligible,
-        allow_synthetic_paper_reservations,
+        allow_synthetic_paper_reservations, guard_held_feed_during_lease,
     )):
         raise DataValidationError("D410 owner/public/PAPER gate type invalid")
     if not all((
@@ -99,6 +100,7 @@ def run_current_n50_paper_lease_once(
         budget=budget, session_factory=session_factory,
         paper_router=paper_router, measure_public_coverage=True,
         require_fresh_held_position_for_paper=True,
+        guard_held_feed_during_lease=guard_held_feed_during_lease,
         clock=clock, wall_ms=wall_ms, sleeper=sleeper,
     )
     try:
