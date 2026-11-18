@@ -539,3 +539,7 @@ A avaliação causal de hipóteses sobre dados observados D434 foi integrada pel
 ## J2 #677 / D436 — composição do close confirmado até a hipótese de pesquisa
 
 O operador D436 reutiliza os contratos de close confirmado, journal e D434/D435. Cada lote com ACK persiste no SQLite próprio, é reauditorado e atualiza a hipótese do último candle fechado ou uma abstenção sanitizada. `python -m scripts.demo_j2_prospective_bybit_research_d436` não importa JSON, cria/remove o journal temporário e demonstra LONG não autorizado. Não chama RiskGate/AUTO2/AUTO4, não cria posição/PnL, não usa rede, J1 owner ou VPS. Próximo passo: callback no lease WebSocket opt-in e projeção J5; sem alegar observação pública real ou serviço contínuo antes do gate.
+
+## J2/J5 D436 — sessão WS finita de pesquisa e terminal no Console
+
+O D436 está preparado para processar frames públicos Bybit modelados durante uma sessão supervisionada com transporte injetável, sem ordens. Callback pós-ACK/pós-append publica no J5 um relatório versionado e não autorizante; ao término a interface deve mostrar “Sessão encerrada”, expirar dados e bloquear hipóteses antigas. Prova de fake socket + journal D434 + D435, regressões backend/browser e CI Linux/Windows/Chrome são gates da PR. A observação real/operador PAPER contínuo J6 **não está** aceito por esta entrega; #677 permanece aberta.

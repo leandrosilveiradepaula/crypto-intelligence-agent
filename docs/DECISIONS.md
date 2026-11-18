@@ -1,4 +1,8 @@
 # Decisões do produto
+## D436 — projeção temporal do operador de pesquisa, não trading (18/11/2026)
+
+Decisão de contrato: dados confirmados `kline.60` sob ACK do supervisor alimentam D434/D435 somente após append no journal de pesquisa separado. Sessão injetável declara `offline_protocol_replay` por padrão; `public_ws_observed_unverified` exige opt-in explícito e não prova autenticidade comercial. O relatório J5 `j2-prospective-bybit-research-d436-v2` tem fonte/timestamps, estado `observed_session_ended`, TTL owner-only 0700/0600 e leitura no loopback com `O_NOFOLLOW`. UI distingue hipóteses *não autorizadas*, ausência de hipótese, abstenção, sessão encerrada e indisponibilidade. Nenhuma pesquisa D436 autoriza RiskGate/AUTO2/AUTO4, ordem real, PnL ou modificação na J1/VPS.
+
 
 ## D436 — operador finito de pesquisa prospectiva sobre closes Bybit (18/11/2026)
 
