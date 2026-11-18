@@ -46,6 +46,7 @@ def reports(*, count=2):
     for i in range(count):
         r = fake_source(reserved=1, reconcile=(i + 1) * 241)
         r["existing_paper_position_quote_processed"] = True
+        r["reconnects"] = i % 2
         out.append(r)
     return out
 
@@ -192,6 +193,7 @@ class D428OwnerTrialTests(unittest.TestCase):
         self.assertEqual(result["quotes_forwarded_to_paper"], 484)
         self.assertEqual(result["synthetic_exit_reservation_events"], 1)
         self.assertEqual(result["reconciliation_required_events"], 482)
+        self.assertEqual(result["public_ws_reconnect_events"], 1)
         self.assertEqual(backend.call_count, 2)
         load.assert_called_once()
         self.assertEqual(seen, [router, router])
@@ -215,6 +217,7 @@ class D428OwnerTrialTests(unittest.TestCase):
     def test_absent_held_quote_stops_before_second_lease_and_writes_failure(self):
         blank = fake_source(reserved=0, reconcile=0)
         blank["existing_paper_position_quote_processed"] = False
+        blank["reconnects"] = 0
         blank["paper_coverage_gate"]["quote_frames_delivered_to_paper"] = 0
         blank["paper_monitoring"]["decision_counts"] = {}
         result, backend, _, _ = self.run_trial(
@@ -254,7 +257,7 @@ class D428OwnerTrialTests(unittest.TestCase):
         )["status"], "finite_paper_lease_failed_closed")
 
     def test_gapped_monotonic_clock_prevents_next_socket(self):
-        times = iter((1.0, 1.0, 11.0, 19.0))
+        times = iter((1.0, 1.0, 11.0, 11.0, 19.0))
         result, backend, _, _ = self.run_trial(
             reports(), clock=lambda: next(times),
         )
