@@ -523,3 +523,7 @@ A primeira sessão real de teste comprovou que snapshots/deltas podem chegar ant
 ## J2 D415 — validar cruzamento de sequência e timestamp da Bybit
 
 BTCUSDT em feed público verdadeiro recebeu 65 quotes frescas pós-ACK; N50 recebeu 73 quotes para 33 instrumentos, interrompido em `conflicting_replay`. Para não confundir sequência de matching engine com identificador exclusivo de atualização parcial, D385 passa a aceitar `cs` estável apenas com avanço inequívoco de `ts`, preservando idempotência e fail-closed no mesmo instante, na ordem temporal regressiva ou sem snapshot. Regressões offline + teste real owner curto antes de alegar monitor 50/50 ou J6. Ver `docs/J2_REAL_N50_CROSS_SEQUENCE_D415.md`.
+## J4/J6 D433 — fills PAPER causais opcionais integrados no código
+
+PR #730 integrada em `main` SHA `74008194a4ab07af70e7de3837bbc9b5a2e50d39` após CI Linux/Windows/Chrome verde. O roteador D391 pode aplicar política D394 a reservas de saída AUTO4 usando ticks posteriores e hipóteses explícitas de latência e liquidez; não há fill de exchange, sinal prospectivo, feed live continuamente acoplado ou release VPS. A jornada J4/J6 continua incompleta: próximas capacidades verificáveis incluem operador PAPER event-driven isolado, recuperação/UNKNOWN, feed Bybit público com frescor e observabilidade J5 temporal sem demo fixa, com gate operacional para qualquer instalação. Ver issues #676, #677 e #7.
+
