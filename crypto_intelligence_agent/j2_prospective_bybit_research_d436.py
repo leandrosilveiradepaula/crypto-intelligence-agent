@@ -404,6 +404,14 @@ def run_authorized_public_kline_session(
                 "orders_sent": False}, None
     real_transport = session_factory is None
     if real_transport:
+        # Test-only hooks may NEVER impersonate a genuinely observed socket.
+        # In particular, a synthetic wall clock can falsely validate a close.
+        if owner_check is not None or clock_args:
+            return {"status": "public_test_hooks_forbidden", "network_attempted": False,
+                    "orders_sent": False}, None
+        if os.name != "posix" or os.geteuid() == 0:
+            return {"status": "unprivileged_owner_required", "network_attempted": False,
+                    "orders_sent": False}, None
         from .bybit_public_ws_once import ENDPOINT, _real_session_factory
         if ENDPOINT != "wss://stream.bybit.com/v5/public/linear":
             raise DataValidationError("D436 Bybit endpoint changed")
