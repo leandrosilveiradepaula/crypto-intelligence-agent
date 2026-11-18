@@ -397,19 +397,17 @@ def run_authorized_public_kline_session(
     if not all(flags):
         return {"status": "explicit_public_research_optin_required",
                 "network_attempted": False, "orders_sent": False}, None
-    owner_check_injected = owner_check is not None
+    real_transport = session_factory is None
+    if real_transport and (owner_check is not None or clock_args):
+        # Clock and ownership test hooks must never label a live socket.
+        return {"status": "public_test_hooks_forbidden", "network_attempted": False,
+                "orders_sent": False}, None
     if owner_check is None:
         owner_check = lambda: os.name == "posix" and os.geteuid() != 0
     if not callable(owner_check) or not owner_check():
         return {"status": "unprivileged_owner_required", "network_attempted": False,
                 "orders_sent": False}, None
-    real_transport = session_factory is None
     if real_transport:
-        # Test-only hooks may NEVER impersonate a genuinely observed socket.
-        # In particular, a synthetic wall clock can falsely validate a close.
-        if owner_check_injected or clock_args:
-            return {"status": "public_test_hooks_forbidden", "network_attempted": False,
-                    "orders_sent": False}, None
         if os.name != "posix" or os.geteuid() == 0:
             return {"status": "unprivileged_owner_required", "network_attempted": False,
                     "orders_sent": False}, None
