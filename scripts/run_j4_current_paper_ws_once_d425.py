@@ -77,7 +77,14 @@ def main(argv: list[str] | None = None) -> int:
     if a.paper_watch_directory is not None:
         try:
             _owned_directory(a.paper_watch_directory)
-        except (OSError, DataValidationError):
+            watch = a.paper_watch_directory.resolve(strict=True)
+            owner = a.state_directory.resolve(strict=False)
+            paper = a.private_paper_directory.resolve(strict=False)
+            # An observational export must NEVER add files inside J1 or the
+            # financial AUTO4 journal directory, even with otherwise-valid DAC.
+            if watch.is_relative_to(owner) or watch.is_relative_to(paper):
+                raise DataValidationError("PAPER watch must be a separate directory")
+        except (OSError, DataValidationError, RuntimeError):
             _report("paper_watch_private_owner_directory_unavailable")
             return 65
     os.umask(0o077)
