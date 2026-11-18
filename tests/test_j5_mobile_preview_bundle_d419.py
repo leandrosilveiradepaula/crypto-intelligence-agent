@@ -57,7 +57,7 @@ class MobilePreviewBundleD419Tests(unittest.TestCase):
         expected = required_local_assets(html)
         listed = packaged_local_assets(workflow)
         self.assertEqual(listed, expected)
-        self.assertEqual(len(listed), 9)
+        self.assertEqual(len(listed), 10)
         self.assertGreater(len([x for x in listed if x.endswith(".js")]), 4)
         for asset in listed:
             with self.subTest(asset=asset):
@@ -76,14 +76,15 @@ class MobilePreviewBundleD419Tests(unittest.TestCase):
         self.assertIn("Simulação offline", readme)
         self.assertIn("nem conecta à VPS", readme)
 
-    def test_parser_would_catch_the_real_missing_four_dependencies(self):
+    def test_parser_would_catch_the_real_missing_five_dependencies(self):
         html = (APP / "index.html").read_text(encoding="utf-8")
         expected = required_local_assets(html)
         incomplete = {"index.html", "style.css", "engine.js", "app.js", "LEIA-ME.txt"}
         self.assertEqual(
             expected - incomplete,
             {"public-market.js", "persisted-paper.js",
-             "research-scorebook.js", "paper-ws-health.js"},
+             "research-scorebook.js", "paper-ws-health.js",
+             "paper-watch.js"},
         )
         self.assertNotEqual(expected, incomplete)
 

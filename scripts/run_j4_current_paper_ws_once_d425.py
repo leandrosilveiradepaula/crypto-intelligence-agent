@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import time
 
 from crypto_intelligence_agent.bybit_public_ticker_supervisor_d386 import (
     TickerLeaseBudget,
@@ -21,6 +22,11 @@ from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import (
     observe_existing_paper_positions_once,
 )
 from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
+from crypto_intelligence_agent.j2_public_n50_health_cycles_d421 import _owned_directory
+from crypto_intelligence_agent.j5_paper_watch_d427 import (
+    project_finite_paper_lease, unavailable_finite_paper_lease,
+    publish_paper_watch,
+)
 
 _SCHEMA = "j4-current-paper-ws-observation-d425-v1"
 
@@ -45,6 +51,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--confirm-personal-readonly-research", action="store_true")
     p.add_argument("--confirm-region-eligible", action="store_true")
     p.add_argument("--allow-synthetic-paper-reservations", action="store_true")
+    p.add_argument("--allow-local-paper-watch-output", action="store_true")
+    p.add_argument("--paper-watch-directory", type=Path)
     a = p.parse_args(argv)
     if not all((
         a.allow_private_pointer_read, a.allow_public_websocket,
@@ -63,6 +71,22 @@ def main(argv: list[str] | None = None) -> int:
             or not 1 <= a.max_sessions <= 2):
         _report("private_paper_operator_environment_invalid")
         return 65
+    if a.allow_local_paper_watch_output != (a.paper_watch_directory is not None):
+        _report("paper_watch_output_explicit_optin_and_directory_required")
+        return 65
+    if a.paper_watch_directory is not None:
+        try:
+            _owned_directory(a.paper_watch_directory)
+            watch = a.paper_watch_directory.resolve(strict=True)
+            owner = a.state_directory.resolve(strict=False)
+            paper = a.private_paper_directory.resolve(strict=False)
+            # An observational export must NEVER add files inside J1 or the
+            # financial AUTO4 journal directory, even with otherwise-valid DAC.
+            if watch.is_relative_to(owner) or watch.is_relative_to(paper):
+                raise DataValidationError("PAPER watch must be a separate directory")
+        except (OSError, DataValidationError, RuntimeError):
+            _report("paper_watch_private_owner_directory_unavailable")
+            return 65
     os.umask(0o077)
     try:
         result = observe_existing_paper_positions_once(
@@ -82,9 +106,29 @@ def main(argv: list[str] | None = None) -> int:
     except (DataGapError, DataValidationError, OSError, RuntimeError,
             TypeError, ValueError, OverflowError, sqlite3.Error):
         # An exception might follow an already-persisted PAPER intent.
-        # Never claim journal rollback or a non-existent FILL.
+        # Do not report rollback, FILL or continuous monitoring.
+        if a.paper_watch_directory is not None:
+            try:
+                publish_paper_watch(
+                    a.paper_watch_directory,
+                    unavailable_finite_paper_lease(
+                        sampled_at_ms=time.time_ns() // 1_000_000),
+                )
+            except (OSError, DataValidationError):
+                pass  # Never leak private filesystem errors to stdout.
         _report("private_paper_or_public_market_unavailable_review_journal")
         return 65
+    if a.paper_watch_directory is not None:
+        try:
+            publish_paper_watch(
+                a.paper_watch_directory,
+                project_finite_paper_lease(
+                    result, sampled_at_ms=time.time_ns() // 1_000_000,
+                ),
+            )
+        except (OSError, DataValidationError):
+            _report("paper_watch_publication_abstained_review_journal")
+            return 65
     print(json.dumps(result, sort_keys=True, separators=(",", ":"),
                      allow_nan=False))
     # A finite lease never proves protection for every position. Exit 2

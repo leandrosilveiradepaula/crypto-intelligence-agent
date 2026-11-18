@@ -24,6 +24,9 @@ from crypto_intelligence_agent.j2_public_n50_health_cycles_d421 import _owned_di
 from crypto_intelligence_agent.j5_local_health_reader_d422 import (
     HealthUnavailable, read_local_health,
 )
+from crypto_intelligence_agent.j5_paper_watch_d427 import (
+    PaperWatchUnavailable, read_paper_watch,
+)
 from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
 from crypto_intelligence_agent.bybit_public_rest_price_pulse_d403 import capture_public_rest_price_pulse
 from crypto_intelligence_agent.bybit_public_j1_transport import _SYMBOL
@@ -45,6 +48,7 @@ _STATIC_FILES: dict[str, tuple[str, str]] = {
     "/persisted-paper.js": ("persisted-paper.js", "text/javascript; charset=utf-8"),
     "/research-scorebook.js": ("research-scorebook.js", "text/javascript; charset=utf-8"),
     "/paper-ws-health.js": ("paper-ws-health.js", "text/javascript; charset=utf-8"),
+    "/paper-watch.js": ("paper-watch.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
 }
 _ALLOWED_HOST_HEADERS = frozenset((f"{HOST}:{PORT}", f"localhost:{PORT}"))
@@ -230,6 +234,7 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
     market_cached: dict[str, Any] | None = None
     # OFF by default; only a same-owner POSIX 0700 directory can enable it.
     public_health_directory: Path | None = None
+    paper_watch_directory: Path | None = None  # separate opt-in; 0700/0600, count-only
     protocol_version = "HTTP/1.1"
     server_version = "CIA-Local-ReadOnly"
     sys_version = ""
@@ -323,6 +328,26 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
             cls.market_cached = report
             self._json(200, report)
             return
+        if self.path == "/api/paper-watch":
+            directory = type(self).paper_watch_directory
+            if directory is None:
+                self._json(503, {
+                    "status": "paper_watch_not_enabled",
+                    "orders_sent": False,
+                })
+                return
+            try:
+                report = read_paper_watch(
+                    directory=directory, now_ms=time.time_ns() // 1_000_000,
+                )
+            except PaperWatchUnavailable:
+                self._json(503, {
+                    "status": "paper_watch_not_fresh_or_available",
+                    "orders_sent": False,
+                })
+                return
+            self._json(200, report)
+            return
         if self.path == "/api/n50-public-health":
             directory = type(self).public_health_directory
             if directory is None:
@@ -397,6 +422,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-public-rest-samples", action="store_true")
     parser.add_argument("--allow-private-health-loopback", action="store_true")
     parser.add_argument("--private-health-directory", type=Path)
+    parser.add_argument("--allow-paper-watch-loopback", action="store_true")
+    parser.add_argument("--paper-watch-directory", type=Path)
     parser.add_argument("--market-symbols", default="", help="1..50 reviewed USDT symbols")
     args = parser.parse_args(argv)
     if not args.allow_loopback_readonly_http:
@@ -417,6 +444,27 @@ def main(argv: list[str] | None = None) -> int:
             "orders_sent": False,
         }, sort_keys=True))
         return 65
+    if args.allow_paper_watch_loopback != (args.paper_watch_directory is not None):
+        print(json.dumps({
+            "status": "paper_watch_explicit_optin_and_directory_required",
+            "orders_sent": False,
+        }, sort_keys=True))
+        return 65
+    if args.allow_paper_watch_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({
+                "status": "paper_watch_unprivileged_owner_required",
+                "orders_sent": False,
+            }, sort_keys=True))
+            return 65
+        try:
+            _owned_directory(args.paper_watch_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({
+                "status": "paper_watch_owner_directory_unavailable",
+                "orders_sent": False,
+            }, sort_keys=True))
+            return 65
     if args.allow_private_health_loopback:
         if os.name != "posix" or os.geteuid() == 0:
             print(json.dumps({
@@ -446,6 +494,9 @@ def main(argv: list[str] | None = None) -> int:
     LoopbackPanelHandler.market_cached = None
     LoopbackPanelHandler.public_health_directory = (
         args.private_health_directory if args.allow_private_health_loopback else None
+    )
+    LoopbackPanelHandler.paper_watch_directory = (
+        args.paper_watch_directory if args.allow_paper_watch_loopback else None
     )
     try:
         with HTTPServer((HOST, PORT), LoopbackPanelHandler) as server:

@@ -441,7 +441,19 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                     )
                     if "Importação recusada" not in page.locator("#notice").inner_text():
                         errors.append("untrusted market file not rejected")
-                    if page.locator("img").count() or page.locator("script").count() != 6:
+                    # Exact script allowlist catches injected HTML while
+                    # accepting D427's reviewed local PAPER watch renderer.
+                    allowed_scripts = (
+                        "./engine.js", "./public-market.js", "./persisted-paper.js",
+                        "./research-scorebook.js", "./paper-ws-health.js",
+                        "./paper-watch.js", "./app.js",
+                    )
+                    actual_scripts = page.locator("script[src]").evaluate_all(
+                        "(nodes) => nodes.map(n => n.getAttribute('src')).sort()"
+                    )
+                    if (page.locator("img").count()
+                            or page.locator("script").count() != len(allowed_scripts)
+                            or actual_scripts != sorted(allowed_scripts)):
                         errors.append("HTML injection on invalid market data")
 
                     # D399: exercise the REAL import and renderer in Chrome,
