@@ -81,7 +81,7 @@ class SustainedPublicN50D418Tests(unittest.TestCase):
         self.assertEqual(reader.call_count, 2)
         self.assertTrue(sock.closed)
         serialized = json.dumps(result)
-        for s in (N50[0], N50[20], "100.9", "private", "account_key"):
+        for s in (N50[0], N50[20], "100.9", "sensitive_owner_path", "account_key"):
             self.assertNotIn(s, serialized)
 
     def test_existing_position_outside_n50_is_subscribed_but_never_managed(self):
