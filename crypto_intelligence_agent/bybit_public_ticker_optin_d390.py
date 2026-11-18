@@ -17,7 +17,7 @@ from .bybit_public_ticker_supervisor_d386 import (
     TickerLeaseBudget, TickerLeaseReport, supervise_public_tickers,
 )
 from .bybit_public_ws_once import StreamSession
-from .market_data import DataValidationError
+from .market_data import DataGapError, DataValidationError
 from .paper_intrahour_quote_router_d391 import PaperIntrahourQuoteRouter
 
 _ALLOWED_WS_HOST = "wss://stream.bybit.com/v5/public/linear"
@@ -48,6 +48,7 @@ def run_readonly_bybit_ticker_lease(
     diagnose_public_freshness: bool = False,
     require_complete_fresh_scope_for_paper: bool = False,
     require_fresh_held_position_for_paper: bool = False,
+    guard_held_feed_during_lease: bool = False,
     clock: Callable[[], float] = time.monotonic,
     wall_ms: Callable[[], int] = lambda: time.time_ns() // 1_000_000,
     sleeper: Callable[[float], None] = time.sleep,
@@ -81,7 +82,8 @@ def run_readonly_bybit_ticker_lease(
             or type(measure_public_coverage) is not bool
             or type(diagnose_public_freshness) is not bool
             or type(require_complete_fresh_scope_for_paper) is not bool
-            or type(require_fresh_held_position_for_paper) is not bool):
+            or type(require_fresh_held_position_for_paper) is not bool
+            or type(guard_held_feed_during_lease) is not bool):
         raise DataValidationError("public_ws_gate_type_invalid")
     if (allow_public_websocket is not True
             or confirm_personal_readonly_research is not True
@@ -126,6 +128,8 @@ def run_readonly_bybit_ticker_lease(
         or require_complete_fresh_scope_for_paper
     ):
         raise DataValidationError("public_ws_held_position_gate_requires_monitor")
+    if guard_held_feed_during_lease and not require_fresh_held_position_for_paper:
+        raise DataValidationError("D429 held feed guard requires existing PAPER quote gate")
     rank_set, position_set = set(ranked_symbols), set(position_symbols)
     monitored = rank_set | position_set
     # The causal exchange timestamp, NOT only the socket receipt timestamp,
@@ -136,10 +140,12 @@ def run_readonly_bybit_ticker_lease(
     exchange_lagged_callbacks = 0
     paper_frames_deferred = 0
     paper_frames_routed = 0
+    first_acked_poll_ms: int | None = None
     unrelated_frames_ignored_for_paper = 0
 
     def session_reset() -> None:
-        nonlocal exchange_lagged_callbacks
+        nonlocal exchange_lagged_callbacks, first_acked_poll_ms
+        first_acked_poll_ms = None
         # A previous socket's quotes cannot prove a new socket's coverage.
         seen_this_session.clear()
         validated_this_session.clear()
@@ -198,6 +204,28 @@ def run_readonly_bybit_ticker_lease(
             paper_router.process(quote)
             paper_frames_routed += 1
 
+    def acked_held_feed_poll() -> None:
+        nonlocal first_acked_poll_ms
+        # Called solely AFTER the current WebSocket's ACK, independent of
+        # unrelated N50 traffic. Never transfer last-session freshness.
+        now = wall_ms()
+        if type(now) is not int:
+            raise DataGapError("paper_held_quote_silence_exceeded")
+        if first_acked_poll_ms is None:
+            first_acked_poll_ms = now
+        if not 0 <= now - first_acked_poll_ms <= 60_000:
+            raise DataGapError("paper_held_quote_silence_exceeded")
+        # The first 5 seconds after ACK allow held snapshot acquisition.
+        # Thereafter every held contract must have its OWN ≤3s mark update.
+        if now - first_acked_poll_ms < 5_000:
+            return
+        if paper_router is None or (
+            paper_router.fresh_held_contract_count(
+                at_ms=now, max_age_ms=MAX_QUOTE_AGE_MS,
+            ) != len(paper_router.monitored_symbols)
+        ):
+            raise DataGapError("paper_held_quote_silence_exceeded")
+
     needs_callback = measure_public_coverage or paper_router is not None
     try:
         report: TickerLeaseReport = supervise_public_tickers(
@@ -206,6 +234,8 @@ def run_readonly_bybit_ticker_lease(
             sleeper=sleeper,
             on_quote=observed_quote if needs_callback else None,
             on_session_reset=session_reset if needs_callback else None,
+            on_acked_poll=(acked_held_feed_poll
+                           if guard_held_feed_during_lease else None),
         )
         values = report.sanitized_report()
         # A subscribe ACK does not prove even one current price observation.

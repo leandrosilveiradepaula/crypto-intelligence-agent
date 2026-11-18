@@ -226,6 +226,7 @@ def run_bounded_paper_trial(
                     confirm_personal_readonly_research=True,
                     confirm_region_eligible=True,
                     allow_synthetic_paper_reservations=True,
+                    guard_held_feed_during_lease=True,
                     budget=TickerLeaseBudget(
                         max_sessions=2,
                         max_frames=budget.max_frames_per_lease,

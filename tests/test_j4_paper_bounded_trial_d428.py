@@ -177,6 +177,7 @@ class D428OwnerTrialTests(unittest.TestCase):
 
         def step(*args, **kwargs):
             self.assertTrue(kwargs["allow_synthetic_paper_reservations"])
+            self.assertIs(kwargs["guard_held_feed_during_lease"], True)
             self.assertEqual(kwargs["budget"].max_sessions, 2)
             self.assertEqual(kwargs["budget"].max_seconds, 10)
             seen.append(kwargs["paper_router"])

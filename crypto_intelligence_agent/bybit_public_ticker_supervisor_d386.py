@@ -54,6 +54,7 @@ _FAILURE_CLASSES = {
     "ticker_delta_without_snapshot": "snapshot_required",
     "ticker_transport_clock_stale_or_future": "stale_or_future",
     "ticker_crossed_best_bid_ask": "bad_best_quotes",
+    "paper_held_quote_silence_exceeded": "held_paper_feed_silent",
     "ticker_universe_rotation_invalid": "scope_clock_invalid",
     "duplicate market JSON keys are forbidden": "duplicate_json_keys",
 }
@@ -157,6 +158,7 @@ def supervise_public_tickers(
     sleeper: Callable[[float], None] = time.sleep,
     on_quote: Callable[[BybitTickerQuote], None] | None = None,
     on_session_reset: Callable[[], None] | None = None,
+    on_acked_poll: Callable[[], None] | None = None,
 ) -> TickerLeaseReport:
     """Receive real-time ticker data from injected sessions for a finite lease.
 
@@ -179,13 +181,18 @@ def supervise_public_tickers(
     Optional on_session_reset is called BEFORE every socket attempt, including
     the first. It must reset ephemeral consumer sequence state while retaining
     causal timestamp watermarks. Exceptions abort before any socket is opened.
+    D429: opt-in on_acked_poll runs during the receive loop after ACK, also
+    after a timeout. It can stop a PAPER-only lease if its HELD contracts have
+    fallen silent even while unrelated tickers continue to stream. No source
+    data or callbacks escape to an untrusted network.
     """
     if (not callable(session_factory) or not callable(clock)
             or not callable(wall_ms) or not callable(sleeper)
             or type(book) is not BybitPublicTickerBook
             or type(budget) is not TickerLeaseBudget
             or (on_quote is not None and not callable(on_quote))
-            or (on_session_reset is not None and not callable(on_session_reset))):
+            or (on_session_reset is not None and not callable(on_session_reset))
+            or (on_acked_poll is not None and not callable(on_acked_poll))):
         raise DataValidationError("ticker_ws_injected_dependencies_invalid")
     topics = _topic_args(book)
     allowed = frozenset(topics)
@@ -253,6 +260,11 @@ def supervise_public_tickers(
                 while True:
                     now = _monotonic(clock)
                     remaining = started + budget.max_seconds - now
+                    if acknowledged and on_acked_poll is not None:
+                        # Check BEFORE lease completion: an invalid/stale held
+                        # feed cannot be hidden by a successful subscribe ACK
+                        # or by busy updates from unrelated N50 contracts.
+                        on_acked_poll()
                     if remaining <= 0:
                         return report("lease_completed" if acknowledged
                                       else "lease_abstained",
