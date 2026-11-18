@@ -22,7 +22,7 @@ reaproveitando a epoch owner ativa J1 somente leitura, escrevendo apenas
 Status 2 é esperado para cobertura final parcial; não é sucesso de entradas.
 
 `cia-j2-n50-health.timer` agenda novas sessões após a conclusão da anterior
-e tem calendário de recuperação. É preciso comprovar a convivência de CPU
+apenas entre os minutos UTC 03 e 55 (a cada dois minutos), mantendo o preclose da J1 e seu timeout fora da janela da amostra. É preciso comprovar a convivência de CPU
 e rede com o serviço horário J1, sem reiniciar ou reconfigurar a J1.
 Risco de sobreposição interprocessos é limitado pelo lock D421.
 
@@ -37,8 +37,7 @@ leitura local, **não um site acessível pelo celular fora da VPS**.
    leitura na VPS. Nunca inferir aprovação a partir de merge.
 2. Fixar SHA aprovado da versão principal do GitHub; baixar fonte
    imutável e conferir SHA/revisão/CI Linux+Windows+Chrome; instalar o
-   código numa pasta `j5-health-release` que não seja symlink e não
-   possa ser alterada pelo usuário do serviço. Nunca executar código
+   código numa pasta protegida do root em `/opt/crypto-intelligence-agent/releases/d423` que não seja symlink, com arquivos root-owned 0555/0444; conferir que o usuário `cia-probe` não consegue alterá-la. O manifest SHA deve corresponder ao `main` validado. Nunca executar código
    `main` mutável em modo root.
 3. Conferir N50 owner ativo, DAC e integridade, agendamentos J1
    existentes, capacidade CPU/memória e ausência de serviço concorrente.
