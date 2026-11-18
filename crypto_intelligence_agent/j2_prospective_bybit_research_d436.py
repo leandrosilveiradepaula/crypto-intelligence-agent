@@ -107,7 +107,7 @@ def consume_confirmed_close_batch(
 def evaluate_persisted_confirmed_close(*, journal_path: str | Path,
     scope: OfflineReviewedStreamScope, symbol: str, open_ms: int,
     received_ms: int, config: CompressionBreakoutConfig,
-    data_mode: str = "public_ws_observed_unverified") -> ProspectiveResearchUpdate:
+    data_mode: str = "offline_protocol_replay") -> ProspectiveResearchUpdate:
     """Causal post-append callback: no parser, reingest or synthetic clock."""
     if (type(open_ms) is not int or open_ms <= 0 or open_ms % HOUR_MS
             or type(received_ms) is not int or received_ms < open_ms + HOUR_MS + 1000
@@ -149,23 +149,46 @@ def publish_projection(directory: Path, update: ProspectiveResearchUpdate) -> No
 
 def read_projection(directory: Path, *, now_ms: int) -> dict:
     path = directory / _PROJECTION
-    if (path.is_symlink() or not path.is_file() or type(now_ms) is not int):
+    if (os.name != "posix" or os.geteuid() == 0 or directory.is_symlink()
+            or not directory.is_dir() or type(now_ms) is not int):
         raise DataValidationError("D436 projection unavailable")
-    info = path.stat()
-    if stat.S_IMODE(info.st_mode) != 0o600 or not 1 <= info.st_size <= 4096:
+    d = directory.stat()
+    if d.st_uid != os.geteuid() or stat.S_IMODE(d.st_mode) != 0o700:
         raise DataValidationError("D436 projection unsafe")
-    value = json.loads(path.read_text(encoding="ascii"))
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1
+                or not 1 <= info.st_size <= 4096): raise DataValidationError("D436 projection unsafe")
+        raw = os.read(fd, 4097); after = os.fstat(fd)
+    finally: os.close(fd)
+    if len(raw) != info.st_size or after.st_ino != info.st_ino or after.st_mtime_ns != info.st_mtime_ns:
+        raise DataValidationError("D436 projection changed")
+    def unique(pairs):
+        value = {}
+        for k, v in pairs:
+            if k in value: raise DataValidationError("D436 duplicate projection field")
+            value[k] = v
+        return value
+    value = json.loads(raw.decode("ascii"), object_pairs_hook=unique,
+        parse_constant=lambda _x: (_ for _ in ()).throw(DataValidationError("D436 numeric invalid")))
     required = {"schema_version", "status", "evaluated_at_ms", "latest_closed_end_ms", "journal_digest_sha256", "closed_events_appended", "identical_replays", "failure_category", "source", "network_attempted", "last_frame_received_ms", "data_quality", "approved_for_signals", "orders_sent", "risk_gate_called", "auto2_called", "auto4_called", "live_trading_authorized"}
     if (type(value) is not dict or set(value) != required or value.get("schema_version") != "j2-prospective-bybit-research-d436-v1"
-            or value.get("orders_sent") is not False or value.get("approved_for_signals") is not False
-            or type(value.get("evaluated_at_ms")) is not int or now_ms - value["evaluated_at_ms"] > 120_000):
+            or value.get("source") not in ("offline_protocol_replay", "public_ws_observed_unverified")
+            or value.get("network_attempted") is not (value.get("source") == "public_ws_observed_unverified")
+            or value.get("status") not in ("observed_long_hypothesis_not_authorized", "observed_short_hypothesis_not_authorized", "observed_no_hypothesis", "observed_data_insufficient", "observed_feed_unavailable")
+            or any(value.get(k) is not False for k in ("orders_sent", "approved_for_signals", "risk_gate_called", "auto2_called", "auto4_called", "live_trading_authorized"))
+            or type(value.get("evaluated_at_ms")) is not int or type(value.get("last_frame_received_ms")) is not int
+            or not 0 <= now_ms - value["last_frame_received_ms"] <= 120_000):
         raise DataValidationError("D436 projection stale or invalid")
     return value
 
 
 def supervise_prospective_research(*, session_factory, journal_path: str | Path,
     scope: OfflineReviewedStreamScope, symbol: str, config: CompressionBreakoutConfig,
-    budget: WSRunBudget, projection_directory: Path | None = None, **clock_args):
+    budget: WSRunBudget, projection_directory: Path | None = None,
+    data_mode: str = "offline_protocol_replay", **clock_args):
     """Tie the existing bounded supervisor to D436 after each committed close."""
     journal = SQLiteOfflineClosedStreamJournal(Path(journal_path))
     latest: list[ProspectiveResearchUpdate] = []
@@ -180,7 +203,8 @@ def supervise_prospective_research(*, session_factory, journal_path: str | Path,
         if payload.get("topic") != "kline.60." + symbol or type(row.get("start")) is not int:
             return
         update = evaluate_persisted_confirmed_close(journal_path=journal_path, scope=scope,
-            symbol=symbol, open_ms=row["start"], received_ms=received_ms, config=config)
+            symbol=symbol, open_ms=row["start"], received_ms=received_ms, config=config,
+            data_mode=data_mode)
         latest[:] = [update]
         if projection_directory is not None: publish_projection(projection_directory, update)
     report = supervise_ws_research(session_factory=session_factory, scope=scope, journal=journal,
