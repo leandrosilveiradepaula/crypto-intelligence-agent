@@ -66,9 +66,11 @@ class HealthSchedulerD423Tests(unittest.TestCase):
         self.assertLessEqual(int(s["CPUQuota"].removesuffix("%")), 30)
         self.assertNotIn("Install", data)
         for unsafe in ("ExecStartPost", "ExecStopPost", "sudo", "curl ",
-                       "orders", "exchange-key", "python -c", "run_j1_n50_ws",
-                       "real_trade", "POST /v5/order", "ReadWritePaths=/home/cia-probe/agent/j1"):
+                       "--allow-real-orders", "exchange-key", "python -c",
+                       "run_j1_n50_ws", "real_trade", "POST /v5/order",
+                       "ReadWritePaths=/home/cia-probe/agent/j1"):
             self.assertNotIn(unsafe, SERVICE.read_text(encoding="utf-8"))
+        self.assertNotIn("order", s["ExecStart"].lower())
 
     def test_timer_starts_after_deactivation_and_retries_failures(self):
         data = unit(TIMER)
