@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import stat
 import tempfile
+import time
 from typing import Any
 
 from .j2_public_n50_health_cycles_d421 import _owned_directory
@@ -213,7 +214,7 @@ def validate_paper_watch(data: object, *, now_ms: int) -> dict[str, Any]:
 def publish_paper_watch(directory: Path, data: dict) -> None:
     """Atomic 0600 output inside pre-existing POSIX nonroot owner 0700 folder."""
     _owned_directory(directory)
-    now_ms = __import__("time").time_ns() // 1_000_000
+    now_ms = time.time_ns() // 1_000_000
     try:
         validated = validate_paper_watch(data, now_ms=now_ms)
     except PaperWatchUnavailable as exc:
@@ -254,6 +255,11 @@ def read_paper_watch(*, directory: Path, now_ms: int) -> dict:
         _owned_directory(directory)
         dirfd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
+            dstat = os.fstat(dirfd)
+            if (not stat.S_ISDIR(dstat.st_mode)
+                    or dstat.st_uid != os.geteuid()
+                    or stat.S_IMODE(dstat.st_mode) != 0o700):
+                raise PaperWatchUnavailable("PAPER directory ownership changed")
             fd = os.open(_FILENAME, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
                          dir_fd=dirfd)
             info = os.fstat(fd)
