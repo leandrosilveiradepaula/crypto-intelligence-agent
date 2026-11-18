@@ -47,6 +47,7 @@ jobs:
             web/app/engine.js
             web/app/public-market.js
             web/app/persisted-paper.js
+            web/app/integrated-paper-cycle.js
             web/app/research-scorebook.js
             web/app/paper-ws-health.js
             web/app/paper-watch.js
