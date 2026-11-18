@@ -75,7 +75,8 @@ def _safe_wall(wall_ms: Callable[[], int]) -> int:
 def _result(
     status: str, *, attempted: int = 0, completed: int = 0,
     forwarded: int = 0, reserved: int = 0, reconciliation: int = 0,
-    largest_gap_ms: int = 0, last_watch_at_ms: int | None = None,
+    largest_gap_ms: int = 0, reconnects: int = 0,
+    last_watch_at_ms: int | None = None,
 ) -> dict:
     """Only counts. In particular no private position ID, symbol or price."""
     return {
@@ -87,6 +88,7 @@ def _result(
         "synthetic_exit_reservation_events": reserved,
         "reconciliation_required_events": reconciliation,
         "largest_interlease_gap_ms": largest_gap_ms,
+        "public_ws_reconnect_events": reconnects,
         "last_terminal_watch_at_ms": last_watch_at_ms,
         "finite_trial_ended": True,
         "active_position_supervision_verified": False,
@@ -169,7 +171,7 @@ def run_bounded_paper_trial(
         watch_directory=watch_directory,
     )
 
-    attempted = completed = forwarded = reserved = reconcile = largest_gap = 0
+    attempted = completed = forwarded = reserved = reconcile = largest_gap = reconnects = 0
     last_watch_ms = None
     previous_end = None
     previous_decisions: dict[str, int] = {}
@@ -201,7 +203,7 @@ def run_bounded_paper_trial(
                 reason, attempted=attempted, completed=completed,
                 forwarded=forwarded, reserved=reserved,
                 reconciliation=reconcile, largest_gap_ms=largest_gap,
-                last_watch_at_ms=last_watch_ms,
+                reconnects=reconnects, last_watch_at_ms=last_watch_ms,
             )
 
         for _ in range(budget.max_leases):
@@ -257,6 +259,12 @@ def run_bounded_paper_trial(
                 observation = project_finite_paper_lease(
                     sanitized, sampled_at_ms=end_ms,
                 )
+                reconnect_count = report.get("reconnects")
+                if (type(reconnect_count) is not int
+                        or not 0 <= reconnect_count <= 1):
+                    raise DataValidationError("D428 bounded reconnect evidence invalid")
+                if _safe_time(clock) - initial_clock > budget.max_total_seconds:
+                    return abort("trial_time_budget_exceeded")
                 # D410's overall N50 health is not the held-position
                 # liveness criterion. Check EVERY configured position had
                 # a recent validated quote in the FINAL ACKed WS session.
@@ -283,6 +291,7 @@ def run_bounded_paper_trial(
                     or report.get("existing_paper_position_quote_processed") is not True):
                 return abort("held_paper_feed_unverified_or_owner_changed")
             completed += 1
+            reconnects += reconnect_count
             forwarded += observation["quote_events_forwarded"]
             reserved += observation["hypothetical_reservations_observed"]
             reconcile += observation["reconciliation_events_observed"]
@@ -292,7 +301,7 @@ def run_bounded_paper_trial(
             attempted=attempted, completed=completed,
             forwarded=forwarded, reserved=reserved,
             reconciliation=reconcile, largest_gap_ms=largest_gap,
-            last_watch_at_ms=last_watch_ms,
+            reconnects=reconnects, last_watch_at_ms=last_watch_ms,
         )
     finally:
         os.close(lock_fd)
