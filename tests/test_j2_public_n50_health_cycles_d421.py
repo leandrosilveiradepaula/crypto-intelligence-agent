@@ -264,8 +264,10 @@ console.log("D421_MOBILE_IMPORT_PASS");
         display = (ROOT / "web" / "app" / "paper-ws-health.js").read_text(encoding="utf-8")
         self.assertIn("globalThis.CIAPaperWSHealth.acceptsSchema(payload.schema_version)", app)
         self.assertIn("j2-public-n50-finite-health-d421-v1", display)
+        self.assertEqual(display.count('global.fetch("/api/n50-public-health"'), 1)
+        self.assertIn('loc.port === "8765"', display)
         for forbidden in ("innerHTML", "new WebSocket", "XMLHttpRequest",
-                          "localStorage.", "sessionStorage.", "eval(", "fetch("):
+                          "localStorage.", "sessionStorage.", "eval("):
             self.assertNotIn(forbidden, display)
 
 
