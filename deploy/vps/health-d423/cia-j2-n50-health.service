@@ -1,0 +1,38 @@
+# D423 RELEASE CANDIDATE ONLY. Do not install/enable without production gate.
+# No J1 write, account credentials, order transport or private PAPER ledger.
+[Unit]
+Description=CIA research - one finite public Bybit N50 health observation (no orders)
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+User=cia-probe
+Group=cia-probe
+WorkingDirectory=/home/cia-probe/agent/j5-health-release
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/cia-probe/agent/ws-venv/bin/python -m scripts.observe_j2_public_n50_health_cycles_d421 --state-directory /home/cia-probe/agent/j1-n50-ws-epochs/active --output-directory /home/cia-probe/agent/j5-n50-health-private --cycles 1 --seconds 60 --allow-private-pointer-read --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible --allow-local-health-write
+TimeoutStartSec=150
+SuccessExitStatus=2
+Restart=no
+Nice=10
+IOSchedulingClass=idle
+CPUQuota=30%
+MemoryMax=512M
+TasksMax=64
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/cia-probe/agent/j5-n50-health-private
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal
