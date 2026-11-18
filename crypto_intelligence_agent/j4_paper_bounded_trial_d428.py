@@ -42,7 +42,7 @@ class PaperTrialBudget:
     lease_seconds: int = 20
     max_total_seconds: int = 90
     max_interlease_gap_ms: int = 5_000
-    max_frames_per_lease: int = 40_000
+    max_frames_per_lease: int = 25_000
 
     def __post_init__(self) -> None:
         if (any(type(getattr(self, k)) is not int for k in (
@@ -53,7 +53,8 @@ class PaperTrialBudget:
                 or not self.max_leases * self.lease_seconds
                     <= self.max_total_seconds <= 300
                 or not 100 <= self.max_interlease_gap_ms <= 15_000
-                or not 1 <= self.max_frames_per_lease <= 100_000):
+                or not 1 <= self.max_frames_per_lease <= 100_000
+                or self.max_frames_per_lease * self.max_leases > 100_000):
             raise DataValidationError("D428 invalid bounded PAPER trial budget")
 
 
@@ -171,6 +172,7 @@ def run_bounded_paper_trial(
     attempted = completed = forwarded = reserved = reconcile = largest_gap = 0
     last_watch_ms = None
     previous_end = None
+    previous_decisions: dict[str, int] = {}
     initial_clock = _safe_time(clock)
     lock_fd = exclusive_paper_operator_lock(private_paper_directory)
     try:
@@ -230,10 +232,32 @@ def run_bounded_paper_trial(
                     session_factory=session_factory,
                     clock=clock, wall_ms=wall_ms, sleeper=sleeper,
                 )
+                # The SAME D391 router deliberately survives each lease,
+                # including its causal watermark and cumulative counters.
+                # D427 requires per-lease counts, so project only the
+                # monotonic DECISION DELTA without resetting AUTO4 or router.
+                raw = report.get("paper_monitoring")
+                if type(raw) is not dict or type(raw.get("decision_counts")) is not dict:
+                    raise DataValidationError("D428 missing PAPER decision counters")
+                current = raw["decision_counts"]
+                if (any(type(k) is not str or type(n) is not int or n < 0
+                        for k, n in current.items())
+                        or any(k not in current or current[k] < n
+                               for k, n in previous_decisions.items())):
+                    raise DataValidationError("D428 PAPER counters regressed")
+                per_lease = {
+                    key: n - previous_decisions.get(key, 0)
+                    for key, n in current.items()
+                }
+                sanitized = {
+                    **report,
+                    "paper_monitoring": {**raw, "decision_counts": per_lease},
+                }
                 end_ms = _safe_wall(wall_ms)
                 observation = project_finite_paper_lease(
-                    report, sampled_at_ms=end_ms,
+                    sanitized, sampled_at_ms=end_ms,
                 )
+                previous_decisions = dict(current)
                 publish_paper_watch(watch_directory, observation)
                 last_watch_ms = end_ms
             except (DataGapError, DataValidationError, OSError,
