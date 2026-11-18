@@ -180,7 +180,7 @@ class RouterD391Tests(unittest.TestCase):
         self.store.append_exit_events(
             self.position_id, reserved.created_intent_id,
             (PaperOrderEvent(
-                "d433_unknown_exit", PaperOrderEventKind.UNKNOWN, t + 1,
+                "fixture_d433_unknown_exit", PaperOrderEventKind.UNKNOWN, t + 1,
             ),), as_of_ms=t + 1,
         )
         router.process(tick(t + 200, seq=2, bid="101"))
