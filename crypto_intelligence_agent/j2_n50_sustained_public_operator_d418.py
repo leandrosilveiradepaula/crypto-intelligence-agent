@@ -141,8 +141,9 @@ def observe_current_n50_sustained_once(
         report["status"] == "lease_completed"
         and report["subscriptions_acknowledged"] >= 1
     )
+    observed_full_duration = after_clock - before_clock >= seconds - 1
     observed_all = (
-        completed and unchanged
+        completed and unchanged and observed_full_duration
         and report["finite_coverage_observed_once"] is True
     )
     status = (
@@ -159,6 +160,7 @@ def observe_current_n50_sustained_once(
         "underlying_ws_status": report["status"],
         "observation_elapsed_seconds": round(after_clock - before_clock, 3),
         "requested_observation_seconds": seconds,
+        "full_finite_duration_observed": observed_full_duration,
         "data_mode": (
             "real_public_websocket" if network else "injected_offline_fixture"
         ),
