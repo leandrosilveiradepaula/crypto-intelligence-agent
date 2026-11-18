@@ -94,6 +94,7 @@ def observe_finite_public_ws_once(
         confirm_personal_readonly_research=True,
         confirm_region_eligible=True,
         measure_public_coverage=True,
+        diagnose_public_freshness=True,
         budget=TickerLeaseBudget(
             max_sessions=max_sessions, max_frames=max_frames,
             max_seconds=seconds,
@@ -124,6 +125,22 @@ def observe_finite_public_ws_once(
         "received_ranked_input_count": snapshot["unique_ranked_contracts_observed"],
         "received_position_input_count": snapshot["unique_position_contracts_observed"],
         "fresh_contracts_at_end": snapshot["fresh_distinct_contracts_at_end"],
+        # D416 count-only, disjoint coverage cohorts. An arrival can be
+        # delayed without making a quote valid, and a once-valid quote can
+        # expire while the lease is still running.
+        "freshness_evaluated_by_exchange_timestamp":
+            snapshot["freshness_evaluated_by_exchange_timestamp"],
+        "validated_quote_contracts": snapshot["validated_quote_contracts"],
+        "never_received_validated_quote_contracts":
+            snapshot["never_received_validated_quote_contracts"],
+        "received_no_eligible_quote_contracts":
+            snapshot["received_no_eligible_quote_contracts"],
+        "eligible_quote_expired_at_end_contracts":
+            snapshot["eligible_quote_expired_at_end_contracts"],
+        "exchange_lagged_quote_callbacks":
+            snapshot["exchange_lagged_quote_callbacks"],
+        "exchange_lagged_quote_contracts":
+            snapshot["exchange_lagged_quote_contracts"],
         "finite_coverage_observed_once": snapshot["finite_coverage_observed_once"],
         "finite_coverage_fresh_at_end": snapshot["finite_coverage_fresh_at_end"],
         "subscription_acks": snapshot["subscriptions_acknowledged"],
