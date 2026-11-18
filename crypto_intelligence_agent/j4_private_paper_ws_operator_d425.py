@@ -42,7 +42,7 @@ _MAX_POSITIONS = 50
 
 
 def _private_directory(directory: Path) -> Path:
-    if (type(directory) is not Path or not directory.is_absolute()
+    if (not isinstance(directory, Path) or not directory.is_absolute()
             or directory.is_symlink() or os.name != "posix"
             or os.geteuid() == 0):
         raise DataValidationError("D425 requires nonroot owner private directory")
@@ -266,7 +266,7 @@ def observe_existing_paper_positions_once(
     if (type(budget) is not TickerLeaseBudget
             or budget.max_sessions > 2 or budget.max_seconds > 60
             or budget.max_frames > 100_000
-            or type(state_directory) is not Path
+            or not isinstance(state_directory, Path)
             or not state_directory.is_absolute()
             or (session_factory is not None and not callable(session_factory))):
         raise DataValidationError("D425 finite bounds or owner state invalid")
