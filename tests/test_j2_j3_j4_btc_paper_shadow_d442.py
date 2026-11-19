@@ -39,7 +39,7 @@ def scope_at(now: int, *, leverage="50"):
 
 
 class IntegratedBtcCostedPaperD442Tests(unittest.TestCase):
-    def simulate(self, frames, *, cfg=None, flags=True, leverage="50"):
+    def simulate(self, frames, *, cfg=None, flags=True, leverage="50", seconds=3):
         clk = Clock()
         sock = Socket(clk, frames)
         opts = dict(
@@ -55,7 +55,7 @@ class IntegratedBtcCostedPaperD442Tests(unittest.TestCase):
                        side_effect=AssertionError("offline test opened public WS")):
                 result = observe_costed_btc_paper_shadow_once(
                     policy=cfg or policy(),
-                    budget=TickerLeaseBudget(1, 120, 4),
+                    budget=TickerLeaseBudget(1, 120, seconds),
                     offline_scope=scope_at(clk.now, leverage=leverage),
                     session_factory=lambda: sock,
                     clock=clk.mono, wall_ms=clk.wall, sleeper=clk.sleep,
@@ -120,7 +120,7 @@ class IntegratedBtcCostedPaperD442Tests(unittest.TestCase):
         self.assertEqual(result["j4_reduce_only_reservations"], 0)
 
     def test_stale_feed_abstains_after_shadow_open(self):
-        result, _ = self.simulate([ack(), frame(), ("delay", 4)])
+        result, _ = self.simulate([ack(), frame(), ("delay", 4)], seconds=5)
         self.assertEqual(result["status"], "public_ticker_lease_abstained")
         self.assertEqual(result["ticker_failure_category"], "held_paper_feed_silent")
         self.assertFalse(result["orders_sent"])
