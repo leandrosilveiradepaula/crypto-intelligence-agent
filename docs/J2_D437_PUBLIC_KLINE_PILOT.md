@@ -31,3 +31,7 @@ O escopo vem da própria coorte atual já revalidada da J1, sem arquivo manual d
 - Gateway MCP da VPS respondeu, mas a leitura do checkout `/home/cia-probe/agent/repo` retornou `Permission denied`; sem execução pública e sem modificação dos serviços da J1.
 - Para autorizar piloto: revalidar a origem/frescor da coorte owner J1, conferir direitos/elegibilidade regional, acesso do owner à VPS e diretório de pesquisa isolado, executar os gates explícitos e registrar somente resumo sanitizado com SHA exato e horário UTC.
 - Próximo valor real do produto: ticker intrahorário e N50 dinâmico persistente, monitor de posições fora do N50, PAPER orientado a eventos e avaliação J6. O piloto finito não substitui isso.
+
+## Operador de host D439
+
+`deploy/vps/j2_public_kline_owner_d439_once.sh` possui `--preflight` **sem rede e sem gravações** e `--capture` explícito, sempre executado no host real e com transporte sob `cia-probe` não-root. Não habilitar a sessão pública por meio do gateway MCP restrito. Procedimento, checksum e requisitos: `docs/J2_D439_OWNER_PILOT_RUNBOOK.md`. Nenhum preflight host foi executado por esta entrega; o próximo teste depende de terminal root verdadeiro do operador.
