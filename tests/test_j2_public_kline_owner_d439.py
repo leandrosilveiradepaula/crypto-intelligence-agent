@@ -28,7 +28,7 @@ class D439OwnerOperatorTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 77, result.stderr)
         self.assertTrue(result.stdout.startswith("D439_BLOCKED="))
-        self.assertNotIn("D439_PUBLIC_WS=STARTED", result.stdout)
+        self.assertNotIn("D439_PUBLIC_REST_AND_WS=ATTEMPTING", result.stdout)
         self.assertNotIn("D439_PUBLIC_RESULT=public_", result.stdout)
 
     def test_invalid_mode_or_sha_rejected_without_host_access(self):
@@ -40,4 +40,4 @@ class D439OwnerOperatorTests(unittest.TestCase):
                 )
                 self.assertEqual(result.returncode, 77)
                 self.assertIn("D439_BLOCKED=", result.stdout)
-                self.assertNotIn("D439_PUBLIC_WS=STARTED", result.stdout)
+                self.assertNotIn("D439_PUBLIC_REST_AND_WS=ATTEMPTING", result.stdout)
