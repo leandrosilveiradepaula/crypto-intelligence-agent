@@ -20,11 +20,11 @@ MODULE = "crypto_intelligence_agent.j2_j3_j4_btc_paper_shadow_d442"
 D = Decimal
 
 
-def policy(*, side=SyntheticSide.LONG, fee="1", slip="1", target="10", leverage=50):
+def policy(*, side=SyntheticSide.LONG, fee="1", slip="1", target="10", stop="100", leverage=50):
     return CostedShadowPolicy(
         ShadowPaperPolicy(
             "BTCUSDT", side, margin_quote=D("3"), leverage=leverage,
-            target1_distance_bps=D(target),
+            target1_distance_bps=D(target), stop_distance_bps=D(stop),
         ),
         D(fee), D(fee), D(slip), D(slip),
     )
@@ -93,6 +93,18 @@ class IntegratedBtcCostedPaperD442Tests(unittest.TestCase):
         self.assertEqual(result["j3_first_partial_cost_hurdle_blocked"], 1)
         self.assertEqual(result["j4_reduce_only_reservations"], 0)
         self.assertFalse(result["j4_hypothetical_filled_open_injected_explicitly"])
+
+    def test_j3_hypothetical_stop_loss_exhausts_margin_before_paper_open(self):
+        # At 50x, a hypothetical 250-bps fully filled stop would already
+        # exceed the three-unit synthetic margin; this is only a veto.
+        result, _ = self.simulate([ack(), frame()], cfg=policy(stop="250"))
+        self.assertEqual(result["status"], "assumed_stop_margin_exhaustion_blocked")
+        self.assertEqual(result["j3_assumed_stop_margin_exhaustion_blocked"], 1)
+        self.assertEqual(result["j3_first_partial_cost_hurdle_blocked"], 0)
+        self.assertEqual(result["j4_reduce_only_reservations"], 0)
+        self.assertFalse(result["j4_hypothetical_filled_open_injected_explicitly"])
+        self.assertFalse(result["j3_real_margin_balance_verified"])
+        self.assertFalse(result["j3_liquidation_path_verified"])
 
     def test_short_and_stop_first_use_existing_auto4(self):
         short, _ = self.simulate([

@@ -60,15 +60,16 @@ class CostedShadowPolicy:
                 raise DataValidationError("D442 unrealistic cost research bound")
 
 
-def _first_partial_after_assumed_costs(
+def _assumed_entry_cost_and_stop_margin_screen(
     quote: BybitTickerQuote, policy: CostedShadowPolicy,
-) -> bool:
-    """J3 cost check for only the FIRST 30%-initial target, not a trade PnL.
+) -> tuple[bool, bool]:
+    """J3 necessary (NOT sufficient) screens before any fictitious PAPER open.
 
-    The remaining 70% is unpriced. No stop protection, funding, liquidation,
-    venue fill, slippage schedule or future price is considered verified.
-    A tiny target that is already negative after declared round-trip costs
-    cannot seed this hypothetical scenario.
+    First 30% target must exceed its declared pro-rata entry+exit costs.
+    Separately, an immediate, fully filled hypothetical stop plus the
+    same costs may not already exhaust the configured isolated margin.
+    Neither screen models exchange liquidation, gap-through, funding,
+    collateral, BBO fillability, maintenance tiers or actual trading.
     """
     shadow = policy.shadow
     mark = quote.mark_price
@@ -79,30 +80,43 @@ def _first_partial_after_assumed_costs(
         if (units <= 0 or entry_notional > wanted
                 or entry_notional < wanted * _MIN_RELATIVE_NOTIONAL):
             raise DataValidationError("D442 synthetic quantity cannot match declared margin")
-        distance = shadow.target1_distance_bps / BPS_DENOMINATOR
-        target = (mark * (1 + distance) if shadow.side is SyntheticSide.LONG
-                  else mark * (1 - distance))
-        if target <= 0:
-            raise DataValidationError("D442 hypothetical target invalid")
-        # Reuse PRE2 for the first 30% of initial units, with entry costs
-        # allocated pro rata. No fictitious 100% exit or residual profit.
-        tranche_units = units * Decimal("0.30")
-        entry_piece = tranche_units * mark
-        exit_piece = tranche_units * target
-        gross = tranche_units * abs(target - mark)
-        breakdown = evaluate_synthetic_costs(SyntheticCostScenario(
-            direction=(ResearchDirection.LONG if shadow.side is SyntheticSide.LONG
-                       else ResearchDirection.SHORT),
-            entry_at_ms=quote.received_at_ms,
-            exit_at_ms=quote.received_at_ms + 1,
-            entry_hypothetical_notional_quote_units=entry_piece,
-            exit_hypothetical_notional_quote_units=exit_piece,
-            entry_fee_bps=policy.entry_fee_bps,
-            exit_fee_bps=policy.exit_fee_bps,
-            entry_adverse_slippage_bps=policy.entry_adverse_slippage_bps,
-            exit_adverse_slippage_bps=policy.exit_adverse_slippage_bps,
-        ))
-        return gross > breakdown.total_signed_cost_units
+        side_long = shadow.side is SyntheticSide.LONG
+        direction = ResearchDirection.LONG if side_long else ResearchDirection.SHORT
+        first_target = (mark * (1 + shadow.target1_distance_bps / BPS_DENOMINATOR)
+                        if side_long else
+                        mark * (1 - shadow.target1_distance_bps / BPS_DENOMINATOR))
+        hypothetical_stop = (
+            mark * (1 - shadow.stop_distance_bps / BPS_DENOMINATOR)
+            if side_long else
+            mark * (1 + shadow.stop_distance_bps / BPS_DENOMINATOR))
+        if first_target <= 0 or hypothetical_stop <= 0:
+            raise DataValidationError("D442 hypothetical bracket invalid")
+
+        def cost(quantity: Decimal, exit_price: Decimal) -> Decimal:
+            breakdown = evaluate_synthetic_costs(SyntheticCostScenario(
+                direction=direction,
+                entry_at_ms=quote.received_at_ms,
+                exit_at_ms=quote.received_at_ms + 1,
+                entry_hypothetical_notional_quote_units=quantity * mark,
+                exit_hypothetical_notional_quote_units=quantity * exit_price,
+                entry_fee_bps=policy.entry_fee_bps,
+                exit_fee_bps=policy.exit_fee_bps,
+                entry_adverse_slippage_bps=policy.entry_adverse_slippage_bps,
+                exit_adverse_slippage_bps=policy.exit_adverse_slippage_bps,
+            ))
+            return breakdown.total_signed_cost_units
+
+        tranche = units * Decimal("0.30")
+        expected_first_target_gross = tranche * abs(first_target - mark)
+        first_target_positive = expected_first_target_gross > cost(tranche, first_target)
+        # This is an optimistic immediate STOP at exactly the configured mark,
+        # so a loss at or above the provided margin is a decisive veto.
+        hypothetical_stop_loss = units * abs(hypothetical_stop - mark)
+        stop_below_margin = (
+            hypothetical_stop_loss + cost(units, hypothetical_stop)
+            < shadow.margin_quote
+        )
+        return first_target_positive, stop_below_margin
 
 
 def observe_costed_btc_paper_shadow_once(
@@ -182,7 +196,7 @@ def observe_costed_btc_paper_shadow_once(
     book = BybitPublicTickerBook(
         ranked_symbols=("BTCUSDT",), universe_at_ms=scope.observed_at_ms,
     )
-    seeded = followed = cost_blocked = eligible = 0
+    seeded = followed = cost_blocked = stop_blocked = eligible = 0
     with TemporaryDirectory(prefix="cia-d442-btc-shadow-") as directory:
         paper = Path(directory) / "paper-positions.sqlite"
         router = None
@@ -207,14 +221,19 @@ def observe_costed_btc_paper_shadow_once(
                 raise DataGapError("paper_held_quote_silence_exceeded")
 
         def route_quote(quote: BybitTickerQuote) -> None:
-            nonlocal seeded, followed, cost_blocked, eligible
+            nonlocal seeded, followed, cost_blocked, stop_blocked, eligible
             nonlocal router, open_at_ms
             if router is None:
                 if not _eligible_anchor(quote, policy.shadow, scope.observed_at_ms):
                     return
                 eligible += 1
-                if not _first_partial_after_assumed_costs(quote, policy):
+                target_ok, stop_ok = _assumed_entry_cost_and_stop_margin_screen(
+                    quote, policy)
+                if not target_ok:
                     cost_blocked += 1
+                if not stop_ok:
+                    stop_blocked += 1
+                if not target_ok or not stop_ok:
                     return
                 router = _seed_paper_at_quote(paper, policy.shadow, quote)
                 paper.chmod(0o600)
@@ -239,7 +258,9 @@ def observe_costed_btc_paper_shadow_once(
         if result.status != "lease_completed":
             status = "public_ticker_lease_abstained"
         elif not seeded:
-            status = ("assumed_first_partial_cost_hurdle_blocked"
+            status = ("assumed_stop_margin_exhaustion_blocked"
+                      if stop_blocked else
+                      "assumed_first_partial_cost_hurdle_blocked"
                       if cost_blocked else "no_valid_public_shadow_anchor")
         elif not followed:
             status = "hypothetical_shadow_open_no_followup_quote"
@@ -258,7 +279,10 @@ def observe_costed_btc_paper_shadow_once(
             "ticker_failure_category": result.failure_category,
             "j3_cost_hurdle_evaluated": eligible,
             "j3_first_partial_cost_hurdle_blocked": cost_blocked,
+            "j3_assumed_stop_margin_exhaustion_blocked": stop_blocked,
             "j3_cost_assumptions_declared": True,
+            "j3_stop_execution_verified": False,
+            "j3_real_margin_balance_verified": False,
             "j3_funding_known": False,
             "j3_liquidation_path_verified": False,
             "j3_out_of_sample_validated": False,

@@ -1,5 +1,10 @@
 # Jornadas — plano de execução
 
+## J2→J3→J4 D442 — triagem de custos e margem no fluxo PAPER (19/11/2026)
+
+Integração de **um único contrato de pesquisa** BTCUSDT, desacoplada da J1 e restrita a uma sessão pública finita: D441 REST para metadados atuais → D385/D386 ticker ACK/snapshot/delta → J3/PRE2 custos explícitos + veto de stop hipotético que já exauriria a margem → D426/D391/D389/AUTO4 para abertura declaradamente fictícia e reserva de saída automática sem FILL inferido. Sem nova estratégia, ranking N50, orders, testnet, mudanças VPS ou aceitação de retorno. CI/verificação e prova pública ainda são gates separados. Documento: `docs/J2_J3_J4_BTC_SHADOW_D442.md`.
+
+
 ## J5/J6 D432 — projeção local sem importação manual
 
 Uma execução offline pode publicar o relatório integrado para o Console loopback já existente, que o lê automaticamente com `fetch` somente em `127.0.0.1`. O artefato é uma projeção de leitura, owner-only e fail-closed; não transforma a demo em supervisão contínua nem em PAPER prospectivo.

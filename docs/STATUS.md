@@ -1,5 +1,10 @@
 # STATUS — Crypto Intelligence Agent
 
+## J2→J3→J4 D442 — triagem de custos e margem no fluxo PAPER (19/11/2026)
+
+Integração de **um único contrato de pesquisa** BTCUSDT, desacoplada da J1 e restrita a uma sessão pública finita: D441 REST para metadados atuais → D385/D386 ticker ACK/snapshot/delta → J3/PRE2 custos explícitos + veto de stop hipotético que já exauriria a margem → D426/D391/D389/AUTO4 para abertura declaradamente fictícia e reserva de saída automática sem FILL inferido. Sem nova estratégia, ranking N50, orders, testnet, mudanças VPS ou aceitação de retorno. CI/verificação e prova pública ainda são gates separados. Documento: `docs/J2_J3_J4_BTC_SHADOW_D442.md`.
+
+
 ## J2 — piloto Bybit isolado D441 (19/11/2026)
 
 J1 D360 mantém o aceite de pesquisa. Corrigida a dependência indevida D438/D439 que levava piloto público J2 a revalidar a J1. Novo piloto é single-BTCUSDT com um REST público de metadados e uma sessão WSS finita; isolado de estado, bancos e timers J1. A CI e captura pública genuína são gates separados. Sem ordens e sem produção. Referência: `docs/OPERATIONAL_STATE.md`.
