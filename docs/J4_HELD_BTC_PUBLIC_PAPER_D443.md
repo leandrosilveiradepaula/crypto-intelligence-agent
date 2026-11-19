@@ -19,3 +19,7 @@ Teste D443: usa **real SQLite AUTO4 persistido no diretório de testes**, com um
 ## Pendências antes de produto pronto
 
 Para acompanhar posições durante toda a vida útil: feed público N50 e contratos retidos fora do N50, controle de rotação e recomposição de snapshots, serviço owner de ciclo longo, watchdog e alertas J5/J6, fills PAPER causais, financiamento/risco/liquidação venue e walk-forward OOS validados na J3. A presente entrega não executa ordens, não assegura um stop real e não substitui esses gates.
+
+### Comando de operador futuro (não executar em produção sem gate)
+
+Há uma CLI sem instalação de serviço: `python -m scripts.run_j4_held_btc_paper_d443_once --private-paper-directory PASTA_PAPER_0700 --seconds 30 --max-frames 20000 --allow-public-network --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible --allow-private-paper-reservations`. Requer manifesto D425 + journal persistente da própria posição PAPER e usuário owner POSIX não-root. A ausência de qualquer opt-in aborta antes de ler o journal ou abrir socket. O custo/slippage/risk-Gate de novas entradas permanece independente: D443 **não bloqueia stops/saídas de posição existente** porque um teste de entrada J3 ficou negativo.
