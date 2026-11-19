@@ -1,5 +1,10 @@
 # Plano de validação e gates
 
+## D443 — validação de posição PAPER existente (sem reiniciar J1)
+
+Teste integrado real do SQLite AUTO4 criado no teste, com fill de abertura explicitamente fictício anterior ao ticker. Sem mockar o writer AUTO4: ACK + ticker BTC de alvo devem reservar uma parcial (30 unidades de 100), sem alterar quantidade preenchida; ACK + ticker BTC adverso devem reservar stop protetivo antes de target; reiniciar o roteador no **mesmo SQLite** e reapresentar ticker não pode duplicar reserva. Sem ACK/sem ticker, não exibir posição protegida. Sem opt-ins e com orçamento inválido, não ler pasta privada nem abrir REST/WS. Em modo real, proibir escopo/socket/clock injetáveis e root. Testes test_j4_held_btc_public_d443.py e test_j4_held_btc_paper_d443_cli.py no Linux/Windows (POSIX gates quando aplicável), suíte completa, navegador mobile e revisão do SHA. Sem serviços, deploy, ordens ou J1.
+
+
 ## D442 — validação do fluxo J2 → J3 → J4
 
 Validar no HEAD exato da branch D441/D442 os contratos de origem REST atual e ticker ACK/snapshot/delta, o cálculo J3/PRE2 com Decimal de primeira tranche e de stop hipotético na posição inteira, e o envio ao mesmo D391/D389/AUTO4 de LONG/SHORT e stop-first. Cenários negativos obrigatórios: evento pré-ACK, ausência de quote posterior, preço/relógio stale, stop com margem exaurida, custo de entrada/saída maior que alvo, cap de alavancagem insuficiente, opt-ins não fornecidos, custo NaN/float, root POSIX e funções de teste injetadas em transporte real. Nenhum fill automático a partir do ticker. Testar `python -m unittest discover -s tests -p test_j2_j3_j4_btc_paper_shadow_d442.py -v`, suite completa Linux/Windows e mobile/Chrome. Evidência de CI não equivale a captura pública, edge ou execução de ordens. Separar a eventual homologação na VPS, sempre sem escrever na J1.

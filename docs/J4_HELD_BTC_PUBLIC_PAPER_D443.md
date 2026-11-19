@@ -23,3 +23,5 @@ Para acompanhar posições durante toda a vida útil: feed público N50 e contra
 ### Comando de operador futuro (não executar em produção sem gate)
 
 Há uma CLI sem instalação de serviço: `python -m scripts.run_j4_held_btc_paper_d443_once --private-paper-directory PASTA_PAPER_0700 --seconds 30 --max-frames 20000 --allow-public-network --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible --allow-private-paper-reservations`. Requer manifesto D425 + journal persistente da própria posição PAPER e usuário owner POSIX não-root. A ausência de qualquer opt-in aborta antes de ler o journal ou abrir socket. O custo/slippage/risk-Gate de novas entradas permanece independente: D443 **não bloqueia stops/saídas de posição existente** porque um teste de entrada J3 ficou negativo.
+
+O status de pesquisa ao fim do lease NÃO significa que a posição PAPER esteja protegida depois que o processo terminou. Reportar último lease encerrado, não um supervisor ativo.

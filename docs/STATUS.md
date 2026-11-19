@@ -1,5 +1,10 @@
 # STATUS — Crypto Intelligence Agent
 
+## D443 — J4 PAPER persistido, cotação pública BTC, sem dependência da J1 (19/11/2026 UTC)
+
+Entrega codificada na mesma branch/revisão draft de J2/J3/J4: D443 carrega rotas PAPER existentes via D425 e mantém o lock de exclusividade, valida BTCUSDT em REST D441 e usa D390/D385/D386 para alimentar apenas o D391/D389/AUTO4. Diferentemente da demonstração D442 que descarta a posição fictícia, D443 preserva o **arquivo de posição PAPER** e a reserva REDUCE_ONLY ao fim de uma sessão FINITA. Os testes verificam (em SQLite de teste) parcial, stop-first, ausência de fill por ticker e não duplicação no reinício. Sem diagnóstico/alteração da J1, ranking N50, fill real, lucro, proteção de stop nativo ou daemon 24x7. Os gates de CI para o HEAD final e uma futura captura pública real ainda precisam ser concluídos; PR permanece draft. CLI com cinco opt-ins em scripts/run_j4_held_btc_paper_d443_once.py. Prioridade seguinte: liveness/reconexão 24x7 J6, N50 dinâmico/posições fora do ranking, sinais J2 validados OOS e J3 custos/risco realista, sem autorizar ordens.
+
+
 ## J2→J3→J4 D442 — triagem de custos e margem no fluxo PAPER (19/11/2026)
 
 Integração de **um único contrato de pesquisa** BTCUSDT, desacoplada da J1 e restrita a uma sessão pública finita: D441 REST para metadados atuais → D385/D386 ticker ACK/snapshot/delta → J3/PRE2 custos explícitos + veto de stop hipotético que já exauriria a margem → D426/D391/D389/AUTO4 para abertura declaradamente fictícia e reserva de saída automática sem FILL inferido. Sem nova estratégia, ranking N50, orders, testnet, mudanças VPS ou aceitação de retorno. CI/verificação e prova pública ainda são gates separados. Documento: `docs/J2_J3_J4_BTC_SHADOW_D442.md`.
