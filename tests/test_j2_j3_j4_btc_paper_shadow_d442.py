@@ -1,6 +1,7 @@
 """D442 integrated J2/J3/J4 BTC research: one contract, cost gate, AUTO4."""
 from decimal import Decimal
 import json
+import os
 import unittest
 from unittest.mock import patch
 
@@ -194,6 +195,36 @@ class IntegratedBtcCostedPaperD442Tests(unittest.TestCase):
                 ])
             self.assertEqual(rc, 2)
             self.assertEqual(json.loads(output.getvalue())["network_attempted"], False)
+
+    @unittest.skipUnless(os.name == "posix" and hasattr(os, "geteuid")
+                         and os.geteuid() != 0, "unprivileged POSIX only")
+    def test_real_rest_scope_is_checked_after_network_capture_not_before(self):
+        clk = Clock()
+        # The REST observation is captured after the call begins. A pre-GET
+        # wall clock would incorrectly declare even fresh metadata "future".
+        now = {"value": clk.now - 1000}
+        def get_scope():
+            now["value"] = clk.now + 100
+            return scope_at(clk.now)
+        def read_time():
+            return now["value"] * 1_000_000
+        opts = dict(
+            allow_public_network=True, allow_public_websocket=True,
+            confirm_personal_readonly_research=True,
+            confirm_region_eligible=True, allow_hypothetical_paper_open=True,
+        )
+        with patch(MODULE + ".fetch_single_btc_scope_from_public_rest",
+                   side_effect=get_scope) as fetch:
+            with patch(MODULE + ".time.time_ns", side_effect=read_time):
+                with patch(MODULE + ".supervise_public_tickers",
+                           side_effect=RuntimeError("supervisor reached")) as receiver:
+                    with self.assertRaisesRegex(RuntimeError, "supervisor reached"):
+                        observe_costed_btc_paper_shadow_once(
+                            policy=policy(), budget=TickerLeaseBudget(1, 3, 3),
+                            **opts,
+                        )
+        self.assertEqual(fetch.call_count, 1)
+        self.assertEqual(receiver.call_count, 1)
 
     def test_invalid_cost_policy_or_frames_rejected(self):
         for v in (D("-1"), D("NaN"), D("1001"), 1.0, True):
