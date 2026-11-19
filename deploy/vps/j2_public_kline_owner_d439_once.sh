@@ -25,7 +25,7 @@ test -d "$BASE" && test ! -L "$BASE" || fail OWNER_BASE
 test "$(/usr/bin/id -u "$OWNER")" -gt 0 || fail OWNER_ID
 "$RUNUSER" -u "$OWNER" -- /usr/bin/id -u >/dev/null 2>&1 || fail OWNER_SWITCH
 test "$(/usr/bin/timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes || fail CLOCK_NTP
-"$RUNUSER" -u "$OWNER" -- "$PY" -c 'import websockets.sync.client' >/dev/null 2>&1 || fail WEBSSOCKETS_LIBRARY
+"$RUNUSER" -u "$OWNER" -- /usr/bin/env PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "$PY" -B -c 'import websockets.sync.client' >/dev/null 2>&1 || fail WEBSSOCKETS_LIBRARY
 # Preflight is J1-independent. One public BTCUSDT REST GET runs only under
 # --capture, after region, rights and owner gates; no N50 pointer is read.
 printf 'D439_HOST_PREFLIGHT=PASS_NO_NETWORK_NO_WRITES\n'
