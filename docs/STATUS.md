@@ -1,4 +1,9 @@
 # STATUS — Crypto Intelligence Agent
+
+## J2 — piloto Bybit isolado D441 (19/11/2026)
+
+J1 D360 mantém o aceite de pesquisa. Corrigida a dependência indevida D438/D439 que levava piloto público J2 a revalidar a J1. Novo piloto é single-BTCUSDT com um REST público de metadados e uma sessão WSS finita; isolado de estado, bancos e timers J1. A CI e captura pública genuína são gates separados. Sem ordens e sem produção. Referência: `docs/OPERATIONAL_STATE.md`.
+
 ## D436 — pesquisa J2→J5 supervisionada integrada, somente offline verificado (18/11/2026 UTC)
 
 Na branch `codex/issue-677-prospective-research-feed`, a pesquisa de closes públicos Bybit confirmados foi conectada ao supervisor WS injetável existente, D434/D435 e projeção owner-only 0700/0600 no J5. A demonstração `python -m scripts.demo_j2_prospective_bybit_research_d436` executa agora um **socket FAKE sem rede**, com ACK, frame aberto, close confirmado, journal, hipótese LONG/SHORT/sem hipótese, projeção terminal explícita e retransmissão sem duplicação. Browser J5 usa módulo `prospective-research.js` com validação estrita v2, polling somente loopback, revogação em HTTP 503, resposta atrasada e sessão encerrada. Testes backend, Node e navegador passaram na **PR #733**, merge `4ca5f3db8417771154e28341e1636405a148d782`, com HEAD revisado `7c41d285ceb14ba6c7c0d8945e0d39a0320665be` e CI de PR Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS**. A CI após o merge é evidência independente. Não alegar observação pública real, 24×7, entrada PAPER, PnL, stop nativo, ordem, credencial ou liberação do RiskGate. Nenhum serviço J1 owner/VPS foi alterado. Custo R$0.

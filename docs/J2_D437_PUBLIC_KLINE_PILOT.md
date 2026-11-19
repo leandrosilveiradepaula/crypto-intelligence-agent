@@ -1,37 +1,22 @@
-# D437 — piloto finito público Bybit (pesquisa isolada)
+# D441 — piloto público Bybit de BTCUSDT isolado da J1
 
-**Estado em 18/11/2026:** comando de operador versionado; nenhuma sessão pública foi executada nesta entrega. A issue #677 exige feed contínuo N50 e não é concluída por este piloto.
+Esta entrega substitui o piloto D438 e o gate J1 do operador D439. **J1 permanece aceita para pesquisa no escopo D360 e não será reiniciada, auditada ou alterada para testar o canal público J2.**
 
-## Gates e limites
+## Fluxo autorizado para pesquisa, sem ordens
 
-- **Pesquisa somente de BTCUSDT**, assinando os 50 tópicos `kline.60` da seleção N50 atual da J1 já revalidada; WebSocket público linear, sem credenciais, ordens, PAPER, alterações de J1, timer, serviço ou release. A inscrição N50 não prova cobertura de mercado.
-- Quatro flags explícitas para rede e pesquisa: `--allow-public-network --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible`; mais `--allow-private-pointer-read` para leitura exclusiva do owner J1. A elegibilidade regional e de uso pessoal deve ser verificada pelo operador. Não presumir por ser cliente Bybit.
-- Executar com owner POSIX não-root; saída privada 0700 fora da árvore de estado J1, journal isolado, sem alterar arquivos/timers J1.
-- D438 carrega o **escopo tipado existente** da coorte N50 J1: valida pointer e cache owner, digests, timestamps, exatamente 50 instrumentos, presença de BTCUSDT e estabilidade da revisão do epoch. Não consulta REST nem reclassifica ativos. Isso é origem local provisória, **não autenticação independente da exchange**.
-- Um manifesto manual pode continuar sendo validado em testes offline, mas `--scope-file` **não autoriza rede** no piloto; evita capturas artificiais/fictícias.
-- Orçamento padrão de 240 segundos, 24.000 frames, uma sessão sem reconnect. Os parâmetros são limitados pelo WSRunBudget.
+1. No host root real `srv1319424`, executar o operador versionado `deploy/vps/j2_public_kline_owner_d439_once.sh --preflight SHA40`: exige host, relógio NTP, `runuser` do owner `cia-probe`, Python e `websockets.sync.client`. Nenhuma leitura J1, REST, WSS, instalação ou escrita no preflight.
+2. Verificar pessoalmente elegibilidade regional, termos de dados e pesquisa read-only. Somente depois preencher quatro confirmações operacionais para `--capture`: `CIA_D439_CONFIRM_PERSONAL_RESEARCH=YES`, `CIA_D439_CONFIRM_REGION_ELIGIBLE=YES`, `CIA_D439_CONFIRM_DATA_RIGHTS=YES`, `CIA_D439_CONFIRM_PUBLIC_WS=YES`.
+3. O operador cria **um diretório novo** com owner 0700 em `/home/cia-probe/agent/j2-d439-public-XXXXXXXX`, baixa o SHA fixado em checkout separado e valida o HEAD. Não altera `/home/cia-probe/agent/repo` nem o estado privado J1.
+4. O launcher D437 confere owner, opt-ins, diretório de pesquisa privado e orçamento; faz **um único GET público HTTPS** à API Bybit `instruments-info?category=linear&symbol=BTCUSDT&limit=1`, reutilizando `BoundedBybitPublicClient` para TLS, redirecionamentos, cotas e limite de resposta. O contrato BTCUSDT deve ser `LinearPerpetual`, `Trading`, USDT/USDT, base BTC em registro revisado, timestamps atuais, sem pré-listagem ou TradFi.
+5. Somente depois do REST válido, inicia um WebSocket público `linear` `kline.60.BTCUSDT`, uma sessão por 240s/24.000 frames, journal SQLite isolado e projeção local terminal. ACK, atualização aberta, close confirmado e falha são reportados separadamente. **Uma janela de quatro minutos pode não alcançar o close horário: ACK/open já são evidências limitadas, nunca inventar close.**
 
-## Comando (modelo, não autorização para executar)
+## Limites e interpretações
 
-```bash
-python -m scripts.run_j2_public_kline_session_d437_once \
-  --state-directory /CAMINHO/ESTADO-OWNER-J1 \
-  --output-dir /CAMINHO/PRIVADO-SEPARADO \
-  --allow-private-pointer-read \
-  --allow-public-network --allow-public-websocket \
-  --confirm-personal-readonly-research --confirm-region-eligible
-```
+- Nenhuma leitura ou escrita na J1, nenhum Top50, nenhum ranking N50 novo, nenhuma alteração de timers/systemd, nenhuma credencial ou ordem real.
+- O escopo é **apenas BTCUSDT**, não o feed de 50 ativos. A prova pública é um marco de transporte, não prova de cobertura de mercado ou desempenho, nem fonte autenticada, direitos de uso ou operação PAPER.
+- `--state-directory`, `--scope-file` e `--allow-private-pointer-read` são parâmetros legados recusados antes de rede. O parser de manifesto D437 só existe para testes offline, nunca para construir a sessão real.
+- `D439_BLOCKED=...` encerra o processo sem execução pública. Qualquer erro REST ou clock gera abstenção, não fallback para arquivo J1 nem fixture.
+- O conector VPS limitado não consegue trocar usuário (`runuser: cannot set groups`); o preflight deve ser feito no shell root do host real. O teste anterior que dependia de J1 **não deve ser repetido**.
+- A transição futura para feed contínuo N50 e PAPER exige avaliação própria; não substituir a J1 por um piloto nem publicar dados financeiros.
 
-O escopo vem da própria coorte atual já revalidada da J1, sem arquivo manual de metadados. Os diretórios de saída e de estado J1 devem ser disjuntos. O programa cria um diretório novo, um journal SQLite separado e uma projeção J5 privada terminal. Um ACK genuíno sem fechamento produz somente `public_subscription_ack_observed_unverified`; com atualizações abertas, `public_open_updates_observed_unverified`; um close só é declarado quando o supervisor conclui a sessão sem erro. Falhas posteriores a closes causam `public_session_abstained`. Nenhuma dessas evidências equivale a fonte autenticada ou sinal autorizado. Não preencher as 24 horas exigidas com dados fictícios.
-
-## Evidências e próximos passos
-
-- Commit inicial confirmado `fcb34fe7b308d313990f5c68d0c80b9721fe3fa8` na branch `codex/issue-677-public-kline-session`.
-- Commit anterior `b5c4f2e4c93ea4b8d6fd4bdec1df05bbca2f344f`: CI Linux 3.403 OK, Windows 3.403 OK (558 skips), mobile/Chrome SUCCESS. A integração D438 exige repetir CI e revisão de SHA exato; o piloto público real permanece pendente.
-- Gateway MCP da VPS respondeu, mas a leitura do checkout `/home/cia-probe/agent/repo` retornou `Permission denied`; sem execução pública e sem modificação dos serviços da J1.
-- Para autorizar piloto: revalidar a origem/frescor da coorte owner J1, conferir direitos/elegibilidade regional, acesso do owner à VPS e diretório de pesquisa isolado, executar os gates explícitos e registrar somente resumo sanitizado com SHA exato e horário UTC.
-- Próximo valor real do produto: ticker intrahorário e N50 dinâmico persistente, monitor de posições fora do N50, PAPER orientado a eventos e avaliação J6. O piloto finito não substitui isso.
-
-## Operador de host D439
-
-`deploy/vps/j2_public_kline_owner_d439_once.sh` possui `--preflight` **sem rede e sem gravações** e `--capture` explícito, sempre executado no host real e com transporte sob `cia-probe` não-root. Não habilitar a sessão pública por meio do gateway MCP restrito. Procedimento, checksum e requisitos: `docs/J2_D439_OWNER_PILOT_RUNBOOK.md`. Nenhum preflight host foi executado por esta entrega; o próximo teste depende de terminal root verdadeiro do operador.
+Veja o runbook `docs/J2_D439_OWNER_PILOT_RUNBOOK.md`, as decisões D383/D436/D437/D441 e issue #677.
