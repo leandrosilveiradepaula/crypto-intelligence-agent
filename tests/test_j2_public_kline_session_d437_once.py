@@ -57,7 +57,7 @@ class D437CommandTests(TestCase):
                 flags = {key: True for key in _OPTINS}
                 flags[field] = False
                 with self.subTest(field=field):
-                    with patch("scripts.run_j2_public_kline_session_d437_once.read_private_manifest",
+                    with patch("scripts.run_j2_public_kline_session_d437_once.fetch_single_btc_scope_from_public_rest",
                                side_effect=AssertionError("I/O attempted")):
                         result = run_once(_args(path, **flags))
                     self.assertEqual(result["status"], "explicit_public_research_optin_required")
@@ -74,38 +74,38 @@ class D437CommandTests(TestCase):
                     self.assertEqual(run_once(args)["status"], "unprivileged_owner_required")
 
 
-    def test_manual_manifest_never_bypasses_current_owner_capture(self):
+    def test_legacy_j1_scope_or_manifest_cannot_drive_public_pilot(self):
         with tempfile.TemporaryDirectory() as root:
             path = Path(root)
             flags = {key: True for key in _OPTINS}
-            with patch("scripts.run_j2_public_kline_session_d437_once.read_private_manifest",
-                       side_effect=AssertionError("manual manifest read")):
-                with patch("scripts.run_j2_public_kline_session_d437_once.read_current_owner_n50_kline_scope",
-                           side_effect=AssertionError("J1 read")):
-                    if os.name == "posix" and os.geteuid() != 0:
-                        result = run_once(_args(path, scope_file=path / "manifest.json", **flags))
-                        self.assertEqual(result["status"], "current_owner_n50_scope_required")
-                        result = run_once(_args(path, state_directory=path, **flags))
-                        self.assertEqual(result["status"], "explicit_private_owner_scope_optin_required")
-                    else:
-                        result = run_once(_args(path, scope_file=path / "manifest.json", **flags))
-                        self.assertEqual(result["status"], "unprivileged_owner_required")
-                    self.assertFalse(result["network_attempted"])
+            with patch("scripts.run_j2_public_kline_session_d437_once.fetch_single_btc_scope_from_public_rest",
+                       side_effect=AssertionError("public GET before gate")):
+                for legacy in (
+                    {"state_directory": path},
+                    {"scope_file": path / "manifest.json"},
+                    {"allow_private_pointer_read": True},
+                ):
+                    with self.subTest(legacy=tuple(legacy)):
+                        result = run_once(_args(path, **flags, **legacy))
+                        if os.name != "posix" or os.geteuid() == 0:
+                            self.assertEqual(result["status"], "unprivileged_owner_required")
+                        else:
+                            self.assertEqual(result["status"],
+                                             "j1_or_manual_scope_not_used_by_isolated_pilot")
+                        self.assertFalse(result["network_attempted"])
 
-    def test_owner_output_cannot_overlap_j1_state(self):
+    def test_unsafe_output_directory_stops_before_public_rest(self):
         if os.name != "posix" or os.geteuid() == 0:
             self.skipTest("POSIX non-root owner only")
         with tempfile.TemporaryDirectory() as root:
-            state = Path(root) / "j1"
-            state.mkdir(mode=0o700)
-            state.chmod(0o700)
+            path = Path(root)
+            path.chmod(0o755)
             flags = {key: True for key in _OPTINS}
-            with patch("scripts.run_j2_public_kline_session_d437_once.read_current_owner_n50_kline_scope",
-                       side_effect=AssertionError("owner read before path gate")):
-                result = run_once(_args(state, state_directory=state,
-                                        allow_private_pointer_read=True, **flags))
-                self.assertEqual(result["status"], "owner_preflight_abstained")
-                self.assertFalse(result["network_attempted"])
+            with patch("scripts.run_j2_public_kline_session_d437_once.fetch_single_btc_scope_from_public_rest",
+                       side_effect=AssertionError("public GET before directory gate")):
+                result = run_once(_args(path, **flags))
+            self.assertEqual(result["status"], "owner_preflight_abstained")
+            self.assertFalse(result["network_attempted"])
 
     def test_only_completed_acknowledged_public_lease_can_claim_close(self):
         good = {"status": "ws_budget_ended_research_only",
