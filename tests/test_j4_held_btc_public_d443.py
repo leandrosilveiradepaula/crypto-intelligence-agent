@@ -37,7 +37,7 @@ class D443PersistedPaperTests(unittest.TestCase):
         self.router = _route(self.db, short=False)
         self.clock = Clock()
 
-    def run_tick(self, frames, *, duration=3):
+    def run_tick(self, frames, *, duration=2):
         socket = Socket(self.clock, frames)
         with patch(MODULE + ".fetch_single_btc_scope_from_public_rest",
                    side_effect=AssertionError("network REST forbidden in offline test")):
@@ -62,6 +62,8 @@ class D443PersistedPaperTests(unittest.TestCase):
         self.assertTrue(socket.closed)
         self.assertEqual(socket.sent[0]["args"], ["tickers.BTCUSDT"])
         self.assertEqual(result["held_quote_frames_forwarded"], 1)
+        self.assertEqual(result["status"], "finite_held_paper_quote_observed_unverified")
+        self.assertTrue(result["held_quote_fresh_at_lease_end"])
         self.assertEqual(len(balance.exit_orders), 1)
         self.assertEqual(str(balance.reserved_unfilled_units), "30")
         self.assertEqual(str(balance.filled_exit_units), "0")
