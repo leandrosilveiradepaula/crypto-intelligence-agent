@@ -41,8 +41,9 @@ def _bytes(obj):
 
 
 def _args(directory, **overrides):
-    defaults = dict(scope_file=directory / "manifest.json", output_dir=directory,
-                    max_seconds=1, max_frames=1)
+    defaults = dict(scope_file=None, state_directory=None,
+                    allow_private_pointer_read=False,
+                    output_dir=directory, max_seconds=1, max_frames=1)
     defaults.update({key: False for key in _OPTINS})
     defaults.update(overrides)
     return argparse.Namespace(**defaults)
@@ -72,6 +73,39 @@ class D437CommandTests(TestCase):
                 with patch("scripts.run_j2_public_kline_session_d437_once.os.geteuid", return_value=0):
                     self.assertEqual(run_once(args)["status"], "unprivileged_owner_required")
 
+
+    def test_manual_manifest_never_bypasses_current_owner_capture(self):
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root)
+            flags = {key: True for key in _OPTINS}
+            with patch("scripts.run_j2_public_kline_session_d437_once.read_private_manifest",
+                       side_effect=AssertionError("manual manifest read")):
+                with patch("scripts.run_j2_public_kline_session_d437_once.read_current_owner_n50_kline_scope",
+                           side_effect=AssertionError("J1 read")):
+                    if os.name == "posix" and os.geteuid() != 0:
+                        result = run_once(_args(path, scope_file=path / "manifest.json", **flags))
+                        self.assertEqual(result["status"], "current_owner_n50_scope_required")
+                        result = run_once(_args(path, state_directory=path, **flags))
+                        self.assertEqual(result["status"], "explicit_private_owner_scope_optin_required")
+                    else:
+                        result = run_once(_args(path, scope_file=path / "manifest.json", **flags))
+                        self.assertEqual(result["status"], "unprivileged_owner_required")
+                    self.assertFalse(result["network_attempted"])
+
+    def test_owner_output_cannot_overlap_j1_state(self):
+        if os.name != "posix" or os.geteuid() == 0:
+            self.skipTest("POSIX non-root owner only")
+        with tempfile.TemporaryDirectory() as root:
+            state = Path(root) / "j1"
+            state.mkdir(mode=0o700)
+            state.chmod(0o700)
+            flags = {key: True for key in _OPTINS}
+            with patch("scripts.run_j2_public_kline_session_d437_once.read_current_owner_n50_kline_scope",
+                       side_effect=AssertionError("owner read before path gate")):
+                result = run_once(_args(state, state_directory=state,
+                                        allow_private_pointer_read=True, **flags))
+                self.assertEqual(result["status"], "owner_preflight_abstained")
+                self.assertFalse(result["network_attempted"])
 
     def test_only_completed_acknowledged_public_lease_can_claim_close(self):
         good = {"status": "ws_budget_ended_research_only",

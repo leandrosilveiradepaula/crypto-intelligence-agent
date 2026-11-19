@@ -1,5 +1,9 @@
 # Decisões do produto
 
+## D438 — piloto Bybit usa seleção N50 owner J1 sem manifesto fabricado (18/11/2026)
+
+O piloto D437 deve ler a coorte N50 provisória **já existente na J1**, em modo estritamente read-only, por D406 e revalidação owner do ponteiro/cache, confrontando digests antes/depois; exige quinto opt-in `allow_private_pointer_read` e diretório de saída disjunto. Somente BTCUSDT alimenta a pesquisa D436, mas a sessão pública assina a seleção atual de 50, sem criar segundo ranking ou escritor J1. Manifesto manual não é mais autorização de transporte público (somente parser offline). Coorte provisória não atesta identidade crypto-only independente, cobertura Top50 real, direitos nem elegibilidade regional. Sem sessão real, ordens, PAPER ou serviço nessa decisão.
+
 ## D437 — sessão pública Bybit finita somente sob opt-in de pesquisa (18/11/2026)
 
 `run_authorized_public_kline_session` reusa o supervisor D436 para uma única sessão Bybit V5 linear de `kline.60`, limitada por orçamento e isolada do SQLite J1. Quatro booleans explícitos — rede pública, WebSocket público, pesquisa pessoal read-only e elegibilidade regional — e owner não-root POSIX são necessários antes de construir o transporte real. Socket injetado nunca pode afirmar observação pública: continua `offline_protocol_replay`; apenas a factory pública lazy é rotulada `public_ws_observed_unverified`. Falta de 24 closes mantém abstenção; não há bootstrap REST nesta decisão, credencial, ordem, PAPER, serviço ou deploy.
