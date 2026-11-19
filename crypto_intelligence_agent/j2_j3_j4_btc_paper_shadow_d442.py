@@ -170,11 +170,6 @@ def observe_costed_btc_paper_shadow_once(
                 not all(callable(x) for x in (clock, wall_ms, sleeper))):
             raise DataValidationError("D442 injected offline session must be explicit")
 
-    current_ms = (time.time_ns() // 1_000_000 if real else wall_ms())
-    if (type(current_ms) is not int or
-            not 1_600_000_000_000 <= current_ms < _MAX_MS):
-        raise DataValidationError("D442 observed market clock invalid")
-
     if real:
         try:
             scope = fetch_single_btc_scope_from_public_rest()
@@ -182,8 +177,15 @@ def observe_costed_btc_paper_shadow_once(
                 OSError, ValueError, TypeError):
             return {**denied, "status": "single_btc_public_rest_abstained",
                     "network_attempted": True}
+        # REST network latency advances the wall clock. Reading the current
+        # instant BEFORE GET would falsely mark every genuine scope future.
+        current_ms = time.time_ns() // 1_000_000
     else:
         scope = offline_scope
+        current_ms = wall_ms()
+    if (type(current_ms) is not int or
+            not 1_600_000_000_000 <= current_ms < _MAX_MS):
+        raise DataValidationError("D442 observed market clock invalid")
     _scope_contract_fingerprint(scope)
     if (len(scope.contracts) != 1 or scope.contracts[0].symbol != "BTCUSDT"
             or not 0 <= current_ms - scope.observed_at_ms <= 30_000):
