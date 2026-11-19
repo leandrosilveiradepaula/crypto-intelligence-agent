@@ -107,6 +107,24 @@ class D437CommandTests(TestCase):
             self.assertEqual(result["status"], "owner_preflight_abstained")
             self.assertFalse(result["network_attempted"])
 
+    def test_real_transport_abstention_cannot_claim_observation(self):
+        if os.name != "posix" or os.geteuid() == 0:
+            self.skipTest("POSIX non-root owner only")
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            directory.chmod(0o700)
+            flags = {key: True for key in _OPTINS}
+            with patch("scripts.run_j2_public_kline_session_d437_once.fetch_single_btc_scope_from_public_rest",
+                       return_value=_scope()) as fetch:
+                with patch("scripts.run_j2_public_kline_session_d437_once.run_authorized_public_kline_session",
+                           return_value=({"status": "public_owner_preflight_abstained",
+                                          "orders_sent": False}, None)):
+                    result = run_once(_args(directory, **flags))
+            self.assertEqual(fetch.call_count, 1)
+            self.assertEqual(result["status"], "public_ws_preflight_abstained")
+            self.assertFalse(result["websocket_observation_proven"])
+            self.assertFalse(result["orders_sent"])
+
     def test_only_completed_acknowledged_public_lease_can_claim_close(self):
         good = {"status": "ws_budget_ended_research_only",
                 "sessions_fully_acknowledged": 1,
