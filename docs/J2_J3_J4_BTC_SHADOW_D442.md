@@ -6,7 +6,7 @@ Não criar outro coletor J1, outro ranking N50, uma segunda contabilidade de pos
 
 ## Contratos e ordem causal
 
-1. Cinco opt-ins explícitos e usuário não-root no acesso real. Testes com socket injetado mantêm `injected_offline_protocol_replay` e nunca afirmam observação pública. Nenhum código da J1 é importado ou lido na execução D442.
+1. Cinco opt-ins explícitos e usuário não-root no acesso real. Testes com socket injetado mantêm `injected_offline_protocol_replay` e nunca afirmam observação pública. A execução D442 **não acessa nem modifica arquivos, ponteiro, ranking, banco ou serviços J1**; utilitários legados importados transitivamente não são chamados para ler estado J1.
 2. Um GET público só do contrato BTCUSDT deve validar `LinearPerpetual`, `Trading`, quote/settle USDT, filtros e relógio. O BTC é apenas prova de transporte; a seleção crypto-only N50 exige identidade PIT própria.
 3. O supervisor recebe `tickers.BTCUSDT`, exige ACK e snapshot, preserva marca temporal, descarta eventos pré-ACK para o consumidor e falha fechado por relógio/lag/reconexão.
 4. Ao primeiro mark próprio e recente, executa **duas triagens J3/PRE2** antes da abertura: (a) retorno bruto hipotético da **primeira parcial de 30%** superior aos custos declarados e (b) perda hipotética ao stop da posição inteira **mais taxas/slippage** estritamente inferior à margem de pesquisa configurada. Se falhar qualquer uma, **não fabrica abertura PAPER**. O stop pressupõe execução imediata ao preço informado, e portanto não prova proteção ou liquidação evitada. Funding, risco de gap, tiers e colateral reais continuam desconhecidos.

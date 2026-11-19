@@ -1,5 +1,10 @@
 # Plano de validação e gates
 
+## D442 — validação do fluxo J2 → J3 → J4
+
+Validar no HEAD exato da branch D441/D442 os contratos de origem REST atual e ticker ACK/snapshot/delta, o cálculo J3/PRE2 com Decimal de primeira tranche e de stop hipotético na posição inteira, e o envio ao mesmo D391/D389/AUTO4 de LONG/SHORT e stop-first. Cenários negativos obrigatórios: evento pré-ACK, ausência de quote posterior, preço/relógio stale, stop com margem exaurida, custo de entrada/saída maior que alvo, cap de alavancagem insuficiente, opt-ins não fornecidos, custo NaN/float, root POSIX e funções de teste injetadas em transporte real. Nenhum fill automático a partir do ticker. Testar `python -m unittest discover -s tests -p test_j2_j3_j4_btc_paper_shadow_d442.py -v`, suite completa Linux/Windows e mobile/Chrome. Evidência de CI não equivale a captura pública, edge ou execução de ordens. Separar a eventual homologação na VPS, sempre sem escrever na J1.
+
+
 Toda entrega deve vincular issue, PR, SHA, testes reais e limitações. Implementação não é evidência de retorno financeiro.
 
 - J0: documentos e decisões coerentes, testes de integridade documental e backlog rastreável.

@@ -1,5 +1,10 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D442 — evidência e gates do fluxo integrado (19/11/2026 UTC)
+
+A integração nova D442 está versionada na mesma branch draft que D441, com **um único fluxo BTCUSDT REST → ticker WebSocket → triagem J3 de custo/stop/margem → D391/D389/AUTO4 PAPER**. O primeiro SHA integrado `6c8b9e2543fb44751dfb599a18ae2201b967a081` passou em **Linux/docs 3.423 testes e navegador mobile**; Windows e revisão posterior de CLI/owner ainda precisavam de conclusão na última verificação. O SHA mais novo inclui tratamento conservador de falha após início possível de rede, sem alegar sessão não realizada. Tests offline com socket falso não provam Bybit real, ganhos, stop nativo, sourcing N50, feed contínuo ou PAPER persistente. Não houve deploy, alteração J1, ordens nem gasto adicional. Próximo passo: concluir CI do SHA efetivo; revisar diffs/contratos antes de entregar nova execução pública opt-in separada de J1. Critérios: `docs/J2_J3_J4_BTC_SHADOW_D442.md` e D442 em `docs/DECISIONS.md`.
+
+
 ## J2→J3→J4 D442 — triagem de custos e margem no fluxo PAPER (19/11/2026)
 
 Integração de **um único contrato de pesquisa** BTCUSDT, desacoplada da J1 e restrita a uma sessão pública finita: D441 REST para metadados atuais → D385/D386 ticker ACK/snapshot/delta → J3/PRE2 custos explícitos + veto de stop hipotético que já exauriria a margem → D426/D391/D389/AUTO4 para abertura declaradamente fictícia e reserva de saída automática sem FILL inferido. Sem nova estratégia, ranking N50, orders, testnet, mudanças VPS ou aceitação de retorno. CI/verificação e prova pública ainda são gates separados. Documento: `docs/J2_J3_J4_BTC_SHADOW_D442.md`.
