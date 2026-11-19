@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# D439: host-only preflight and finite public research. NO J1 writes or orders.
+# D441: host-only, J1-independent finite public BTCUSDT research. NO J1 writes/orders.
 set -euo pipefail
 umask 077
 test "$#" -eq 2 || { echo 'D439_BLOCKED=ARGUMENTS'; exit 77; }
@@ -8,8 +8,6 @@ SHA="$2"
 OWNER=cia-probe
 HOST=srv1319424
 BASE=/home/cia-probe/agent
-STATE="$BASE/j1-n50-ws-epochs/active"
-REPO="$BASE/repo"
 PY="$BASE/ws-venv/bin/python"
 RUNUSER=/usr/sbin/runuser
 GIT=/usr/bin/git
@@ -24,26 +22,12 @@ test "$(/usr/bin/hostname)" = "$HOST" || fail WRONG_HOST
 test -x "$RUNUSER" && test -x "$GIT" && test -x "$TIMEOUT" || fail HOST_DEPENDENCIES
 test -x "$PY" || fail VENV_MISSING
 test -d "$BASE" && test ! -L "$BASE" || fail OWNER_BASE
-test -d "$STATE" && test ! -L "$STATE" || fail J1_OWNER_STATE
-test -d "$REPO" && test ! -L "$REPO" || fail OWNER_REPO
 test "$(/usr/bin/id -u "$OWNER")" -gt 0 || fail OWNER_ID
-"$RUNUSER" -u "$OWNER" -- /usr/bin/test -d "$STATE" >/dev/null 2>&1 || fail OWNER_DAC
 "$RUNUSER" -u "$OWNER" -- /usr/bin/id -u >/dev/null 2>&1 || fail OWNER_SWITCH
 test "$(/usr/bin/timedatectl show -p NTPSynchronized --value 2>/dev/null)" = yes || fail CLOCK_NTP
 "$RUNUSER" -u "$OWNER" -- "$PY" -c 'import websockets.sync.client' >/dev/null 2>&1 || fail WEBSSOCKETS_LIBRARY
-# This checks the existing private J1 pointer without modifying it or using network.
-"$RUNUSER" -u "$OWNER" -- /usr/bin/env PYTHONPATH="$REPO" \
-    PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "$PY" -c '
-import time
-from pathlib import Path
-from crypto_intelligence_agent.j1_n50_ws_epoch_rotation import load_active_n50_ws_epoch
-s = load_active_n50_ws_epoch(
-    state_directory=Path("/home/cia-probe/agent/j1-n50-ws-epochs/active"),
-    current_at_ms=time.time_ns() // 1000000,
-    allow_private_pointer_read=True)
-assert s.status == "active_n50_ws_epoch_revalidated"
-' >/dev/null 2>&1 || fail OWNER_J1_EPOCH_REVALIDATION
-
+# Preflight is J1-independent. One public BTCUSDT REST GET runs only under
+# --capture, after region, rights and owner gates; no N50 pointer is read.
 printf 'D439_HOST_PREFLIGHT=PASS_NO_NETWORK_NO_WRITES\n'
 printf 'D439_EXPECTED_SHA=%s\n' "$SHA"
 if test "$MODE" = --preflight; then
@@ -75,29 +59,16 @@ test "$("$RUNUSER" -u "$OWNER" -- "$GIT" -C "$CODE" rev-parse FETCH_HEAD)" = "$S
 test "$("$RUNUSER" -u "$OWNER" -- "$GIT" -C "$CODE" rev-parse HEAD)" = "$SHA" || fail CHECKOUT_SHA
 test -z "$("$RUNUSER" -u "$OWNER" -- "$GIT" -C "$CODE" status --porcelain)" || fail DIRTY
 test -f "$CODE/scripts/run_j2_public_kline_session_d437_once.py" || fail D437_MISSING
-test -f "$CODE/crypto_intelligence_agent/j2_current_owner_kline_scope_d438.py" || fail D438_MISSING
-# Fail before opening WSS unless the current J1 N50 is valid at this instant.
-"$RUNUSER" -u "$OWNER" -- /usr/bin/env PYTHONPATH="$CODE" \
-    PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 "$PY" -c '
-import time
-from pathlib import Path
-from crypto_intelligence_agent.j2_current_owner_kline_scope_d438 import read_current_owner_n50_kline_scope
-scope = read_current_owner_n50_kline_scope(
-    state_directory=Path("/home/cia-probe/agent/j1-n50-ws-epochs/active"),
-    now_ms=time.time_ns() // 1000000,
-    allow_private_pointer_read=True)
-assert len(scope.contracts) == 50
-' >/dev/null 2>&1 || fail CURRENT_N50_UNAVAILABLE
-
-printf 'D439_OWNER_N50_SCOPE=REVALIDATED_PROVISIONAL\n'
-printf 'D439_PUBLIC_WS=STARTED_FINITE_READONLY\n'
+test -f "$CODE/crypto_intelligence_agent/j2_public_btc_scope_d441.py" || fail D441_MISSING
+printf 'D439_PUBLIC_SCOPE=ISOLATED_BTCUSDT_REST_RESEARCH\n'
+printf 'D439_PUBLIC_REST_AND_WS=ATTEMPTING_READONLY\n'
 set +e
 RAW="$("$TIMEOUT" 300 "$RUNUSER" -u "$OWNER" -- /usr/bin/env \
     PYTHONPATH="$CODE" PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 \
     "$PY" -m scripts.run_j2_public_kline_session_d437_once \
-    --state-directory "$STATE" --output-dir "$OUT" \
+    --output-dir "$OUT" \
     --max-seconds 240 --max-frames 24000 \
-    --allow-private-pointer-read --allow-public-network --allow-public-websocket \
+    --allow-public-network --allow-public-websocket \
     --confirm-personal-readonly-research --confirm-region-eligible 2>/dev/null)"
 RC="$?"
 set -e
