@@ -11,7 +11,7 @@ SCRIPT = (Path(__file__).resolve().parents[1]
           / "deploy" / "vps" / "j2_public_kline_owner_d439_once.sh")
 
 
-@unittest.skipUnless(shutil.which("bash"), "host Bash unavailable")
+@unittest.skipUnless(os.name == "posix" and shutil.which("bash"), "POSIX host Bash only")
 class D439OwnerOperatorTests(unittest.TestCase):
     def test_script_parses_as_shell(self):
         result = subprocess.run(
