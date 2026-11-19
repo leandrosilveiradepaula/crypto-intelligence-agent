@@ -25,8 +25,9 @@ from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
 from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import (
     read_projection, run_authorized_public_kline_session,
 )
-from crypto_intelligence_agent.market_data import DataValidationError, DataGapError
-from crypto_intelligence_agent.j2_current_owner_kline_scope_d438 import read_current_owner_n50_kline_scope
+from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
+from crypto_intelligence_agent.j2_public_btc_scope_d441 import fetch_single_btc_scope_from_public_rest
 from scripts.demo_j2_prospective_bybit_research_d436 import CONFIG
 
 _SCHEMA = "d437-reviewed-single-kline-scope-v1"
@@ -199,34 +200,29 @@ def run_once(args: argparse.Namespace) -> dict:
     if os.name != "posix" or not hasattr(os, "geteuid") or os.geteuid() == 0:
         return {"status": "unprivileged_owner_required",
                 "network_attempted": False, "orders_sent": False}
-    # An operator-crafted manifest, even when well formed, does NOT establish
-    # an owner-verified capture. Keep its parser for offline diagnosis only.
-    owner_dir = getattr(args, "state_directory", None)
-    if (not isinstance(owner_dir, Path)
-            or getattr(args, "scope_file", None) is not None):
-        return {"status": "current_owner_n50_scope_required",
+    # A J1 pointer or operator-crafted manifest cannot authorize this pilot.
+    # D441 is intentionally independent of previously accepted J1 collection.
+    if (getattr(args, "state_directory", None) is not None
+            or getattr(args, "scope_file", None) is not None
+            or getattr(args, "allow_private_pointer_read", False)):
+        return {"status": "j1_or_manual_scope_not_used_by_isolated_pilot",
                 "network_attempted": False, "orders_sent": False}
-    if getattr(args, "allow_private_pointer_read", False) is not True:
-        return {"status": "explicit_private_owner_scope_optin_required",
-                "network_attempted": False, "orders_sent": False}
-    # No I/O or public socket until all owner/network/region gates pass.
     try:
         _owner_private_directory(args.output_dir)
-        owner_root = owner_dir.resolve(strict=True)
-        output_root = args.output_dir.resolve(strict=True)
-        if (not owner_dir.is_absolute() or owner_root == output_root
-                or output_root.is_relative_to(owner_root)
-                or owner_root.is_relative_to(output_root)):
-            raise DataValidationError("D438 pilot output must be separate from owner J1")
-        now_ms = time.time_ns() // 1_000_000
-        scope = read_current_owner_n50_kline_scope(
-            state_directory=owner_dir, now_ms=now_ms,
-            allow_private_pointer_read=True,
-        )
         budget = WSRunBudget(max_sessions=1, max_frames=args.max_frames,
                              max_seconds=args.max_seconds)
-    except (DataValidationError, DataGapError, OSError, ValueError, TypeError):
-        return {"status": "owner_preflight_abstained", "network_attempted": False,
+    except (DataValidationError, OSError, ValueError, TypeError):
+        return {"status": "owner_preflight_abstained",
+                "network_attempted": False, "orders_sent": False}
+
+    # Exactly one opt-in public instrument GET. Validate current BTCUSDT
+    # metadata before any WebSocket is created. Never consult J1 state.
+    try:
+        scope = fetch_single_btc_scope_from_public_rest()
+    except (J1BybitCaptureError, DataValidationError, OSError,
+            ValueError, TypeError):
+        return {"status": "public_rest_instrument_abstained",
+                "network_attempted": True, "websocket_attempted": False,
                 "orders_sent": False}
 
     # A unique 0700 pilot directory and isolated journal; never touch J1 owner.
@@ -248,8 +244,8 @@ def run_once(args: argparse.Namespace) -> dict:
         return {
             "status": outcome,
             "source": "public_ws_observed_unverified",
-            "scope_source": "owner_j1_revalidated_provisional_n50_unverified",
-            "owner_scope_members": 50,
+            "scope_source": "single_btc_public_rest_instrument_unverified",
+            "scope_members": 1,
             "network_attempted": True,
             "session": session,
             "research": update.sanitized_report() if update is not None else None,
@@ -270,11 +266,11 @@ def run_once(args: argparse.Namespace) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="D437 owner-only bounded Bybit kline pilot")
-    parser.add_argument("--state-directory", type=Path,
-                        help="Existing private J1 owner epoch directory, read-only")
-    parser.add_argument("--scope-file", type=Path,
-                        help="Legacy manual manifest; never authorizes public transport")
-    parser.add_argument("--allow-private-pointer-read", action="store_true")
+    # Deprecated arguments remain parseable only to fail closed (no J1 I/O).
+    parser.add_argument("--state-directory", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--scope-file", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--allow-private-pointer-read", action="store_true",
+                        help=argparse.SUPPRESS)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-seconds", type=int, default=240)
     parser.add_argument("--max-frames", type=int, default=24000)
