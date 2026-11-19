@@ -168,6 +168,33 @@ class IntegratedBtcCostedPaperD442Tests(unittest.TestCase):
         self.assertEqual(result["status"], "unprivileged_owner_required")
         self.assertFalse(result["network_attempted"])
 
+    def test_cli_no_optin_and_bad_cost_deny_before_network(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+        from scripts.run_j2_j3_j4_btc_shadow_d442_once import main
+        costs = [
+            "--entry-fee-bps", "1", "--exit-fee-bps", "1",
+            "--entry-adverse-slippage-bps", "1",
+            "--exit-adverse-slippage-bps", "1",
+        ]
+        with patch(MODULE + ".fetch_single_btc_scope_from_public_rest",
+                   side_effect=AssertionError("network before gate")):
+            output = StringIO()
+            with redirect_stdout(output):
+                rc = main(costs)
+            self.assertEqual(rc, 77)
+            self.assertEqual(json.loads(output.getvalue())["network_attempted"], False)
+            output = StringIO()
+            with redirect_stdout(output):
+                rc = main(costs + ["--entry-fee-bps", "NaN"] + [
+                    "--allow-public-network", "--allow-public-websocket",
+                    "--confirm-personal-readonly-research",
+                    "--confirm-region-eligible",
+                    "--allow-hypothetical-paper-open",
+                ])
+            self.assertEqual(rc, 2)
+            self.assertEqual(json.loads(output.getvalue())["network_attempted"], False)
+
     def test_invalid_cost_policy_or_frames_rejected(self):
         for v in (D("-1"), D("NaN"), D("1001"), 1.0, True):
             with self.subTest(value=v), self.assertRaises(DataValidationError):

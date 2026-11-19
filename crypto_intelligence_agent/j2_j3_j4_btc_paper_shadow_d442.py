@@ -160,7 +160,9 @@ def observe_costed_btc_paper_shadow_once(
     if real:
         if offline_scope is not None or any(x is not None for x in (clock, wall_ms, sleeper)):
             raise DataValidationError("D442 no injected inputs on real public transport")
-        if os.name != "posix" or not hasattr(os, "geteuid") or os.geteuid() == 0:
+        if (os.name != "posix" or not hasattr(os, "geteuid")
+                or not hasattr(os, "getuid") or os.getuid() != os.geteuid()
+                or os.geteuid() == 0):
             return {**denied, "status": "unprivileged_owner_required"}
     else:
         if (not callable(session_factory) or

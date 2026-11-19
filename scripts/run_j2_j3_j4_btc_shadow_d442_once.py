@@ -56,16 +56,25 @@ def main(argv: list[str] | None = None) -> int:
             Decimal(args.entry_adverse_slippage_bps),
             Decimal(args.exit_adverse_slippage_bps),
         )
+        budget = TickerLeaseBudget(1, args.max_frames, args.seconds)
+    except (DataValidationError, ValueError, ArithmeticError):
+        print(json.dumps({"status": "invalid_research_policy",
+                          "network_attempted": False, "orders_sent": False}))
+        return 2
+    try:
         report = observe_costed_btc_paper_shadow_once(
             policy=policy,
             allow_public_network=True, allow_public_websocket=True,
             confirm_personal_readonly_research=True, confirm_region_eligible=True,
-            allow_hypothetical_paper_open=True,
-            budget=TickerLeaseBudget(1, args.max_frames, args.seconds),
+            allow_hypothetical_paper_open=True, budget=budget,
         )
-    except (DataValidationError, ValueError, ArithmeticError):
-        report = {"status": "invalid_or_unavailable_research_policy",
-                  "network_attempted": False, "orders_sent": False}
+    except (DataValidationError, OSError, ValueError, ArithmeticError,
+            TypeError, RuntimeError, ImportError):
+        # Once the network-capable function has been entered, the caller can
+        # no longer assert NO network access on an unexpected failure.
+        report = {"status": "btc_public_research_abstained",
+                  "network_attempted": True, "orders_sent": False,
+                  "approved_for_live_use": False}
     print(json.dumps(report, sort_keys=True, separators=(",", ":"), allow_nan=False))
     return 0 if report.get("status") == "public_quote_routed_to_costed_paper_reservations" else 2
 
