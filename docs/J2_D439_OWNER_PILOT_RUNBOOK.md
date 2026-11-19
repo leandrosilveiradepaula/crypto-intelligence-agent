@@ -45,3 +45,11 @@ Antes do piloto, confirmar também que a source de uso é permitida para a regi�
 - A coorte owner atual pode estar ausente, expirada, rotacionando ou sem BTCUSDT. Nesse caso, o script retorna categoria `BLOCKED` e deixa J1 intacta.
 - Não interpretar uma captura finita como monitoramento contínuo de posições, nem fazer merge do PR draft #734 antes da prova pública real e revisão operacional.
 - Fonte de verdade: issue #677, PR #734 e `docs/OPERATIONAL_STATE.md`.
+
+## D440 — diagnóstico independente quando o preflight falhar
+
+Primeira execução real do D439 no terminal root do host (19/11/2026) retornou `D439_BLOCKED=OWNER_J1_EPOCH_REVALIDATION` antes de abrir rede. A tentativa seguinte de diagnóstico no checkout `/home/cia-probe/agent/repo` resultou em `ImportError: cannot import name 'j1_n50_ws_epoch_rotation'`; isso demonstra divergência/incompletude do código implantado, mas **não prova** que o ponteiro ou a coorte privada estão expirados. Além disso, o terminal copiou trechos do heredoc anterior de modo truncado. Nenhum arquivo da J1 foi modificado.
+
+Foi versionado `scripts/diag_j1_owner_n50_d440_readonly.py`, independente de módulos instalados e da rede pública, para ser baixado de um SHA exato e executado como `cia-probe` via `python -I -B -` recebendo apenas stdin verificado por SHA-256. O relatório não divulga símbolos, preços nem os diretórios privados: imprime apenas HEAD do checkout, presença do módulo, ponteiro, idade do manifesto/cache (48h), comparação básica de digests e abstenção. **Não** usar o relatório D440 como prova equivalente à validação completa D321 ou como liberação de captura: ele apenas discrimina o próximo reparo.
+
+O operador recebeu o comando D440 verificado com SHA `29cb29650dba3c0cd35c156471efac3883316aa5` e hash SHA-256 `c260359904f0f6cf5b80cb93ff604cc8fc58e9ada9647add7f717d3223d7e465`. Aguardar a saída D440 antes de eventual correção no host ou revisão do D439. Sem autorizar atualização de checkout vivo J1, restauração de ponteiro, nova captura ou alterações de timers.
