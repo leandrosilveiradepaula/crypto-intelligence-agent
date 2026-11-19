@@ -238,6 +238,12 @@ def run_once(args: argparse.Namespace) -> dict:
             allow_public_network=True, allow_public_websocket=True,
             confirm_personal_readonly_research=True, confirm_region_eligible=True,
         )
+        if type(report) is dict:
+            # Real transport preflight returned an abstention, not a WS lease.
+            return {"status": "public_ws_preflight_abstained",
+                    "network_attempted": True, "websocket_observation_proven": False,
+                    "private_evidence_retained": True, "orders_sent": False,
+                    "live_trading_authorized": False}
         terminal = read_projection(projection, now_ms=time.time_ns() // 1_000_000)
         session = report.sanitized_report()
         outcome = _pilot_public_outcome(session)
