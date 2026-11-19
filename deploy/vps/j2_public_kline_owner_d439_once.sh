@@ -104,6 +104,7 @@ for key in ("subscriptions_acknowledged", "closed_events_appended", "open_update
 print("D439_PUBLIC_RESULT=" + status)
 print("D439_ORDERS_SENT=NO")
 print("D439_CONTINUOUS_24X7_VERIFIED=NO")
+print("D439_PRIVATE_EVIDENCE_RETAINED=" +
+      ("YES" if v.get("private_evidence_retained") is True else "NO"))
 PY
-printf 'D439_PRIVATE_EVIDENCE_RETAINED=YES\n'
 printf 'D439_J1_SERVICES_MODIFIED=NO\n'
