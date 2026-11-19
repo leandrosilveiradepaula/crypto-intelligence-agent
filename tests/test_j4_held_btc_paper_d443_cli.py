@@ -36,5 +36,7 @@ class D443CLIResearchTests(unittest.TestCase):
                 code = main(flags)
         self.assertEqual(code, 2)
         self.assertEqual(json.loads(out.getvalue())["status"],
-                         "held_btc_paper_operator_failed_closed")
+                         "held_btc_paper_budget_invalid_before_io")
+        self.assertFalse(json.loads(out.getvalue())["network_attempted"])
+        self.assertFalse(json.loads(out.getvalue())["private_paper_journal_accessed"])
         self.assertFalse(json.loads(out.getvalue())["orders_sent"])

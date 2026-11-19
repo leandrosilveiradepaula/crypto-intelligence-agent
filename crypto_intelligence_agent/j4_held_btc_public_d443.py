@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Callable
 
 from .bybit_closed_stream_cache import (
-    MAX_SCOPE_AGE_MS, OfflineReviewedStreamScope, _scope_contract_fingerprint,
+    OfflineReviewedStreamScope, _scope_contract_fingerprint,
 )
 from .bybit_public_j1_transport import J1BybitCaptureError
 from .bybit_public_ticker_optin_d390 import run_readonly_bybit_ticker_lease

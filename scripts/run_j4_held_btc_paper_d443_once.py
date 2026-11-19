@@ -44,6 +44,15 @@ def main(argv: list[str] | None = None) -> int:
         budget = TickerLeaseBudget(1, args.max_frames, args.seconds)
         if budget.max_seconds > 60 or budget.max_frames > 100_000:
             raise DataValidationError("D443 finite budget exceeded")
+    except (DataValidationError, ValueError, TypeError, ArithmeticError):
+        print(json.dumps({
+            "status": "held_btc_paper_budget_invalid_before_io",
+            "network_attempted": False,
+            "private_paper_journal_accessed": False,
+            "orders_sent": False,
+        }, sort_keys=True))
+        return 2
+    try:
         result = observe_existing_btc_paper_once(
             private_paper_directory=args.private_paper_directory,
             allow_public_network=True, allow_public_websocket=True,
