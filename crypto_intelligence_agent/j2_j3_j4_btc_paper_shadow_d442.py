@@ -193,8 +193,17 @@ def observe_costed_btc_paper_shadow_once(
                 router.begin_new_market_session()
 
         def poll_held() -> None:
-            if router is not None and router.fresh_held_contract_count(
-                    at_ms=wall_fn(), max_age_ms=3000) != 1:
+            if router is None:
+                return
+            now = wall_fn()
+            # The seed quote is deliberately NOT forwarded as an exit quote.
+            # Before the first later quote, use the seed reception time as
+            # a bounded grace period; do not require a nonexistent router mark.
+            if followed == 0:
+                if open_at_ms is None or not 0 <= now - open_at_ms <= 3000:
+                    raise DataGapError("paper_held_quote_silence_exceeded")
+            elif router.fresh_held_contract_count(
+                    at_ms=now, max_age_ms=3000) != 1:
                 raise DataGapError("paper_held_quote_silence_exceeded")
 
         def route_quote(quote: BybitTickerQuote) -> None:
