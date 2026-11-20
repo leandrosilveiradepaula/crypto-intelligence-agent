@@ -8,7 +8,9 @@ No account endpoint, sender, J1 cache, order, trading approval or paid API.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from pathlib import Path
+import fcntl
 from decimal import Decimal, ROUND_DOWN
 from hashlib import sha256
 import json
@@ -338,3 +340,139 @@ def capture_dynamic_public_n50(
         source_mode=("injected_offline_protocol_replay" if injected
                      else "public_rest_observed_unverified"),
     )
+
+
+
+@dataclass(frozen=True)
+class PinnedDynamicN50Epoch:
+    """Durable live-shape scope and journal for ONE stable membership epoch."""
+
+    selected: DynamicPublicN50
+    closed_journal_path: Path
+    epoch_observed_at_ms: int
+    newly_rotated: bool
+
+    def sanitized_report(self) -> dict[str, object]:
+        return {
+            **self.selected.sanitized_report(),
+            "schema_version": "d451-dynamic-public-n50-pinned-epoch-v1",
+            "epoch_observed_at_ms": self.epoch_observed_at_ms,
+            "new_isolated_closed_journal": self.newly_rotated,
+            "old_confirmed_history_relabelled": False,
+            "j1_accessed": False,
+        }
+
+
+def pin_dynamic_public_n50_epoch(
+    *, snapshot: DynamicPublicN50, private_j2_directory: Path,
+) -> PinnedDynamicN50Epoch:
+    """Keep the 24h J2 series across refreshes while members/spec are unchanged.
+
+    Acquires ONE non-blocking owner-only flock. On a membership change or
+    six-day age limit, creates an entirely new isolated closed journal,
+    preserving the old file for evidence. NEVER merges historical candles
+    from a different scope, no implicit backfill or J1 activity.
+    """
+    from .j4_private_paper_ws_operator_d425 import (
+        _private_directory, _owner_file,
+    )
+    from .j4_automatic_entry_materializer_d448 import (
+        _atomic_private_write, _read_owner_bytes, _parse_json, _json,
+    )
+    from .bybit_closed_stream_cache import SQLiteOfflineClosedStreamJournal
+    if (type(snapshot) is not DynamicPublicN50
+            or not isinstance(private_j2_directory, Path)
+            or any(part.startswith("j1-") for part in private_j2_directory.parts)):
+        raise DataValidationError("D451 isolated owner J2 epoch and typed selection required")
+    home = _private_directory(private_j2_directory)
+    lockname = ".d451-epoch-owner.lock"
+    flags = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC
+    fd = os.open(home / lockname, flags, 0o600)
+    try:
+        import stat
+        info = os.fstat(fd)
+        if (info.st_uid != os.geteuid() or not stat.S_ISREG(info.st_mode)
+                or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1):
+            raise DataValidationError("D451 private scope lock unsafe")
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise DataGapError("D451 another scope rotation is in progress") from exc
+        pointer_name = "current-d451-provisional-cohort.json"
+        pointer = home / pointer_name
+        observed = snapshot.ticker_received_ms
+        current_epoch = None
+        journal_name = None
+        if pointer.exists() or pointer.is_symlink():
+            envelope = _parse_json(_read_owner_bytes(home, pointer_name, 4096))
+            if (type(envelope) is not dict or set(envelope) != {
+                "schema", "payload", "sha256",
+            } or envelope["schema"] != "d451-provisional-n50-epoch-pointer-v1"
+                    or type(envelope["payload"]) is not dict
+                    or type(envelope["sha256"]) is not str
+                    or sha256(_json(envelope["payload"]).encode("ascii")).hexdigest()
+                       != envelope["sha256"]):
+                raise DataValidationError("D451 N50 epoch pointer integrity invalid")
+            payload = envelope["payload"]
+            if (set(payload) != {"epoch_ms", "cohort_sha256", "journal"}
+                    or type(payload["epoch_ms"]) is not int
+                    or type(payload["cohort_sha256"]) is not str
+                    or not re.fullmatch("[0-9a-f]{64}", payload["cohort_sha256"])
+                    or type(payload["journal"]) is not str
+                    or re.fullmatch(r"n50-d451-[0-9a-f]{18}-[0-9]{13}[.]sqlite",
+                                    payload["journal"]) is None):
+                raise DataValidationError("D451 N50 epoch pointer shape invalid")
+            if (not 0 < payload["epoch_ms"] <= observed
+                    or payload["journal"] != (
+                        "n50-d451-" + payload["cohort_sha256"][:18]
+                        + "-" + str(payload["epoch_ms"]) + ".sqlite"
+                    )):
+                raise DataValidationError("D451 N50 epoch pointer causality invalid")
+            existing = home / payload["journal"]
+            owner_fd = _owner_file(home, payload["journal"])
+            os.close(owner_fd)
+            if (payload["cohort_sha256"] == snapshot.fingerprint_sha256
+                    and observed - payload["epoch_ms"] < 6 * 86_400_000):
+                current_epoch = payload["epoch_ms"]
+                journal_name = payload["journal"]
+
+        newly_rotated = current_epoch is None
+        if newly_rotated:
+            current_epoch = observed
+            journal_name = (
+                "n50-d451-" + snapshot.fingerprint_sha256[:18]
+                + "-" + str(current_epoch) + ".sqlite"
+            )
+            journal_path = home / journal_name
+            if journal_path.exists() or journal_path.is_symlink():
+                raise DataGapError("D451 orphaned rotated J2 journal requires reconciliation")
+            SQLiteOfflineClosedStreamJournal.create(journal_path)
+            owner_fd = _owner_file(home, journal_name)
+            os.close(owner_fd)
+            payload = {
+                "epoch_ms": current_epoch,
+                "cohort_sha256": snapshot.fingerprint_sha256,
+                "journal": journal_name,
+            }
+            raw = _json({
+                "schema": "d451-provisional-n50-epoch-pointer-v1",
+                "payload": payload,
+                "sha256": sha256(_json(payload).encode("ascii")).hexdigest(),
+            }).encode("ascii")
+            _atomic_private_write(home, pointer_name, raw)
+
+        scope = snapshot.scope
+        pinned_scope = replace(
+            scope, observed_at_ms=current_epoch,
+            contracts=tuple(replace(member, observed_at_ms=current_epoch)
+                            for member in scope.contracts),
+        )
+        _scope_contract_fingerprint(pinned_scope)
+        return PinnedDynamicN50Epoch(
+            selected=replace(snapshot, scope=pinned_scope),
+            closed_journal_path=home / journal_name,
+            epoch_observed_at_ms=current_epoch,
+            newly_rotated=newly_rotated,
+        )
+    finally:
+        os.close(fd)
