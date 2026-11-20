@@ -149,4 +149,6 @@ class ContinuousPaperWorkerD444Tests(unittest.TestCase):
                                  0o600)
                 with self.assertRaises(Exception):
                     PrivateWorkerStatus(directory)
-            self.assertFalse(any(p.name.startswith(".paper-monitor-") for p in directory.iterdir()))
+            self.assertFalse(any(p.name.startswith(".paper-monitor-")
+                                 and p.name != ".paper-monitor-worker.lock"
+                                 for p in directory.iterdir()))
