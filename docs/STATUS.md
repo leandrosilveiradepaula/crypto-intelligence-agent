@@ -1,5 +1,10 @@
 # STATUS — Crypto Intelligence Agent
 
+## D446 — posições AUTO4 salvas aparecem diretamente no console localhost (20/11/2026)
+
+Implementado leitor read-only de todas as posições explicitamente roteadas no manifesto privado D425, usando `inspect_paper_positions` e o formato D407 já aceito pelo navegador. O servidor local J5 requer opt-in independente `--allow-owner-paper-positions-loopback --owner-paper-positions-directory` e só atende em 127.0.0.1. A UI deixa de exigir importação de JSON quando este opt-in está ativo; atualiza a cada 15s, identifica origem local e remove snapshot antigo se a leitura falhar, sem adulterar cenários locais. Sem novas posições, fills ou ordens; nenhuma escrita no journal, J1 ou produção. Proteção da corretora não é inferida. Testes exercitam owner 0700/0600, duas posições no mesmo SQLite, conteúdo de resposta no loopback e bloqueio de Host e métodos de escrita.
+
+
 ## D445 — múltiplas posições PAPER sem depender do N50 (20/11/2026)
 
 Implementado código J4 capaz de acompanhar todos os contratos de posições existentes no arquivo AUTO4 (limite 50) numa mesma assinatura WS, inclusive aqueles fora do ranking corrente. A lista vem do manifesto privado D425 em cada ciclo; a elegibilidade de *monitorar posição já aberta* independe da classificação de oportunidades da J2. REST usa paginação limitada para verificar o instrumento, não per-symbol GET; D443 foi generalizada com compatibilidade do piloto BTC, e D444 chama a nova rotina multicontrato. Testes cobrem BTC e ETH simultâneos no mesmo SQLite com parcial, stop protetivo, nenhuma redução artificial por ticker, replay idempotente e caminho sem opt-ins. **Não implica nova posição, sinais autorizados nem cobertura comprovada.** Sem merge/deploy/VPS, sem J1 ou ordens reais. Próximo marco de desenvolvimento: seleção N50 dinâmica como fonte de *novas* oportunidades e J3 prospectivo/OOS com custos reais de pesquisa; worker de posições já não depende desse ranking.

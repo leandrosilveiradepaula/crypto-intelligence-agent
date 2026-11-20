@@ -41,6 +41,8 @@
   const DEC = /^(?:0|[1-9][0-9]{0,35})(?:\.[0-9]{1,30})?$/;
   const UNIT_SCALE = 10n ** 30n;
   let current = null;
+  let source = "none"; // manual import or explicitly opt-in local owner snapshot
+  let refreshing = false;
 
   function valid(ok) {
     if (!ok) throw new Error("Relatório de posições PAPER inválido ou incompatível");
@@ -154,10 +156,13 @@
     const blocked = current.positions.filter(p =>
       p.pending_or_unknown_orders > 0 ||
       p.runner_readiness.includes("PENDING_EXIT")).length;
-    status.textContent = blocked ? "Reconciliação pendente" : "Diário PAPER importado";
+    status.textContent = blocked ? "Reconciliação pendente" :
+      source === "owner-local" ? "Diário PAPER local" : "Diário PAPER importado";
     summary.textContent = current.positions.length + " posições selecionadas" +
       (blocked ? " · " + blocked + " com pendências" : " · sem pendências registradas") +
-      " · dados estáticos importados, sem monitor ao vivo";
+      (source === "owner-local" ?
+        " · leitura local recente do SQLite; sem stop nativo" :
+        " · dados estáticos importados, sem monitor ao vivo");
     for (const p of current.positions) {
       const card = span("article", "", "market-pulse-row");
       card.append(span("strong", p.symbol_fixture + " · " + p.side),
@@ -194,12 +199,53 @@
   }
   function install(payload) {
     const accepted = validateReport(payload);
-    current = accepted; // Volatile snapshot; never persisted.
+    current = accepted; // Manual volatile snapshot; never persisted.
+    source = "manual";
     render();
   }
-  global.CIAPersistedPaper = Object.freeze({ validateReport, install });
+  function isLocal() {
+    const loc = global.location;
+    return Boolean(loc && loc.protocol === "http:" && loc.port === "8765" &&
+      (loc.hostname === "127.0.0.1" || loc.hostname === "localhost"));
+  }
+  async function refreshLocal() {
+    if (!isLocal() || refreshing) return;
+    refreshing = true;
+    try {
+      const response = await global.fetch("/api/owner-paper-positions", {
+        method: "GET", credentials: "omit", cache: "no-store", redirect: "error"
+      });
+      if (response.status !== 200 || !response.ok ||
+          !(response.headers.get("content-type") || "").startsWith("application/json")) {
+        throw new Error("owner PAPER source not available");
+      }
+      const raw = await response.text();
+      if (raw.length < 2 || raw.length > 96000) throw new Error("PAPER view oversized");
+      const accepted = validateReport(JSON.parse(raw));
+      current = accepted;
+      source = "owner-local";
+      render();
+    } catch (_) {
+      // Never leave an old owner snapshot on screen as a current one.
+      // A manually imported report is independent, so preserve it.
+      if (source === "owner-local") {
+        current = null;
+        source = "none";
+        render();
+      }
+    } finally {
+      refreshing = false;
+    }
+  }
+  global.CIAPersistedPaper = Object.freeze({ validateReport, install, refreshLocal });
   if (typeof module === "object" && module && module.exports) {
     module.exports = global.CIAPersistedPaper;
   }
-  if (typeof document !== "undefined") render();
+  if (typeof document !== "undefined") {
+    render();
+    if (isLocal()) {
+      void refreshLocal();
+      global.setInterval(() => { void refreshLocal(); }, 15000);
+    }
+  }
 })(typeof globalThis !== "undefined" ? globalThis : this);

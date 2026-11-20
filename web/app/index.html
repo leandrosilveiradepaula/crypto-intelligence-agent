@@ -288,10 +288,10 @@
             <h3 id="persisted-paper-title">Posições registradas no diário PAPER</h3>
             <span class="status-label" id="persisted-paper-status">Sem diário PAPER</span>
           </div>
-          <p class="muted fine">Importe pelo seletor JSON um relatório de posições já persistidas no diário AUTO4. Este painel é independente dos cenários criados no navegador: mostra reservas, parciais, saldo e necessidade de reconciliação.</p>
+          <p class="muted fine">O servidor local autorizado mostra automaticamente as posições realmente salvas no diário AUTO4. Sem autorização local, é possível importar JSON manualmente. Este painel é independente dos cenários criados no navegador: mostra reservas, parciais, saldo e necessidade de reconciliação.</p>
           <div id="persisted-paper-empty" class="empty">
-            <strong>Nenhum diário de posições importado</strong>
-            <p>Não existe monitoramento de corretora ou acesso ao SQLite privado por esta página.</p>
+            <strong>Nenhum diário de posições disponível</strong>
+            <p>Somente o servidor localhost explicitamente autorizado pode ler o diário privado. Sem acesso remoto à corretora.</p>
           </div>
           <div id="persisted-paper-loaded" hidden>
             <p id="persisted-paper-summary" class="muted fine" role="status" aria-live="polite"></p>

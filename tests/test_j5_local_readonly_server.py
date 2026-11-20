@@ -326,6 +326,43 @@ class LoopbackHTTPTests(unittest.TestCase):
         finally:
             handler.paper_worker_directory = previous
 
+    def test_real_paper_positions_endpoint_disabled_by_default_and_read_only(self):
+        handler = panel.LoopbackPanelHandler
+        old = handler.persisted_paper_directory
+        handler.persisted_paper_directory = None
+        try:
+            code, _, raw = self.get("GET", "/api/owner-paper-positions")
+            self.assertEqual(code, 503)
+            self.assertEqual(json.loads(raw)["status"],
+                             "owner_paper_positions_not_enabled")
+            sample = {
+                "schema_version": "paper_positions_snapshot_v1",
+                "mode": "offline_paper", "quality": "synthetic_journal_replay_only",
+                "source_provenance": "local_sqlite_digest_not_exchange_authenticated",
+                "selection": "explicit_ids_same_sqlite_read_transaction",
+                "no_cross_instrument_quantity_aggregation": True,
+                "orders_sent": False, "live_trading_authorized": False,
+                "approved_for_live_use": False, "financial_pnl_available": False,
+                "positions": [],
+            }
+            handler.persisted_paper_directory = Path("/private/auto4")
+            with patch.object(panel, "read_owner_paper_positions", return_value=sample):
+                status, headers, raw = self.get("GET", "/api/owner-paper-positions")
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(raw)["schema_version"], "paper_positions_snapshot_v1")
+            self.assertFalse(json.loads(raw)["orders_sent"])
+            self.assertNotIn("Access-Control-Allow-Origin", headers)
+            with patch.object(panel, "read_owner_paper_positions",
+                              side_effect=panel.OwnerPaperPositionsUnavailable("/secret/owner")):
+                status, _, raw = self.get("GET", "/api/owner-paper-positions")
+            self.assertEqual(status, 503)
+            self.assertNotIn(b"secret", raw)
+            self.assertEqual(self.get("POST", "/api/owner-paper-positions")[0], 405)
+            self.assertEqual(self.get("GET", "/api/owner-paper-positions",
+                                      "attacker.invalid:8765")[0], 403)
+        finally:
+            handler.persisted_paper_directory = old
+
     def test_private_j2_endpoint_returns_only_sanitized_counts(self):
         payload = ResearchProjectionTests().synthetic_ready()
         with patch.object(panel, "read_j2_descriptive", return_value=payload):
