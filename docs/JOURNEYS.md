@@ -1,5 +1,10 @@
 # Jornadas — plano de execução
 
+## D445 — múltiplas posições PAPER sem depender do N50 (20/11/2026)
+
+Implementado código J4 capaz de acompanhar todos os contratos de posições existentes no arquivo AUTO4 (limite 50) numa mesma assinatura WS, inclusive aqueles fora do ranking corrente. A lista vem do manifesto privado D425 em cada ciclo; a elegibilidade de *monitorar posição já aberta* independe da classificação de oportunidades da J2. REST usa paginação limitada para verificar o instrumento, não per-symbol GET; D443 foi generalizada com compatibilidade do piloto BTC, e D444 chama a nova rotina multicontrato. Testes cobrem BTC e ETH simultâneos no mesmo SQLite com parcial, stop protetivo, nenhuma redução artificial por ticker, replay idempotente e caminho sem opt-ins. **Não implica nova posição, sinais autorizados nem cobertura comprovada.** Sem merge/deploy/VPS, sem J1 ou ordens reais. Próximo marco de desenvolvimento: seleção N50 dinâmica como fonte de *novas* oportunidades e J3 prospectivo/OOS com custos reais de pesquisa; worker de posições já não depende desse ranking.
+
+
 ## D444 — desenvolvimento de worker PAPER em ciclo contínuo (20/11/2026)
 
 O código passou de sessões J4 finitas isoladas para um **worker de ciclo contínuo** com D443, reutilizando D425/D390/D391/AUTO4 e a posição PAPER persistida. Possui reconexão/backoff, orçamento por lease, limite de degradação, lock do worker e estado owner-only para interface futura, com CLI opt-in. A cada novo ciclo preserva journal/ordens PAPER; só declara último lease saudável quando há cotação pós-ACK válida. Limites: ainda BTCUSDT, não há serviço implantado, a operação real não foi demonstrada, e não há cobertura ininterrupta/ordem real. Nenhum diagnóstico ou mudança na J1. Próximo marco de produto: conectar worker às rotas de todas as posições existentes e seleção N50 dinâmica; depois interface J5 com estado terminal/stale e sinal J2/J3 validado. Documento `docs/J4_CONTINUOUS_PAPER_MONITOR_D444.md`.

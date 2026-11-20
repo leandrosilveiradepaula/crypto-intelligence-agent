@@ -1,5 +1,10 @@
 # Plano de validação e gates
 
+## D445 — teste integrado multicontrato PAPER
+
+Exigir scan REST paginado completo com cursors causais e limites, reconhecimento estrito de contratos USDT lineares já presentes no diário, rejeição de contrato sumido/duplicado/sem negociação/TradFi; nenhum pedido de rede por símbolo individual. Receber ACK de uma assinatura `tickers.BTCUSDT` + `tickers.ETHUSDT` em replay hermético; disparar target BTC e stop ETH sobre *um mesmo journal AUTO4 real* de teste, verificar reservas persistentes e FILL de saída zero, reiniciar roteador e comprovar idempotência. Ausência de uma quote deve degradar a cobertura total sem cancelar reserva do outro ativo. Sem N50 como condição de saída. CI Linux/Windows/mobile do SHA final e prova real no host em gate posterior.
+
+
 ## D444 — worker repetido de posições PAPER, não apenas sessão finita
 
 Em ambiente hermético, verificar sequência de leases saudáveis, duas falhas de transporte seguidas de recuperação automática sem FILL, backoff 2–60s, parada após degradação persistente, interrupção entre ciclos, programa sem flags não acessa owner nem rede, limites inválidos falham antes do transporte, relatório contraditório que alegue ordem/live/J1 é encerrado, e estado owner-only 0700/0600 fica atômico sem símbolos nem preços. Comprovar limites de temporizador e lock em Linux POSIX, sem necessidade de execução WSS pública para esta etapa de desenvolvimento. Validar também integração com D443 sobre o SQLite PAPER real de testes, e suites Linux/Windows/mobile do HEAD. O monitor não afirma stop nativo ou que a conexão permaneça ativa depois do processo terminar.

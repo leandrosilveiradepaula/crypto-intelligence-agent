@@ -1,4 +1,4 @@
-"""D444: run continuing BTCUSDT PAPER owner monitor without J1.
+"""D444/D445: run continuing all-held PAPER owner monitor without J1.
 
 No actual orders, fills, API keys, J1 files, live-trading permissions, timer or
 production installation. Long-running mode (--max-cycles 0) is explicit opt-in.
