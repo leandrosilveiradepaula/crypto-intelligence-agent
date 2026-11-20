@@ -23,6 +23,7 @@ from crypto_intelligence_agent.j2_j4_dual_public_supervisor_d450 import (
 )
 from crypto_intelligence_agent.j2_j4_public_paper_cycle_d449 import PublicPaperCycle
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import load_private_paper_routes
+from crypto_intelligence_agent.j4_durable_paper_risk_d452 import DurablePaperRiskSource
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
 from test_j2_j4_public_paper_cycle_d449 import (
     FIRST, LAST, RECEIPT, SIZE, SETTINGS,
@@ -142,7 +143,7 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
             contract_for_quote=contract, risk_for_quote=paper_risk,
         )
 
-    def run_streams(self, *, omit_close=None, omit_ack=False, allow=True):
+    def run_streams(self, *, omit_close=None, omit_ack=False, allow=True, risk_source=None):
         ready = threading.Event()
         kc, tc = Clock(), Clock()
         last = [frame(s, 24) for s in self.symbols if s != omit_close]
@@ -176,6 +177,7 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
                 ticker_clock_args={
                     "clock": tc.monotonic, "wall_ms": tc.wall, "sleeper": tc.sleeper,
                 },
+                risk_source=risk_source,
             )
         return report, ks, ts
 
@@ -203,6 +205,24 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
         self.assertFalse(result["orders_sent"])
         self.assertFalse(result["session_continues_after_return"])
         self.assertFalse(result["marketwide_n50_verified"])
+
+
+    def test_real_durable_risk_reader_with_two_supervisors_no_zero_fixture(self):
+        risk = DurablePaperRiskSource(private_paper_directory=self.paper)
+        self.cycle._risk = risk
+        result, _, _ = self.run_streams(risk_source=risk)
+        self.assertEqual(result["accepted_closed_callbacks"], 50)
+        self.assertEqual(result["paper_cycle"]["held_paper_contract_count"], 1)
+        self.assertEqual(result["paper_cycle"]["pending_paper_open_count"], 0)
+        # A position whose opening cost/realized PnL was never measured is
+        # not automatically allowed to open another position.
+        from test_j2_j4_public_paper_cycle_d449 import ticker
+        later = ticker(at=RECEIPT + 1400, mark="107.3", seq=13)
+        risk.observe_public_quote(later)
+        snapshot = risk.inspect(later)
+        self.assertEqual(snapshot.filled_open_count, 1)
+        self.assertGreater(snapshot.portfolio_exposure_quote, 0)
+        self.assertFalse(snapshot.realized_loss_known_zero)
 
     def test_missing_one_close_abstains_openings_without_forging_cohort(self):
         report, _, _ = self.run_streams(omit_close="BTCUSDT")
