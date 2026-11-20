@@ -135,10 +135,12 @@ def _policy_payload(policy: PaperEntryExitPolicy) -> dict:
 
 
 def _read_policy(value: object) -> PaperEntryExitPolicy:
-    if type(value) is not dict or set(value) != set(_policy_payload(PaperEntryExitPolicy(
-            Decimal(50), (Decimal(100),),
-            (SyntheticExitTranche(ExitBasis.INITIAL_POSITION, Decimal(50)),),
-            Decimal(50), Decimal("0.01"))):
+    required = {
+        "stop_distance_bps", "target_distances_bps", "tranches",
+        "runner_floor_percent", "synthetic_lot_step_units", "max_spread_bps",
+        "max_book_participation_bps", "min_fill_latency_ms", "max_fill_wait_ms",
+    }
+    if type(value) is not dict or set(value) != required:
         raise DataValidationError("D448 immutable entry policy schema invalid")
     def d(raw: object) -> Decimal:
         if type(raw) is not str or len(raw) > 44:
