@@ -26,7 +26,7 @@ from .market_data import DataValidationError, DataGapError
 from .paper_intrahour_quote_router_d391 import PaperIntrahourQuoteRouter
 
 
-def run_held_btc_paper_lease(
+def run_held_paper_lease(
     *, router: PaperIntrahourQuoteRouter, scope: OfflineReviewedStreamScope,
     budget: TickerLeaseBudget,
     session_factory: Callable, clock: Callable, wall_ms: Callable,
@@ -38,7 +38,7 @@ def run_held_btc_paper_lease(
     Router may mutate only its PRE-EXISTING PAPER journal via D391.
     """
     if (type(router) is not PaperIntrahourQuoteRouter
-            or router.monitored_symbols != frozenset({"BTCUSDT"})
+            or not 1 <= len(router.monitored_symbols) <= 50
             or type(scope) is not OfflineReviewedStreamScope
             or type(budget) is not TickerLeaseBudget
             or budget.max_sessions != 1 or budget.max_seconds > 60
@@ -48,14 +48,15 @@ def run_held_btc_paper_lease(
         raise DataValidationError("D443 existing held BTC PAPER and bounded WS required")
     _scope_contract_fingerprint(scope)
     current = wall_ms()
-    if (type(current) is not int or
-            len(scope.contracts) != 1
-            or scope.contracts[0].symbol != "BTCUSDT"
+    if (type(current) is not int
+            or len(scope.contracts) != len(router.monitored_symbols)
+            or frozenset(x.symbol for x in scope.contracts)
+               != router.monitored_symbols
             or not 0 <= current - scope.observed_at_ms <= 30_000):
-        raise DataValidationError("D443 current exact BTC instrument required")
+        raise DataValidationError("D445 current exact held PAPER instruments required")
     result = run_readonly_bybit_ticker_lease(
-        ranked_symbols=("BTCUSDT",),
-        position_symbols=(),
+        ranked_symbols=tuple(sorted(router.monitored_symbols)),
+        position_symbols=tuple(sorted(router.monitored_symbols)),
         universe_at_ms=scope.observed_at_ms,
         allow_public_websocket=True,
         confirm_personal_readonly_research=True,
@@ -73,7 +74,8 @@ def run_held_btc_paper_lease(
     fresh = result.get("finite_coverage_fresh_at_end") is True
     complete = result.get("status") == "lease_completed"
     return {
-        "schema_version": "j2-j4-existing-btc-paper-lease-d443-v1",
+        "schema_version": "j2-j4-existing-held-paper-lease-d445-v1",
+        "held_position_contracts": len(router.monitored_symbols),
         "status": ("finite_held_paper_quote_observed_unverified"
                    if complete and fresh and delivered > 0
                    else "finite_held_paper_degraded_abstain"),
@@ -97,6 +99,25 @@ def run_held_btc_paper_lease(
         "order_submission_enabled": False,
         "approved_for_live_use": False,
     }
+
+
+
+def run_held_btc_paper_lease(
+    *, router: PaperIntrahourQuoteRouter, scope: OfflineReviewedStreamScope,
+    budget: TickerLeaseBudget, session_factory: Callable,
+    clock: Callable, wall_ms: Callable, sleeper: Callable,
+) -> dict:
+    """Backward-compatible D443 BTC-only entrypoint."""
+    if (type(router) is not PaperIntrahourQuoteRouter
+            or router.monitored_symbols != frozenset({"BTCUSDT"})):
+        raise DataValidationError("D443 BTC-only research scope required")
+    report = run_held_paper_lease(
+        router=router, scope=scope, budget=budget,
+        session_factory=session_factory, clock=clock,
+        wall_ms=wall_ms, sleeper=sleeper,
+    )
+    report["schema_version"] = "j2-j4-existing-btc-paper-lease-d443-v1"
+    return report
 
 
 def observe_existing_btc_paper_once(

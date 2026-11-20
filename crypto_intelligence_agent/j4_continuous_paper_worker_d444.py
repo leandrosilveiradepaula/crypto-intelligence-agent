@@ -1,4 +1,4 @@
-"""D444: repeat real BTC PAPER quote leases without touching J1 or sending orders.
+"""D444: repeat all held PAPER quote leases without J1 or real orders.
 
 A long-running owner process reuses D443 (which in turn uses D425/D390/
 D391/AUTO4), recovers from bounded transport failures, and writes only a
@@ -22,7 +22,7 @@ except ImportError:  # imported but never run on non-POSIX CI
     fcntl = None
 
 from .bybit_public_ticker_supervisor_d386 import TickerLeaseBudget
-from .j4_held_btc_public_d443 import observe_existing_btc_paper_once
+from .j4_held_multi_public_d445 import observe_existing_held_paper_once
 from .market_data import DataValidationError
 
 _SCHEMA = "j4-btc-continuous-paper-worker-d444-v1"
@@ -309,7 +309,7 @@ def run_owner_continuous_paper_worker(
         try:
             output = drive_paper_cycles(
                 policy=policy,
-                lease_once=lambda: observe_existing_btc_paper_once(
+                lease_once=lambda: observe_existing_held_paper_once(
                     private_paper_directory=paper_dir,
                     allow_public_network=True, allow_public_websocket=True,
                     confirm_personal_readonly_research=True,

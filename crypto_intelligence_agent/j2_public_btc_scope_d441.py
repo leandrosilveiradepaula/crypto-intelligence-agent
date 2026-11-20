@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from hashlib import sha256
 import json
+import re
 import time
 
 from .bybit_closed_stream_cache import (
@@ -22,6 +23,44 @@ from .market_data import DataValidationError
 _SYMBOL = "BTCUSDT"
 _BASE = "BTC"
 _LABEL = "d441-btcusdt-rest-ws-transport-only-not-crypto-identity"
+_TRANSPORT_SYMBOL = re.compile(r"[A-Z0-9]{1,28}USDT\Z")
+
+
+
+def validated_public_held_row(
+    row: dict, *, symbol: str, server_ms: int,
+) -> tuple:
+    """Structural check for an EXISTING held PAPER symbol, not N50 admission."""
+    if (type(symbol) is not str
+            or _TRANSPORT_SYMBOL.fullmatch(symbol) is None
+            or type(server_ms) is not int or server_ms <= 0
+            or type(row) is not dict or row.get("symbol") != symbol
+            or row.get("baseCoin") != symbol[:-4]
+            or row.get("quoteCoin") != "USDT"
+            or row.get("settleCoin") != "USDT"
+            or row.get("contractType") != "LinearPerpetual"
+            or row.get("status") != "Trading"
+            or row.get("symbolType") != ""
+            or row.get("marketRegion", "") != ""
+            or row.get("underlyingTicker", "") != ""
+            or row.get("tags") != []
+            or row.get("isPreListing") is not False
+            or row.get("preListingInfo") is not None
+            or row.get("deliveryTime") != "0"):
+        raise DataValidationError("held PAPER instrument not supported public linear perp")
+    launch = _epoch_millis(row.get("launchTime"), label="launchTime")
+    leverage, price, qty = (row.get("leverageFilter"),
+                            row.get("priceFilter"), row.get("lotSizeFilter"))
+    if (launch > server_ms or type(leverage) is not dict
+            or type(price) is not dict or type(qty) is not dict):
+        raise DataValidationError("held PAPER instrument filters invalid")
+    minlev = _positive_decimal(leverage.get("minLeverage"), label="minLeverage")
+    maxlev = _positive_decimal(leverage.get("maxLeverage"), label="maxLeverage")
+    tick = _positive_decimal(price.get("tickSize"), label="tickSize")
+    step = _positive_decimal(qty.get("qtyStep"), label="qtyStep")
+    if minlev > maxlev:
+        raise DataValidationError("held PAPER instrument leverage bounds inverted")
+    return symbol[:-4], launch, minlev, maxlev, tick, step
 
 
 def reviewed_single_btc_scope(payload: dict, *, observed_at_ms: int) -> OfflineReviewedStreamScope:
@@ -46,33 +85,9 @@ def reviewed_single_btc_scope(payload: dict, *, observed_at_ms: int) -> OfflineR
             or not 0 <= observed_at_ms - server <= 30_000):
         raise DataValidationError("D441 public BTC metadata missing, future or stale")
     row = result["list"][0]
-    if (type(row) is not dict or row.get("symbol") != _SYMBOL
-            or row.get("baseCoin") != _BASE
-            or row.get("quoteCoin") != "USDT"
-            or row.get("settleCoin") != "USDT"
-            or row.get("contractType") != "LinearPerpetual"
-            or row.get("status") != "Trading"
-            or row.get("symbolType") != ""
-            or row.get("marketRegion", "") != ""
-            or row.get("underlyingTicker", "") != ""
-            or row.get("tags") != []
-            or row.get("isPreListing") is not False
-            or row.get("preListingInfo") is not None
-            or row.get("deliveryTime") != "0"):
-        raise DataValidationError("D441 public BTC instrument not eligible for pilot")
-    launch = _epoch_millis(row.get("launchTime"), label="launchTime")
-    leverage = row.get("leverageFilter")
-    price = row.get("priceFilter")
-    quantity = row.get("lotSizeFilter")
-    if (launch > server or type(leverage) is not dict
-            or type(price) is not dict or type(quantity) is not dict):
-        raise DataValidationError("D441 public BTC filters invalid")
-    minlev = _positive_decimal(leverage.get("minLeverage"), label="minLeverage")
-    maxlev = _positive_decimal(leverage.get("maxLeverage"), label="maxLeverage")
-    tick = _positive_decimal(price.get("tickSize"), label="tickSize")
-    step = _positive_decimal(quantity.get("qtyStep"), label="qtyStep")
-    if minlev > maxlev:
-        raise DataValidationError("D441 public BTC leverage bounds inverted")
+    _base, launch, minlev, maxlev, tick, step = validated_public_held_row(
+        row, symbol=_SYMBOL, server_ms=server,
+    )
     # Binding is a one-run transport-scope fingerprint. It is NOT the
     # independently reviewed asset registry and must never be reused as one.
     fingerprint = sha256(json.dumps(
