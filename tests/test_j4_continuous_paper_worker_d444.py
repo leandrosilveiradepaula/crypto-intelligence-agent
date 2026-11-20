@@ -117,7 +117,7 @@ class ContinuousPaperWorkerD444Tests(unittest.TestCase):
     def test_optins_deny_before_owner_files_or_network(self):
         with patch("crypto_intelligence_agent.j4_continuous_paper_worker_d444._owner_directory",
                    side_effect=AssertionError("file access without gate")):
-            with patch("crypto_intelligence_agent.j4_continuous_paper_worker_d444.observe_existing_btc_paper_once",
+            with patch("crypto_intelligence_agent.j4_continuous_paper_worker_d444.observe_existing_held_paper_once",
                        side_effect=AssertionError("network without gate")):
                 output = run_owner_continuous_paper_worker(
                     private_paper_directory=Path("/not/read"),
