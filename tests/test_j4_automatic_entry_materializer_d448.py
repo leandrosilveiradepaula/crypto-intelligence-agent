@@ -33,13 +33,16 @@ from test_j2_observed_paper_entry_d447 import inputs
 
 POLICY = PaperEntryExitPolicy(
     stop_distance_bps=Decimal("50"),
-    target_distances_bps=(Decimal("100"), Decimal("200")),
+    target_distances_bps=(Decimal("200"), Decimal("300")),
     tranches=(
         SyntheticExitTranche(ExitBasis.INITIAL_POSITION, Decimal("30")),
         SyntheticExitTranche(ExitBasis.INITIAL_POSITION, Decimal("20")),
     ),
     runner_floor_percent=Decimal("50"),
     synthetic_lot_step_units=Decimal("0.01"),
+    entry_fee_bps=Decimal("6"), exit_fee_bps=Decimal("6"),
+    entry_adverse_slippage_bps=Decimal("3"),
+    exit_adverse_slippage_bps=Decimal("3"),
     max_spread_bps=Decimal("30"),
     max_book_participation_bps=Decimal("2500"),
     min_fill_latency_ms=150,
@@ -125,9 +128,9 @@ class D448PaperLifecycleTests(unittest.TestCase):
                 self.assertEqual(len(j5["positions"]), 1)
                 # A later quote creates only a REDUCE_ONLY target or stop reservation.
                 if side == "LONG":
-                    mark, bid, ask = "101.2", "101.1", "101.3"
+                    mark, bid, ask = "102.2", "102.1", "102.3"
                 else:
-                    mark, bid, ask = "98.8", "98.7", "98.9"
+                    mark, bid, ask = "97.8", "97.7", "97.9"
                 later = replace(
                     fill,
                     exchange_at_ms=fill.exchange_at_ms + 800,
@@ -247,6 +250,27 @@ class D448PaperLifecycleTests(unittest.TestCase):
         path.chmod(0o644)
         with self.assertRaises(DataValidationError):
             self.complete(intent, self.fill_quote(args), self.fill_quote(args).received_at_ms)
+
+
+    def test_fill_time_j3_cost_and_stop_margin_veto_do_not_create_position(self):
+        for variant, expected in (
+            (replace(POLICY, entry_fee_bps=Decimal("100"),
+                     exit_fee_bps=Decimal("100")),
+             "paper_entry_target_after_costs_veto"),
+            (replace(POLICY, stop_distance_bps=Decimal("900")),
+             "paper_entry_stop_margin_veto"),
+        ):
+            with self.subTest(expected=expected):
+                if next(self.home.glob("paper-entry-plan-*"), None) is not None:
+                    self.tearDownNothing()
+                intent, args = self.pending()
+                self.arm(intent, variant)
+                fresh = self.fill_quote(args)
+                result = self.complete(intent, fresh, fresh.received_at_ms)
+                self.assertEqual(result["status"], expected)
+                self.assertEqual(self.orders.load(intent).snapshot.status,
+                                 PaperOrderStatus.PENDING)
+                self.assertFalse((self.home / "paper-routes.json").exists())
 
     def test_manifest_routes_still_get_protective_stop_first(self):
         intent, args = self.pending()
