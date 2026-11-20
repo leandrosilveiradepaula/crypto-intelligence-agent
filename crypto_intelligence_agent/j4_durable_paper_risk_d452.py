@@ -147,6 +147,9 @@ class DurablePaperRiskSource:
                 if orphan is not None:
                     raise DataValidationError("D452 orphan PAPER position index")
 
+            if (any(e.snapshot.as_of_ms > now for e in orders)
+                    or any(p.as_of_ms > now for p in positions)):
+                raise DataGapError("D452 future PAPER state cannot authorize current risk")
             tracked = {p.opening_intent_id for p in positions}
             filled_opens = [
                 e for e in orders if e.intent.effect is PaperOrderEffect.OPEN
