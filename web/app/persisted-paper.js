@@ -77,6 +77,10 @@
     valid(positive ? scaled > 0n : scaled >= 0n);
     return scaled;
   }
+  function signedScaled(raw) {
+    valid(typeof raw === "string" && SIGNED_DEC.test(raw));
+    return raw.startsWith("-") ? -units(raw.slice(1), false) : units(raw, false);
+  }
   function validateConditionalPnl(pnl, position, exited) {
     if (pnl.status === "legacy_paper_position_without_priced_strategy") {
       exact(pnl, LEGACY_PNL);
@@ -119,12 +123,15 @@
     for (const field of numbers) {
       valid(typeof pnl[field] === "string" && SIGNED_DEC.test(pnl[field]));
     }
-    for (const field of [
+    const costs = [
       "entry_fee_allocated_quote", "exit_fee_quote",
-      "entry_slippage_allocated_quote", "exit_slippage_quote",
-      "outstanding_entry_cost_quote"
-    ]) {
-      units(pnl[field], false);
+      "entry_slippage_allocated_quote", "exit_slippage_quote"
+    ].reduce((sum, field) => sum + units(pnl[field], false), 0n);
+    units(pnl.outstanding_entry_cost_quote, false);
+    valid(signedScaled(pnl.conditional_realized_before_funding_quote) ===
+      signedScaled(pnl.gross_realized_reference_quote) - costs);
+    if (exited === 0n) {
+      valid(costs === 0n && signedScaled(pnl.gross_realized_reference_quote) === 0n);
     }
   }
   function validateReport(raw) {
