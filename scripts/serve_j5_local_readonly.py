@@ -395,7 +395,9 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
                                  "orders_sent": False})
                 return
             try:
-                report = read_owner_paper_positions(directory=directory)
+                report = read_owner_paper_positions(
+                    directory=directory, include_conditional_pnl=True,
+                )
             except OwnerPaperPositionsUnavailable:
                 self._json(503, {"status": "owner_paper_positions_unavailable",
                                  "orders_sent": False})
