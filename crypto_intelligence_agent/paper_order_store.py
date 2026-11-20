@@ -59,12 +59,19 @@ def _intent_json(intent: PaperOrderIntent) -> str:
 
 
 def _event_json(event: PaperOrderEvent) -> str:
-    return _json({
+    payload = {
         "event_id": event.event_id,
         "kind": event.kind.value,
         "event_at_ms": event.event_at_ms,
         "filled_units": str(event.filled_units),
-    })
+    }
+    # Canonical legacy JSON stays byte-for-byte identical; price is persisted
+    # only when the newer explicitly HYPOTHETICAL event supplies one.
+    if event.hypothetical_reference_price_quote is not None:
+        payload["hypothetical_reference_price_quote"] = str(
+            event.hypothetical_reference_price_quote
+        )
+    return _json(payload)
 
 
 def _snapshot_json(snapshot: PaperOrderSnapshot) -> str:
@@ -116,6 +123,12 @@ def _decode_event(payload: str) -> PaperOrderEvent:
             kind=PaperOrderEventKind(value["kind"]),
             event_at_ms=value["event_at_ms"],
             filled_units=Decimal(value["filled_units"]),
+            hypothetical_reference_price_quote=(
+                Decimal(value["hypothetical_reference_price_quote"])
+                if "hypothetical_reference_price_quote" in value
+                and type(value["hypothetical_reference_price_quote"]) is str
+                else None
+            ),
         )
         if _event_json(event) != payload:
             raise ValueError("non-canonical paper event")
