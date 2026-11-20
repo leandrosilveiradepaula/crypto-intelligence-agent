@@ -33,7 +33,7 @@ from test_j2_j4_public_paper_cycle_d449 import (
 def ack(req="cia-ws-1"):
     return json.dumps({
         "op": "subscribe", "success": True,
-        "ret_msg": "subscribe", "req_id": req,
+        "ret_msg": "subscribe", "conn_id": "fixture", "req_id": req,
     })
 
 
