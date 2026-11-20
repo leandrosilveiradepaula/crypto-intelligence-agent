@@ -124,6 +124,9 @@ class PaperOrderEvent:
     kind: PaperOrderEventKind
     event_at_ms: int
     filled_units: Decimal = Decimal(0)
+    # D454: OPTIONAL reference price for newer HYPOTHETICAL FILLs.
+    # Legacy events contain no price. Never imply exchange execution.
+    hypothetical_reference_price_quote: Decimal | None = None
 
     def __post_init__(self) -> None:
         _id(self.event_id, "event_id")
@@ -132,8 +135,12 @@ class PaperOrderEvent:
         _utc_ms(self.event_at_ms, "event_at_ms")
         if self.kind is PaperOrderEventKind.FILL:
             _fixture_units(self.filled_units)
-        elif type(self.filled_units) is not Decimal or self.filled_units.as_tuple() != Decimal(0).as_tuple():
-            raise DataValidationError("only a paper FILL can change filled quantity")
+            if self.hypothetical_reference_price_quote is not None:
+                _fixture_units(self.hypothetical_reference_price_quote)
+        elif (type(self.filled_units) is not Decimal
+              or self.filled_units.as_tuple() != Decimal(0).as_tuple()
+              or self.hypothetical_reference_price_quote is not None):
+            raise DataValidationError("only a paper FILL can carry quantity or a price reference")
 
 
 @dataclass(frozen=True)
