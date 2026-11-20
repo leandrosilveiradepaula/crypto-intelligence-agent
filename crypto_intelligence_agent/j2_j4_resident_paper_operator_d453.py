@@ -325,8 +325,11 @@ def run_resident_paper_observer(
                     primary_error = "degraded_primary"
                 else:
                     completed += 1
-            except (DataGapError, DataValidationError, OSError, TimeoutError,
-                    RuntimeError, ValueError):
+            except Exception:
+                # A primary programming/transport failure must NEVER abandon
+                # an existing PAPER position without trying its independent
+                # public ticker route. Do not print the exception or private
+                # symbol; do not retry the failed opening on the same tick.
                 primary_error = "primary_abstained"
             if primary_error is not None:
                 fallbacks += 1
@@ -334,7 +337,13 @@ def run_resident_paper_observer(
                         last_failure=primary_error)
                 # If this fails due to private state/symlink corruption, stop
                 # the resident operator instead of pretending stops function.
-                fallback = held_fallback_lease()
+                try:
+                    fallback = held_fallback_lease()
+                except Exception:
+                    # An unreadable/symlinked private manifest or failing held
+                    # socket is a terminal loss of PAPER quote observation.
+                    # Persist failure explicitly instead of a stale "active".
+                    fallback = None
                 if (type(fallback) is not dict
                         or fallback.get("orders_sent") is not False
                         or fallback.get("status") not in (
