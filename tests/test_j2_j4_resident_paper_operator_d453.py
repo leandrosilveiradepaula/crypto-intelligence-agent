@@ -165,9 +165,15 @@ class ResidentPaperOperatorTests(unittest.TestCase):
         ticker = json.loads(market_quote(ts=at - 100, cs=22, mark="102.4"))
         ticker["topic"] = "tickers.BTCUSDT"
         ticker["data"]["symbol"] = "BTCUSDT"
+        later = json.loads(market_quote(ts=at + 400, cs=23, mark="102.4"))
+        later["topic"] = "tickers.BTCUSDT"
+        later["data"]["symbol"] = "BTCUSDT"
         session = Session(clock, [
             (ack("cia-ticker-1"), at - 400),
             (json.dumps(ticker), at),
+            # First quote only RESERVES the partial. This later quote may
+            # record a simulated FILL under D394 liquidity/latency checks.
+            (json.dumps(later), at + 500),
         ])
         with patch("socket.create_connection",
                    side_effect=AssertionError("D453 fallback never contacts network in test")):
@@ -185,7 +191,7 @@ class ResidentPaperOperatorTests(unittest.TestCase):
         self.assertEqual(outcome["status"], "held_paper_lease_completed")
         self.assertEqual(outcome["data_mode"], "injected_offline_protocol_replay")
         self.assertEqual(outcome["ticker_acks"], 1)
-        self.assertEqual(outcome["ticker_frames_accepted"], 1)
+        self.assertEqual(outcome["ticker_frames_accepted"], 2)
         self.assertEqual(outcome["held_contract_count"], 1)
         self.assertFalse(outcome["network_attempted"])
         self.assertFalse(outcome["orders_sent"])
@@ -194,7 +200,11 @@ class ResidentPaperOperatorTests(unittest.TestCase):
         balance = positions.load(routes.monitored_position_ids[0])
         self.assertEqual(len(balance.exit_orders), 1)
         self.assertEqual(balance.exit_orders[0].tranche_step, 1)
-        self.assertEqual(balance.filled_exit_units, 0)
+        self.assertEqual(balance.filled_exit_units, Decimal("0.75"))
+        self.assertEqual(balance.reserved_unfilled_units, 0)
+        self.assertEqual(balance.confirmed_remaining_units, Decimal("1.75"))
+        self.assertEqual(balance.exit_orders[0].snapshot.filled_total_units,
+                         Decimal("0.75"))
 
     def test_fallback_symlink_manifest_is_fatal_not_silent(self):
         victim = self.home / "elsewhere.json"
