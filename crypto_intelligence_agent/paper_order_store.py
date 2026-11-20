@@ -544,6 +544,7 @@ class SQLitePaperOrderJournal:
     def append_events(
         self, intent_id: str, events: tuple[PaperOrderEvent, ...],
         *, as_of_ms: int,
+        opening_paper_health_path: str | Path | None = None,
     ) -> PaperJournalEntry:
         """Atomically append hypothetical events AND checkpoint after full replay.
 
@@ -562,6 +563,24 @@ class SQLitePaperOrderJournal:
             from .paper_open_health import _verify_locked_order_schema
             _verify_locked_order_schema(conn)
             previous = self._checked_entry(conn, intent_id)
+            if opening_paper_health_path is not None:
+                # D448: a new assumed OPEN fill must not bypass durable
+                # kill-switch or race another AUTO2 fill while risk is stale.
+                # Both controls are read under this SAME BEGIN IMMEDIATE.
+                if (previous.intent.effect is not PaperOrderEffect.OPEN
+                        or not events
+                        or any(e.kind is not PaperOrderEventKind.FILL for e in events)):
+                    raise DataValidationError("guarded PAPER fill requires OPEN FILL events")
+                from .paper_operator_kill_switch import _read_locked
+                from .paper_open_health import _audit_paper_open_health_locked
+                if _read_locked(conn).active:
+                    raise DataValidationError("PAPER kill switch blocks new hypothetical OPEN fills")
+                health = _audit_paper_open_health_locked(
+                    conn, self.path, opening_paper_health_path,
+                    decision_at_ms=cutoff,
+                )
+                if not health.new_open_allowed:
+                    raise DataValidationError("PAPER position health blocks new OPEN fill")
             if cutoff < previous.snapshot.as_of_ms:
                 raise DataValidationError("paper checkpoint cannot go backwards")
             known = {e.event_id: _event_json(e) for e in previous.events}
