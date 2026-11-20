@@ -24,6 +24,7 @@ from .bybit_public_ticker_supervisor_d386 import (
 from .bybit_public_ws_once import _bounded_json
 from .bybit_ws_supervisor import WSRunBudget, supervise_ws_research
 from .j2_j4_public_paper_cycle_d449 import PublicPaperCycle
+from .j4_durable_paper_risk_d452 import DurablePaperRiskSource
 from .market_data import DataValidationError
 
 
@@ -70,6 +71,7 @@ def run_finite_n50_paper_streams(
     ticker_session_factory: Callable | None = None,
     kline_clock_args: dict | None = None,
     ticker_clock_args: dict | None = None,
+    risk_source: DurablePaperRiskSource | None = None,
 ) -> dict:
     """Finite public-data + PAPER event loop, with testable socket injection.
 
@@ -100,6 +102,10 @@ def run_finite_n50_paper_streams(
     if (expected != cycle._symbols
             or journal_path.resolve(strict=True) != cycle._closed.resolve(strict=True)):
         raise DataValidationError("D450 streams and PAPER cycle scope disagree")
+    if (risk_source is not None
+            and (type(risk_source) is not DurablePaperRiskSource
+                 or cycle._risk is not risk_source)):
+        raise DataValidationError("D452 ticker risk source not bound to exact PAPER cycle")
     injections = kline_session_factory is not None
     if injections:
         if (not callable(kline_session_factory)
@@ -136,6 +142,16 @@ def run_finite_n50_paper_streams(
     )
     accepted = [0]
 
+    def handle_quote(quote) -> None:
+        if risk_source is not None:
+            risk_source.observe_public_quote(quote)
+        cycle.on_public_quote(quote)
+
+    def reset_session() -> None:
+        if risk_source is not None:
+            risk_source.reset_market_session()
+        cycle.on_ticker_session_reset()
+
     def confirmed(raw: str | bytes, received_ms: int) -> None:
         parsed = _bounded_json(raw)
         if (type(parsed) is not dict or type(parsed.get("topic")) is not str
@@ -168,8 +184,8 @@ def run_finite_n50_paper_streams(
             supervise_public_tickers,
             session_factory=ticker_session_factory,
             book=book, budget=budget.ticker,
-            on_quote=cycle.on_public_quote,
-            on_session_reset=cycle.on_ticker_session_reset,
+            on_quote=handle_quote,
+            on_session_reset=reset_session,
             **ticker_clock_args,
         )
         # Always await BOTH. Neither lease can be claimed to continue once
