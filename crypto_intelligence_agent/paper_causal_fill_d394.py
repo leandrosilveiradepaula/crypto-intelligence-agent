@@ -217,6 +217,7 @@ def apply_causal_paper_fill_assumption(
         event = PaperOrderEvent(
             event_id, PaperOrderEventKind.FILL,
             quote.received_at_ms, quantity,
+            hypothetical_reference_price_quote=bbo,
         )
         receipt = PaperDeclaredFillReference(
             intent_id, event_id, quote.received_at_ms, bbo,
