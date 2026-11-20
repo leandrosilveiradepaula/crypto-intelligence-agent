@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from pathlib import Path
-import fcntl
 from decimal import Decimal, ROUND_DOWN
 from hashlib import sha256
 import json
@@ -380,6 +379,7 @@ def pin_dynamic_public_n50_epoch(
         _atomic_private_write, _read_owner_bytes, _parse_json, _json,
     )
     from .bybit_closed_stream_cache import SQLiteOfflineClosedStreamJournal
+    import fcntl  # POSIX-only: imported lazily after owner admission
     if (type(snapshot) is not DynamicPublicN50
             or not isinstance(private_j2_directory, Path)
             or any(part.startswith("j1-") for part in private_j2_directory.parts)):
