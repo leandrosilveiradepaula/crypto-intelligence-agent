@@ -573,3 +573,8 @@ O D436 está preparado para processar frames públicos Bybit modelados durante u
 ## J2 → J3 → J4 / D447 — entrada observada até intenção PAPER
 
 **Implementação da fronteira, ainda sem homologação:** série de candles públicos confirmados D434/D435 pode produzir hipótese LONG/SHORT pesquisada; ticker D385 fresco posterior ao close, filtro J3/PRE2 de alvo líquido e risco hipotético, margem PRE11 e AUTO8/RiskGate determinam se uma intenção OPEN PENDING é reservada no AUTO2, com alavancagem da nova entrada em receipt. Repetição é bloqueada transacionalmente, sem um fill ou posição inventados. A jornada de produto ainda depende de escopo dinâmico N50, entrada integrada ao worker D444, execução PAPER honesta, validação J3 OOS e prova operacional J6; no momento nada foi implantado na VPS e a PR #734 segue draft. Contrato `docs/J2_J3_PAPER_ENTRY_D447.md`.
+
+
+## J2/J3/J4/J5 D448 — percurso PAPER integrado, sem ordens
+
+D436 recebe closes confirmados no journal J2; D435 pesquisa hipótese causal; D447 passa por custos/risco e só cria OPEN PENDING; D448 exige BBO posterior e condições conservadoras para FILL de **simulação** no AUTO2. O mesmo evento e receipt alimentam AUTO4 e o plano de stops/parciais; o manifesto D425 alimenta o monitor D444/D445 e a consulta J5/D446. Falhas no meio das gravações podem ser retomadas sem novas intenções/quantidades. Demonstração determinística LONG/SHORT com parser de frames D436, SQLite real, parcial D391 e J5: `scripts.demo_j2_j4_observed_paper_cycle_d448`. O ciclo ainda não tem fonte N50 real contínua, prova de fill/liquidação ou serviço PAPER implantado; J3 OOS e J6 permanecem gates, sem negociação real.
