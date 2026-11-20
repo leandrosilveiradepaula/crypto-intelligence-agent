@@ -19,6 +19,23 @@
     "opening_order_cross_checked", "pending_or_unknown_orders",
     "unknown_order_count"
   ]);
+  const CONDITIONAL = Object.freeze([
+    "schema_version", "status", "priced_entry_units",
+    "realized_exit_units", "gross_realized_reference_quote",
+    "entry_fee_allocated_quote", "exit_fee_quote",
+    "entry_slippage_allocated_quote", "exit_slippage_quote",
+    "conditional_realized_before_funding_quote",
+    "outstanding_entry_cost_quote", "leverage_at_open",
+    "priced_fill_events", "funding_calendar_verified",
+    "funding_settlement_unknown", "true_realized_net_pnl_available",
+    "source_is_hypothetical_post_latency_bbo",
+    "venue_fill_verified", "venue_fee_schedule_verified",
+    "liquidation_verified", "orders_sent", "approved_for_live_use"
+  ]);
+  const LEGACY_PNL = Object.freeze([
+    "status", "true_realized_net_pnl_available"
+  ]);
+  const SIGNED_DEC = /^-?(?:0|[1-9][0-9]{0,35})(?:\.[0-9]{1,30})?$/;
   const MARGIN = Object.freeze([
     "leverage_at_intent", "requested_margin_quote", "quote_currency",
     "quality", "opening_order_cross_checked",
@@ -60,6 +77,56 @@
     valid(positive ? scaled > 0n : scaled >= 0n);
     return scaled;
   }
+  function validateConditionalPnl(pnl, position, exited) {
+    if (pnl.status === "legacy_paper_position_without_priced_strategy") {
+      exact(pnl, LEGACY_PNL);
+      valid(pnl.true_realized_net_pnl_available === false);
+      return;
+    }
+    exact(pnl, CONDITIONAL);
+    valid(pnl.schema_version === "d454-paper-conditional-priced-fills-v1"
+      && ["legacy_unpriced_fill_no_pnl",
+          "conditional_paper_reference_before_unverified_funding"].includes(pnl.status)
+      && pnl.funding_calendar_verified === false
+      && pnl.funding_settlement_unknown === true
+      && pnl.true_realized_net_pnl_available === false
+      && pnl.source_is_hypothetical_post_latency_bbo === true
+      && pnl.venue_fill_verified === false
+      && pnl.venue_fee_schedule_verified === false
+      && pnl.liquidation_verified === false
+      && pnl.orders_sent === false && pnl.approved_for_live_use === false
+      && Number.isSafeInteger(pnl.leverage_at_open)
+      && pnl.leverage_at_open >= 1 && pnl.leverage_at_open <= 200
+      && Number.isSafeInteger(pnl.priced_fill_events)
+      && pnl.priced_fill_events >= 0 && pnl.priced_fill_events <= 1024);
+    valid(units(pnl.realized_exit_units, false) === exited);
+    if (position.margin_intent_requested !== null) {
+      valid(pnl.leverage_at_open === position.margin_intent_requested.leverage_at_intent);
+    }
+    const numbers = [
+      "priced_entry_units", "gross_realized_reference_quote",
+      "entry_fee_allocated_quote", "exit_fee_quote",
+      "entry_slippage_allocated_quote", "exit_slippage_quote",
+      "conditional_realized_before_funding_quote", "outstanding_entry_cost_quote"
+    ];
+    if (pnl.status === "legacy_unpriced_fill_no_pnl") {
+      valid(pnl.priced_fill_events === 0
+        && numbers.every(field => pnl[field] === null));
+      return;
+    }
+    valid(pnl.priced_fill_events >= 1
+      && units(pnl.priced_entry_units, true) === units(position.initial_confirmed_units, true));
+    for (const field of numbers) {
+      valid(typeof pnl[field] === "string" && SIGNED_DEC.test(pnl[field]));
+    }
+    for (const field of [
+      "entry_fee_allocated_quote", "exit_fee_quote",
+      "entry_slippage_allocated_quote", "exit_slippage_quote",
+      "outstanding_entry_cost_quote"
+    ]) {
+      units(pnl[field], false);
+    }
+  }
   function validateReport(raw) {
     exact(raw, ROOT);
     valid(raw.schema_version === "paper_positions_snapshot_v1" &&
@@ -74,7 +141,9 @@
       raw.positions.length <= 128);
     const ids = new Set();
     for (const p of raw.positions) {
-      exact(p, FIELDS);
+      valid(p && typeof p === "object" && !Array.isArray(p));
+      const present = Object.hasOwn(p, "conditional_paper_pnl");
+      exact(p, present ? [...FIELDS, "conditional_paper_pnl"] : FIELDS);
       valid(typeof p.position_id === "string" &&
         /^fixture_[A-Za-z0-9_-]{1,120}$/.test(p.position_id) &&
         !ids.has(p.position_id));
@@ -107,6 +176,12 @@
         reserved + unreserved === remaining &&
         floor <= initial && runnerFilled <= exited &&
         runnerReserved <= reserved && runnerFree <= remaining);
+      if (present) {
+        valid(p.conditional_paper_pnl !== null &&
+          typeof p.conditional_paper_pnl === "object" &&
+          !Array.isArray(p.conditional_paper_pnl));
+        validateConditionalPnl(p.conditional_paper_pnl, p, exited);
+      }
       if (p.margin_intent_requested !== null) {
         const m = p.margin_intent_requested;
         exact(m, MARGIN);
@@ -190,6 +265,21 @@
         card.append(span("span", "Monitor recuperado PAPER: " +
           p.recovered_runner.state + " · " +
           p.recovered_runner.observed_tick_count + " marcas hipotéticas"));
+      }
+      if (Object.hasOwn(p, "conditional_paper_pnl")) {
+        const pnl = p.conditional_paper_pnl;
+        if (pnl.status === "conditional_paper_reference_before_unverified_funding") {
+          card.append(
+            span("strong", "Resultado PAPER parcial estimado: " +
+              pnl.conditional_realized_before_funding_quote + " USDT"),
+            span("span", "Bruto: " + pnl.gross_realized_reference_quote +
+              " · taxas e slippage já estimados"),
+            span("span", "Funding e liquidação não verificados · NÃO é lucro real")
+          );
+        } else {
+          card.append(span("span",
+            "Resultado financeiro indisponível: dados antigos sem preço executado"));
+        }
       }
       if (p.pending_or_unknown_orders || p.unknown_order_count) {
         card.append(span("strong", "Bloqueado para novas reduções até reconciliação"));
