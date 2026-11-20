@@ -118,8 +118,10 @@ def _effective_size(
         if units <= 0:
             return None
         margin = units * mark / leverage
-        if (margin <= 0 or margin > config.margin_quote
-                or (config.margin_quote - margin) / config.margin_quote > Decimal("0.0001")):
+        # The configured margin is a CAP, not a minimum use threshold.
+        # A coarse lot step may leave an honest, unused remainder. PRE11
+        # independently enforces min size/notional and available leverage.
+        if margin <= 0 or margin > config.margin_quote:
             return None
         return units, margin
 
