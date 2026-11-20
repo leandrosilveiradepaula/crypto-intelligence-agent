@@ -30,7 +30,7 @@ from .j4_automatic_entry_materializer_d448 import (
     materialize_observed_paper_entry,
 )
 from .j4_private_paper_ws_operator_d425 import (
-    _MANIFEST, _JOURNAL, _private_directory,
+    _MANIFEST, _JOURNAL, _private_directory, _owner_file,
     exclusive_paper_operator_lock, load_private_paper_routes,
 )
 from .market_data import DataGapError, DataValidationError
@@ -113,10 +113,8 @@ def _effective_size(
     with localcontext(_EXACT_CONTEXT):
         leverage = Decimal(config.leverage.for_new_positions)
         notional = config.margin_quote * leverage
-        units = (notional / mark).quantize(contract.quantity_step_base, rounding=ROUND_DOWN)
-        # Quantize() is exponent-based, not a multiple check for non-powers
-        # of ten. Floor on the EXPLICIT fixture step instead.
-        units -= units % contract.quantity_step_base
+        # Floor to the actual declared step (not just its decimal exponent).
+        units = (notional / mark // contract.quantity_step_base) * contract.quantity_step_base
         if units <= 0:
             return None
         margin = units * mark / leverage
@@ -191,6 +189,24 @@ class PublicPaperCycle:
         self._counts: dict[str, int] = {}
         # Reuse existing durable order/position files. A bare coordinator
         # never initializes an account, credentials, or N50 ranking service.
+        for filename in (_ORDER_FILE, _JOURNAL):
+            target = self._home / filename
+            if not target.exists() and not target.is_symlink():
+                directory_fd = os.open(
+                    self._home, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                )
+                try:
+                    fd = os.open(
+                        filename, os.O_RDWR | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                        0o600, dir_fd=directory_fd,
+                    )
+                    os.close(fd)
+                finally:
+                    os.close(directory_fd)
+            # Reject unsafe existing files: no relaxing chmod on someone
+            # else's journal and no symlink or surprise hard link.
+            fd = _owner_file(self._home, filename)
+            os.close(fd)
         self._orders = SQLitePaperOrderJournal(self._home / _ORDER_FILE)
         self._positions = SQLitePaperPositionJournal(self._home / _JOURNAL)
         self._reload_held()
@@ -296,20 +312,20 @@ class PublicPaperCycle:
             studies[symbol] = (series, observed)
         btc = studies["BTCUSDT"][0].candles
         with localcontext(_EXACT_CONTEXT):
-            btc_return = (btc[-1].close / btc[0].open - 1) * 100
+            btc_return = (btc[-1].close / btc[-24].open - 1) * 100
             candidates: list[_Candidate] = []
             for symbol, (series, study) in studies.items():
                 if symbol == "BTCUSDT" or not study.hypotheses:
                     continue
                 h = study.hypotheses[0]
                 bars = series.candles
-                relative = (bars[-1].close / bars[0].open - 1) * 100 - btc_return
+                relative = (bars[-1].close / bars[-24].open - 1) * 100 - btc_return
                 if ((h.side is SyntheticSide.LONG and relative <= 0)
                         or (h.side is SyntheticSide.SHORT and relative >= 0)):
                     continue
                 candidates.append(_Candidate(
                     symbol, series, h.side, relative,
-                    sum((x.quote_volume for x in bars), Decimal(0)),
+                    sum((x.quote_volume for x in bars[-24:]), Decimal(0)),
                     h.quote_volume_to_prior_mean,
                 ))
             candidates.sort(key=lambda c: (
