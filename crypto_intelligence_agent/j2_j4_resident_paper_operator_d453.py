@@ -133,7 +133,9 @@ def run_held_paper_without_n50(
         raise DataValidationError("D453 held manifest cannot be a symlink")
     if not (home / _MANIFEST).exists():
         return {**denied, "status": "no_held_paper_positions"}
-    router = load_private_paper_routes(home)
+    router = load_private_paper_routes(
+        home, enable_hypothetical_exit_fills=True,
+    )
     held = tuple(sorted(router.monitored_symbols))
     if not 1 <= len(held) <= _MAX_HELD:
         raise DataValidationError("D453 held-only subscription exceeds bounded scope")
