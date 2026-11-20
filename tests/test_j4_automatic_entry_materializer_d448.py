@@ -272,6 +272,28 @@ class D448PaperLifecycleTests(unittest.TestCase):
                                  PaperOrderStatus.PENDING)
                 self.assertFalse((self.home / "paper-routes.json").exists())
 
+
+    def test_persisted_kill_switch_blocks_new_paper_fill_under_auto2_lock(self):
+        intent, args = self.pending()
+        self.arm(intent)
+        quote = self.fill_quote(args)
+        self.orders.set_local_kill_switch(
+            pause=True, expected_sequence=0,
+            changed_at_ms=quote.received_at_ms - 1,
+        )
+        with self.assertRaises(DataValidationError):
+            self.complete(intent, quote, quote.received_at_ms)
+        self.assertEqual(self.orders.load(intent).snapshot.status, PaperOrderStatus.PENDING)
+        self.assertFalse((self.home / "paper-routes.json").exists())
+        self.orders.set_local_kill_switch(
+            pause=False, expected_sequence=1,
+            changed_at_ms=quote.received_at_ms - 1,
+            acknowledge_resume=True,
+        )
+        result = self.complete(intent, quote, quote.received_at_ms)
+        self.assertTrue(result["hypothetical_open_fill_written"])
+        self.assertEqual(self.orders.load(intent).snapshot.status, PaperOrderStatus.FILLED)
+
     def test_manifest_routes_still_get_protective_stop_first(self):
         intent, args = self.pending()
         self.arm(intent)
