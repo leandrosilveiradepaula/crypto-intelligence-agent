@@ -346,8 +346,11 @@ class LoopbackHTTPTests(unittest.TestCase):
                 "positions": [],
             }
             handler.persisted_paper_directory = Path("/private/auto4")
-            with patch.object(panel, "read_owner_paper_positions", return_value=sample):
+            with patch.object(panel, "read_owner_paper_positions", return_value=sample) as reader:
                 status, headers, raw = self.get("GET", "/api/owner-paper-positions")
+                reader.assert_called_once_with(
+                    directory=Path("/private/auto4"), include_conditional_pnl=True,
+                )
             self.assertEqual(status, 200)
             self.assertEqual(json.loads(raw)["schema_version"], "paper_positions_snapshot_v1")
             self.assertFalse(json.loads(raw)["orders_sent"])
