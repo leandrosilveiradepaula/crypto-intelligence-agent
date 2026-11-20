@@ -576,6 +576,10 @@ def materialize_observed_paper_entry(
             event = PaperOrderEvent(
                 _FILL_PREFIX + token, PaperOrderEventKind.FILL,
                 quote.received_at_ms, entry.intent.requested_units,
+                hypothetical_reference_price_quote=(
+                    quote.ask_price if entry.intent.position_side is SyntheticSide.LONG
+                    else quote.bid_price
+                ),
             )
             saved = orders.append_events(
                 intent_id, (event,), as_of_ms=quote.received_at_ms,
