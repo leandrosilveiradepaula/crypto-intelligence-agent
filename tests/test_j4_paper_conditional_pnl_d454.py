@@ -18,6 +18,9 @@ from crypto_intelligence_agent.j4_paper_conditional_pnl_d454 import (
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import (
     load_private_paper_routes,
 )
+from crypto_intelligence_agent.j5_owner_paper_positions_d446 import (
+    read_owner_paper_positions,
+)
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_order_store import (
     SQLitePaperOrderJournal, _event_json, _decode_event,
@@ -170,6 +173,20 @@ class DurableConditionalPaperPnLTests(unittest.TestCase):
                     private_paper_directory=home, position_id=position_id,
                 )
                 self.assertEqual(report, replayed)
+                # Existing J5 defaults remain unchanged, while explicitly
+                # requested financial projections are clearly conditional.
+                original_ui = read_owner_paper_positions(directory=home)
+                self.assertNotIn(
+                    "conditional_paper_pnl", original_ui["positions"][0],
+                )
+                priced_ui = read_owner_paper_positions(
+                    directory=home, include_conditional_pnl=True,
+                )
+                self.assertEqual(
+                    priced_ui["positions"][0]["conditional_paper_pnl"],
+                    sanitized,
+                )
+                self.assertFalse(priced_ui["financial_pnl_available"])
 
 
 if __name__ == "__main__":
