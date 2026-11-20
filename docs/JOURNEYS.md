@@ -1,5 +1,10 @@
 # Jornadas — plano de execução
 
+## D445/D446 — positions multicontrato e interface ligada ao SQLite
+
+O worker D444 passou de BTCUSDT para até 50 contratos de posições PAPER já mantidas (D445), mesmo que fora do ranking N50, usando scan REST paginado e o mesmo AUTO4. Para o usuário visualizar o resultado sem importar arquivos, D446 adiciona leitura owner-only do mesmo diário em transação SQLite ro e alimenta o console em português no loopback com saldos e reservas PAPER. O navegador continua separado das simulações locais e não envia ordens. Ainda falta colocar o worker em execução contínua na VPS, ampliar o motor de entrada J2 para o universo dinâmico N50 e provar retorno ajustado ao risco J3, sem transformar CI em comprovação de rentabilidade.
+
+
 ## D445 — múltiplas posições PAPER sem depender do N50 (20/11/2026)
 
 Implementado código J4 capaz de acompanhar todos os contratos de posições existentes no arquivo AUTO4 (limite 50) numa mesma assinatura WS, inclusive aqueles fora do ranking corrente. A lista vem do manifesto privado D425 em cada ciclo; a elegibilidade de *monitorar posição já aberta* independe da classificação de oportunidades da J2. REST usa paginação limitada para verificar o instrumento, não per-symbol GET; D443 foi generalizada com compatibilidade do piloto BTC, e D444 chama a nova rotina multicontrato. Testes cobrem BTC e ETH simultâneos no mesmo SQLite com parcial, stop protetivo, nenhuma redução artificial por ticker, replay idempotente e caminho sem opt-ins. **Não implica nova posição, sinais autorizados nem cobertura comprovada.** Sem merge/deploy/VPS, sem J1 ou ordens reais. Próximo marco de desenvolvimento: seleção N50 dinâmica como fonte de *novas* oportunidades e J3 prospectivo/OOS com custos reais de pesquisa; worker de posições já não depende desse ranking.

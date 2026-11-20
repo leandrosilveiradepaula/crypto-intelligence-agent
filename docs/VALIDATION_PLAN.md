@@ -1,5 +1,10 @@
 # Plano de validação e gates
 
+## D446 — leitura real do PAPER persistido no Console
+
+Testar seleção exclusivamente por manifesto D425 com dois contratos diferentes no mesmo SQLite owner, leitura RO de saldos e reservas, owner 0700/0600, symlink e troca de arquivo, manifest inválido e falha fechada. No HTTP loopback J5: GET-only, 503 sem opt-in, host/origin restritos, falha sanitizada sem path privado e resposta de tamanho limitado. No navegador mobile: contrato D407 permanece estrito e não há `localStorage` para snapshots, novo fetch apenas `/api/owner-paper-positions` quando localhost, sem credenciais, sem redirect, e importação JSON manual continua válida. Nenhuma solicitação HTTP externa, financeira ou com ordem real.
+
+
 ## D445 — teste integrado multicontrato PAPER
 
 Exigir scan REST paginado completo com cursors causais e limites, reconhecimento estrito de contratos USDT lineares já presentes no diário, rejeição de contrato sumido/duplicado/sem negociação/TradFi; nenhum pedido de rede por símbolo individual. Receber ACK de uma assinatura `tickers.BTCUSDT` + `tickers.ETHUSDT` em replay hermético; disparar target BTC e stop ETH sobre *um mesmo journal AUTO4 real* de teste, verificar reservas persistentes e FILL de saída zero, reiniciar roteador e comprovar idempotência. Ausência de uma quote deve degradar a cobertura total sem cancelar reserva do outro ativo. Sem N50 como condição de saída. CI Linux/Windows/mobile do SHA final e prova real no host em gate posterior.
