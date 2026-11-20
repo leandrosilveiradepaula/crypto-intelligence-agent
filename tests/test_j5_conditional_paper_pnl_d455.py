@@ -37,6 +37,8 @@ fake((r,p)=>p.leverage_at_open=201);
 fake((r,p)=>p.priced_fill_events=-1);
 fake((r,p)=>p.exit_fee_quote="-0.001");
 fake((r,p)=>p.extra_value="secret");
+fake((r,p)=>p.conditional_realized_before_funding_quote="-0.31");
+fake((r,p)=>p.gross_realized_reference_quote="9000000");
 fake((r,p)=>r.financial_pnl_available=true);
 const legacy = structuredClone(report);
 legacy.positions[0].conditional_paper_pnl = {
@@ -83,7 +85,7 @@ class D455PaperPnLBrowserTests(unittest.TestCase):
             "status": "conditional_paper_reference_before_unverified_funding",
             "priced_entry_units": "100",
             "realized_exit_units": "30",
-            "gross_realized_reference_quote": "0.5",
+            "gross_realized_reference_quote": "-0.28",
             "entry_fee_allocated_quote": "0.01",
             "exit_fee_quote": "0.01",
             "entry_slippage_allocated_quote": "0.01",
