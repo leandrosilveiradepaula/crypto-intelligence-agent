@@ -221,3 +221,87 @@ def run_finite_n50_paper_streams(
         "orders_sent": False,
         "approved_for_live_use": False,
     }
+
+
+
+def run_dynamic_public_paper_lease_once(
+    *, private_j2_directory: Path, private_paper_directory: Path,
+    config, budget: DualPaperLeaseBudget,
+    allow_public_network: bool = False,
+    allow_public_websocket: bool = False,
+    confirm_personal_readonly_research: bool = False,
+    confirm_region_eligible: bool = False,
+    confirm_public_data_rights: bool = False,
+    enable_hypothetical_paper_cycle: bool = False,
+    public_rest_client=None, public_rest_clock=None,
+    kline_session_factory=None, ticker_session_factory=None,
+    kline_clock_args: dict | None = None,
+    ticker_clock_args: dict | None = None,
+) -> dict:
+    """Complete D451 -> pinned J2 epoch -> D452 -> D449/D450 finite lease.
+
+    A fresh, provisional N50 is selected before every lease. A matching
+    membership preserves the previous J2 candle journal; a changed membership
+    rotates cleanly and must warm up before new PAPER signals. Held PAPER
+    positions are always loaded from the SAME AUTO4 journal independent of
+    N50 membership. Never turns a test socket into a public-source claim.
+    """
+    from .j2_dynamic_public_n50_d451 import (
+        capture_dynamic_public_n50, pin_dynamic_public_n50_epoch,
+    )
+    from .j2_j4_public_paper_cycle_d449 import PaperPublicCycleConfig
+    from .j4_durable_paper_risk_d452 import build_dynamic_public_paper_cycle
+    flags = (allow_public_network, allow_public_websocket,
+             confirm_personal_readonly_research, confirm_region_eligible,
+             confirm_public_data_rights, enable_hypothetical_paper_cycle)
+    if any(type(v) is not bool for v in flags):
+        raise DataValidationError("D450 explicit dynamic cycle switches invalid")
+    if not all(flags):
+        return _denied("six_explicit_paper_public_data_optins_required")
+    if (type(config) is not PaperPublicCycleConfig
+            or type(budget) is not DualPaperLeaseBudget
+            or not isinstance(private_j2_directory, Path)
+            or not isinstance(private_paper_directory, Path)):
+        raise DataValidationError("D450 typed durable N50 PAPER run inputs required")
+    snapshot = capture_dynamic_public_n50(
+        allow_public_network=True,
+        confirm_personal_readonly_research=True,
+        confirm_region_eligible=True,
+        confirm_public_data_rights=True,
+        client=public_rest_client, wall_ms=public_rest_clock,
+    )
+    pinned = pin_dynamic_public_n50_epoch(
+        snapshot=snapshot, private_j2_directory=private_j2_directory,
+    )
+    cycle, risk = build_dynamic_public_paper_cycle(
+        snapshot=pinned.selected,
+        closed_journal_path=pinned.closed_journal_path,
+        private_paper_directory=private_paper_directory,
+        config=config,
+    )
+    lease = run_finite_n50_paper_streams(
+        cycle=cycle, scope=pinned.selected.scope,
+        journal_path=pinned.closed_journal_path,
+        budget=budget,
+        allow_public_network=True, allow_public_websocket=True,
+        confirm_personal_readonly_research=True,
+        confirm_region_eligible=True, confirm_public_data_rights=True,
+        enable_hypothetical_paper_cycle=True,
+        kline_session_factory=kline_session_factory,
+        ticker_session_factory=ticker_session_factory,
+        kline_clock_args=kline_clock_args,
+        ticker_clock_args=ticker_clock_args,
+        risk_source=risk,
+    )
+    return {
+        "schema_version": "d450-dynamic-public-n50-paper-lease-v1",
+        "status": lease["status"],
+        "rolling_volume_selection": pinned.sanitized_report(),
+        "dual_public_streams": lease,
+        "marketwide_crypto_identity_verified": False,
+        "public_feed_confirmed_24h_continuous": False,
+        "live_venue_liquidation_and_funding_verified": False,
+        "orders_sent": False,
+        "approved_for_live_use": False,
+        "session_continues_after_return": False,
+    }
