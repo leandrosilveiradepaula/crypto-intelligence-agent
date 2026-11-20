@@ -64,8 +64,13 @@ def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
     if (not isinstance(path, Path) or not path.is_absolute()
             or path.name.startswith(".") or path.suffix != ".json"):
         raise DataValidationError("D453 absolute ordinary owner JSON policy required")
+    if path.is_symlink():
+        raise DataValidationError("D453 owner policy symlink forbidden")
     home = _private_directory(path.parent)
-    fd = _owner_file(home, path.name)
+    try:
+        fd = _owner_file(home, path.name)
+    except OSError:
+        raise DataValidationError("D453 owner policy missing or unsafe") from None
     with os.fdopen(fd, "rb") as stream:
         data = stream.read(8193)
     if not 2 <= len(data) <= 8192:
