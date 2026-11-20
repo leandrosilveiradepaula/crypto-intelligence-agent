@@ -568,3 +568,8 @@ O operador D436 reutiliza os contratos de close confirmado, journal e D434/D435.
 ## J2/J5 D436 — sessão WS finita de pesquisa e terminal no Console
 
 O D436 está preparado para processar frames públicos Bybit modelados durante uma sessão supervisionada com transporte injetável, sem ordens. Callback pós-ACK/pós-append publica no J5 um relatório versionado e não autorizante; ao término a interface deve mostrar “Sessão encerrada”, expirar dados e bloquear hipóteses antigas. Prova de fake socket + journal D434 + D435, regressões backend/browser e CI Linux/Windows/Chrome **aprovadas** na PR #733, merge SHA `4ca5f3db8417771154e28341e1636405a148d782` (HEAD de CI `7c41d285ceb14ba6c7c0d8945e0d39a0320665be`). A observação real/operador PAPER contínuo J6 **não está** aceito por esta entrega; #677 permanece aberta.
+
+
+## J2 → J3 → J4 / D447 — entrada observada até intenção PAPER
+
+**Implementação da fronteira, ainda sem homologação:** série de candles públicos confirmados D434/D435 pode produzir hipótese LONG/SHORT pesquisada; ticker D385 fresco posterior ao close, filtro J3/PRE2 de alvo líquido e risco hipotético, margem PRE11 e AUTO8/RiskGate determinam se uma intenção OPEN PENDING é reservada no AUTO2, com alavancagem da nova entrada em receipt. Repetição é bloqueada transacionalmente, sem um fill ou posição inventados. A jornada de produto ainda depende de escopo dinâmico N50, entrada integrada ao worker D444, execução PAPER honesta, validação J3 OOS e prova operacional J6; no momento nada foi implantado na VPS e a PR #734 segue draft. Contrato `docs/J2_J3_PAPER_ENTRY_D447.md`.
