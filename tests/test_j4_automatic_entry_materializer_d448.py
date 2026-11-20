@@ -147,8 +147,6 @@ class D448PaperLifecycleTests(unittest.TestCase):
                 second = self.complete(intent, None, later.received_at_ms + 20)
                 self.assertFalse(second["hypothetical_open_fill_written"])
                 self.assertEqual(len(self.positions.load(pos_id).exit_orders), 1)
-                if side == "LONG":
-                    break
 
     def tearDownNothing(self):
         # Disjoint owner state for the second side of the parametrized case.
