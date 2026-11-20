@@ -2064,3 +2064,8 @@ A J6 separa a supervisão do subprocesso D428 do próprio recebimento WebSocket:
 ## D432 — projeção do ciclo PAPER no Console local (18/11/2026)
 
 Extensão J5/J6 aprovada **apenas em código**: a leitura automática do ciclo PRE9 usa HTTP GET loopback autorizado, arquivo owner-only 0700/0600 e validação estrita com falha fechada; ausência ou erro após uma amostra deve invalidar a tela, e resposta antiga não prevalece sobre nova. Produtor exige PRE9 e fixtures Bybit-shaped D392, não conecta à Bybit e não infere fills reais. O resultado **continua uma demonstração offline**, nunca promover a supervisor real, estado prospectivo, stop, ordens, PnL ou permissão live. PR #729 merge `f86ae1c939175ea686dadfd9cc20abb77582d04d`, CI no HEAD revisado `05bdbf591a87115f13259919c14025c66dddabf4` verde Linux/Windows/mobile; nenhuma ativação VPS. Próximo produto: ingestão real pública contínua Bybit + journals PAPER + view observável, com gates de integração e execução separados. Custo R$0.
+
+
+## D447 — hipótese pública causal não é ordem; reserva PAPER passa por J3 e AUTO8 (20/11/2026)
+
+A pesquisa observada D435 sobre série D434 de candles Bybit confirmados somente pode formar uma intenção OPEN PAPER **PENDING** após ticker D385 posterior ao fechamento, frescor pelos dois relógios, custos J3/PRE2 com alvo líquido e margem no stop hipotético, margem PRE11 e RiskGate/AUTO8/AUTO2 sob bloqueio transacional. Repetição da mesma oportunidade não reserva nova abertura. Dados públicos e custos hipotéticos não autenticam preço ou conta e não representam fills ou proteção nativa; D447 não abre posição AUTO4 nem ativa a entrada no worker D444. Sem J1, release, ordens, API privada ou custo extra. Contrato e limites em `docs/J2_J3_PAPER_ENTRY_D447.md`.
