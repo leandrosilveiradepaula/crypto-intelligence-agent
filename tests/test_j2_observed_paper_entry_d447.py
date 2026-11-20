@@ -185,7 +185,7 @@ class ObservedPaperEntryTests(unittest.TestCase):
              "hypothetical_stop_margin_veto"),
             ({"observation": replace(
                 baseline["observation"], kill_switch_active=True)},
-             "paper_margin_denied_risk_gate_blocked"),
+             "paper_margin_denied_paper_risk_gate_blocked"),
         )
         for changes, expected in cases:
             with self.subTest(expected=expected), TemporaryDirectory() as folder:
