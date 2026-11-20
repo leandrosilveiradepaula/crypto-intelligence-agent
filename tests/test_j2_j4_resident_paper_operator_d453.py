@@ -109,6 +109,54 @@ class ResidentPaperOperatorTests(unittest.TestCase):
             0o600,
         )
 
+    def test_unexpected_primary_exception_still_uses_held_fallback(self):
+        seen = []
+        def primary():
+            raise KeyError("do not echo private program state")
+        def fallback():
+            seen.append("held")
+            return {"status": "no_held_paper_positions", "orders_sent": False}
+        outcome = run_resident_paper_observer(
+            private_j2_directory=self.j2,
+            private_paper_directory=self.paper,
+            config=SETTINGS,
+            policy=ResidentPaperRunPolicy(self.budget, 0, 1),
+            primary_lease=primary, held_fallback_lease=fallback,
+            sleep=lambda _: None,
+            clock_ms=lambda: 1_800_000_000_000,
+            should_stop=lambda: False,
+            **self.flags,
+        )
+        self.assertEqual(outcome["status"], "bounded_run_completed")
+        self.assertEqual(outcome["held_only_fallbacks"], 1)
+        self.assertEqual(seen, ["held"])
+        self.assertFalse(outcome["orders_sent"])
+
+    def test_failing_held_fallback_persists_terminal_degraded_status(self):
+        def primary():
+            raise OSError("REST temporarily inaccessible")
+        def held():
+            raise DataValidationError("unsafe owner manifest")
+        outcome = run_resident_paper_observer(
+            private_j2_directory=self.j2,
+            private_paper_directory=self.paper,
+            config=SETTINGS,
+            policy=ResidentPaperRunPolicy(self.budget, 0, 2),
+            primary_lease=primary, held_fallback_lease=held,
+            sleep=lambda _: None,
+            clock_ms=lambda: 1_800_000_000_000,
+            should_stop=lambda: False,
+            **self.flags,
+        )
+        self.assertEqual(outcome["status"], "degraded_no_held_coverage")
+        self.assertEqual(outcome["cycles_attempted"], 1)
+        recorded = json.loads(
+            (self.paper / "paper-operator-state-d453.json").read_text(),
+        )
+        self.assertEqual(recorded["state"], "degraded_no_held_coverage")
+        self.assertFalse(recorded["position_monitoring_guaranteed"])
+        self.assertNotIn("unsafe owner manifest", json.dumps(recorded))
+
     def test_second_owner_instance_cannot_grab_resident_lock(self):
         lock = _resident_lock(self.paper)
         try:
