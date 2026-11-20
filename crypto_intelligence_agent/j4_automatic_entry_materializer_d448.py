@@ -579,6 +579,7 @@ def materialize_observed_paper_entry(
             )
             saved = orders.append_events(
                 intent_id, (event,), as_of_ms=quote.received_at_ms,
+                opening_paper_health_path=position_path,
             )
             wrote_fill = True
         if (saved.snapshot.status is not PaperOrderStatus.FILLED
