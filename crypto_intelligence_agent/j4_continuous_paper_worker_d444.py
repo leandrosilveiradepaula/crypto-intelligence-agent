@@ -328,3 +328,120 @@ def run_owner_continuous_paper_worker(
             # No claim that the process is still watching after interruption.
             raise
     return output
+
+
+class WorkerStatusUnavailable(Exception):
+    """Public-facing local reader must never leak private owner paths."""
+
+
+_STATUS_KEYS = frozenset((
+    "schema_version", "phase", "updated_at_ms", "last_good_lease_at_ms",
+    "lease_attempts", "healthy_lease_count", "consecutive_lease_failures",
+    "accepted_quote_events_total", "last_lease_outcome", "source_mode",
+    "lease_active", "native_stop_active", "exchange_source_authenticated",
+    "uninterrupted_coverage_verified", "paper_positions_automatically_filled",
+    "j1_state_accessed", "orders_sent", "approved_for_live_use",
+))
+_PHASES = frozenset((
+    "starting", "lease_started", "between_leases", "stopped_by_operator",
+    "failed_closed", "stopped_after_repeated_degradation",
+    "completed_finite_cycles",
+))
+_TERMINAL = frozenset((
+    "stopped_by_operator", "failed_closed",
+    "stopped_after_repeated_degradation", "completed_finite_cycles",
+))
+
+
+def read_private_worker_status(*, directory: Path, now_ms: int) -> dict:
+    """Strict count-only local projection for J5; never a protection claim.
+
+    Active/reconnecting records older than 120 seconds are rejected rather
+    than displayed as a still-running supervisor. Terminal status is retained
+    for 24 hours, clearly labelled as stopped.
+    """
+    if type(now_ms) is not int or not 1_600_000_000_000 <= now_ms < _MAX_UTC_MS:
+        raise WorkerStatusUnavailable("paper_worker_unavailable")
+    try:
+        home = _owner_directory(directory)
+        dirfd = os.open(home, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            fd = os.open(
+                _STATE_FILE, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                dir_fd=dirfd,
+            )
+            try:
+                before = os.fstat(fd)
+                if (not stat.S_ISREG(before.st_mode)
+                        or before.st_uid != os.geteuid()
+                        or before.st_nlink != 1
+                        or stat.S_IMODE(before.st_mode) != 0o600
+                        or not 2 <= before.st_size <= _MAX_OUTPUT_BYTES):
+                    raise ValueError("unsafe status")
+                raw = os.read(fd, _MAX_OUTPUT_BYTES + 1)
+                after = os.fstat(fd)
+                if (len(raw) != before.st_size
+                        or (before.st_ino, before.st_dev, before.st_mtime_ns,
+                            before.st_size) !=
+                           (after.st_ino, after.st_dev, after.st_mtime_ns,
+                            after.st_size)):
+                    raise ValueError("unstable status")
+            finally:
+                os.close(fd)
+        finally:
+            os.close(dirfd)
+
+        def no_duplicates(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("duplicate keys")
+                result[key] = value
+            return result
+
+        obj = json.loads(
+            raw.decode("ascii"),
+            object_pairs_hook=no_duplicates,
+            parse_float=lambda _: (_ for _ in ()).throw(ValueError("float")),
+            parse_constant=lambda _: (_ for _ in ()).throw(ValueError("constant")),
+        )
+        if (type(obj) is not dict or set(obj) != _STATUS_KEYS
+                or obj["schema_version"] != _SCHEMA
+                or obj["phase"] not in _PHASES
+                or obj["source_mode"] not in (
+                    _EXPECTED_REAL_MODE, _EXPECTED_TEST_MODE)
+                or type(obj["updated_at_ms"]) is not int
+                or not 0 <= now_ms - obj["updated_at_ms"] <= (
+                    86_400_000 if obj["phase"] in _TERMINAL else 120_000
+                )
+                or (obj["last_good_lease_at_ms"] is not None and
+                    (type(obj["last_good_lease_at_ms"]) is not int or
+                     not 1_600_000_000_000 <= obj["last_good_lease_at_ms"]
+                     <= obj["updated_at_ms"]))
+                or any(type(obj[k]) is not int or not 0 <= obj[k] <= 100_000_000
+                       for k in (
+                           "lease_attempts", "healthy_lease_count",
+                           "consecutive_lease_failures",
+                           "accepted_quote_events_total",
+                       ))
+                or obj["healthy_lease_count"] > obj["lease_attempts"]
+                or obj["consecutive_lease_failures"] > obj["lease_attempts"]
+                or obj["last_lease_outcome"] not in (
+                    "not_started", "lease_started", "fresh_finite_paper_lease",
+                    "lease_degraded_abstain",
+                    "unexpected_financial_or_source_claim",
+                )
+                or type(obj["lease_active"]) is not bool
+                or obj["lease_active"] != (obj["phase"] == "lease_started")
+                or any(obj[k] is not False for k in (
+                    "native_stop_active", "exchange_source_authenticated",
+                    "uninterrupted_coverage_verified",
+                    "paper_positions_automatically_filled",
+                    "j1_state_accessed", "orders_sent",
+                    "approved_for_live_use",
+                ))):
+            raise ValueError("invalid status")
+        return obj
+    except (DataValidationError, OSError, ValueError, TypeError,
+            UnicodeError, OverflowError):
+        raise WorkerStatusUnavailable("paper_worker_unavailable") from None
