@@ -669,3 +669,8 @@ D418 continua sendo o operador finito read-only de mercado Bybit sobre N50 J1. O
 ## J5/D422 — adaptador de saúde sanitizada apenas loopback
 
 `D418/Bybit public WS` → `D421/arquivo owner 0600` → `D422/GET localhost 8765` → `J5/paper-ws-health.js`. A fonte de cotações e o owner N50 continuam os mesmos; backend apenas lê o resumo D421 de um diretório próprio e configurado, com proteção contra symlink, permissões indevidas, arquivo antigo, contagens inconsistentes e falso status live. O endpoint está desligado sem opt-in duplo; `Host` e `Origin` devem satisfazer a defesa anti-DNS-rebinding do servidor existente. HTTP 503 remove a amostra automática anterior, sem emular preço corrente. O navegador `file://` não inicia requisições, e o servidor não atende clientes remotos. A J5 móvel acessível por rede só poderá ser planejada com autenticação e autorização de release, não com exposição do localhost.
+
+
+## D449/D450 — ingresso de mercado e ciclo PAPER coordenado
+
+D449 acrescenta camada de orquestração fina em cima de J2 D434/D435, J3 PRE2/PRE11, D447/D448, AUTO2/AUTO4, D389/D391/D425 e J5. D450 combina, em sessões PUBLIC ONLY separadas e simultâneas, o coletor WS de velas fechadas e o ticker D385/D386 pós-ACK. A seleção N50 não é recriada por esta camada: é dependência tipada externa, não assume classificação de crypto ou fonte atual autenticada. Caminho de saída tem prioridade sobre admissão de novas posições; falhas na coorte invalidam somente novos sinais, sem declarar stops nativos. Nenhum livro financeiro duplicado, credenciais ou mudanças no coletor J1. Ver docs/J2_J4_PUBLIC_N50_PAPER_D450.md.

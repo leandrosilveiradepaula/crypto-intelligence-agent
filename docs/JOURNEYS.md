@@ -578,3 +578,8 @@ O D436 está preparado para processar frames públicos Bybit modelados durante u
 ## J2/J3/J4/J5 D448 — percurso PAPER integrado, sem ordens
 
 D436 recebe closes confirmados no journal J2; D435 pesquisa hipótese causal; D447 passa por custos/risco e só cria OPEN PENDING; D448 exige BBO posterior e condições conservadoras para FILL de **simulação** no AUTO2. O mesmo evento e receipt alimentam AUTO4 e o plano de stops/parciais; o manifesto D425 alimenta o monitor D444/D445 e a consulta J5/D446. Falhas no meio das gravações podem ser retomadas sem novas intenções/quantidades. Demonstração determinística LONG/SHORT com parser de frames D436, SQLite real, parcial D391 e J5: `scripts.demo_j2_j4_observed_paper_cycle_d448`. O ciclo ainda não tem fonte N50 real contínua, prova de fill/liquidação ou serviço PAPER implantado; J3 OOS e J6 permanecem gates, sem negociação real.
+
+
+## J2/J3/J4/J5 — D449/D450: integração de dois feeds públicos a PAPER
+
+D449 recebe closes J2 auditados dos contratos da mesma hora (1..50), compara com BTC e conduz a hipótese D435 às telas de custo J3 e risco D447, intenção PAPER AUTO2, BBO posterior D448 e posição AUTO4 com plano de saídas J4. Prioriza o ticker das posições mantidas para stops e parciais, independentemente da disponibilidade dos 49 demais ativos. D450 usa supervisores de kline.60 e tickers.* existentes em paralelo, sob opt-ins e lease finito. A coorte dinâmica real e os dados de risco/fees/funding/liquidação ainda não foram conectados como serviço na VPS, logo não há trading real ou produto 24x7. A prova atual é protocol replay com 50 membros, sem websocket genuíno nesta unidade.
