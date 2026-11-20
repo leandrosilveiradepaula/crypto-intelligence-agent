@@ -226,8 +226,11 @@ class PublicPaperCycle:
 
     def _reload_held(self) -> None:
         manifest = self._home / _MANIFEST
-        self._router = (load_private_paper_routes(self._home)
-                        if manifest.exists() or manifest.is_symlink() else None)
+        self._router = (
+            load_private_paper_routes(
+                self._home, enable_hypothetical_exit_fills=True,
+            ) if manifest.exists() or manifest.is_symlink() else None
+        )
 
     def recover_observed_openings(self) -> None:
         """After restart, continue ONLY previously armed PAPER strategies.
