@@ -1,5 +1,10 @@
 # Plano de validação e gates
 
+## D444 — worker repetido de posições PAPER, não apenas sessão finita
+
+Em ambiente hermético, verificar sequência de leases saudáveis, duas falhas de transporte seguidas de recuperação automática sem FILL, backoff 2–60s, parada após degradação persistente, interrupção entre ciclos, programa sem flags não acessa owner nem rede, limites inválidos falham antes do transporte, relatório contraditório que alegue ordem/live/J1 é encerrado, e estado owner-only 0700/0600 fica atômico sem símbolos nem preços. Comprovar limites de temporizador e lock em Linux POSIX, sem necessidade de execução WSS pública para esta etapa de desenvolvimento. Validar também integração com D443 sobre o SQLite PAPER real de testes, e suites Linux/Windows/mobile do HEAD. O monitor não afirma stop nativo ou que a conexão permaneça ativa depois do processo terminar.
+
+
 ## D443 — validação de posição PAPER existente (sem reiniciar J1)
 
 Teste integrado real do SQLite AUTO4 criado no teste, com fill de abertura explicitamente fictício anterior ao ticker. Sem mockar o writer AUTO4: ACK + ticker BTC de alvo devem reservar uma parcial (30 unidades de 100), sem alterar quantidade preenchida; ACK + ticker BTC adverso devem reservar stop protetivo antes de target; reiniciar o roteador no **mesmo SQLite** e reapresentar ticker não pode duplicar reserva. Sem ACK/sem ticker, não exibir posição protegida. Sem opt-ins e com orçamento inválido, não ler pasta privada nem abrir REST/WS. Em modo real, proibir escopo/socket/clock injetáveis e root. Testes test_j4_held_btc_public_d443.py e test_j4_held_btc_paper_d443_cli.py no Linux/Windows (POSIX gates quando aplicável), suíte completa, navegador mobile e revisão do SHA. Sem serviços, deploy, ordens ou J1.

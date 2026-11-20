@@ -1,5 +1,10 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D444 — desenvolvimento de worker PAPER em ciclo contínuo (20/11/2026)
+
+O código passou de sessões J4 finitas isoladas para um **worker de ciclo contínuo** com D443, reutilizando D425/D390/D391/AUTO4 e a posição PAPER persistida. Possui reconexão/backoff, orçamento por lease, limite de degradação, lock do worker e estado owner-only para interface futura, com CLI opt-in. A cada novo ciclo preserva journal/ordens PAPER; só declara último lease saudável quando há cotação pós-ACK válida. Limites: ainda BTCUSDT, não há serviço implantado, a operação real não foi demonstrada, e não há cobertura ininterrupta/ordem real. Nenhum diagnóstico ou mudança na J1. Próximo marco de produto: conectar worker às rotas de todas as posições existentes e seleção N50 dinâmica; depois interface J5 com estado terminal/stale e sinal J2/J3 validado. Documento `docs/J4_CONTINUOUS_PAPER_MONITOR_D444.md`.
+
+
 ## D443 — J4 PAPER persistido, cotação pública BTC, sem dependência da J1 (19/11/2026 UTC)
 
 Entrega codificada na mesma branch/revisão draft de J2/J3/J4: D443 carrega rotas PAPER existentes via D425 e mantém o lock de exclusividade, valida BTCUSDT em REST D441 e usa D390/D385/D386 para alimentar apenas o D391/D389/AUTO4. Diferentemente da demonstração D442 que descarta a posição fictícia, D443 preserva o **arquivo de posição PAPER** e a reserva REDUCE_ONLY ao fim de uma sessão FINITA. Os testes verificam (em SQLite de teste) parcial, stop-first, ausência de fill por ticker e não duplicação no reinício. Sem diagnóstico/alteração da J1, ranking N50, fill real, lucro, proteção de stop nativo ou daemon 24x7. Os gates de CI para o HEAD final e uma futura captura pública real ainda precisam ser concluídos; PR permanece draft. CLI com cinco opt-ins em scripts/run_j4_held_btc_paper_d443_once.py. Prioridade seguinte: liveness/reconexão 24x7 J6, N50 dinâmico/posições fora do ranking, sinais J2 validados OOS e J3 custos/risco realista, sem autorizar ordens.
