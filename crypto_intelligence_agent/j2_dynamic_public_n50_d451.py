@@ -50,7 +50,7 @@ class ProvisionalVolumeMember:
     quantity_step: Decimal
     minimum_quantity: Decimal
     minimum_notional: Decimal
-    maximum_notional: Decimal | None
+    maximum_quantity_base: Decimal
 
 
 @dataclass(frozen=True)
@@ -83,6 +83,7 @@ class DynamicPublicN50:
         if (quote.received_at_ms < self.ticker_received_ms
                 or quote.received_at_ms - self.ticker_received_ms > 60_000):
             raise DataValidationError("D451 public instrument metadata expired for new PAPER open")
+        # Bybit maxOrderQty is BASE units, not USDT notional.
         return PaperLinearContractFixture(
             venue=PaperVenue.BYBIT_V5, symbol=member.symbol, quote_currency="USDT",
             observed_at_ms=self.ticker_received_ms,
@@ -92,7 +93,7 @@ class DynamicPublicN50:
             quantity_step_base=member.quantity_step,
             min_quantity_base=member.minimum_quantity,
             min_notional_quote=member.minimum_notional,
-            max_notional_quote=member.maximum_notional,
+            max_notional_quote=member.maximum_quantity_base * quote.mark_price,
         )
 
     def sanitized_report(self) -> dict[str, object]:
