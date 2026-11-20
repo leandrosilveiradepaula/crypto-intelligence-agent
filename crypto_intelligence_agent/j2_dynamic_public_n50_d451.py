@@ -414,7 +414,11 @@ def pin_dynamic_public_n50_epoch(
                        != envelope["sha256"]):
                 raise DataValidationError("D451 N50 epoch pointer integrity invalid")
             payload = envelope["payload"]
-            if (set(payload) != {"epoch_ms", "cohort_sha256", "journal"}
+            if (set(payload) != {"epoch_ms", "cohort_sha256", "journal", "source_mode"}
+                    or payload["source_mode"] not in (
+                        "injected_offline_protocol_replay",
+                        "public_rest_observed_unverified",
+                    )
                     or type(payload["epoch_ms"]) is not int
                     or type(payload["cohort_sha256"]) is not str
                     or not re.fullmatch("[0-9a-f]{64}", payload["cohort_sha256"])
@@ -432,6 +436,7 @@ def pin_dynamic_public_n50_epoch(
             owner_fd = _owner_file(home, payload["journal"])
             os.close(owner_fd)
             if (payload["cohort_sha256"] == snapshot.fingerprint_sha256
+                    and payload["source_mode"] == snapshot.source_mode
                     and observed - payload["epoch_ms"] < 6 * 86_400_000):
                 current_epoch = payload["epoch_ms"]
                 journal_name = payload["journal"]
@@ -453,6 +458,7 @@ def pin_dynamic_public_n50_epoch(
                 "epoch_ms": current_epoch,
                 "cohort_sha256": snapshot.fingerprint_sha256,
                 "journal": journal_name,
+                "source_mode": snapshot.source_mode,
             }
             raw = _json({
                 "schema": "d451-provisional-n50-epoch-pointer-v1",
