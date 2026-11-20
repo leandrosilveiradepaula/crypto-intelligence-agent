@@ -28,6 +28,9 @@ from crypto_intelligence_agent.j5_local_health_reader_d422 import (
 from crypto_intelligence_agent.j5_paper_watch_d427 import (
     PaperWatchUnavailable, read_paper_watch,
 )
+from crypto_intelligence_agent.j4_continuous_paper_worker_d444 import (
+    WorkerStatusUnavailable, read_private_worker_status,
+)
 from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import read_projection
 from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
 from crypto_intelligence_agent.bybit_public_rest_price_pulse_d403 import capture_public_rest_price_pulse
@@ -286,6 +289,7 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
     # OFF by default; only a same-owner POSIX 0700 directory can enable it.
     public_health_directory: Path | None = None
     paper_watch_directory: Path | None = None  # separate opt-in; 0700/0600, count-only
+    paper_worker_directory: Path | None = None  # D444 owner state, count-only
     prospective_research_directory: Path | None = None
     protocol_version = "HTTP/1.1"
     server_version = "CIA-Local-ReadOnly"
@@ -378,6 +382,27 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
                                  "orders_sent": False})
                 return
             cls.market_cached = report
+            self._json(200, report)
+            return
+        if self.path == "/api/paper-worker":
+            directory = type(self).paper_worker_directory
+            if directory is None:
+                self._json(503, {
+                    "status": "paper_worker_loopback_not_enabled",
+                    "orders_sent": False,
+                })
+                return
+            try:
+                report = read_private_worker_status(
+                    directory=directory,
+                    now_ms=time.time_ns() // 1_000_000,
+                )
+            except WorkerStatusUnavailable:
+                self._json(503, {
+                    "status": "paper_worker_stopped_or_unavailable",
+                    "orders_sent": False,
+                })
+                return
             self._json(200, report)
             return
         if self.path == "/api/paper-watch":
@@ -496,6 +521,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--private-health-directory", type=Path)
     parser.add_argument("--allow-paper-watch-loopback", action="store_true")
     parser.add_argument("--paper-watch-directory", type=Path)
+    parser.add_argument("--allow-paper-worker-loopback", action="store_true")
+    parser.add_argument("--paper-worker-directory", type=Path)
     parser.add_argument("--allow-prospective-research-loopback", action="store_true")
     parser.add_argument("--prospective-research-directory", type=Path)
     parser.add_argument("--market-symbols", default="", help="1..50 reviewed USDT symbols")
@@ -518,6 +545,10 @@ def main(argv: list[str] | None = None) -> int:
             "orders_sent": False,
         }, sort_keys=True))
         return 65
+    if args.allow_paper_worker_loopback != (args.paper_worker_directory is not None):
+        print(json.dumps({"status": "paper_worker_explicit_optin_and_directory_required",
+                          "orders_sent": False}, sort_keys=True))
+        return 65
     if args.allow_paper_watch_loopback != (args.paper_watch_directory is not None):
         print(json.dumps({
             "status": "paper_watch_explicit_optin_and_directory_required",
@@ -533,6 +564,17 @@ def main(argv: list[str] | None = None) -> int:
         try: _owned_directory(args.prospective_research_directory)
         except (OSError, DataValidationError):
             print(json.dumps({"status": "prospective_research_owner_directory_unavailable", "orders_sent": False}, sort_keys=True)); return 65
+    if args.allow_paper_worker_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({"status": "paper_worker_unprivileged_owner_required",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+        try:
+            _owned_directory(args.paper_worker_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({"status": "paper_worker_owner_directory_unavailable",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
     if args.allow_paper_watch_loopback:
         if os.name != "posix" or os.geteuid() == 0:
             print(json.dumps({
@@ -580,6 +622,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     LoopbackPanelHandler.paper_watch_directory = (
         args.paper_watch_directory if args.allow_paper_watch_loopback else None
+    )
+    LoopbackPanelHandler.paper_worker_directory = (
+        args.paper_worker_directory if args.allow_paper_worker_loopback else None
     )
     LoopbackPanelHandler.prospective_research_directory = (
         args.prospective_research_directory if args.allow_prospective_research_loopback else None

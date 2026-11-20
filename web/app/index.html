@@ -342,6 +342,15 @@
           </div>
           <p class="muted fine">Sempre encerra como sessão FINITA; desaparece após três minutos ou falha de leitura. Não garante vigilância 24×7, proteção nativa, FILL, lucro, posição verdadeira ou execução automática de ordens.</p>
         </div>
+        <div class="panel" aria-labelledby="paper-worker-title">
+          <div class="panel-heading">
+            <h3 id="paper-worker-title">Processo de acompanhamento PAPER</h3>
+            <span id="paper-worker-status" class="status-label">Não iniciado</span>
+          </div>
+          <p id="paper-worker-summary" class="muted fine" role="status" aria-live="polite">O processo de acompanhamento de posições ainda não está conectado ao painel.</p>
+          <div id="paper-worker-rows" class="market-pulse-rows" aria-label="Ciclos do processo PAPER"></div>
+          <p class="muted fine">Informações locais do último ciclo: reconexão, cotação válida e falhas. Não garante WebSocket ininterrupto, execução financeira ou stop nativo. Se o estado ficar antigo, será mostrado como indisponível.</p>
+        </div>
         <div class="panel risk-audit-panel" aria-labelledby="risk-audit-title">
           <div class="panel-heading">
             <h3 id="risk-audit-title">Risco de liquidação · auditoria PAPER J3</h3>

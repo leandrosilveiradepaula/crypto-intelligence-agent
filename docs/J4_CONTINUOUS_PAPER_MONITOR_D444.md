@@ -32,3 +32,7 @@ Implementado somente o ciclo contínuo do **BTCUSDT PAPER já persistido**, não
 Testes de aceitação incluem recuperação automática de falha, preservação de contagens e reservas, teto de falhas, interrupção, status atômico e flags explícitas. Mesmo com CI verde, não afirmar execução WSS real ou cobertura 24×7 sem operar o processo continuamente em VPS e medir lacunas.
 
 Estado de produto: componente de execução contínua preparado em código, não implantado; nenhum custo adicional ou ordem real autorizada.
+
+## Status visível no console local J5
+
+O console local recebe, sob autorização independente `--allow-paper-worker-loopback --paper-worker-directory`, somente o arquivo owner 0600 `paper-monitor-state.json` com contagens e fases. Endpoint `/api/paper-worker` é GET-only e loopback. `lease_started` é **tentativa de sessão**, não prova de stop ativo, e fases antigas perdem validade; estado terminal fica disponível por até 24 horas. O painel mobile diferencia reconexão, sessão iniciada, falha e parada. O navegador nunca recebe símbolos, posições, preços ou ordens.

@@ -133,6 +133,33 @@ class ContinuousPaperWorkerD444Tests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(DataValidationError):
                 PaperWorkerPolicy(**bad)
 
+    def test_status_reader_rejects_stale_or_false_protection(self):
+        import os
+        from crypto_intelligence_agent.j4_continuous_paper_worker_d444 import (
+            read_private_worker_status, WorkerStatusUnavailable,
+        )
+        if os.name != "posix" or os.geteuid() == 0:
+            self.skipTest("POSIX nonroot owner only")
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)
+            path.chmod(0o700)
+            report = self.drive([GOOD])[0]
+            with PrivateWorkerStatus(path) as writer:
+                writer.publish(report)
+            now = report["updated_at_ms"]
+            loaded = read_private_worker_status(directory=path, now_ms=now)
+            self.assertEqual(loaded["healthy_lease_count"], 1)
+            self.assertFalse(loaded["native_stop_active"])
+            with self.assertRaises(WorkerStatusUnavailable):
+                read_private_worker_status(
+                    directory=path, now_ms=now + 86_400_001)
+            bad = {**report, "orders_sent": True}
+            file = path / "paper-monitor-state.json"
+            file.write_text(json.dumps(bad), encoding="ascii")
+            file.chmod(0o600)
+            with self.assertRaises(WorkerStatusUnavailable):
+                read_private_worker_status(directory=path, now_ms=now)
+
     def test_status_file_atomic_owner_only_when_unprivileged_linux(self):
         import os
         if os.name != "posix" or os.geteuid() == 0:
