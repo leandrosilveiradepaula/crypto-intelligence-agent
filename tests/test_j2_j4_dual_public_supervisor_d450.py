@@ -1,0 +1,230 @@
+"""D450: actual existing WS validators feeding a 50-member PAPER pipeline.
+
+All sockets below are in-memory protocol sessions. None are public market
+captures and no fixture claim can authorize a real broker order.
+"""
+from __future__ import annotations
+
+from decimal import Decimal
+import json
+import os
+from pathlib import Path
+import threading
+from tempfile import TemporaryDirectory
+import unittest
+from unittest.mock import patch
+
+from crypto_intelligence_agent.bybit_closed_stream_cache import SQLiteOfflineClosedStreamJournal
+from crypto_intelligence_agent.bybit_public_ticker_supervisor_d386 import TickerLeaseBudget
+from crypto_intelligence_agent.bybit_ws_offline_pipeline import ingest_offline_ws_batch
+from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
+from crypto_intelligence_agent.j2_j4_dual_public_supervisor_d450 import (
+    DualPaperLeaseBudget, run_finite_n50_paper_streams,
+)
+from crypto_intelligence_agent.j2_j4_public_paper_cycle_d449 import PublicPaperCycle
+from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import load_private_paper_routes
+from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
+from test_j2_j4_public_paper_cycle_d449 import (
+    FIRST, LAST, RECEIPT, SIZE, SETTINGS,
+    contract, frame, paper_risk, scope_and_symbols,
+)
+
+
+def ack(req="cia-ws-1"):
+    return json.dumps({
+        "op": "subscribe", "success": True,
+        "ret_msg": "subscribe", "req_id": req,
+    })
+
+
+def market_quote(*, ts: int, cs: int, mark: str = "105"):
+    value = Decimal(mark)
+    return json.dumps({
+        "topic": "tickers.ETHUSDT", "type": "snapshot",
+        "ts": ts, "cs": cs,
+        "data": {
+            "symbol": "ETHUSDT",
+            "lastPrice": mark, "markPrice": mark, "indexPrice": mark,
+            "bid1Price": str(value - Decimal("0.1")),
+            "ask1Price": str(value + Decimal("0.1")),
+            "bid1Size": "20", "ask1Size": "20",
+            "turnover24h": "1000000", "volume24h": "10000",
+            "fundingRate": "0",
+        },
+    })
+
+
+class Clock:
+    def __init__(self):
+        self.mono_time = 0.0
+        self.utc_ms = RECEIPT
+
+    def monotonic(self):
+        return self.mono_time
+
+    def wall(self):
+        return self.utc_ms
+
+    def sleeper(self, seconds):
+        self.mono_time += seconds
+        self.utc_ms += int(seconds * 1000)
+
+
+class Session:
+    def __init__(self, clock: Clock, frames, *, after_close=None, signal_done=None):
+        self.clock = clock
+        self.frames = list(frames)
+        self.after_close = after_close
+        self.signal_done = signal_done
+        self.sent = []
+        self.closed = False
+
+    def send(self, payload):
+        parsed = json.loads(payload)
+        if parsed.get("op") not in ("subscribe", "ping"):
+            raise AssertionError("not a public WS control frame")
+        self.sent.append(parsed)
+
+    def recv(self, timeout):
+        if self.frames:
+            raw, received = self.frames[0]
+            if (self.after_close is not None
+                    and raw.startswith('{"topic": "tickers.')
+                    and not self.after_close.wait(3)):
+                raise TimeoutError("kline callbacks not ready")
+            self.frames.pop(0)
+            self.clock.utc_ms = received
+            self.clock.mono_time += 0.001
+            return raw
+        if self.signal_done is not None:
+            self.signal_done.set()
+        self.clock.sleeper(timeout)
+        raise TimeoutError("end of offline frames")
+
+    def close(self):
+        self.closed = True
+
+
+BUDGET = DualPaperLeaseBudget(
+    WSRunBudget(max_sessions=1, max_frames=200, max_seconds=5),
+    TickerLeaseBudget(max_sessions=1, max_frames=200, max_seconds=5),
+)
+
+
+@unittest.skipUnless(os.name == "posix" and hasattr(os, "geteuid")
+                     and os.geteuid() != 0, "POSIX non-root owner only")
+class DualPublicStreamIntegrationTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = TemporaryDirectory(prefix="cia-d450-")
+        self.addCleanup(self.tmp.cleanup)
+        base = Path(self.tmp.name)
+        self.paper = base / "paper"
+        self.paper.mkdir(mode=0o700)
+        self.market = base / "j2"
+        self.market.mkdir(mode=0o700)
+        self.closed = self.market / "closed.sqlite"
+        self.scope, self.symbols = scope_and_symbols()
+        store = SQLiteOfflineClosedStreamJournal.create(self.closed)
+        # Bootstrap from explicitly OFFLINE historical frames only. It is
+        # not silently labelled public; the final hour passes through the
+        # actual reviewed public WS supervisor below.
+        seed = [(ack(), FIRST + 1)]
+        for hour in range(24):
+            for symbol in self.symbols:
+                seed.append(frame(symbol, hour))
+        result = ingest_offline_ws_batch(
+            frames=tuple(seed), scope=self.scope, journal=store,
+        )
+        self.assertEqual(result.appended, SIZE * 24)
+        self.cycle = PublicPaperCycle(
+            scope=self.scope, closed_journal_path=self.closed,
+            private_paper_directory=self.paper, config=SETTINGS,
+            contract_for_quote=contract, risk_for_quote=paper_risk,
+        )
+
+    def run_streams(self, *, omit_close=None, omit_ack=False, allow=True):
+        ready = threading.Event()
+        kc, tc = Clock(), Clock()
+        last = [frame(s, 24) for s in self.symbols if s != omit_close]
+        kframes = ([] if omit_ack else [(ack(), RECEIPT)]) + last
+        tframes = [
+            (ack("cia-ticker-1"), RECEIPT),
+            (market_quote(ts=RECEIPT - 100, cs=10), RECEIPT),
+            (market_quote(ts=RECEIPT + 400, cs=11), RECEIPT + 500),
+            (market_quote(ts=RECEIPT + 1100, cs=12, mark="107.3"), RECEIPT + 1200),
+        ]
+        ks = Session(kc, kframes, signal_done=ready)
+        ts = Session(tc, tframes, after_close=ready)
+        with patch(
+            "socket.create_connection",
+            side_effect=AssertionError("offline two-stream test must not connect network"),
+        ):
+            report = run_finite_n50_paper_streams(
+                cycle=self.cycle, scope=self.scope,
+                journal_path=self.closed, budget=BUDGET,
+                allow_public_network=allow,
+                allow_public_websocket=allow,
+                confirm_personal_readonly_research=allow,
+                confirm_region_eligible=allow,
+                confirm_public_data_rights=allow,
+                enable_hypothetical_paper_cycle=allow,
+                kline_session_factory=lambda: ks,
+                ticker_session_factory=lambda: ts,
+                kline_clock_args={
+                    "clock": kc.monotonic, "wall_ms": kc.wall, "sleeper": kc.sleeper,
+                },
+                ticker_clock_args={
+                    "clock": tc.monotonic, "wall_ms": tc.wall, "sleeper": tc.sleeper,
+                },
+            )
+        return report, ks, ts
+
+    def test_parallel_50_kline_and_ticker_ws_to_paper_and_partial(self):
+        result, ks, ts = self.run_streams()
+        self.assertTrue(ks.closed)
+        self.assertTrue(ts.closed)
+        self.assertEqual(len(ks.sent[0]["args"]), SIZE)
+        self.assertEqual(len(ts.sent[0]["args"]), SIZE)
+        self.assertEqual(result["status"], "finite_public_paper_research_closed")
+        self.assertEqual(result["data_mode"], "injected_offline_protocol_replay")
+        self.assertEqual(result["kline_acks"], 1)
+        self.assertEqual(result["ticker_acks"], 1)
+        self.assertEqual(result["accepted_closed_callbacks"], SIZE)
+        self.assertEqual(result["accepted_public_ticker_callbacks"], 3)
+        self.assertEqual(result["paper_cycle"]["held_paper_contract_count"], 1)
+        self.assertEqual(result["paper_cycle"]["pending_paper_open_count"], 0)
+        route = load_private_paper_routes(self.paper)
+        pos = SQLitePaperPositionJournal(self.paper / "paper-positions.sqlite").load(
+            route.monitored_position_ids[0],
+        )
+        self.assertEqual(pos.confirmed_remaining_units, Decimal("2"))
+        self.assertEqual(pos.reserved_unfilled_units, Decimal("0.6"))
+        self.assertEqual(pos.filled_exit_units, 0)
+        self.assertFalse(result["orders_sent"])
+        self.assertFalse(result["session_continues_after_return"])
+        self.assertFalse(result["marketwide_n50_verified"])
+
+    def test_missing_one_close_abstains_openings_without_forging_cohort(self):
+        report, _, _ = self.run_streams(omit_close="BTCUSDT")
+        self.assertFalse(report["paper_cycle"]["research_cohort_complete"])
+        self.assertEqual(report["paper_cycle"]["pending_paper_open_count"], 0)
+        self.assertEqual(report["paper_cycle"]["held_paper_contract_count"], 0)
+        self.assertFalse((self.paper / "paper-routes.json").exists())
+
+    def test_denied_without_explicit_optins_no_sockets(self):
+        report, k, t = self.run_streams(allow=False)
+        self.assertEqual(report["status"], "six_explicit_paper_public_data_optins_required")
+        self.assertFalse(k.sent)
+        self.assertFalse(t.sent)
+        self.assertFalse(report["network_attempted"])
+
+    def test_malformed_subscription_ack_never_accepts_kline_signal(self):
+        report, k, _ = self.run_streams(omit_ack=True)
+        self.assertEqual(report["kline_acks"], 0)
+        self.assertEqual(report["accepted_closed_callbacks"], 0)
+        self.assertEqual(report["paper_cycle"]["held_paper_contract_count"], 0)
+        self.assertFalse(report["orders_sent"])
+
+
+if __name__ == "__main__":
+    unittest.main()
