@@ -252,9 +252,13 @@ def select_dynamic_public_n50(
         selected[-1] = "BTCUSDT"
     # The currently selected set never hides BTC context even if the BTC
     # rolling ticker temporarily falls below top50 (49+BTC context).
+    # EPOCH identity must not change on every ticker refresh or change in
+    # rank order: D434 requires an unchanged cohort/specification during
+    # its 24h confirmed-candle history window. A membership/spec change
+    # starts a new journal epoch instead of relabelling old candles.
     snapshot = sha256(json.dumps([
-        ticker_received_at_ms, tuple(selected),
-        tuple((s, str(turnover[s]), list(map(str, admitted[s]))) for s in selected),
+        "d451-public-provisional-epoch-membership-v1",
+        tuple((s, list(map(str, admitted[s]))) for s in sorted(selected)),
     ], separators=(",", ":"), ensure_ascii=True).encode("ascii")).hexdigest()
     members = tuple(ProvisionalVolumeMember(
         symbol, admitted[symbol][0], turnover[symbol],
