@@ -25,8 +25,12 @@ class OwnerPaperPositionsUnavailable(Exception):
     """Private source rejected; never expose owner paths or position IDs."""
 
 
-def read_owner_paper_positions(*, directory: Path) -> dict:
-    """Map the existing D425 route manifest to D407's original UI contract."""
+def read_owner_paper_positions(
+    *, directory: Path, include_conditional_pnl: bool = False,
+) -> dict:
+    """Map D425 positions to J5; optional D454 prices never imply real PnL."""
+    if type(include_conditional_pnl) is not bool:
+        raise OwnerPaperPositionsUnavailable("owner_paper_positions_unavailable")
     try:
         home = _private_directory(directory)
         router = load_private_paper_routes(home)
@@ -67,6 +71,25 @@ def read_owner_paper_positions(*, directory: Path) -> dict:
                 or type(report.get("positions")) is not list
                 or len(report["positions"]) != len(position_ids)):
             raise DataValidationError("D446 viewer contract invalid")
+        if include_conditional_pnl:
+            from .j4_paper_conditional_pnl_d454 import (
+                conditional_paper_pnl_from_existing_fills,
+            )
+            # Only D448 observed PAPER positions possess a D448 immutable
+            # fee/stop plan. Legacy positions retain their ordinary J5
+            # view with an explicit unsupported/not-priced indicator.
+            for position in report["positions"]:
+                pid = position["position_id"]
+                if pid.startswith("fixture_d448_pos_"):
+                    projection = conditional_paper_pnl_from_existing_fills(
+                        private_paper_directory=home, position_id=pid,
+                    )
+                    position["conditional_paper_pnl"] = projection.sanitized_report()
+                else:
+                    position["conditional_paper_pnl"] = {
+                        "status": "legacy_paper_position_without_priced_strategy",
+                        "true_realized_net_pnl_available": False,
+                    }
         return report
     except (DataValidationError, OSError, UnicodeError, ValueError, TypeError,
             OverflowError):
