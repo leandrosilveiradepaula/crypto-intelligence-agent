@@ -61,7 +61,7 @@ def _d(value, label: str) -> Decimal:
 
 def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
     """No defaults or float conversion for financial settings; 0600 only."""
-    if (type(path) is not Path or not path.is_absolute()
+    if (not isinstance(path, Path) or not path.is_absolute()
             or path.name.startswith(".") or path.suffix != ".json"):
         raise DataValidationError("D453 absolute ordinary owner JSON policy required")
     home = _private_directory(path.parent)
