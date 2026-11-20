@@ -197,8 +197,8 @@ class DynamicN50EpochTests(TestCase):
             # the existing J2 epoch or reinterpret any older candle.
             pages, tick = scenario()
             tick = deepcopy(tick)
-            tick["result"]["list"][1]["turnover24h"] = "9000"
-            tick["result"]["list"][2]["turnover24h"] = "9500"
+            tick["result"]["list"][1]["turnover24h"] = "9997"
+            tick["result"]["list"][2]["turnover24h"] = "9999"
             later = selected(pages=pages, ticks=tick,
                              at=NOW + 1200,
                              received=(NOW + 900, NOW + 1000))
