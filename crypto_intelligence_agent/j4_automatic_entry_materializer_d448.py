@@ -28,7 +28,10 @@ from .paper_margin_receipt import PaperMarginIntentReceipt
 from .paper_order_store import SQLitePaperOrderJournal
 from .paper_position_reservations import SQLitePaperPositionJournal
 from .paper_intrahour_target_step_d387 import _levels_valid
-from .synthetic_cost_scenarios import BPS_DENOMINATOR, _rate
+from .synthetic_cost_scenarios import (
+    BPS_DENOMINATOR, SyntheticCostScenario, _rate, evaluate_synthetic_costs,
+)
+from .synthetic_intrabar_barriers import ResearchDirection
 from .synthetic_manual_exit_replay import _EXACT_CONTEXT, _utc_ms
 from .synthetic_order_lifecycle import (
     PaperOrderEffect, PaperOrderEvent, PaperOrderEventKind,
@@ -82,6 +85,10 @@ class PaperEntryExitPolicy:
     tranches: tuple[SyntheticExitTranche, ...]
     runner_floor_percent: Decimal
     synthetic_lot_step_units: Decimal
+    entry_fee_bps: Decimal
+    exit_fee_bps: Decimal
+    entry_adverse_slippage_bps: Decimal
+    exit_adverse_slippage_bps: Decimal
     max_spread_bps: Decimal = Decimal("30")
     max_book_participation_bps: Decimal = Decimal("2500")
     min_fill_latency_ms: int = 150
@@ -94,8 +101,11 @@ class PaperEntryExitPolicy:
                 or len(self.tranches) != len(self.target_distances_bps)
                 or any(type(t) is not SyntheticExitTranche for t in self.tranches)):
             raise DataValidationError("D448 exit tranches/targets inconsistent")
-        for field in ("stop_distance_bps", "max_spread_bps",
-                      "max_book_participation_bps"):
+        for field in (
+            "stop_distance_bps", "max_spread_bps",
+            "max_book_participation_bps", "entry_fee_bps", "exit_fee_bps",
+            "entry_adverse_slippage_bps", "exit_adverse_slippage_bps",
+        ):
             _rate(getattr(self, field), field, signed=False)
         for target in self.target_distances_bps:
             _rate(target, "target_distance", signed=False)
@@ -105,6 +115,10 @@ class PaperEntryExitPolicy:
                     self.target_distances_bps, self.target_distances_bps[1:]))
                 or not 0 < self.max_book_participation_bps <= 10_000
                 or self.max_spread_bps > 100
+                or any(getattr(self, name) > 1_000 for name in (
+                    "entry_fee_bps", "exit_fee_bps", "entry_adverse_slippage_bps",
+                    "exit_adverse_slippage_bps",
+                ))
                 or type(self.min_fill_latency_ms) is not int
                 or not 1 <= self.min_fill_latency_ms <= 60_000
                 or type(self.max_fill_wait_ms) is not int
@@ -127,6 +141,10 @@ def _policy_payload(policy: PaperEntryExitPolicy) -> dict:
         ],
         "runner_floor_percent": str(policy.runner_floor_percent),
         "synthetic_lot_step_units": str(policy.synthetic_lot_step_units),
+        "entry_fee_bps": str(policy.entry_fee_bps),
+        "exit_fee_bps": str(policy.exit_fee_bps),
+        "entry_adverse_slippage_bps": str(policy.entry_adverse_slippage_bps),
+        "exit_adverse_slippage_bps": str(policy.exit_adverse_slippage_bps),
         "max_spread_bps": str(policy.max_spread_bps),
         "max_book_participation_bps": str(policy.max_book_participation_bps),
         "min_fill_latency_ms": policy.min_fill_latency_ms,
@@ -138,7 +156,9 @@ def _read_policy(value: object) -> PaperEntryExitPolicy:
     required = {
         "stop_distance_bps", "target_distances_bps", "tranches",
         "runner_floor_percent", "synthetic_lot_step_units", "max_spread_bps",
-        "max_book_participation_bps", "min_fill_latency_ms", "max_fill_wait_ms",
+        "entry_fee_bps", "exit_fee_bps", "entry_adverse_slippage_bps",
+        "exit_adverse_slippage_bps", "max_book_participation_bps",
+        "min_fill_latency_ms", "max_fill_wait_ms",
     }
     if type(value) is not dict or set(value) != required:
         raise DataValidationError("D448 immutable entry policy schema invalid")
@@ -167,6 +187,10 @@ def _read_policy(value: object) -> PaperEntryExitPolicy:
             ),
             runner_floor_percent=d(value["runner_floor_percent"]),
             synthetic_lot_step_units=d(value["synthetic_lot_step_units"]),
+            entry_fee_bps=d(value["entry_fee_bps"]),
+            exit_fee_bps=d(value["exit_fee_bps"]),
+            entry_adverse_slippage_bps=d(value["entry_adverse_slippage_bps"]),
+            exit_adverse_slippage_bps=d(value["exit_adverse_slippage_bps"]),
             max_spread_bps=d(value["max_spread_bps"]),
             max_book_participation_bps=d(value["max_book_participation_bps"]),
             min_fill_latency_ms=value["min_fill_latency_ms"],
@@ -366,6 +390,46 @@ def arm_observed_paper_entry(
         os.close(lock)
 
 
+
+def _net_target_and_stop_buffer(
+    planned: dict, policy: PaperEntryExitPolicy, quote: BybitTickerQuote,
+    units: Decimal, margin_quote: Decimal,
+) -> tuple[Decimal, Decimal]:
+    """Recheck the fixed D447-reference exits against the LATER entry BBO.
+
+    Never use a signal-close price as an executable fill. Stop at its exact
+    hypothetical level is optimistic: zero/negative buffer is a veto, not a
+    liquidity or liquidation approval.
+    """
+    long = planned["side"] == "LONG"
+    direction = ResearchDirection.LONG if long else ResearchDirection.SHORT
+    with localcontext(_EXACT_CONTEXT):
+        entry_price = quote.ask_price if long else quote.bid_price
+        target = Decimal(planned["target_prices"][0])
+        stop = Decimal(planned["stop_mark_price"])
+        gross_first = target - entry_price if long else entry_price - target
+        loss_per_unit = entry_price - stop if long else stop - entry_price
+        if gross_first <= 0 or loss_per_unit <= 0:
+            return Decimal(-1), Decimal(-1)
+        first = policy.tranches[0]
+        first_qty = units * first.percent / Decimal(100)
+        def cost(qty: Decimal, exit_price: Decimal) -> Decimal:
+            return evaluate_synthetic_costs(SyntheticCostScenario(
+                direction=direction,
+                entry_at_ms=quote.received_at_ms,
+                exit_at_ms=quote.received_at_ms + 1,
+                entry_hypothetical_notional_quote_units=qty * entry_price,
+                exit_hypothetical_notional_quote_units=qty * exit_price,
+                entry_fee_bps=policy.entry_fee_bps,
+                exit_fee_bps=policy.exit_fee_bps,
+                entry_adverse_slippage_bps=policy.entry_adverse_slippage_bps,
+                exit_adverse_slippage_bps=policy.exit_adverse_slippage_bps,
+            )).total_signed_cost_units
+        net_first = first_qty * gross_first - cost(first_qty, target)
+        stop_buffer = margin_quote - units * loss_per_unit - cost(units, stop)
+        return net_first, stop_buffer
+
+
 def _read_routes(home: Path) -> list[dict]:
     target = home / _MANIFEST
     if not target.exists() and not target.is_symlink():
@@ -496,6 +560,14 @@ def materialize_observed_paper_entry(
                 )
                 if simulated_available < entry.intent.requested_units:
                     return _report("paper_entry_top_book_liquidity_veto")
+            target_net, stop_buffer = _net_target_and_stop_buffer(
+                planned, policy, quote, entry.intent.requested_units,
+                receipt.requested_margin_quote,
+            )
+            if target_net <= 0:
+                return _report("paper_entry_target_after_costs_veto")
+            if stop_buffer <= 0:
+                return _report("paper_entry_stop_margin_veto")
             # Full-fills only: the existing AUTO4 opening record has immutable
             # opening events, so no partial/final double registration is possible.
             token = sha256(_json([
