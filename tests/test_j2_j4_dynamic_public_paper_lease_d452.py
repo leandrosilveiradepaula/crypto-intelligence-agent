@@ -79,7 +79,14 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         ksession = Session(kc, frames)
         ticker_frames = [
             (ack("cia-ticker-1"), received - 100),
-            (market_quote(ts=received - 100, cs=10), received),
+            (json.dumps({
+                **json.loads(market_quote(ts=received - 100, cs=10, mark="100")),
+                "topic": "tickers.ALT1USDT",
+                "data": {
+                    **json.loads(market_quote(ts=received - 100, cs=10, mark="100"))["data"],
+                    "symbol": "ALT1USDT",
+                },
+            }), received),
         ]
         tsession = Session(tc, ticker_frames)
         args = dict(
