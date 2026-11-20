@@ -583,3 +583,8 @@ D436 recebe closes confirmados no journal J2; D435 pesquisa hipótese causal; D4
 ## J2/J3/J4/J5 — D449/D450: integração de dois feeds públicos a PAPER
 
 D449 recebe closes J2 auditados dos contratos da mesma hora (1..50), compara com BTC e conduz a hipótese D435 às telas de custo J3 e risco D447, intenção PAPER AUTO2, BBO posterior D448 e posição AUTO4 com plano de saídas J4. Prioriza o ticker das posições mantidas para stops e parciais, independentemente da disponibilidade dos 49 demais ativos. D450 usa supervisores de kline.60 e tickers.* existentes em paralelo, sob opt-ins e lease finito. A coorte dinâmica real e os dados de risco/fees/funding/liquidação ainda não foram conectados como serviço na VPS, logo não há trading real ou produto 24x7. A prova atual é protocol replay com 50 membros, sem websocket genuíno nesta unidade.
+
+
+## D451/D452 — evolução contínua de J2 e J4 sem reiniciar J1
+
+J2 obtém N50 **provisório** a partir de Bybit instruments-info paginado e ticker rolling turnover24h, com BTC sempre como contexto. Persistência de coorte por membros e filtros protege o histórico de 24h contra reset de ranking e impede misturar epochs; atualizações de composição criam novo journal e precisam de novo warmup. J4 substitui observação sempre-zero de tests pela reconstrução de risco dos diários AUTO2/AUTO4 e mark público posterior. A ligação D450 seleciona ranking, abre duas streams públicas em paralelo e conduz hipóteses D435/D447/D448 a PAPER e à tela J5. Ainda sem serviço VPS, captura pública contínua, PnL líquido validado, funding/liquidação ou ordens. Ver docs/J2_DYNAMIC_PUBLIC_N50_PAPER_D451_D452.md.

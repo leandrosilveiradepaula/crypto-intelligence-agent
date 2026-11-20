@@ -674,3 +674,8 @@ D418 continua sendo o operador finito read-only de mercado Bybit sobre N50 J1. O
 ## D449/D450 — ingresso de mercado e ciclo PAPER coordenado
 
 D449 acrescenta camada de orquestração fina em cima de J2 D434/D435, J3 PRE2/PRE11, D447/D448, AUTO2/AUTO4, D389/D391/D425 e J5. D450 combina, em sessões PUBLIC ONLY separadas e simultâneas, o coletor WS de velas fechadas e o ticker D385/D386 pós-ACK. A seleção N50 não é recriada por esta camada: é dependência tipada externa, não assume classificação de crypto ou fonte atual autenticada. Caminho de saída tem prioridade sobre admissão de novas posições; falhas na coorte invalidam somente novos sinais, sem declarar stops nativos. Nenhum livro financeiro duplicado, credenciais ou mudanças no coletor J1. Ver docs/J2_J4_PUBLIC_N50_PAPER_D450.md.
+
+
+## D451/D452 — camada de seleção dinâmica e risco PAPER baseado em diários
+
+Nova fronteira J2: Bybit REST GET público, seleção provisória turnover24h, scope epoch durável J2 independente de J1. D450 recebe scope pinned e inicia em paralelo os coletores D434/kline e D385/D386/ticker. D449 aplica regime/força BTC e entrada D447/PRE11, D448 simula FILL explícito, AUTO4/D425 conservam stops/parciais e J5 lê o mesmo ledger. D452 injeta risco do replay read-only AUTO2/AUTO4 e mark público fresco; não há subsistema financeiro paralelo nem aceitação de PnL sem custo/execução. Em caso de mudança de N50, novo journal é criado mas posições abertas continuam monitoradas como held extras. Sem trade privado ou coleta J1. Doc docs/J2_DYNAMIC_PUBLIC_N50_PAPER_D451_D452.md.
