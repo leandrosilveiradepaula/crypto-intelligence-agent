@@ -21,7 +21,9 @@ from crypto_intelligence_agent.bybit_public_j1_transport import (
 from crypto_intelligence_agent.j2_j4_dual_public_supervisor_d450 import (
     run_dynamic_public_paper_lease_once,
 )
-from test_j2_dynamic_public_n50_d451 import NOW, scenario
+from test_j2_dynamic_public_n50_d451 import NOW, scenario, selected
+from test_j2_rest_n50_history_d461 import historical_payload
+from crypto_intelligence_agent.j2_rest_n50_history_d461 import capture_rest_n50_24h
 from test_j2_j4_dual_public_supervisor_d450 import (
     BUDGET, Clock, Session, ack, market_quote,
 )
@@ -55,8 +57,9 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
 
         self.client = BoundedBybitPublicClient(transport=transport)
 
-    def run_once(self, *, hour=0, allow=True):
-        opened = ((NOW // HOUR_MS) + 1 + hour) * HOUR_MS
+    def run_once(self, *, hour=0, allow=True,
+                 rest_warmup_filename=None):
+        opened = ((NOW // HOUR_MS) + (0 if rest_warmup_filename else 1) + hour) * HOUR_MS
         closed = opened + HOUR_MS - 1
         received = closed + 2001
         members = ["BTCUSDT"] + [f"ALT{i}USDT" for i in range(1, 60)]
@@ -109,6 +112,7 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
             ticker_clock_args={
                 "clock": tc.monotonic, "wall_ms": tc.wall, "sleeper": tc.sleeper,
             },
+            rest_warmup_filename=rest_warmup_filename,
         )
         with patch(
             "socket.create_connection",
@@ -148,6 +152,46 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 6)
         self.assertEqual(second["dual_public_streams"]["paper_cycle"]["held_paper_contract_count"], 0)
         self.assertFalse(second["orders_sent"])
+
+    def test_50_member_real_modules_join_24_rest_plus_confirmed_ws_without_fake_24h(self):
+        from urllib.parse import urlsplit, parse_qs
+        old_replies = self.responses.copy()
+        def extended_transport(url, max_size):
+            self.calls.append(url)
+            if "/v5/market/kline?" in url:
+                q = parse_qs(urlsplit(url).query)
+                return json.dumps(historical_payload(
+                    q["symbol"][0], int(q["start"][0]), int(q["end"][0]) + 1,
+                )).encode("ascii")
+            return json.dumps(old_replies[url]).encode("ascii")
+        self.client = BoundedBybitPublicClient(transport=extended_transport)
+        with patch("socket.create_connection",
+                   side_effect=AssertionError("D462 all WS and REST are injected")):
+            history = capture_rest_n50_24h(
+                snapshot=selected(), private_j2_directory=self.j2,
+                client=self.client, wall_ms=lambda:NOW+1500,
+                allow_public_network=True,
+                confirm_personal_readonly_research=True,
+                confirm_region_eligible=True,
+                confirm_public_data_rights=True,
+            )
+        self.assertEqual(len(history.series),50)
+        result, kline, ticker = self.run_once(
+            rest_warmup_filename=history.snapshot_file.name,
+        )
+        self.assertEqual(result["status"],"finite_public_paper_research_closed")
+        self.assertTrue(result["preclosed_rest_history_warmup_enabled"])
+        self.assertEqual(result["dual_public_streams"]["accepted_closed_callbacks"],50)
+        counts = result["dual_public_streams"]["paper_cycle"]["event_counts"]
+        self.assertEqual(counts.get("cohort_researched"),1)
+        self.assertTrue(result["dual_public_streams"]["paper_cycle"]["historical_rest_warmup_enabled"])
+        self.assertFalse(result["orders_sent"])
+        self.assertFalse(result["public_feed_confirmed_24h_continuous"])
+        self.assertEqual(len(tuple(self.j2.glob("rest-history-d461-*.json"))),1)
+        self.assertEqual(len(tuple(self.j2.glob("n50-d451-*.sqlite"))),1)
+        with sqlite3.connect(next(self.j2.glob("n50-d451-*.sqlite"))) as db:
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM confirmed").fetchone()[0],50)
+        self.assertEqual(len(self.calls),56)  # 50 REST+3 fresh N50+3 N50 replay
 
     def test_missing_explicit_operator_optin_is_zero_io(self):
         denied, k, t = self.run_once(allow=False)
