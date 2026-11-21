@@ -243,6 +243,7 @@ class DurablePaperRiskSource:
 def build_dynamic_public_paper_cycle(
     *, snapshot, closed_journal_path: Path,
     private_paper_directory: Path, config,
+    historical_rest_warmup=None,
 ):
     """Wire D451 public metadata and D452 REAL local risk into D449.
 
@@ -264,6 +265,7 @@ def build_dynamic_public_paper_cycle(
         risk_for_quote=lambda _: (_ for _ in ()).throw(
             DataGapError("D452 risk source not initialized")
         ),
+        historical_rest_warmup=historical_rest_warmup,
     )
     risk = DurablePaperRiskSource(
         private_paper_directory=private_paper_directory,
