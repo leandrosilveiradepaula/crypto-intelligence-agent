@@ -352,8 +352,10 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
                             "sleeper": tc.sleeper,
                         },
                     )
-                self.assertTrue(ks.closed)
-                self.assertTrue(ts.closed)
+                # A peer may be stopped before its socket is ever opened.
+                # An opened socket must be closed on return.
+                self.assertTrue(ks.closed or not ks.sent)
+                self.assertTrue(ts.closed or not ts.sent)
                 self.assertEqual(
                     report["status"], "finite_public_paper_research_degraded",
                 )
