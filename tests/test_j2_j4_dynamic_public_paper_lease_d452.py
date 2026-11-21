@@ -59,7 +59,8 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.client = BoundedBybitPublicClient(transport=transport)
 
     def run_once(self, *, hour=0, allow=True,
-                 rest_warmup_filename=None, auto_capture_rest_warmup=False):
+                 rest_warmup_filename=None, auto_capture_rest_warmup=False,
+                 omit_close=None):
         opened = ((NOW // HOUR_MS) + (
             0 if rest_warmup_filename or auto_capture_rest_warmup else 1
         ) + hour) * HOUR_MS
@@ -71,6 +72,8 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         chosen = members[:50]
         frames = [(ack(), received - 100)]
         for symbol in chosen:
+            if symbol == omit_close:
+                continue
             frames.append((json.dumps({
                 "topic": "kline.60." + symbol, "type": "snapshot",
                 "ts": closed + 1000,
