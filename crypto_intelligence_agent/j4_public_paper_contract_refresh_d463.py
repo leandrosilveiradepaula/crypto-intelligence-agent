@@ -141,7 +141,7 @@ class AsyncPublicPaperContractTerms:
         return True
 
     def run(self, stop_event: threading.Event) -> None:
-        if not isinstance(stop_event, threading.Event):
+        if not callable(getattr(stop_event, "is_set", None)) or not callable(getattr(stop_event, "wait", None)):
             raise DataValidationError("D463 bounded lifecycle event required")
         while not stop_event.is_set():
             if not self.refresh_one():
