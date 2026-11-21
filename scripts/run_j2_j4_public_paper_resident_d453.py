@@ -176,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--paper-directory", required=True, type=Path)
     parser.add_argument("--policy-file", required=True, type=Path)
     parser.add_argument("--rest-warmup-filename", type=str)
+    parser.add_argument("--auto-capture-rest-warmup", action="store_true")
     parser.add_argument("--lease-seconds", type=int, default=60)
     parser.add_argument("--max-cycles", type=int, default=None)
     parser.add_argument("--pause-seconds", type=float, default=1.0)
