@@ -89,7 +89,7 @@ def _name(fingerprint: str, until: int) -> str:
     return "rest-history-d461-" + fingerprint[:18] + "-" + str(until) + ".json"
 
 
-def _decode(envelope: dict, *, snapshot: DynamicPublicN50,
+def _decode(envelope: dict, *, snapshot: DynamicPublicN50 | None,
             end_ms: int, path: Path | None) -> RestN50History:
     if (type(envelope) is not dict or set(envelope) != {"schema", "payload", "sha256"}
             or envelope["schema"] != _SCHEMA
@@ -101,16 +101,29 @@ def _decode(envelope: dict, *, snapshot: DynamicPublicN50,
     p = envelope["payload"]
     if (set(p) != {"cohort_sha256", "window_end_ms", "captured_at_ms",
                     "member_symbols", "source_mode", "rows"}
-            or p["cohort_sha256"] != snapshot.fingerprint_sha256
+            or type(p["cohort_sha256"]) is not str
+            or _DIGEST.fullmatch(p["cohort_sha256"]) is None
             or p["window_end_ms"] != end_ms
             or type(p["captured_at_ms"]) is not int
             or not end_ms <= p["captured_at_ms"] < end_ms + HOUR_MS
-            or p["source_mode"] != snapshot.source_mode
+            or p["source_mode"] not in (
+                "public_rest_observed_unverified",
+                "injected_offline_protocol_replay",
+            )
             or type(p["member_symbols"]) is not list
-            or p["member_symbols"] != sorted(snapshot.symbols)
+            or len(p["member_symbols"]) != 50
+            or any(type(x) is not str for x in p["member_symbols"])
+            or len(set(p["member_symbols"])) != 50
+            or p["member_symbols"] != sorted(p["member_symbols"])
             or type(p["rows"]) is not dict
-            or set(p["rows"]) != set(snapshot.symbols)
-            or len(p["rows"]) != 50):
+            or set(p["rows"]) != set(p["member_symbols"])
+            or len(p["rows"]) != 50
+            or (snapshot is not None and (
+                p["cohort_sha256"] != snapshot.fingerprint_sha256
+                or p["source_mode"] != snapshot.source_mode
+                or p["member_symbols"] != sorted(snapshot.symbols)
+                or snapshot.scope.observed_at_ms > p["captured_at_ms"]
+            ))):
         raise DataGapError("D461 REST history scope/window changed")
     series = []
     for symbol in p["member_symbols"]:
@@ -125,7 +138,13 @@ def _decode(envelope: dict, *, snapshot: DynamicPublicN50,
             }},
             symbol=symbol, quote_currency="USDT",
             contract_type="LinearPerpetual", contract_status="Trading",
-            contract_observed_at_ms=snapshot.scope.observed_at_ms,
+            # A frozen historical read must NOT be re-dated to a fresh
+            # current ticker catalog: do not rely on live N50 membership for
+            # replays. Historical-only quality never authorizes AUTO2.
+            contract_observed_at_ms=(
+                snapshot.scope.observed_at_ms if snapshot is not None
+                else p["captured_at_ms"]
+            ),
             observed_at_ms=p["captured_at_ms"],
             max_contract_age_ms=86_400_000,
             interval="1h", start_open_ms=end_ms-_WINDOW*HOUR_MS,
@@ -142,8 +161,8 @@ def _decode(envelope: dict, *, snapshot: DynamicPublicN50,
         ) for bar in page.candles)
         series.append((symbol, bars))
     return RestN50History(
-        snapshot.fingerprint_sha256, end_ms, p["captured_at_ms"],
-        envelope["sha256"], snapshot.source_mode, tuple(series), path,
+        p["cohort_sha256"], end_ms, p["captured_at_ms"],
+        envelope["sha256"], p["source_mode"], tuple(series), path,
     )
 
 
@@ -348,3 +367,35 @@ def research_rest_n50_24h(
         "source_authenticated": False,
         "venue_trading_approved": False,
     }
+
+
+def reopen_frozen_rest_n50_for_research(
+    *, private_j2_directory: Path, filename: str,
+) -> RestN50History:
+    """Offline research replay after changing N50 membership or REST clocks.
+
+    The immutable original snapshot remains the source of its own exact
+    cohort, end hour, checksum, 50x24 rows and historical-only quality.
+    Never supplies an instrument contract or a WS-confirmed receipt.
+    """
+    if (not isinstance(private_j2_directory, Path)
+            or type(filename) is not str
+            or re.fullmatch(r"rest-history-d461-[0-9a-f]{18}-[0-9]{13}[.]json",
+                            filename) is None):
+        raise DataValidationError("D461 exact frozen owner REST filename required")
+    home = _private_directory(private_j2_directory)
+    raw = _read_owner_bytes(home, filename, _MAX_BYTES)
+    try:
+        envelope = json.loads(raw.decode("ascii"), object_pairs_hook=_unique)
+    except (ValueError, UnicodeError, TypeError):
+        raise DataGapError("D461 frozen historical REST JSON corrupt") from None
+    p = envelope.get("payload") if type(envelope) is dict else None
+    if (type(p) is not dict
+            or type(p.get("cohort_sha256")) is not str
+            or type(p.get("window_end_ms")) is not int
+            or _name(p["cohort_sha256"], p["window_end_ms"]) != filename):
+        raise DataGapError("D461 frozen REST archive identity mismatch")
+    return _decode(
+        envelope, snapshot=None, end_ms=p["window_end_ms"],
+        path=home / filename,
+    )
