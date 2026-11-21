@@ -135,6 +135,36 @@ for _label, _nonnegative in (
          or _label in ("base-volume", "quote-turnover") else "ws_open_ohlcv_invalid")
 del _label, _nonnegative
 
+# D465: these are literal enum-style errors emitted by our OWN bounded
+# public-frame validator, never provider text. The previous generic
+# "invalid_or_gapped_market_data" erased the reason when a real 50-topic
+# hourly session stopped after one confirmed close (D464).
+# This changes telemetry ONLY; rejecting the offending frame remains strict.
+for _local_reason in (
+    "ws_owner_clock_invalid",
+    "ws_kline_root_keys_invalid",
+    "ws_kline_topic_invalid",
+    "ws_kline_type_invalid",
+    "ws_kline_rows_type_invalid",
+    "ws_kline_rows_overflow_invalid",
+    "ws_kline_rows_nonobject_invalid",
+    "ws_clock_invalid",
+    "ws_kline_fields_invalid",
+    "ws_time_type_invalid",
+    "ws_clock_grid_invalid",
+    "ws_trade_stamp_diagnostic_flag_invalid",
+    "ws_clock_trade_stamp_invalid",
+    "ws_clock_server_ahead_invalid",
+    "ws_clock_server_stale_invalid",
+    "ws_ohlc_invalid",
+    "ws_confirm_type_invalid",
+    "ws_clock_closed_before_server_end",
+    "ws_clock_closed_before_local_end",
+    "ws_clock_closed_too_old",
+):
+    _SAFE_REJECTION_CLASSES[_local_reason] = _local_reason
+del _local_reason
+
 
 def _safe_ws_failure_class(error: BaseException) -> str:
     """Whitelist reasons for owner ops; never serialize raw exception text."""
