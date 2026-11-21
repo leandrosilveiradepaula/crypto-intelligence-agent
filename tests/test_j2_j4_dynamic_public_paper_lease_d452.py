@@ -59,8 +59,10 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.client = BoundedBybitPublicClient(transport=transport)
 
     def run_once(self, *, hour=0, allow=True,
-                 rest_warmup_filename=None):
-        opened = ((NOW // HOUR_MS) + (0 if rest_warmup_filename else 1) + hour) * HOUR_MS
+                 rest_warmup_filename=None, auto_capture_rest_warmup=False):
+        opened = ((NOW // HOUR_MS) + (
+            0 if rest_warmup_filename or auto_capture_rest_warmup else 1
+        ) + hour) * HOUR_MS
         closed = opened + HOUR_MS - 1
         received = closed + 2001
         members = ["BTCUSDT"] + [f"ALT{i}USDT" for i in range(1, 60)]
@@ -95,7 +97,9 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         ]
         tsession = Session(
             tc, ticker_frames,
-            after_close=ready if rest_warmup_filename else None,
+            after_close=ready if (
+                rest_warmup_filename or auto_capture_rest_warmup
+            ) else None,
         )
         args = dict(
             private_j2_directory=self.j2,
@@ -118,6 +122,7 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
                 "clock": tc.monotonic, "wall_ms": tc.wall, "sleeper": tc.sleeper,
             },
             rest_warmup_filename=rest_warmup_filename,
+            auto_capture_rest_warmup=auto_capture_rest_warmup,
         )
         with patch(
             "socket.create_connection",
@@ -220,6 +225,30 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         with sqlite3.connect(next(self.j2.glob("n50-d451-*.sqlite"))) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM confirmed").fetchone()[0],50)
         self.assertEqual(len(self.calls),53)  # 50 historical REST + 3 new N50 selection
+
+    def test_one_command_auto_selects_and_captures_rest_before_ws_closed_paper(self):
+        from urllib.parse import urlsplit, parse_qs
+        existing = self.responses.copy()
+        def complete_transport(url, max_size):
+            self.calls.append(url)
+            if "/v5/market/kline?" in url:
+                args = parse_qs(urlsplit(url).query)
+                return json.dumps(historical_payload(
+                    args["symbol"][0],
+                    int(args["start"][0]), int(args["end"][0])+1,
+                )).encode("ascii")
+            return json.dumps(existing[url]).encode("ascii")
+        self.client = BoundedBybitPublicClient(transport=complete_transport)
+        result, ks, ts = self.run_once(auto_capture_rest_warmup=True)
+        self.assertEqual(result["status"], "finite_public_paper_research_closed")
+        self.assertTrue(result["preclosed_rest_history_warmup_enabled"])
+        self.assertEqual(result["dual_public_streams"]["accepted_closed_callbacks"],50)
+        self.assertEqual(result["dual_public_streams"]["paper_cycle"]["event_counts"].get(
+            "cohort_researched"),1)
+        self.assertEqual(len(self.calls),53)
+        self.assertEqual(len(tuple(self.j2.glob("rest-history-d461-*.json"))),1)
+        self.assertFalse(result["orders_sent"])
+        self.assertFalse(result["public_feed_confirmed_24h_continuous"])
 
     def test_missing_explicit_operator_optin_is_zero_io(self):
         denied, k, t = self.run_once(allow=False)
