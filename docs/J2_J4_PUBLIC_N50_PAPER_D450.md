@@ -41,3 +41,8 @@ A margem configurada é teto por posição. Decimal reduz quantidade ao múltipl
 - tests/test_j2_j4_public_paper_cycle_d449.py: coorte fixture de 50 contratos, 25 closes, seleção BTC-relative, OPEN -> FILL simulado posterior -> AUTO4 -> parcial e J5, restart sem duplicação, incompletude, staleness e inconsistência econômica.
 - tests/test_j2_j4_dual_public_supervisor_d450.py: supervisores WS reais do código com sockets inteiramente INJETADOS, para 50 tópicos kline e 50 ticker concorrentes; ACK, callback pós-append, falta de fechamento e ausência de ordens.
 - CI Linux/Windows/Chrome no SHA exato é exigência de integração; sockets fictícios não provam a fonte real da Bybit. Custo adicional R$0.
+
+
+## D471 — reconexão de transporte no par público PAPER (21/11/2026)
+
+A D450 anteriormente exigia `max_sessions=1` embora os supervisores J2 e D386 já suportassem reconexão limitada após `OSError/RuntimeError` do transporte. A CLI D453 agora permite `--public-ws-sessions 1..3`, padrão 3, simétrico para kline e ticker, mantendo o mesmo orçamento total da lease e os mesmos diários privados. Somente queda transportável é recuperada; ACK inválido, clocks impossíveis e dados corrompidos continuam falhando fechado. D467 interrompe o par apenas quando um supervisor termina degradado após esgotar as próprias tentativas; nenhuma vela ou preço é inventado. A regressão integrada simula 50 callbacks WS e desconexão de ticker seguida de novo ACK/BBO causal, com PAPER no diário e zero ordens reais. Essa alteração não diagnostica retroativamente a falha D466 nem prova funcionamento contínuo na VPS; ainda exige teste real pós-CI, sem release/J1/custos adicionais.
