@@ -303,6 +303,75 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
         self.assertEqual(report["paper_cycle"]["held_paper_contract_count"], 0)
         self.assertFalse((self.paper / "paper-routes.json").exists())
 
+    def test_failed_public_ws_stops_its_peer_before_full_lease(self):
+        # Both error directions are exercised through the actual supervisor
+        # receive loops and fake sockets. No orders, REST, or live sockets.
+        for failing in ("kline", "ticker"):
+            with self.subTest(failing=failing):
+                kc, tc = Clock(), Clock()
+
+                def bounded_wait(c):
+                    def wait(seconds):
+                        threading.Event().wait(0.001)
+                        c.mono_time += min(seconds, 0.25)
+                        c.utc_ms += int(min(seconds, 0.25) * 1000)
+                    return wait
+
+                kc.sleeper = bounded_wait(kc)
+                tc.sleeper = bounded_wait(tc)
+                bad = ('{"unexpected":true}', RECEIPT + 1)
+                ks = Session(kc, [(ack(), RECEIPT)]
+                             + ([bad] if failing == "kline" else []))
+                ts = Session(tc, [(ack("cia-ticker-1"), RECEIPT)]
+                             + ([bad] if failing == "ticker" else []))
+                budget = DualPaperLeaseBudget(
+                    WSRunBudget(max_sessions=1, max_frames=100000, max_seconds=120),
+                    TickerLeaseBudget(max_sessions=1, max_frames=100000, max_seconds=120),
+                )
+                with patch(
+                    "socket.create_connection",
+                    side_effect=AssertionError("must not access network"),
+                ):
+                    report = run_finite_n50_paper_streams(
+                        cycle=self.cycle, scope=self.scope,
+                        journal_path=self.closed, budget=budget,
+                        allow_public_network=True,
+                        allow_public_websocket=True,
+                        confirm_personal_readonly_research=True,
+                        confirm_region_eligible=True,
+                        confirm_public_data_rights=True,
+                        enable_hypothetical_paper_cycle=True,
+                        kline_session_factory=lambda: ks,
+                        ticker_session_factory=lambda: ts,
+                        kline_clock_args={
+                            "clock": kc.monotonic, "wall_ms": kc.wall,
+                            "sleeper": kc.sleeper,
+                        },
+                        ticker_clock_args={
+                            "clock": tc.monotonic, "wall_ms": tc.wall,
+                            "sleeper": tc.sleeper,
+                        },
+                    )
+                self.assertTrue(ks.closed)
+                self.assertTrue(ts.closed)
+                self.assertEqual(
+                    report["status"], "finite_public_paper_research_degraded",
+                )
+                self.assertEqual(report["accepted_closed_callbacks"], 0)
+                if failing == "kline":
+                    self.assertEqual(
+                        report["ticker_failure_category"],
+                        "paired_public_stream_stopped",
+                    )
+                else:
+                    self.assertEqual(
+                        report["kline_failure_category"],
+                        "paired_public_stream_stopped",
+                    )
+                self.assertLess(kc.mono_time, 10)
+                self.assertLess(tc.mono_time, 10)
+                self.assertFalse(report["orders_sent"])
+
     def test_denied_without_explicit_optins_no_sockets(self):
         report, k, t = self.run_streams(allow=False)
         self.assertEqual(report["status"], "six_explicit_paper_public_data_optins_required")
