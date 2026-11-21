@@ -244,6 +244,7 @@ def build_dynamic_public_paper_cycle(
     *, snapshot, closed_journal_path: Path,
     private_paper_directory: Path, config,
     historical_rest_warmup=None,
+    public_contract_source=None,
 ):
     """Wire D451 public metadata and D452 REAL local risk into D449.
 
@@ -261,7 +262,11 @@ def build_dynamic_public_paper_cycle(
     cycle = PublicPaperCycle(
         scope=snapshot.scope, closed_journal_path=closed_journal_path,
         private_paper_directory=private_paper_directory,
-        config=config, contract_for_quote=snapshot.contract_for_quote,
+        config=config,
+        contract_for_quote=(
+            public_contract_source if public_contract_source is not None
+            else snapshot.contract_for_quote
+        ),
         risk_for_quote=lambda _: (_ for _ in ()).throw(
             DataGapError("D452 risk source not initialized")
         ),
