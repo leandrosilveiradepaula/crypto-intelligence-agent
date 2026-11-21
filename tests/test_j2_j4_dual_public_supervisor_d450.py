@@ -14,7 +14,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
-from crypto_intelligence_agent.bybit_closed_stream_cache import SQLiteOfflineClosedStreamJournal
+from crypto_intelligence_agent.bybit_closed_stream_cache import HOUR_MS, SQLiteOfflineClosedStreamJournal
 from crypto_intelligence_agent.bybit_public_ticker_supervisor_d386 import TickerLeaseBudget
 from crypto_intelligence_agent.bybit_ws_offline_pipeline import ingest_offline_ws_batch
 from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
@@ -144,7 +144,8 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
         )
 
     def run_streams(self, *, omit_close=None, omit_ack=False, allow=True,
-                    risk_source=None, postclose_trade_clock=False):
+                    risk_source=None, postclose_trade_clock=False,
+                    mixed_close_and_open=False):
         ready = threading.Event()
         kc, tc = Clock(), Clock()
         last = [frame(s, 24) for s in self.symbols if s != omit_close]
@@ -159,6 +160,26 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
                 payload["ts"] = row["end"] + 202
                 updated.append((json.dumps(payload), received))
             last = updated
+        if mixed_close_and_open:
+            # D466 reproduces one Bybit snapshot containing a fully closed
+            # previous hour AND the next hour's unconfirmed first tick.
+            # D1 accepts both after full validation but appends only one;
+            # the PAPER callback must only forward the committed row.
+            raw, received = last[0]
+            payload = json.loads(raw)
+            previous = payload["data"][0]
+            next_hour = previous["start"] + HOUR_MS
+            next_row = dict(previous)
+            next_row.update({
+                "start": next_hour, "end": next_hour + HOUR_MS - 1,
+                "timestamp": next_hour + 100,
+                "open": previous["close"], "high": previous["close"],
+                "low": previous["close"], "close": previous["close"],
+                "volume": "0", "turnover": "0", "confirm": False,
+            })
+            payload["ts"] = received - 100
+            payload["data"] = [previous, next_row]
+            last[0] = (json.dumps(payload), received)
         kframes = ([] if omit_ack else [(ack(), RECEIPT)]) + last
         tframes = [
             (ack("cia-ticker-1"), RECEIPT),
@@ -218,6 +239,27 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
         self.assertFalse(result["session_continues_after_return"])
         self.assertFalse(result["marketwide_n50_verified"])
 
+
+    def test_mixed_closed_and_open_rows_still_complete_50_ws_callbacks(self):
+        report, _, _ = self.run_streams(mixed_close_and_open=True)
+        self.assertEqual(report["status"], "finite_public_paper_research_closed")
+        self.assertEqual(report["kline_confirmed_events_appended"], SIZE)
+        self.assertEqual(report["accepted_closed_callbacks"], SIZE)
+        self.assertEqual(report["paper_cycle"]["event_counts"].get(
+            "confirmed_close_observed"), SIZE)
+        self.assertEqual(report["paper_cycle"]["event_counts"].get(
+            "cohort_researched"), 1)
+        self.assertEqual(report["kline_failure_category"], None)
+        self.assertFalse(report["orders_sent"])
+        from sqlite3 import connect
+        with connect(self.closed) as db:
+            rows = db.execute(
+                "select count(*) from confirmed where open_ms=?", (LAST,),
+            ).fetchone()[0]
+            self.assertEqual(rows, SIZE)
+            self.assertEqual(db.execute(
+                "select count(*) from confirmed where open_ms=?", (LAST + HOUR_MS,),
+            ).fetchone()[0], 0)
 
     def test_real_bybit_postclose_trade_clock_is_persisted_and_replayed(self):
         report, _, _ = self.run_streams(postclose_trade_clock=True)
