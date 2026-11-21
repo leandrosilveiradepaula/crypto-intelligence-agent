@@ -301,6 +301,7 @@ def supervise_ws_research(
     allow_declared_gaps: bool = False,
     allow_temporal_discard: bool = False,
     allow_server_bounded_trade_clock: bool = False,
+    stop_requested: Callable[[], bool] | None = None,
 ) -> WSRunReport:
     """Collect confirmed hourly WS events for a finite, *injected* lease.
 
@@ -321,6 +322,7 @@ def supervise_ws_research(
             or type(allow_temporal_discard) is not bool
             or type(allow_server_bounded_trade_clock) is not bool
             or (on_confirmed_frame is not None and not callable(on_confirmed_frame))
+            or (stop_requested is not None and not callable(stop_requested))
             or (allow_server_bounded_trade_clock and not allow_temporal_discard)):
         raise DataValidationError("injected WS research capabilities required")
     groups = _topic_batches(scope)
@@ -342,12 +344,16 @@ def supervise_ws_research(
                            discarded_before, discarded_after)
 
     for attempt in range(budget.max_sessions):
+        if stop_requested is not None and stop_requested():
+            return report("ws_budget_ended_abstain", "paired_public_stream_stopped")
         if attempt:
             wait = RECONNECT_WAIT_SECONDS * (2 ** (attempt - 1))
             now = clock()
             if now + wait >= started + budget.max_seconds:
                 return report("ws_budget_ended_abstain", "reconnection_deferred")
             sleeper(wait)
+            if stop_requested is not None and stop_requested():
+                return report("ws_budget_ended_abstain", "paired_public_stream_stopped")
         if clock() - started >= budget.max_seconds:
             return report("ws_budget_ended_research_only")
         if frames >= budget.max_frames:
@@ -401,6 +407,8 @@ def supervise_ws_research(
 
                 subscribe(0)
                 while True:
+                    if stop_requested is not None and stop_requested():
+                        return report("ws_budget_ended_abstain", "paired_public_stream_stopped")
                     now = clock()
                     remaining = started + budget.max_seconds - now
                     if frames >= budget.max_frames:
