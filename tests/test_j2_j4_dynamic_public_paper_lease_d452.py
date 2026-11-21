@@ -188,7 +188,11 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.assertTrue(result["preclosed_rest_history_warmup_enabled"])
         self.assertEqual(result["dual_public_streams"]["accepted_closed_callbacks"],50)
         counts = result["dual_public_streams"]["paper_cycle"]["event_counts"]
-        self.assertEqual(counts.get("cohort_researched"),1, counts)
+        self.assertEqual(
+            result["dual_public_streams"]["accepted_public_ticker_callbacks"],
+            1, result["dual_public_streams"],
+        )
+        self.assertEqual(counts.get("cohort_researched"),1, result["dual_public_streams"])
         self.assertTrue(result["dual_public_streams"]["paper_cycle"]["historical_rest_warmup_enabled"])
         self.assertFalse(result["orders_sent"])
         self.assertFalse(result["public_feed_confirmed_24h_continuous"])
