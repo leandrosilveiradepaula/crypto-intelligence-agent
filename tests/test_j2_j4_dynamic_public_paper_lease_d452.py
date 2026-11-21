@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import sqlite3
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -79,7 +80,8 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
                 }],
             }), received))
         kc, tc = Clock(), Clock()
-        ksession = Session(kc, frames)
+        ready = threading.Event()
+        ksession = Session(kc, frames, signal_done=ready)
         ticker_frames = [
             (ack("cia-ticker-1"), received - 100),
             (json.dumps({
@@ -91,7 +93,10 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
                 },
             }), received),
         ]
-        tsession = Session(tc, ticker_frames)
+        tsession = Session(
+            tc, ticker_frames,
+            after_close=ready if rest_warmup_filename else None,
+        )
         args = dict(
             private_j2_directory=self.j2,
             private_paper_directory=self.paper,
@@ -183,7 +188,7 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.assertTrue(result["preclosed_rest_history_warmup_enabled"])
         self.assertEqual(result["dual_public_streams"]["accepted_closed_callbacks"],50)
         counts = result["dual_public_streams"]["paper_cycle"]["event_counts"]
-        self.assertEqual(counts.get("cohort_researched"),1)
+        self.assertEqual(counts.get("cohort_researched"),1, counts)
         self.assertTrue(result["dual_public_streams"]["paper_cycle"]["historical_rest_warmup_enabled"])
         self.assertFalse(result["orders_sent"])
         self.assertFalse(result["public_feed_confirmed_24h_continuous"])
