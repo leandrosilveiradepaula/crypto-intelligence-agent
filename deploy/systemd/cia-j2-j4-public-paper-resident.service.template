@@ -16,7 +16,7 @@ WorkingDirectory=@REPO@
 UMask=0077
 Environment=PYTHONDONTWRITEBYTECODE=1
 ExecStartPre=@PYTHON@ -m scripts.preflight_j2_j4_paper_resident_d457 --j2-directory @J2_DIR@ --paper-directory @PAPER_DIR@ --policy-file @POLICY@
-ExecStart=@PYTHON@ -m scripts.run_j2_j4_public_paper_resident_d453 --j2-directory @J2_DIR@ --paper-directory @PAPER_DIR@ --policy-file @POLICY@ --lease-seconds 60 --pause-seconds 1 --allow-public-network --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible --confirm-public-data-rights --enable-hypothetical-paper-cycle
+ExecStart=@PYTHON@ -m scripts.run_j2_j4_public_paper_resident_d453 --j2-directory @J2_DIR@ --paper-directory @PAPER_DIR@ --policy-file @POLICY@ --lease-seconds 60 --pause-seconds 1 --allow-public-network --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible --confirm-public-data-rights --enable-hypothetical-paper-cycle --auto-capture-rest-warmup
 Restart=on-failure
 RestartSec=15s
 TimeoutStartSec=30
