@@ -11,7 +11,7 @@ snapshot can be reread/audited without another HTTP request after restart.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import Decimal, localcontext, Context
 from hashlib import sha256
 import json
 import os
@@ -261,3 +261,72 @@ def _unique(pairs):
             raise DataGapError("D461 repeated JSON historical field")
         result[key] = value
     return result
+
+
+def research_rest_n50_24h(
+    *, history: RestN50History,
+    config,
+) -> dict:
+    """Use existing D435 indicators for real, REST-sourced RESEARCH ONLY.
+
+    This cannot initialize AUTO2, issue a trading signal, create a WS
+    confirmed receipt, or evade D447's default WS-only quality gate.
+    """
+    from .j2_bybit_closed_research_bridge import BybitClosedResearchSeries
+    from .j2_observed_bybit_research import evaluate_observed_bybit_research
+    from .synthetic_entry_hypotheses import CompressionBreakoutConfig
+    if (type(history) is not RestN50History
+            or type(config) is not CompressionBreakoutConfig
+            or len(history.series) != 50
+            or len(set(history.symbols)) != 50):
+        raise DataValidationError("D461 typed immutable REST-only research required")
+    outcome = []
+    total = Decimal(0)
+    for symbol, bars in history.series:
+        if (len(bars) != 24 or bars[-1].close_time_ms + 1 != history.window_end_ms
+                or any(c.quality != _QUALITY or c.symbol != symbol for c in bars)):
+            raise DataGapError("D461 historical REST research coherence invalid")
+        series = BybitClosedResearchSeries(
+            bars, history.digest_sha256, history.scope_sha256,
+            "research_only_public_closed_series",
+        )
+        observed = evaluate_observed_bybit_research(
+            series, config=config, decision_at_ms=history.window_end_ms,
+            close_safety_ms=1, allow_rest_historical_research=True,
+        )
+        with localcontext(Context(prec=72)):
+            pct = (bars[-1].close / bars[0].open - 1) * 100
+            turnover = sum((x.quote_volume for x in bars), Decimal(0))
+            total += turnover
+        outcome.append({
+            "symbol": symbol,
+            "closed_bars": 24,
+            "last_closed_at_ms": bars[-1].close_time_ms,
+            "historical_24h_return_percent": format(pct, "f"),
+            "historical_quote_turnover_usdt": format(turnover, "f"),
+            "hypothesis_count": len(observed.hypotheses),
+            "historical_hypothesis_side": (
+                observed.hypotheses[0].side.value
+                if observed.hypotheses else None
+            ),
+            "provenance": _SOURCE,
+            "approved_for_signals": False,
+            "orders_sent": False,
+        })
+    return {
+        "schema_version": "d461-rest-24h-j2-research-v1",
+        "status": "historical_n50_indicators_researched_no_order",
+        "window_end_ms": history.window_end_ms,
+        "closed_candles_analyzed": len(outcome) * 24,
+        "members_analyzed": len(outcome),
+        "potential_hypothesis_count": sum(x["hypothesis_count"] for x in outcome),
+        "total_quote_turnover_usdt": format(total, "f"),
+        "rows": outcome,
+        "source_mode": history.source_mode,
+        "provenance": _SOURCE,
+        "websocket_confirmed_candles": 0,
+        "approved_for_signals": False,
+        "orders_sent": False,
+        "source_authenticated": False,
+        "venue_trading_approved": False,
+    }
