@@ -161,17 +161,27 @@ def run_finite_n50_paper_streams(
 
     def confirmed(raw: str | bytes, received_ms: int) -> None:
         parsed = _bounded_json(raw)
+        # D466: the authoritative D1 ingester has already validated ALL
+        # rows and atomically appended the single confirmed candle. Bybit
+        # may pair that confirmed prior hour with the new hour's in-progress
+        # row in one snapshot. Requiring len(data)==1 here previously
+        # killed the WHOLE 50-topic lease after the first durable append.
+        # Never turn the co-present open row into a confirmed callback.
+        rows = parsed.get("data") if type(parsed) is dict else None
         if (type(parsed) is not dict or type(parsed.get("topic")) is not str
                 or not parsed["topic"].startswith("kline.60.")
-                or type(parsed.get("data")) is not list
-                or len(parsed["data"]) != 1
-                or type(parsed["data"][0]) is not dict
-                or parsed["data"][0].get("confirm") is not True
-                or type(parsed["data"][0].get("start")) is not int):
+                or type(rows) is not list or not 1 <= len(rows) <= 8
+                or any(type(row) is not dict
+                       or type(row.get("confirm")) is not bool
+                       for row in rows)):
             raise DataValidationError("D450 only committed closed kline callback allowed")
+        confirmed_rows = [row for row in rows if row["confirm"] is True]
+        if (len(confirmed_rows) != 1
+                or type(confirmed_rows[0].get("start")) is not int):
+            raise DataValidationError("D450 only one persisted WS close may notify PAPER")
         symbol = parsed["topic"][len("kline.60."):]
         cycle.on_confirmed_close(
-            symbol=symbol, open_ms=parsed["data"][0]["start"],
+            symbol=symbol, open_ms=confirmed_rows[0]["start"],
             received_ms=received_ms,
         )
         accepted[0] += 1
