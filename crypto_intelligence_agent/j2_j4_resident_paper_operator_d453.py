@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event, Thread
 from typing import Callable
 import json
 import os
@@ -51,6 +52,9 @@ _SAFE_TICKER_STATES = frozenset((
 ))
 _MAX_HELD = 50
 _MAX_CYCLES = 10_000
+_HEARTBEAT_INTERVAL_SECONDS = 15.0
+_ACTIVE_STATUS_TTL_MS = 45_000
+_TERMINAL_STATUS_TTL_MS = 375_000
 
 
 def _optins(
@@ -318,7 +322,14 @@ def run_resident_paper_observer(
             "schema_version": "d453-resident-paper-status-v1",
             "state": state,
             "updated_at_ms": now,
-            "stale_after_ms": now + 2 * policy.budget.ticker.max_seconds * 1000 + 15_000,
+            # D468: the J5/D456 reader accepts AT MOST 375 seconds.
+            # A long 55m lease must refresh a short TTL; it cannot claim
+            # that a silent/dead process is still actively observed for hours.
+            "stale_after_ms": now + (
+                _ACTIVE_STATUS_TTL_MS if state in (
+                    "starting", "observing_public_lease", "held_only_fallback",
+                ) else _TERMINAL_STATUS_TTL_MS
+            ),
             "cycles_attempted": attempts,
             "primary_leases_completed": completed,
             "held_only_fallbacks": fallbacks,
@@ -411,6 +422,43 @@ def run_resident_paper_observer(
             home, _LEASE_DIAGNOSTICS_FILE,
             json.dumps(summary, sort_keys=True, separators=(",", ":")).encode("ascii"),
         )
+    def observe_with_heartbeat(
+        state: str, operation: Callable[[], object],
+        *, last_failure: str | None = None,
+    ) -> object:
+        """Keep J5's owner-only process state fresh during a long REST/WSS lease.
+
+        This proves only the local operator is still executing: not feed
+        quality, exchange stops, positions, or any public data response.
+        Stop and join BEFORE any state transition so a late pulse never
+        overwrites a terminal failure. A write error must not be reported
+        as a healthy completed primary lease.
+        """
+        stop_pulse = Event()
+        failures: list[Exception] = []
+
+        def pulse() -> None:
+            while not stop_pulse.wait(_HEARTBEAT_INTERVAL_SECONDS):
+                try:
+                    persist(state, last_cycle=attempts,
+                            last_failure=last_failure)
+                except Exception as error:
+                    failures.append(error)
+                    stop_pulse.set()
+                    break
+
+        worker = Thread(target=pulse, name="cia-paper-status-pulse",
+                        daemon=True)
+        worker.start()
+        try:
+            result = operation()
+        finally:
+            stop_pulse.set()
+            worker.join()
+        if failures:
+            raise DataValidationError("D468 owner status heartbeat unavailable")
+        return result
+
     try:
         persist("starting", last_cycle=0)
         while policy.max_cycles is None or attempts < policy.max_cycles:
@@ -422,7 +470,9 @@ def run_resident_paper_observer(
             # it did not raise. Fail over to independent held ticker feed.
             primary_error: str | None = None
             try:
-                observed = primary_lease()
+                observed = observe_with_heartbeat(
+                    "observing_public_lease", primary_lease,
+                )
                 persist_lease_diagnostics(observed, returned=True)
                 if (type(observed) is not dict
                         or observed.get("status") != "finite_public_paper_research_closed"
@@ -443,7 +493,10 @@ def run_resident_paper_observer(
                 # If this fails due to private state/symlink corruption, stop
                 # the resident operator instead of pretending stops function.
                 try:
-                    fallback = held_fallback_lease()
+                    fallback = observe_with_heartbeat(
+                        "held_only_fallback", held_fallback_lease,
+                        last_failure=primary_error,
+                    )
                 except Exception:
                     # An unreadable/symlinked private manifest or failing held
                     # socket is a terminal loss of PAPER quote observation.
