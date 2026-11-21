@@ -25,7 +25,7 @@ from .synthetic_position_state import SyntheticSide
 
 _QUALITY = "bybit_public_ws_confirmed_unverified"
 _REST_HISTORICAL_QUALITY = "bybit_public_rest_historical_closed_unverified"
-_MIXED_STATUS = "research_only_mixed_rest23_ws1_closed_series"
+_MIXED_STATUS = "research_only_mixed_rest24_ws1_closed_series"
 _STATUS = "research_only_public_closed_series"
 _HOUR_MS = 3_600_000
 
@@ -101,11 +101,11 @@ def _validated_observed_candles(
     identity = (first.exchange, first.market, first.symbol, first.interval)
     mixed = allow_causal_rest_ws_warmup and series.status == _MIXED_STATUS
     if mixed:
-        if (len(candles) != 24
+        if (len(candles) != 25
                 or any(c.quality != _REST_HISTORICAL_QUALITY
                        for c in candles[:-1])
                 or candles[-1].quality != _QUALITY):
-            raise DataValidationError("D462 requires 23 REST historical and final WS confirmed")
+            raise DataValidationError("D462 requires 24 REST historical and final WS confirmed")
     allowed_quality = (
         (_REST_HISTORICAL_QUALITY,) if mixed else
         (_QUALITY, _REST_HISTORICAL_QUALITY)
