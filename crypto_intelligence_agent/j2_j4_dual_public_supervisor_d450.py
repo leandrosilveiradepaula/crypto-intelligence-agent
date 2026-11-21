@@ -254,6 +254,7 @@ def run_dynamic_public_paper_lease_once(
     kline_session_factory=None, ticker_session_factory=None,
     kline_clock_args: dict | None = None,
     ticker_clock_args: dict | None = None,
+    rest_warmup_filename: str | None = None,
 ) -> dict:
     """Complete D451 -> pinned J2 epoch -> D452 -> D449/D450 finite lease.
 
@@ -290,11 +291,28 @@ def run_dynamic_public_paper_lease_once(
     pinned = pin_dynamic_public_n50_epoch(
         snapshot=snapshot, private_j2_directory=private_j2_directory,
     )
+    # The historical source must be independently captured and frozen
+    # BEFORE the latest WebSocket-confirmed candle, not fetched on demand
+    # during a time-critical PAPER decision.
+    rest_history = None
+    if rest_warmup_filename is not None:
+        from .j2_rest_n50_history_d461 import (
+            reopen_frozen_rest_n50_for_research,
+        )
+        rest_history = reopen_frozen_rest_n50_for_research(
+            private_j2_directory=private_j2_directory,
+            filename=rest_warmup_filename,
+        )
+        if (rest_history.scope_sha256 != pinned.selected.fingerprint_sha256
+                or rest_history.source_mode != pinned.selected.source_mode
+                or rest_history.window_end_ms !=
+                   pinned.selected.ticker_received_ms // 3_600_000 * 3_600_000):
+            raise DataValidationError("D462 frozen REST cohort does not match current WS research epoch")
     cycle, risk = build_dynamic_public_paper_cycle(
         snapshot=pinned.selected,
         closed_journal_path=pinned.closed_journal_path,
         private_paper_directory=private_paper_directory,
-        config=config,
+        config=config, historical_rest_warmup=rest_history,
     )
     lease = run_finite_n50_paper_streams(
         cycle=cycle, scope=pinned.selected.scope,
@@ -317,6 +335,7 @@ def run_dynamic_public_paper_lease_once(
         "dual_public_streams": lease,
         "marketwide_crypto_identity_verified": False,
         "public_feed_confirmed_24h_continuous": False,
+        "preclosed_rest_history_warmup_enabled": rest_history is not None,
         "live_venue_liquidation_and_funding_verified": False,
         "orders_sent": False,
         "approved_for_live_use": False,
