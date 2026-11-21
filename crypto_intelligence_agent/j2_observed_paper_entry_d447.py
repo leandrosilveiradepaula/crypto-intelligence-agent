@@ -167,8 +167,12 @@ def reserve_observed_paper_entry(
     position_journal_path: str | Path,
     now_ms: int,
     allow_hypothetical_paper_open: bool = False,
+    allow_causal_rest_ws_warmup: bool = False,
 ) -> ObservedPaperEntryResult:
     """Causal entry PAPER; never reclassifies public candles as synthetic."""
+    if (type(allow_hypothetical_paper_open) is not bool
+            or type(allow_causal_rest_ws_warmup) is not bool):
+        raise DataValidationError("D447 PAPER research opt-ins must be boolean")
     if type(allow_hypothetical_paper_open) is not bool:
         raise DataValidationError("D447 opt-in must be boolean")
     if not allow_hypothetical_paper_open:
@@ -189,6 +193,7 @@ def reserve_observed_paper_entry(
     close_at = series.candles[-1].close_time_ms
     research = evaluate_observed_bybit_research(
         series, config=config, decision_at_ms=close_at + 1, close_safety_ms=1,
+        allow_causal_rest_ws_warmup=allow_causal_rest_ws_warmup,
     )
     if not research.hypotheses:
         return ObservedPaperEntryResult(
