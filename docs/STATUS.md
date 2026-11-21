@@ -2054,3 +2054,8 @@ Avanço de produto comprovado, sem nova PR: `systemd-run --uid=cia-probe` resolv
 ## D459 — regressão real do teste horário, sem fechar J6 (21/11/2026)
 
 O trial D458 `093979aec3ad464b9143c3c95d9d7cc4` finalizou com `degraded_no_held_coverage` e **0 closes 1h**, não foi homologado; nenhum trade real e nenhuma mudança J1. Encontrado erro de orçamento em contingência: principal 3480s encaminhado à fallback de máximo 180s. D459 corrige essa incompatibilidade e adiciona diagnóstico seguro, persistente e privado com status kline/ticker para identificar a próxima falha do fluxo principal. Ainda sem prova da causa original do canal kline. Não reivindicar prontidão VPS ou J6.
+
+
+## D460 — campo temporal real da Bybit corrigido (21/11/2026)
+
+Prova pública read-only de `kline.1.BTCUSDT` na VPS UID999: ACK válido, `confirm:true`, envelope `data/topic/ts/type`, 11 campos esperados, `timestamp=end+202ms`, `server_ts=end+202ms`, recebimento 207ms após servidor. No pipeline D450 a política antiga `allow_server_bounded_trade_clock=False` rejeitava essa vela válida porque exigia timestamp do último negócio <= end. D460 reutiliza o validador J1 existente com os flags de bounded trade clock + temporal discard, sob limites estritos da fonte (trade<=server, server<=receipt, <=120s após close, clock coerente) e registra contagens/diagnósticos da sessão. Teste regressivo com 50 candles confirmados pós-close no próprio journal offline PAPER (sem inventar prova de close horário live). Continuidade longa D458 anterior já terminou degradada e NÃO é considerada homologada; nova prova horária pública é gate separado. Sem ordens reais, J1 intocada.

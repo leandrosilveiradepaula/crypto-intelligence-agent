@@ -143,10 +143,22 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
             contract_for_quote=contract, risk_for_quote=paper_risk,
         )
 
-    def run_streams(self, *, omit_close=None, omit_ack=False, allow=True, risk_source=None):
+    def run_streams(self, *, omit_close=None, omit_ack=False, allow=True,
+                    risk_source=None, postclose_trade_clock=False):
         ready = threading.Event()
         kc, tc = Clock(), Clock()
         last = [frame(s, 24) for s in self.symbols if s != omit_close]
+        if postclose_trade_clock:
+            updated = []
+            for raw, received in last:
+                payload = json.loads(raw)
+                row = payload["data"][0]
+                # Real Bybit observed 21/11/2026: trade timestamp=end+202ms,
+                # server timestamp likewise end+202ms (bounded by receipt).
+                row["timestamp"] = row["end"] + 202
+                payload["ts"] = row["end"] + 202
+                updated.append((json.dumps(payload), received))
+            last = updated
         kframes = ([] if omit_ack else [(ack(), RECEIPT)]) + last
         tframes = [
             (ack("cia-ticker-1"), RECEIPT),
@@ -206,6 +218,24 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
         self.assertFalse(result["session_continues_after_return"])
         self.assertFalse(result["marketwide_n50_verified"])
 
+
+    def test_real_bybit_postclose_trade_clock_is_persisted_and_replayed(self):
+        report, _, _ = self.run_streams(postclose_trade_clock=True)
+        self.assertEqual(report["status"], "finite_public_paper_research_closed")
+        self.assertEqual(report["accepted_closed_callbacks"], SIZE)
+        self.assertEqual(report["kline_confirmed_events_appended"], SIZE)
+        self.assertEqual(report["kline_postclose_trade_clock_accepted"], SIZE)
+        self.assertEqual(report["kline_temporal_discard_count"], 0)
+        self.assertIsNone(report["kline_failure_category"])
+        # Exact same vetted journal that J2 feature research subsequently
+        # reads: no duplicate REST backfill and no synthetic close.
+        from sqlite3 import connect
+        with connect(self.closed) as db:
+            rows = db.execute(
+                "SELECT COUNT(*) FROM confirmed WHERE open_ms=?", (LAST,),
+            ).fetchone()[0]
+        self.assertEqual(rows, SIZE)
+        self.assertFalse(report["orders_sent"])
 
     def test_real_durable_risk_reader_with_two_supervisors_no_zero_fixture(self):
         risk = DurablePaperRiskSource(private_paper_directory=self.paper)

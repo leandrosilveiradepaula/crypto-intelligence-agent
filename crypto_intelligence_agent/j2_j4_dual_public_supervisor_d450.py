@@ -178,6 +178,14 @@ def run_finite_n50_paper_streams(
             session_factory=kline_session_factory,
             scope=scope, journal=journal, budget=budget.kline,
             on_confirmed_frame=confirmed,
+            # D460: a real Bybit confirmed kline can legally carry its
+            # latest-trade clock a few hundred milliseconds AFTER the
+            # closed-hour end. The existing D1/J1 validator only permits
+            # this when server time corroborates the trade clock and the
+            # receipt is <=120s after close. Temporal discards remain
+            # explicit abstentions, never synthetic candles.
+            allow_temporal_discard=True,
+            allow_server_bounded_trade_clock=True,
             **kline_clock_args,
         )
         ticker_future = pool.submit(
@@ -213,6 +221,15 @@ def run_finite_n50_paper_streams(
         "accepted_public_ticker_callbacks": ticker_result.ticker_frames_accepted,
         "kline_lease_status": kline_result.status,
         "ticker_lease_status": ticker_result.status,
+        "kline_failure_category": kline_result.failure_category,
+        "ticker_failure_category": ticker_result.failure_category,
+        "kline_confirmed_events_appended": kline_result.closed_events_appended,
+        "kline_postclose_trade_clock_accepted": (
+            kline_result.accepted_postclose_trade_clock
+        ),
+        "kline_temporal_discard_count": sum(
+            kline_result.discarded_closed_temporal
+        ),
         "session_continues_after_return": False,
         "native_stop_installed": False,
         "financial_backtest_approved": False,

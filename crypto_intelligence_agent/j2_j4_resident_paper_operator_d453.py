@@ -32,6 +32,7 @@ from .j4_private_paper_ws_operator_d425 import (
     load_private_paper_routes,
 )
 from .market_data import DataGapError, DataValidationError
+from .bybit_ws_supervisor import _SAFE_REJECTION_CLASSES
 from .j4_automatic_entry_materializer_d448 import _atomic_private_write
 
 
@@ -344,6 +345,14 @@ def run_resident_paper_observer(
         def allowed_status(key: str, known: frozenset[str]) -> str:
             value = stream.get(key)
             return value if type(value) is str and value in known else "not_reported"
+        def bounded_failure(key: str) -> str:
+            value = stream.get(key)
+            safe = set(_SAFE_REJECTION_CLASSES.values())
+            safe.update((
+                "transport_disconnected", "frame_budget_exhausted",
+                "reconnection_deferred", "receive_budget",
+            ))
+            return value if type(value) is str and value in safe else "none_or_unknown"
         def counter(key: str) -> int | None:
             value = stream.get(key)
             if type(value) is int and 0 <= value <= 5_000_000:
@@ -364,6 +373,10 @@ def run_resident_paper_observer(
             "ticker_subscription_acks": counter("ticker_acks"),
             "accepted_confirmed_close_callbacks": counter("accepted_closed_callbacks"),
             "accepted_public_ticker_callbacks": counter("accepted_public_ticker_callbacks"),
+            "kline_failure_category": bounded_failure("kline_failure_category"),
+            "kline_confirmed_events_appended": counter("kline_confirmed_events_appended"),
+            "kline_postclose_trade_clock_accepted": counter("kline_postclose_trade_clock_accepted"),
+            "kline_temporal_discard_count": counter("kline_temporal_discard_count"),
             "real_orders_sent": False,
             "protected_positions_at_venue": False,
         }
