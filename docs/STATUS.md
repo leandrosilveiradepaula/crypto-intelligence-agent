@@ -2049,3 +2049,8 @@ Código entregue na branch: status D453 owner-only 0600 com leitor D456/endpoint
 ## D458 — primeira execução PAPER integrada com Bybit pública real na VPS (21/11/2026)
 
 Avanço de produto comprovado, sem nova PR: `systemd-run --uid=cia-probe` resolveu bloqueio de `runuser`; stage isolado D458, preflight D457 PASS, 1 lease D453 completo, 1 lease D450 real com 939 instrumentos / 370 elegíveis / N50=50, dois ACKs WSS e **3.390 cotações aceitas**, depois 2 leases D453 consecutivas completas sem rotacionar journal. Nenhum candle horário confirmado nestas janelas curtas; nenhuma posição PAPER criada e nenhum trade real. Job finito de até 58 min para captura do próximo close iniciado e registrado como `093979aec3ad464b9143c3c95d9d7cc4` (`running` no registro inicial), usando SHA `5591506bb9e208f2af1cfabd4b0dc5f30782814c`. Nenhum serviço permanente instalado. O painel J5 antigo ainda ocupa porta 8765, sem novos endpoints; publicação e atualização dependem do gate de release. Fonte de verdade operacional e critérios de acompanhamento: `docs/OPERATIONAL_STATE.md`. Custo adicional R$0, J1 intocada.
+
+
+## D459 — regressão real do teste horário, sem fechar J6 (21/11/2026)
+
+O trial D458 `093979aec3ad464b9143c3c95d9d7cc4` finalizou com `degraded_no_held_coverage` e **0 closes 1h**, não foi homologado; nenhum trade real e nenhuma mudança J1. Encontrado erro de orçamento em contingência: principal 3480s encaminhado à fallback de máximo 180s. D459 corrige essa incompatibilidade e adiciona diagnóstico seguro, persistente e privado com status kline/ticker para identificar a próxima falha do fluxo principal. Ainda sem prova da causa original do canal kline. Não reivindicar prontidão VPS ou J6.

@@ -36,7 +36,17 @@ from .j4_automatic_entry_materializer_d448 import _atomic_private_write
 
 
 _STATUS_FILE = "paper-operator-state-d453.json"
+_LEASE_DIAGNOSTICS_FILE = "paper-last-public-lease-d459.json"
 _LOCK_FILE = ".d453-resident.lock"
+_SAFE_KLINE_STATES = frozenset((
+    "ws_budget_ended_research_only", "ws_budget_ended_abstain",
+    "ws_fail_closed_abstain", "ws_frame_budget_exhausted_abstain",
+    "ws_reconnect_budget_exhausted_abstain",
+))
+_SAFE_TICKER_STATES = frozenset((
+    "lease_completed", "lease_degraded", "ticker_fail_closed_abstain",
+    "ticker_reconnect_budget_exhausted_abstain",
+))
 _MAX_HELD = 50
 _MAX_CYCLES = 10_000
 
@@ -278,7 +288,15 @@ def run_resident_paper_observer(
         )
         held_fallback_lease = lambda: run_held_paper_without_n50(
             private_paper_directory=home,
-            budget=policy.budget.ticker,
+            # D459: D453 held-only explicitly caps fallback at 180s,
+            # whereas the primary owner may use a bounded 3600s lease.
+            # Pass a separately bounded budget instead of making failover
+            # impossible after a long primary observation.
+            budget=TickerLeaseBudget(
+                max_sessions=1,
+                max_frames=policy.budget.ticker.max_frames,
+                max_seconds=min(180, policy.budget.ticker.max_seconds),
+            ),
             allow_public_network=True, allow_public_websocket=True,
             confirm_personal_readonly_research=True, confirm_region_eligible=True,
             confirm_public_data_rights=True, enable_hypothetical_paper_cycle=True,
@@ -309,6 +327,50 @@ def run_resident_paper_observer(
             home, _STATUS_FILE,
             json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("ascii"),
         )
+    def persist_lease_diagnostics(outcome: object, *, returned: bool) -> None:
+        """One owner-only safe summary; never save raw Bybit frames or errors.
+
+        D459 distinguishes an error raised before dual-WS supervision from
+        which public subscription degraded after a valid REST/N50 cohort.
+        """
+        envelope = outcome if type(outcome) is dict else {}
+        stream = envelope.get("dual_public_streams")
+        stream = stream if type(stream) is dict else {}
+        raw_status = envelope.get("status")
+        observed_status = (raw_status if raw_status in (
+            "finite_public_paper_research_closed",
+            "finite_public_paper_research_degraded",
+        ) else "not_reported")
+        def allowed_status(key: str, known: frozenset[str]) -> str:
+            value = stream.get(key)
+            return value if type(value) is str and value in known else "not_reported"
+        def counter(key: str) -> int | None:
+            value = stream.get(key)
+            if type(value) is int and 0 <= value <= 5_000_000:
+                return value
+            return None
+        summary = {
+            "schema_version": "d459-operator-public-lease-diagnostic-v1",
+            "observed_at_ms": clock_ms(),
+            "primary_result": ("returned" if returned else "raised_exception"),
+            "primary_status": observed_status,
+            "kline_lease_status": allowed_status(
+                "kline_lease_status", _SAFE_KLINE_STATES,
+            ),
+            "ticker_lease_status": allowed_status(
+                "ticker_lease_status", _SAFE_TICKER_STATES,
+            ),
+            "kline_subscription_acks": counter("kline_acks"),
+            "ticker_subscription_acks": counter("ticker_acks"),
+            "accepted_confirmed_close_callbacks": counter("accepted_closed_callbacks"),
+            "accepted_public_ticker_callbacks": counter("accepted_public_ticker_callbacks"),
+            "real_orders_sent": False,
+            "protected_positions_at_venue": False,
+        }
+        _atomic_private_write(
+            home, _LEASE_DIAGNOSTICS_FILE,
+            json.dumps(summary, sort_keys=True, separators=(",", ":")).encode("ascii"),
+        )
     try:
         persist("starting", last_cycle=0)
         while policy.max_cycles is None or attempts < policy.max_cycles:
@@ -321,6 +383,7 @@ def run_resident_paper_observer(
             primary_error: str | None = None
             try:
                 observed = primary_lease()
+                persist_lease_diagnostics(observed, returned=True)
                 if (type(observed) is not dict
                         or observed.get("status") != "finite_public_paper_research_closed"
                         or observed.get("orders_sent") is not False):
@@ -330,8 +393,8 @@ def run_resident_paper_observer(
             except Exception:
                 # A primary programming/transport failure must NEVER abandon
                 # an existing PAPER position without trying its independent
-                # public ticker route. Do not print the exception or private
-                # symbol; do not retry the failed opening on the same tick.
+                # public ticker route. Do not print exception content.
+                persist_lease_diagnostics(None, returned=False)
                 primary_error = "primary_abstained"
             if primary_error is not None:
                 fallbacks += 1

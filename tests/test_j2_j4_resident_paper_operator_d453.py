@@ -157,6 +157,74 @@ class ResidentPaperOperatorTests(unittest.TestCase):
         self.assertFalse(recorded["position_monitoring_guaranteed"])
         self.assertNotIn("unsafe owner manifest", json.dumps(recorded))
 
+    def test_long_primary_lease_clamps_held_fallback_budget_to_180_seconds(self):
+        # Reproduce the actual D458 3480s failure: a primary 3600s budget
+        # must not be passed unchanged to D453's <=180s fallback contract.
+        long_policy = ResidentPaperRunPolicy(
+            DualPaperLeaseBudget(
+                WSRunBudget(max_sessions=1, max_frames=200, max_seconds=3480),
+                TickerLeaseBudget(max_sessions=1, max_frames=200, max_seconds=3480),
+            ),
+            restart_pause_seconds=0, max_cycles=1,
+        )
+        primary = {
+            "status": "finite_public_paper_research_degraded",
+            "orders_sent": False,
+            "dual_public_streams": {
+                "kline_lease_status": "ws_fail_closed_abstain",
+                "ticker_lease_status": "lease_completed",
+                "kline_acks": 1, "ticker_acks": 1,
+                "accepted_closed_callbacks": 0,
+                "accepted_public_ticker_callbacks": 3390,
+            },
+        }
+        module = "crypto_intelligence_agent.j2_j4_resident_paper_operator_d453."
+        with patch(module + "run_dynamic_public_paper_lease_once",
+                   return_value=primary), patch(
+                   module + "run_held_paper_without_n50",
+                   return_value={"status": "no_held_paper_positions",
+                                 "orders_sent": False}) as held:
+            outcome = run_resident_paper_observer(
+                private_j2_directory=self.j2,
+                private_paper_directory=self.paper,
+                config=SETTINGS, policy=long_policy, **self.flags,
+            )
+        self.assertEqual(outcome["status"], "bounded_run_completed")
+        self.assertEqual(outcome["held_only_fallbacks"], 1)
+        self.assertEqual(held.call_args.kwargs["budget"].max_seconds, 180)
+        diagnostic = json.loads(
+            (self.paper / "paper-last-public-lease-d459.json").read_text()
+        )
+        self.assertEqual(diagnostic["kline_lease_status"],
+                         "ws_fail_closed_abstain")
+        self.assertEqual(diagnostic["ticker_lease_status"],
+                         "lease_completed")
+        self.assertEqual(diagnostic["accepted_public_ticker_callbacks"], 3390)
+        self.assertFalse(diagnostic["real_orders_sent"])
+
+    def test_private_diagnostic_never_echoes_unknown_provider_error(self):
+        def broken():
+            raise RuntimeError("SECRET_PRIVATE_VENUE_DATA")
+        outcome = run_resident_paper_observer(
+            private_j2_directory=self.j2,
+            private_paper_directory=self.paper,
+            config=SETTINGS,
+            policy=ResidentPaperRunPolicy(self.budget, 0, 1),
+            primary_lease=broken,
+            held_fallback_lease=lambda: {
+                "status": "no_held_paper_positions", "orders_sent": False,
+            },
+            sleep=lambda _: None,
+            clock_ms=lambda: 1_800_000_000_000,
+            should_stop=lambda: False,
+            **self.flags,
+        )
+        self.assertEqual(outcome["status"], "bounded_run_completed")
+        raw = (self.paper / "paper-last-public-lease-d459.json").read_text()
+        self.assertNotIn("SECRET_PRIVATE_VENUE_DATA", raw)
+        self.assertEqual(json.loads(raw)["primary_result"], "raised_exception")
+        self.assertEqual((self.paper / "paper-last-public-lease-d459.json").stat().st_mode & 0o777, 0o600)
+
     def test_second_owner_instance_cannot_grab_resident_lock(self):
         lock = _resident_lock(self.paper)
         try:
