@@ -28,3 +28,8 @@ O gateway administrativo retorna `runuser: cannot set groups: Operation not perm
 ## Próximo passo seguro
 
 Completar CI Linux/Windows/mobile no SHA final; não reabrir J1. Assim que existir execução não-root efetiva na VPS, rodar trial público real com duração finita e coleta de evidências, sem transformar automaticamente em daemon. Manter PR #734 draft enquanto a integração de host não está demonstrada.
+
+
+## D458 — prova operacional real sem instalação permanente (21/11/2026)
+
+O caminho correto de execução owner é `systemd-run --uid=cia-probe` (root sandbox sem CAP_SETUID não pode executar `runuser`, mas o PID1/systemd pode iniciar transiente como UID999). O ambiente isolado privado D458 foi preparado e a política de PAPER 50x/margem USDT5 carregada sem alterar J1. O preflight D457 passou em todos os itens. Os flows REST N50, kline público e ticker público foram executados em leases reais, com 3.390 ticks pós-ACK no teste de 18s e duas leases subsequentes completas com recuperação de journal. Ainda não há candle horário confirmado nessas janelas curtas; o operador não negociou nem completou 24h de warmup. Job finito auditável `093979aec3ad464b9143c3c95d9d7cc4` está `running` na consulta inicial, planejado para atravessar um fechamento, limitado 3480 segundos e recursos de host. Status futuro deve ser verificado por job ID antes de afirmar êxito. O servidor J5 local anterior responde em 127.0.0.1:8765 e ainda não tem endpoint `/api/resident-paper-status`, não houve troca/restart da versão em produção. Gate de release permanente separado e pendente.
