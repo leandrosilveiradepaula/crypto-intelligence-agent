@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from crypto_intelligence_agent.market_data import DataValidationError
 from scripts.run_j2_j4_public_paper_resident_d453 import (
@@ -42,6 +43,31 @@ class OwnerPaperConfigTests(unittest.TestCase):
                          (Decimal(200), Decimal(300)))
         self.assertEqual(config.entry.first_tranche_fraction, Decimal("0.3"))
         self.assertEqual(config.limits.max_pending_open_orders, 5)
+
+    def test_long_finite_lease_reserves_enough_public_ticker_frames(self):
+        with patch(
+            "scripts.run_j2_j4_public_paper_resident_d453."
+            "run_resident_paper_observer",
+            return_value={"status": "bounded_run_completed", "orders_sent": False},
+        ) as runner:
+            code = main([
+                "--j2-directory", str(self.home / "j2"),
+                "--paper-directory", str(self.home / "paper"),
+                "--policy-file", str(self.policy),
+                "--lease-seconds", "1500", "--max-cycles", "1",
+                "--allow-public-network", "--allow-public-websocket",
+                "--confirm-personal-readonly-research",
+                "--confirm-region-eligible", "--confirm-public-data-rights",
+                "--enable-hypothetical-paper-cycle",
+                "--auto-capture-rest-warmup",
+            ])
+        self.assertEqual(code, 0)
+        budget = runner.call_args.kwargs["policy"].budget
+        self.assertEqual(budget.kline.max_frames, 50_000)
+        self.assertEqual(budget.ticker.max_frames, 1_500_000)
+        self.assertEqual(budget.ticker.max_seconds, 1500)
+        self.assertTrue(runner.call_args.kwargs["auto_capture_rest_warmup"])
+        self.assertFalse((self.home / "paper").exists())
 
     def test_denied_cli_makes_no_network_or_paper_state(self):
         self.assertEqual(main([
