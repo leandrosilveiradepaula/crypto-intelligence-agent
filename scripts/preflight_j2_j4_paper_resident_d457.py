@@ -14,6 +14,8 @@ from pathlib import Path
 import stat
 import sys
 
+from crypto_intelligence_agent.market_data import DataValidationError
+
 
 def preflight(*, j2_directory: Path, paper_directory: Path,
               policy_file: Path) -> dict:
@@ -58,7 +60,8 @@ def preflight(*, j2_directory: Path, paper_directory: Path,
             )
             parsed = read_owner_paper_policy(policy_file)
             checks["policy_owner_only_and_valid"] = parsed.margin_quote > 0
-        except (OSError, ValueError, TypeError, RuntimeError, ImportError):
+        except (OSError, ValueError, TypeError, RuntimeError, ImportError,
+                DataValidationError):
             pass
     result={
         "schema_version":"d457-paper-resident-owner-preflight-v1",
