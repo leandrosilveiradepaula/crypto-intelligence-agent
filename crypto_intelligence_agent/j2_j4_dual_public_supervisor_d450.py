@@ -190,6 +190,16 @@ def run_finite_n50_paper_streams(
     # AUTO2/AUTO4 transactions serialize their financial work; never create
     # a signal from the kline callback itself.
     stop_refresh = Event()
+    stop_paired_stream = Event()
+
+    def stop_peer_on_failure(future, successful_state: str) -> None:
+        # An early failure must not strand the other feed for an entire lease.
+        try:
+            if future.result().status != successful_state:
+                stop_paired_stream.set()
+        except BaseException:
+            stop_paired_stream.set()
+
     with ThreadPoolExecutor(
         max_workers=3 if public_contract_source is not None else 2,
         thread_name_prefix="cia-paper-dual",
@@ -203,6 +213,7 @@ def run_finite_n50_paper_streams(
             session_factory=kline_session_factory,
             scope=scope, journal=journal, budget=budget.kline,
             on_confirmed_frame=confirmed,
+            stop_requested=stop_paired_stream.is_set,
             # D460: a real Bybit confirmed kline can legally carry its
             # latest-trade clock a few hundred milliseconds AFTER the
             # closed-hour end. The existing D1/J1 validator only permits
@@ -219,7 +230,14 @@ def run_finite_n50_paper_streams(
             book=book, budget=budget.ticker,
             on_quote=handle_quote,
             on_session_reset=reset_session,
+            stop_requested=stop_paired_stream.is_set,
             **ticker_clock_args,
+        )
+        kline_future.add_done_callback(
+            lambda future: stop_peer_on_failure(future, "ws_budget_ended_research_only")
+        )
+        ticker_future.add_done_callback(
+            lambda future: stop_peer_on_failure(future, "lease_completed")
         )
         # Always await BOTH. Neither lease can be claimed to continue once
         # this method returns; a crash cannot leave an "active" status behind.
