@@ -85,9 +85,9 @@ class LastLeaseBrowserTests(unittest.TestCase):
         self.assertIn("D470_LAST_LEASE_LOCAL_BROWSER_PASS",result.stdout)
 
     def test_html_asset_is_local_only_and_does_not_inject_markup(self):
-        html=(ROOT/"web/app/index.html").read_text()
-        server=(ROOT/"scripts/serve_j5_local_readonly.py").read_text()
-        script=(ROOT/"web/app/last-public-paper-lease.js").read_text()
+        html=(ROOT/"web/app/index.html").read_text(encoding="utf-8")
+        server=(ROOT/"scripts/serve_j5_local_readonly.py").read_text(encoding="utf-8")
+        script=(ROOT/"web/app/last-public-paper-lease.js").read_text(encoding="utf-8")
         self.assertIn('src="./last-public-paper-lease.js"',html)
         self.assertIn('id="last-public-paper-status"',html)
         self.assertIn('"/last-public-paper-lease.js"',server)
