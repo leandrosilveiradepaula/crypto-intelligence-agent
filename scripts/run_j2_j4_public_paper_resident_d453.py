@@ -210,8 +210,19 @@ def main(argv: list[str] | None = None) -> int:
             DualPaperLeaseBudget(
                 WSRunBudget(max_sessions=1, max_frames=50_000,
                             max_seconds=args.lease_seconds),
-                TickerLeaseBudget(max_sessions=1, max_frames=50_000,
-                                  max_seconds=args.lease_seconds),
+                # A 50-symbol ticker stream can produce >150 market
+                # frames/sec. Keeping the default 50k cap for a 25min
+                # public lease would end before the hourly candle close.
+                # Scale the bounded ticker frame budget with requested
+                # seconds, never above D386's five-million hard limit.
+                TickerLeaseBudget(
+                    max_sessions=1,
+                    max_frames=min(
+                        5_000_000,
+                        max(50_000, args.lease_seconds * 1000),
+                    ),
+                    max_seconds=args.lease_seconds,
+                ),
             ),
             restart_pause_seconds=args.pause_seconds,
             max_cycles=args.max_cycles,
