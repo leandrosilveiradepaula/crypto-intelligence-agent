@@ -357,6 +357,14 @@ def run_resident_paper_observer(
                 "reconnection_deferred", "receive_budget",
             ))
             return value if type(value) is str and value in safe else "none_or_unknown"
+        contract = stream.get("public_contract_refresh")
+        contract = contract if type(contract) is dict else {}
+        def bounded(value) -> int | None:
+            if type(value) is int and 0 <= value <= 5_000_000:
+                return value
+            return None
+        def contract_counter(key: str) -> int | None:
+            return bounded(contract.get(key))
         def counter(key: str) -> int | None:
             value = stream.get(key)
             if type(value) is int and 0 <= value <= 5_000_000:
@@ -381,6 +389,18 @@ def run_resident_paper_observer(
             "kline_confirmed_events_appended": counter("kline_confirmed_events_appended"),
             "kline_postclose_trade_clock_accepted": counter("kline_postclose_trade_clock_accepted"),
             "kline_temporal_discard_count": counter("kline_temporal_discard_count"),
+            "historical_rest_validated_closed_candles": bounded(
+                envelope.get("historical_rest_validated_closed_candles")
+            ),
+            "paper_contract_public_gets": contract_counter(
+                "requested_public_contract_gets"
+            ),
+            "paper_contract_rules_unchanged": contract_counter(
+                "unchanged_rules_refreshed"
+            ),
+            "paper_contract_rule_changes_denied": contract_counter(
+                "stale_or_changed_contracts_rejected"
+            ),
             "real_orders_sent": False,
             "protected_positions_at_venue": False,
         }
