@@ -122,6 +122,29 @@ class ImmutableRestN50Tests(unittest.TestCase):
                             for row in report["rows"]))
         self.assertFalse(tuple(self.home.glob("paper-*.sqlite")))
 
+    def test_hourly_worker_reuses_same_frozen_1200_candles_after_new_n50_clock(self):
+        initial = self.capture()
+        first_calls = len(self.calls)
+        from test_j2_dynamic_public_n50_d451 import selected
+        refreshed = selected(
+            received=(NOW+9500,NOW+9700),
+            at=NOW+10_000,
+        )
+        self.assertEqual(refreshed.fingerprint_sha256,
+                         self.snapshot.fingerprint_sha256)
+        from crypto_intelligence_agent.j2_rest_n50_history_d461 import (
+            capture_rest_n50_24h,
+        )
+        reused = capture_rest_n50_24h(
+            snapshot=refreshed,private_j2_directory=self.home,
+            client=self.client,wall_ms=lambda:NOW+10_050,**self.flags,
+        )
+        self.assertEqual(reused.digest_sha256,initial.digest_sha256)
+        self.assertEqual(reused.snapshot_file,initial.snapshot_file)
+        self.assertEqual(reused.captured_at_ms,initial.captured_at_ms)
+        self.assertEqual(len(self.calls),first_calls)
+        self.assertEqual(len(tuple(self.home.glob("rest-history-d461-*.json"))),1)
+
     def test_malformed_symbol_fails_all_or_none_without_snapshot(self):
         self.broken_symbol = "ALT25USDT"
         with self.assertRaises(DataGapError):
