@@ -64,10 +64,29 @@ class OwnerPaperConfigTests(unittest.TestCase):
         self.assertEqual(code, 0)
         budget = runner.call_args.kwargs["policy"].budget
         self.assertEqual(budget.kline.max_frames, 50_000)
+        self.assertEqual(budget.kline.max_sessions, 3)
+        self.assertEqual(budget.ticker.max_sessions, 3)
         self.assertEqual(budget.ticker.max_frames, 1_500_000)
         self.assertEqual(budget.ticker.max_seconds, 1500)
         self.assertTrue(runner.call_args.kwargs["auto_capture_rest_warmup"])
         self.assertFalse((self.home / "paper").exists())
+
+    def test_unbounded_public_ws_reconnect_rejected_before_network(self):
+        with patch(
+            "scripts.run_j2_j4_public_paper_resident_d453."
+            "run_resident_paper_observer",
+        ) as runner, self.assertRaises(DataValidationError):
+            main([
+                "--j2-directory", str(self.home / "j2"),
+                "--paper-directory", str(self.home / "paper"),
+                "--policy-file", str(self.policy),
+                "--public-ws-sessions", "4",
+                "--allow-public-network", "--allow-public-websocket",
+                "--confirm-personal-readonly-research",
+                "--confirm-region-eligible", "--confirm-public-data-rights",
+                "--enable-hypothetical-paper-cycle",
+            ])
+        runner.assert_not_called()
 
     def test_denied_cli_makes_no_network_or_paper_state(self):
         self.assertEqual(main([
