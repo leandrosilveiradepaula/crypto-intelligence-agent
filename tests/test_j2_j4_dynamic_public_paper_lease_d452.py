@@ -191,7 +191,7 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.assertEqual(len(tuple(self.j2.glob("n50-d451-*.sqlite"))),1)
         with sqlite3.connect(next(self.j2.glob("n50-d451-*.sqlite"))) as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM confirmed").fetchone()[0],50)
-        self.assertEqual(len(self.calls),56)  # 50 REST+3 fresh N50+3 N50 replay
+        self.assertEqual(len(self.calls),53)  # 50 historical REST + 3 new N50 selection
 
     def test_missing_explicit_operator_optin_is_zero_io(self):
         denied, k, t = self.run_once(allow=False)
