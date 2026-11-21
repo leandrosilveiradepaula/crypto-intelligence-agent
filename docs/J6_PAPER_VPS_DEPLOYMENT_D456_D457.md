@@ -7,6 +7,7 @@
 - O CLI D453 agora recebe SIGINT/SIGTERM e encerra depois da sessão atual, sem perder WAL/SQLite. Não há proteção nativa após o encerramento.
 - D457 acrescenta preflight `scripts/preflight_j2_j4_paper_resident_d457.py` sem rede/mutações: exige usuário não-root, dois diretórios privados 0700 diferentes, política owner-only 0600 válida e import real de `websockets.sync.client`.
 - Unidade de serviço **candidata desativada**, `deploy/systemd/cia-j2-j4-public-paper-resident.service.template`, separa caminhos J2/PAPER, só aceita `cia-probe`, aplica sandbox/memória/CPU/timeout, exige preflight e configura reconexões e status. Não está instalada nem autorizada para produção.
+- Painel read-only candidato **também desativado**, `deploy/systemd/cia-j5-public-paper-owner-loopback.service.template`: o mesmo processo local J5 em 127.0.0.1:8765 exibe status residente e posições do diário, sem endpoint público. Deve **substituir**, e não competir na porta com eventual unidade J5 antiga. Não instalar sem gate.
 
 ## Evidência pública real feita na VPS (não equivale ao aplicativo instalado)
 
