@@ -220,6 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         confirm_region_eligible=True, confirm_public_data_rights=True,
         enable_hypothetical_paper_cycle=True,
         should_stop=lambda: stopping["requested"],
+        rest_warmup_filename=args.rest_warmup_filename,
     )
     print(json.dumps(report, sort_keys=True, separators=(",", ":")))
     return 0 if report["status"] == "bounded_run_completed" else 1
