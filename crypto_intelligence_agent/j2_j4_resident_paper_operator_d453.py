@@ -289,6 +289,7 @@ def run_resident_paper_observer(
             confirm_personal_readonly_research=True, confirm_region_eligible=True,
             confirm_public_data_rights=True, enable_hypothetical_paper_cycle=True,
             rest_warmup_filename=rest_warmup_filename,
+            auto_capture_rest_warmup=auto_capture_rest_warmup,
         )
         held_fallback_lease = lambda: run_held_paper_without_n50(
             private_paper_directory=home,
