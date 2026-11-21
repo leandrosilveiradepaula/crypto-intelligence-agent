@@ -5,6 +5,7 @@ from dataclasses import replace
 from decimal import Decimal
 import json
 import os
+import threading
 from pathlib import Path
 import tempfile
 import unittest
@@ -107,6 +108,80 @@ class ResidentPaperOperatorTests(unittest.TestCase):
         self.assertEqual(
             (self.paper / "paper-operator-state-d453.json").stat().st_mode & 0o777,
             0o600,
+        )
+
+    def test_long_primary_lease_status_stays_readable_and_pulses_in_j5(self):
+        # D468: D453's old TTL was 2*3480s and D456 (max 375s)
+        # rejected the status for the entire long observation window.
+        from crypto_intelligence_agent import j2_j4_resident_paper_operator_d453 as operator
+        from crypto_intelligence_agent.j5_resident_paper_status_d456 import (
+            read_resident_paper_status,
+        )
+        fixed_ms = 1_800_000_000_000
+        updates = []
+        has_pulsed = threading.Event()
+        original_writer = operator._atomic_private_write
+
+        def record_write(directory, filename, raw):
+            if filename == "paper-operator-state-d453.json":
+                value = json.loads(raw)
+                if value["state"] == "observing_public_lease":
+                    updates.append(value)
+                    if len(updates) > 1:
+                        has_pulsed.set()
+            return original_writer(directory, filename, raw)
+
+        def primary():
+            # This is a real read through the same strict reader J5 uses,
+            # while the long (3480s) lease is nominally active.
+            status = read_resident_paper_status(
+                directory=self.paper, now_ms=fixed_ms,
+            )
+            self.assertEqual(status["status"], "observing_public_lease")
+            self.assertFalse(status["native_stop_verified"])
+            self.assertFalse(status["lease_now_guaranteed_active"])
+            self.assertTrue(has_pulsed.wait(1.0))
+            return {"status": "finite_public_paper_research_closed",
+                    "orders_sent": False}
+
+        policy = ResidentPaperRunPolicy(
+            DualPaperLeaseBudget(
+                WSRunBudget(max_sessions=1, max_frames=200, max_seconds=3480),
+                TickerLeaseBudget(max_sessions=1, max_frames=200, max_seconds=3480),
+            ), restart_pause_seconds=0, max_cycles=1,
+        )
+        with patch.object(operator, "_HEARTBEAT_INTERVAL_SECONDS", 0.005), patch.object(
+            operator, "_atomic_private_write", side_effect=record_write,
+        ):
+            result = run_resident_paper_observer(
+                private_j2_directory=self.j2,
+                private_paper_directory=self.paper,
+                config=SETTINGS, policy=policy,
+                primary_lease=primary,
+                held_fallback_lease=lambda: self.fail("unexpected fallback"),
+                sleep=lambda _: None, clock_ms=lambda: fixed_ms,
+                should_stop=lambda: False, **self.flags,
+            )
+        self.assertEqual(result["status"], "bounded_run_completed")
+        self.assertEqual(result["primary_leases_completed"], 1)
+        self.assertGreaterEqual(len(updates), 2)
+        self.assertTrue(all(
+            v["stale_after_ms"]-v["updated_at_ms"] == 45_000
+            for v in updates
+        ))
+        terminal = json.loads(
+            (self.paper / "paper-operator-state-d453.json").read_text()
+        )
+        self.assertEqual(terminal["state"], "bounded_run_completed")
+        self.assertLessEqual(
+            terminal["stale_after_ms"]-terminal["updated_at_ms"], 375_000,
+        )
+        self.assertFalse(terminal["position_monitoring_guaranteed"])
+        # The worker was joined; no trailing pulse may erase terminal state.
+        self.assertEqual(
+            read_resident_paper_status(
+                directory=self.paper, now_ms=fixed_ms,
+            )["status"], "bounded_run_completed",
         )
 
     def test_unexpected_primary_exception_still_uses_held_fallback(self):
