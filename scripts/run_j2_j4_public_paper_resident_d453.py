@@ -11,6 +11,7 @@ from decimal import Decimal
 import json
 import os
 from pathlib import Path
+import signal
 
 from crypto_intelligence_agent.bybit_public_ticker_supervisor_d386 import TickerLeaseBudget
 from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
