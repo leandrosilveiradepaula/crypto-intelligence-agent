@@ -178,6 +178,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rest-warmup-filename", type=str)
     parser.add_argument("--auto-capture-rest-warmup", action="store_true")
     parser.add_argument("--lease-seconds", type=int, default=60)
+    parser.add_argument("--public-ws-sessions", type=int, default=3,
+                        help="1..3 bounded public WSS transport attempts per lease")
     parser.add_argument("--max-cycles", type=int, default=None)
     parser.add_argument("--pause-seconds", type=float, default=1.0)
     for flag in (
@@ -208,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         private_paper_directory=args.paper_directory,
         config=config, policy=ResidentPaperRunPolicy(
             DualPaperLeaseBudget(
-                WSRunBudget(max_sessions=1, max_frames=50_000,
+                WSRunBudget(max_sessions=args.public_ws_sessions, max_frames=50_000,
                             max_seconds=args.lease_seconds),
                 # A 50-symbol ticker stream can produce >150 market
                 # frames/sec. Keeping the default 50k cap for a 25min
@@ -216,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
                 # Scale the bounded ticker frame budget with requested
                 # seconds, never above D386's five-million hard limit.
                 TickerLeaseBudget(
-                    max_sessions=1,
+                    max_sessions=args.public_ws_sessions,
                     max_frames=min(
                         5_000_000,
                         max(50_000, args.lease_seconds * 1000),
