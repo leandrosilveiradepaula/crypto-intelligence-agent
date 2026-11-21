@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import os
 from pathlib import Path
+from threading import Event
 from typing import Callable
 
 from .bybit_closed_stream_cache import (
@@ -25,6 +26,7 @@ from .bybit_public_ws_once import _bounded_json
 from .bybit_ws_supervisor import WSRunBudget, supervise_ws_research
 from .j2_j4_public_paper_cycle_d449 import PublicPaperCycle
 from .j4_durable_paper_risk_d452 import DurablePaperRiskSource
+from .j4_public_paper_contract_refresh_d463 import AsyncPublicPaperContractTerms
 from .market_data import DataValidationError
 
 
@@ -72,6 +74,7 @@ def run_finite_n50_paper_streams(
     kline_clock_args: dict | None = None,
     ticker_clock_args: dict | None = None,
     risk_source: DurablePaperRiskSource | None = None,
+    public_contract_source: AsyncPublicPaperContractTerms | None = None,
 ) -> dict:
     """Finite public-data + PAPER event loop, with testable socket injection.
 
@@ -106,6 +109,10 @@ def run_finite_n50_paper_streams(
             and (type(risk_source) is not DurablePaperRiskSource
                  or cycle._risk is not risk_source)):
         raise DataValidationError("D452 ticker risk source not bound to exact PAPER cycle")
+    if (public_contract_source is not None
+            and (type(public_contract_source) is not AsyncPublicPaperContractTerms
+                 or cycle._contract is not public_contract_source)):
+        raise DataValidationError("D463 recent contract source not bound to exact PAPER cycle")
     injections = kline_session_factory is not None
     if injections:
         if (not callable(kline_session_factory)
@@ -172,7 +179,15 @@ def run_finite_n50_paper_streams(
     # Dual supervisors each own a separate socket. D449 callback lock and
     # AUTO2/AUTO4 transactions serialize their financial work; never create
     # a signal from the kline callback itself.
-    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="cia-paper-dual") as pool:
+    stop_refresh = Event()
+    with ThreadPoolExecutor(
+        max_workers=3 if public_contract_source is not None else 2,
+        thread_name_prefix="cia-paper-dual",
+    ) as pool:
+        refresh_future = (
+            pool.submit(public_contract_source.run, stop_refresh)
+            if public_contract_source is not None else None
+        )
         kline_future = pool.submit(
             supervise_ws_research,
             session_factory=kline_session_factory,
@@ -198,8 +213,13 @@ def run_finite_n50_paper_streams(
         )
         # Always await BOTH. Neither lease can be claimed to continue once
         # this method returns; a crash cannot leave an "active" status behind.
-        kline_result = kline_future.result()
-        ticker_result = ticker_future.result()
+        try:
+            kline_result = kline_future.result()
+            ticker_result = ticker_future.result()
+        finally:
+            stop_refresh.set()
+            if refresh_future is not None:
+                refresh_future.result()
     complete = (
         kline_result.status == "ws_budget_ended_research_only"
         and ticker_result.status == "lease_completed"
@@ -235,6 +255,10 @@ def run_finite_n50_paper_streams(
         "financial_backtest_approved": False,
         "marketwide_n50_verified": False,
         "paper_cycle": cycle.sanitized_report(),
+        "public_contract_refresh": (
+            public_contract_source.sanitized_report()
+            if public_contract_source is not None else None
+        ),
         "orders_sent": False,
         "approved_for_live_use": False,
     }
@@ -324,11 +348,24 @@ def run_dynamic_public_paper_lease_once(
                 or rest_history.window_end_ms !=
                    pinned.selected.ticker_received_ms // 3_600_000 * 3_600_000):
             raise DataValidationError("D462 frozen REST cohort does not match current WS research epoch")
+    # The N50 REST snapshot may be 100s old after historical warmup.
+    # Its contract fixture cannot be relabelled as recent. D463 refreshes
+    # contract terms in a separate bounded GET worker only when candidate
+    # PAPER symbols emerge, and requires a NEW quote after that GET.
+    contract_source = (
+        AsyncPublicPaperContractTerms(
+            snapshot=pinned.selected,
+            max_age_ms=config.max_contract_age_ms,
+            enable_public_contract_refresh=True,
+            client=public_rest_client, wall_ms=public_rest_clock,
+        ) if rest_history is not None else None
+    )
     cycle, risk = build_dynamic_public_paper_cycle(
         snapshot=pinned.selected,
         closed_journal_path=pinned.closed_journal_path,
         private_paper_directory=private_paper_directory,
         config=config, historical_rest_warmup=rest_history,
+        public_contract_source=contract_source,
     )
     lease = run_finite_n50_paper_streams(
         cycle=cycle, scope=pinned.selected.scope,
@@ -343,6 +380,7 @@ def run_dynamic_public_paper_lease_once(
         kline_clock_args=kline_clock_args,
         ticker_clock_args=ticker_clock_args,
         risk_source=risk,
+        public_contract_source=contract_source,
     )
     return {
         "schema_version": "d450-dynamic-public-n50-paper-lease-v1",
