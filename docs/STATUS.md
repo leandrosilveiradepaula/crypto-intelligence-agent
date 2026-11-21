@@ -2084,3 +2084,8 @@ D464 comprovou a primeira vela `confirm:true` de 1h real no journal isolado, XRP
 ## D467 — fail-fast do par WebSocket público J2/J4 (21/11/2026)
 
 Foi implementado encerramento cooperativo simétrico da sessão kline/ticker: falha ou abstenção antecipada de um feed não mantém o outro ativo por todo o orçamento. A sessão conjunta permanece degradada e o operador D453 continua responsável pela contingência PAPER, sem inventar candle, sinal, fill ou proteção de corretora. Teste injetado simula ambos os sentidos, sem rede real. Código na branch da entrega #734, sem implantação na VPS; o trial D466 segue fixado no SHA anterior. Gate: CI Linux/Windows/mobile no HEAD exato e resultado real do job D466. Nenhuma ordem real/J1 alterada.
+
+
+## D468 — sessão PAPER longa visível no Console J5 (21/11/2026)
+
+Defeito funcional corrigido: D453 gerava prazo de estado superior a 115 minutos em uma lease de 3480 segundos, mas o leitor J5/D456 rejeitava prazos acima de 375 segundos. O operador agora usa TTL ativo de 45 segundos e emite um heartbeat privado a cada 15 segundos durante as operações principal e de contingência; finaliza a thread antes de gravar estado terminal, que permanece legível por até 375 segundos. O heartbeat comprova apenas atividade do processo local, **não** conectividade, stops nativos, trades ou cobertura de posições. Regressão integrada abre uma lease simulada de 3480 segundos e verifica leitura pelo leitor real J5 enquanto ela opera, pulso e estado terminal sem sobrescrita. Sem release VPS, ordens, J1 ou custo extra. CI final do SHA e resultado do job público D466 ainda são gates separados.

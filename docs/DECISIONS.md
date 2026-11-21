@@ -2094,3 +2094,8 @@ A seleção atualizada consulta todas as páginas públicas Bybit LINEAR + ticke
 ## D467 — encerramento coordenado e fail-closed dos feeds públicos kline/ticker (21/11/2026)
 
 Se o supervisor público de velas ou cotações falhar/abster-se antecipadamente, encerrar o outro cooperativamente via evento local, classificar a sessão como degradada e permitir que o operador PAPER existente assuma a contingência de posições. Não aguardar o orçamento horário restante depois de uma falha conhecida; não alterar a J1, misturar os papéis dos feeds, sintetizar candle/fill/ordem nem afirmar proteção contínua ou live. Testar ambos os sentidos com sockets injetados e repetir os gates do SHA exato. Custo adicional R$0.
+
+
+## D468 — TTL curto e heartbeat de processo no status PAPER residente (21/11/2026)
+
+Estado proprietário J5 deve permanecer legível durante leases públicas longas sem declarar cobertura real de preço ou proteção de corretora. Unificar TTL do produtor D453 com o contrato estrito do consumidor D456: 45 segundos em estados ativos, atualização de atividade do processo a cada 15 segundos enquanto a chamada principal/fallback estiver em andamento, e até 375 segundos em estados terminais. Encerrar a thread antes de transitar o estado, falhar fechado quando o status não pode ser renovado. O heartbeat não certifica que a Bybit enviou frames, nem altera RiskGate/AUTO2/AUTO4, fechamento confirmado, coorte N50, J1 ou ordens; somente diagnóstico read-only. A CI de regressão e a homologação da VPS são evidências distintas.
