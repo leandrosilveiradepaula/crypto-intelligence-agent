@@ -355,6 +355,7 @@ def run_resident_paper_observer(
             safe.update((
                 "transport_disconnected", "frame_budget_exhausted",
                 "reconnection_deferred", "receive_budget",
+                "invalid_or_gapped_market_data",
             ))
             return value if type(value) is str and value in safe else "none_or_unknown"
         contract = stream.get("public_contract_refresh")
