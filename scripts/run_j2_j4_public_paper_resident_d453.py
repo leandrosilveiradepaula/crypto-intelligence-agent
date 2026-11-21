@@ -196,6 +196,11 @@ def main(argv: list[str] | None = None) -> int:
         }, sort_keys=True))
         return 2
     config = read_owner_paper_policy(args.policy_file)
+    stopping = {"requested": False}
+    def graceful_stop(_signal, _frame):
+        stopping["requested"] = True
+    signal.signal(signal.SIGINT, graceful_stop)
+    signal.signal(signal.SIGTERM, graceful_stop)
     report = run_resident_paper_observer(
         private_j2_directory=args.j2_directory,
         private_paper_directory=args.paper_directory,
@@ -213,6 +218,7 @@ def main(argv: list[str] | None = None) -> int:
         confirm_personal_readonly_research=True,
         confirm_region_eligible=True, confirm_public_data_rights=True,
         enable_hypothetical_paper_cycle=True,
+        should_stop=lambda: stopping["requested"],
     )
     print(json.dumps(report, sort_keys=True, separators=(",", ":")))
     return 0 if report["status"] == "bounded_run_completed" else 1
