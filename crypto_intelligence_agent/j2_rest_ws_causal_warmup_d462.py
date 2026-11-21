@@ -1,4 +1,4 @@
-"""D462: causal 23 REST historical hours + ONE genuine journaled WS close.
+"""D462: causal 24 REST historical hours + ONE genuine journaled WS close.
 
 This is NOT a migration or REST backfill into a WS journal. Historical
 OHLCV retains REST quality; only the final bar has post-ACK WS provenance.
@@ -45,7 +45,7 @@ class CausalRestWsResearch:
 
     def sanitized_report(self) -> dict:
         return {
-            "schema_version": "d462-causal-rest23-ws1-closed-hour-v1",
+            "schema_version": "d462-causal-rest24-ws1-closed-hour-v1",
             "status": "causal_rest_warmup_and_ws_close_validated_for_paper_research",
             "symbol": self.series.candles[-1].symbol,
             "rest_historical_candles": self.rest_warmup_count,
@@ -169,9 +169,9 @@ def read_causal_rest_warmup_ws_close(
         quote_volume=Decimal(data["turnover_usdt"]),
         quality=_WS,
     )
-    recent = tuple(bars[-23:]) + (ws,)
+    recent = tuple(bars) + (ws,)
     combined = sha256(json.dumps({
-        "schema": "d462-rest23-plus-postack-ws1-v1",
+        "schema": "d462-rest24-plus-postack-ws1-v1",
         "scope": scope.registry_sha256,
         "symbol": symbol,
         "rest_history_sha256": frozen.digest_sha256,
@@ -183,7 +183,7 @@ def read_causal_rest_warmup_ws_close(
         series=BybitClosedResearchSeries(
             recent, combined, registry, _STATUS,
         ),
-        rest_warmup_count=23,
+        rest_warmup_count=24,
         ws_confirmed_close_count=1,
         last_ws_received_ms=received_ms,
         historical_rest_snapshot_sha256=frozen.digest_sha256,
