@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 import re
 import time
+import tempfile
 
 from .bybit_linear_candle_research import stage_bybit_linear_kline
 from .bybit_public_j1_transport import (
@@ -26,7 +27,7 @@ from .bybit_public_j1_transport import (
 from .j2_dynamic_public_n50_d451 import DynamicPublicN50
 from .j4_private_paper_ws_operator_d425 import _private_directory
 from .j4_automatic_entry_materializer_d448 import (
-    _atomic_private_write, _read_owner_bytes,
+    _read_owner_bytes,
 )
 from .market_data import ClosedCandle, DataGapError, DataValidationError
 
@@ -235,7 +236,24 @@ def capture_rest_n50_24h(
     # Validate exactly what the immutable reader will later trust, before
     # any disk writes; never turn REST history into a WS-confirmed event.
     parsed = _decode(envelope, snapshot=snapshot, end_ms=end_ms, path=path)
-    _atomic_private_write(home, filename, raw)
+    # D448's atomic writer is intentionally limited to tiny AUTO2
+    # sidecars. Never raise its size cap or reuse it for 50x24 historical
+    # data. Stage 0600 bytes and use an exclusive hardlink for a once-only
+    # atomic publication; never replace an earlier captured observation.
+    fd, staged_name = tempfile.mkstemp(prefix=".d461-staged-", dir=home)
+    try:
+        with os.fdopen(fd, "wb") as out:
+            out.write(raw)
+            out.flush()
+            os.fsync(out.fileno())
+        os.link(staged_name, path, follow_symlinks=False)
+        dirfd = os.open(home, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(dirfd)
+        finally:
+            os.close(dirfd)
+    finally:
+        os.unlink(staged_name)
     return parsed
 
 
