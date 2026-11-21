@@ -2089,3 +2089,8 @@ A seleção atualizada consulta todas as páginas públicas Bybit LINEAR + ticke
 ## D462/D463 — separação obrigatória de fontes e metadados causais (21/11/2026)
 
 **Decisão técnica:** aquecer indicadores com REST fechado é legítimo para PAPER, mas somente a vela atual WS `confirm:true` pós-ACK, hash e recibo no journal D451 pode autorizar pesquisa de entrada corrente. A série tem duas qualidades distintas e digest composto; nunca backfill REST em journal WS. Para contornar a expiração dos termos do contrato durante 100s de aquecimento, **não aumentar TTL nem forjar timestamp**: usar consulta pública de instrumento em worker independente de ticker e, quando as regras não mudarem, admitir apenas novo BBO posterior ao GET, dentro do TTL do PRE11. Qualquer alteração ou falha do GET bloqueia abertura, sem impedir o monitoramento das posições já existentes. Modo inicial PAPER, 50x ainda parâmetro de pesquisa; sem ordens reais e sem custo extra.
+
+
+## D467 — encerramento coordenado e fail-closed dos feeds públicos kline/ticker (21/11/2026)
+
+Se o supervisor público de velas ou cotações falhar/abster-se antecipadamente, encerrar o outro cooperativamente via evento local, classificar a sessão como degradada e permitir que o operador PAPER existente assuma a contingência de posições. Não aguardar o orçamento horário restante depois de uma falha conhecida; não alterar a J1, misturar os papéis dos feeds, sintetizar candle/fill/ordem nem afirmar proteção contínua ou live. Testar ambos os sentidos com sockets injetados e repetir os gates do SHA exato. Custo adicional R$0.
