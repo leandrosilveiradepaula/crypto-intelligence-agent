@@ -255,6 +255,7 @@ def run_dynamic_public_paper_lease_once(
     kline_clock_args: dict | None = None,
     ticker_clock_args: dict | None = None,
     rest_warmup_filename: str | None = None,
+    auto_capture_rest_warmup: bool = False,
 ) -> dict:
     """Complete D451 -> pinned J2 epoch -> D452 -> D449/D450 finite lease.
 
@@ -279,7 +280,9 @@ def run_dynamic_public_paper_lease_once(
     if (type(config) is not PaperPublicCycleConfig
             or type(budget) is not DualPaperLeaseBudget
             or not isinstance(private_j2_directory, Path)
-            or not isinstance(private_paper_directory, Path)):
+            or not isinstance(private_paper_directory, Path)
+            or type(auto_capture_rest_warmup) is not bool
+            or (auto_capture_rest_warmup and rest_warmup_filename is not None)):
         raise DataValidationError("D450 typed durable N50 PAPER run inputs required")
     snapshot = capture_dynamic_public_n50(
         allow_public_network=True,
@@ -295,7 +298,20 @@ def run_dynamic_public_paper_lease_once(
     # BEFORE the latest WebSocket-confirmed candle, not fetched on demand
     # during a time-critical PAPER decision.
     rest_history = None
-    if rest_warmup_filename is not None:
+    if auto_capture_rest_warmup:
+        from .j2_rest_n50_history_d461 import capture_rest_n50_24h
+        if (snapshot.ticker_received_ms % 3_600_000
+                > 3_600_000 - 180_000):
+            raise DataGapError("D462 too late to prepare safe REST warmup before WS close")
+        rest_history = capture_rest_n50_24h(
+            snapshot=snapshot, private_j2_directory=private_j2_directory,
+            allow_public_network=True,
+            confirm_personal_readonly_research=True,
+            confirm_region_eligible=True,
+            confirm_public_data_rights=True,
+            client=public_rest_client, wall_ms=public_rest_clock,
+        )
+    elif rest_warmup_filename is not None:
         from .j2_rest_n50_history_d461 import (
             reopen_frozen_rest_n50_for_research,
         )
