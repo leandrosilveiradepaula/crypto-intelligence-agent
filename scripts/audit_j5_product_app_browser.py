@@ -448,6 +448,7 @@ def run(*, out_dir: Path | None = None) -> dict[str, object]:
                         "./integrated-paper-cycle.js",
                         "./research-scorebook.js", "./paper-ws-health.js",
                         "./paper-watch.js", "./resident-paper.js",
+                        "./last-public-paper-lease.js",
                         "./prospective-research.js", "./app.js",
                     )
                     actual_scripts = page.locator("script[src]").evaluate_all(
