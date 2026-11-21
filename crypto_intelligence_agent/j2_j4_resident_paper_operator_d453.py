@@ -45,7 +45,8 @@ _SAFE_KLINE_STATES = frozenset((
     "ws_reconnect_budget_exhausted_abstain",
 ))
 _SAFE_TICKER_STATES = frozenset((
-    "lease_completed", "lease_degraded", "ticker_fail_closed_abstain",
+    "lease_completed", "lease_degraded", "lease_abstained",
+    "ticker_fail_closed_abstain",
     "ticker_reconnect_budget_exhausted_abstain",
 ))
 _MAX_HELD = 50
@@ -356,6 +357,7 @@ def run_resident_paper_observer(
                 "transport_disconnected", "frame_budget_exhausted",
                 "reconnection_deferred", "receive_budget",
                 "invalid_or_gapped_market_data",
+                "paired_public_stream_stopped",
             ))
             return value if type(value) is str and value in safe else "none_or_unknown"
         contract = stream.get("public_contract_refresh")
