@@ -250,6 +250,29 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.assertFalse(result["orders_sent"])
         self.assertFalse(result["public_feed_confirmed_24h_continuous"])
 
+    def test_auto_warmup_refuses_incomplete_last_closed_ws_cohort(self):
+        from urllib.parse import urlsplit, parse_qs
+        old = self.responses.copy()
+        def transport(url, max_size):
+            self.calls.append(url)
+            if "/v5/market/kline?" in url:
+                args = parse_qs(urlsplit(url).query)
+                return json.dumps(historical_payload(
+                    args["symbol"][0], int(args["start"][0]),
+                    int(args["end"][0])+1,
+                )).encode("ascii")
+            return json.dumps(old[url]).encode("ascii")
+        self.client = BoundedBybitPublicClient(transport=transport)
+        result, _, _ = self.run_once(
+            auto_capture_rest_warmup=True, omit_close="ALT1USDT",
+        )
+        paper = result["dual_public_streams"]["paper_cycle"]
+        self.assertEqual(result["dual_public_streams"]["accepted_closed_callbacks"],49)
+        self.assertFalse(paper["research_cohort_complete"])
+        self.assertEqual(paper["eligible_relative_btc_hypotheses"],0)
+        self.assertEqual(paper["pending_paper_open_count"],0)
+        self.assertFalse(result["orders_sent"])
+
     def test_missing_explicit_operator_optin_is_zero_io(self):
         denied, k, t = self.run_once(allow=False)
         self.assertEqual(denied["status"], "six_explicit_paper_public_data_optins_required")
