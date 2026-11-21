@@ -29,7 +29,7 @@ from .j2_rest_n50_history_d461 import (
 from .j4_private_paper_ws_operator_d425 import _owner_file
 from .market_data import ClosedCandle, DataGapError, DataValidationError
 
-_STATUS = "research_only_mixed_rest23_ws1_closed_series"
+_STATUS = "research_only_mixed_rest24_ws1_closed_series"
 _REST = "bybit_public_rest_historical_closed_unverified"
 _WS = "bybit_public_ws_confirmed_unverified"
 
