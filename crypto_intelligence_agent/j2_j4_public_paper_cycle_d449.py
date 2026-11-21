@@ -406,6 +406,16 @@ class PublicPaperCycle:
             self._attempted.add(quote.symbol)
             try:
                 contract = self._contract(quote)
+            except DataGapError:
+                # D463: an asynchronous PUBLIC contract refresh was queued.
+                # No intent/sidecar has been written, so a later, newer BBO
+                # can retry only after the unchanged 0600 contract is fresh.
+                self._attempted.discard(quote.symbol)
+                self._count("public_contract_refresh_pending")
+                return "public_contract_refresh_pending"
+            except DataValidationError:
+                return "public_contract_or_paper_risk_unavailable"
+            try:
                 risk = self._risk(quote)
             except (DataGapError, DataValidationError):
                 return "public_contract_or_paper_risk_unavailable"
