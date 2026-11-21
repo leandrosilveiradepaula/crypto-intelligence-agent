@@ -34,6 +34,8 @@ from .j4_private_paper_ws_operator_d425 import (
     exclusive_paper_operator_lock, load_private_paper_routes,
 )
 from .market_data import DataGapError, DataValidationError
+from .j2_rest_n50_history_d461 import RestN50History
+from .j2_rest_ws_causal_warmup_d462 import read_causal_rest_warmup_ws_close
 from .paper_causal_fill_d394 import _checked_market
 from .paper_intrahour_quote_router_d391 import PaperIntrahourQuoteRouter
 from .paper_margin_preflight import (
@@ -160,6 +162,7 @@ class PublicPaperCycle:
         config: PaperPublicCycleConfig,
         contract_for_quote: Callable[[BybitTickerQuote], PaperLinearContractFixture],
         risk_for_quote: Callable[[BybitTickerQuote], PaperRiskObservation],
+        historical_rest_warmup: RestN50History | None = None,
     ):
         if (type(scope) is not OfflineReviewedStreamScope
                 or not 1 <= len(scope.contracts) <= _MAX_COHORT
@@ -168,7 +171,11 @@ class PublicPaperCycle:
                 or type(config) is not PaperPublicCycleConfig
                 or not isinstance(closed_journal_path, Path)
                 or not isinstance(private_paper_directory, Path)
-                or not callable(contract_for_quote) or not callable(risk_for_quote)):
+                or not callable(contract_for_quote) or not callable(risk_for_quote)
+                or (historical_rest_warmup is not None
+                    and (type(historical_rest_warmup) is not RestN50History
+                         or historical_rest_warmup.scope_sha256 != scope.registry_sha256
+                         or historical_rest_warmup.snapshot_file is None))):
             raise DataValidationError("D449 typed independent public cohort and PAPER inputs required")
         self._home = _private_directory(private_paper_directory)
         if (closed_journal_path.resolve(strict=True) == (self._home / _ORDER_FILE).resolve(strict=False)
@@ -177,6 +184,7 @@ class PublicPaperCycle:
             raise DataValidationError("D449 J2 and PAPER must be isolated from J1")
         self._closed = closed_journal_path
         self._scope = scope
+        self._rest_warmup = historical_rest_warmup
         self._symbols = frozenset(m.symbol for m in scope.contracts)
         self._config = config
         self._contract = contract_for_quote
@@ -302,13 +310,23 @@ class PublicPaperCycle:
         studies = {}
         for symbol in sorted(self._symbols):
             try:
-                series = read_bybit_closed_research_series(
-                    self._closed, scope=self._scope, symbol=symbol,
-                    decision_at_ms=close + 1, as_of_ms=now_ms,
-                )
+                if self._rest_warmup is not None:
+                    joined = read_causal_rest_warmup_ws_close(
+                        history=self._rest_warmup,
+                        scope=self._scope, journal_path=self._closed,
+                        symbol=symbol, open_ms=close+1-HOUR_MS,
+                        received_ms=self._closes[symbol][1],
+                    )
+                    series = joined.series
+                else:
+                    series = read_bybit_closed_research_series(
+                        self._closed, scope=self._scope, symbol=symbol,
+                        decision_at_ms=close + 1, as_of_ms=now_ms,
+                    )
                 observed = evaluate_observed_bybit_research(
                     series, config=self._config.research, decision_at_ms=close + 1,
                     close_safety_ms=1,
+                    allow_causal_rest_ws_warmup=self._rest_warmup is not None,
                 )
             except (DataGapError, DataValidationError):
                 return "closed_history_incomplete"
@@ -417,6 +435,7 @@ class PublicPaperCycle:
                     position_journal_path=self._home / _JOURNAL,
                     now_ms=quote.received_at_ms,
                     allow_hypothetical_paper_open=True,
+                    allow_causal_rest_ws_warmup=self._rest_warmup is not None,
                 )
             except DataValidationError:
                 # A crash between AUTO2 and sidecar might leave a PENDING.
@@ -459,6 +478,7 @@ class PublicPaperCycle:
                 "held_paper_contract_count":
                     len(self._router.monitored_symbols) if self._router else 0,
                 "event_counts": dict(sorted(self._counts.items())),
+                "historical_rest_warmup_enabled": self._rest_warmup is not None,
                 "marketwide_n50_independently_verified": False,
                 "financial_backtest_approved": False,
                 "real_fills_verified": False,
