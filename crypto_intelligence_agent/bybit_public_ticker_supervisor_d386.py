@@ -159,6 +159,7 @@ def supervise_public_tickers(
     on_quote: Callable[[BybitTickerQuote], None] | None = None,
     on_session_reset: Callable[[], None] | None = None,
     on_acked_poll: Callable[[], None] | None = None,
+    stop_requested: Callable[[], bool] | None = None,
 ) -> TickerLeaseReport:
     """Receive real-time ticker data from injected sessions for a finite lease.
 
@@ -192,7 +193,8 @@ def supervise_public_tickers(
             or type(budget) is not TickerLeaseBudget
             or (on_quote is not None and not callable(on_quote))
             or (on_session_reset is not None and not callable(on_session_reset))
-            or (on_acked_poll is not None and not callable(on_acked_poll))):
+            or (on_acked_poll is not None and not callable(on_acked_poll))
+            or (stop_requested is not None and not callable(stop_requested))):
         raise DataValidationError("ticker_ws_injected_dependencies_invalid")
     topics = _topic_args(book)
     allowed = frozenset(topics)
@@ -227,11 +229,17 @@ def supervise_public_tickers(
         )
 
     for attempt in range(budget.max_sessions):
+        if stop_requested is not None and stop_requested():
+            book.mark_disconnected()
+            return report("lease_abstained", "paired_public_stream_stopped")
         if attempt:
             delay = min(RECONNECT_WAIT_SECONDS * 2 ** (attempt - 1), 20.0)
             if _monotonic(clock) + delay >= started + budget.max_seconds:
                 return report("lease_abstained", "reconnect_deferred")
             sleeper(delay)
+            if stop_requested is not None and stop_requested():
+                book.mark_disconnected()
+                return report("lease_abstained", "paired_public_stream_stopped")
         if _monotonic(clock) - started >= budget.max_seconds:
             return report("lease_abstained", "time_budget_exceeded")
         if frames >= budget.max_frames:
@@ -258,6 +266,9 @@ def supervise_public_tickers(
                 attempts = 0
 
                 while True:
+                    if stop_requested is not None and stop_requested():
+                        book.mark_disconnected()
+                        return report("lease_abstained", "paired_public_stream_stopped")
                     now = _monotonic(clock)
                     remaining = started + budget.max_seconds - now
                     if acknowledged and on_acked_poll is not None:
