@@ -29,7 +29,7 @@ from crypto_intelligence_agent.j2_observed_paper_entry_d447 import ObservedPaper
 from crypto_intelligence_agent.j4_automatic_entry_materializer_d448 import PaperEntryExitPolicy
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import load_private_paper_routes
 from crypto_intelligence_agent.j5_owner_paper_positions_d446 import read_owner_paper_positions
-from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.market_data import DataGapError, DataValidationError
 from crypto_intelligence_agent.paper_margin_preflight import PaperLinearContractFixture
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
 from crypto_intelligence_agent.paper_risk_gate import PaperRiskLimits, PaperRiskObservation
@@ -247,6 +247,35 @@ class Provisional50PaperCycleTests(unittest.TestCase):
         )
         self.assertEqual(fresh.sanitized_report()["held_paper_contract_count"], 1)
         self.assertEqual(len(ledger.load(position_id).exit_orders), 1)
+
+    def test_paper_candidate_waits_for_refreshed_contract_and_new_quote(self):
+        self.all_closes()
+        seen = []
+        def initially_stale(quote):
+            seen.append(quote.received_at_ms)
+            if len(seen) == 1:
+                raise DataGapError("D463 refresh not yet completed")
+            return contract(quote)
+        self.cycle._contract = initially_stale
+        self.assertEqual(
+            self.cycle.on_public_quote(ticker()),
+            "public_contract_refresh_pending",
+        )
+        self.assertEqual(self.cycle.sanitized_report()["pending_paper_open_count"],0)
+        self.assertEqual(
+            self.cycle.sanitized_report()["event_counts"].get(
+                "public_contract_refresh_pending",
+            ),1,
+        )
+        # Only the NEXT, newer quote can reserve AUTO2. No invented
+        # new signal is injected and the original 50/50 WS cohort remains.
+        self.assertEqual(
+            self.cycle.on_public_quote(ticker(at=RECEIPT+200,seq=11)),
+            "paper_open_pending_armed",
+        )
+        self.assertEqual(len(seen),2)
+        self.assertEqual(self.cycle.sanitized_report()["pending_paper_open_count"],1)
+        self.assertFalse(self.cycle.sanitized_report()["orders_sent"])
 
     def test_silence_in_other_contract_prevents_entries_not_held_exits(self):
         self.all_closes(omit="BTCUSDT")
