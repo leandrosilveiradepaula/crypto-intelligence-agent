@@ -197,6 +197,15 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
             received_ms=history.window_end_ms + HOUR_MS + 2000,
         )
         self.assertEqual(len(joined.series.candles),25)
+        from crypto_intelligence_agent.j2_observed_bybit_research import (
+            evaluate_observed_bybit_research,
+        )
+        btc_result = evaluate_observed_bybit_research(
+            joined.series, config=SETTINGS.research,
+            decision_at_ms=history.window_end_ms+HOUR_MS,
+            close_safety_ms=1, allow_causal_rest_ws_warmup=True,
+        )
+        self.assertEqual(btc_result.evaluated_candle_count,25)
         counts = result["dual_public_streams"]["paper_cycle"]["event_counts"]
         self.assertEqual(
             result["dual_public_streams"]["accepted_public_ticker_callbacks"],
