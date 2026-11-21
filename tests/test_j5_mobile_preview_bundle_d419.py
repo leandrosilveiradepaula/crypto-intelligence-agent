@@ -85,7 +85,7 @@ class MobilePreviewBundleD419Tests(unittest.TestCase):
             {"public-market.js", "persisted-paper.js",
              "integrated-paper-cycle.js", "research-scorebook.js",
              "paper-ws-health.js", "paper-watch.js", "resident-paper.js",
-             "prospective-research.js"},
+             "last-public-paper-lease.js", "prospective-research.js"},
         )
         self.assertNotEqual(expected, incomplete)
 
