@@ -13,7 +13,7 @@ Group=cia-probe
 WorkingDirectory=@REPO@
 UMask=0077
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStart=@PYTHON@ -m scripts.serve_j5_local_readonly --allow-loopback-readonly-http --allow-resident-paper-status-loopback --resident-paper-status-directory @PAPER_DIR@ --allow-owner-paper-positions-loopback --owner-paper-positions-directory @PAPER_DIR@
+ExecStart=@PYTHON@ -m scripts.serve_j5_local_readonly --allow-loopback-readonly-http --allow-resident-paper-status-loopback --resident-paper-status-directory @PAPER_DIR@ --allow-last-public-paper-lease-loopback --last-public-paper-lease-directory @PAPER_DIR@ --allow-owner-paper-positions-loopback --owner-paper-positions-directory @PAPER_DIR@
 Restart=on-failure
 RestartSec=15s
 TimeoutStartSec=30

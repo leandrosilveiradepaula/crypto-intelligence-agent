@@ -37,6 +37,9 @@ from crypto_intelligence_agent.j4_continuous_paper_worker_d444 import (
 from crypto_intelligence_agent.j5_resident_paper_status_d456 import (
     ResidentPaperStatusUnavailable, read_resident_paper_status,
 )
+from crypto_intelligence_agent.j5_last_public_paper_lease_d470 import (
+    LastPaperLeaseUnavailable, read_last_paper_lease,
+)
 from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import read_projection
 from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
 from crypto_intelligence_agent.bybit_public_rest_price_pulse_d403 import capture_public_rest_price_pulse
@@ -62,6 +65,7 @@ _STATIC_FILES: dict[str, tuple[str, str]] = {
     "/paper-ws-health.js": ("paper-ws-health.js", "text/javascript; charset=utf-8"),
     "/paper-watch.js": ("paper-watch.js", "text/javascript; charset=utf-8"),
     "/resident-paper.js": ("resident-paper.js", "text/javascript; charset=utf-8"),
+    "/last-public-paper-lease.js": ("last-public-paper-lease.js", "text/javascript; charset=utf-8"),
     "/prospective-research.js": ("prospective-research.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
 }
@@ -299,6 +303,7 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
     persisted_paper_directory: Path | None = None  # D446 read-only detail, opt-in
     paper_worker_directory: Path | None = None  # D444 owner state, count-only
     resident_paper_directory: Path | None = None  # D453 resident PAPER owner-only status
+    last_public_paper_lease_directory: Path | None = None  # D470 last lease; NOT live feed
     prospective_research_directory: Path | None = None
     protocol_version = "HTTP/1.1"
     server_version = "CIA-Local-ReadOnly"
@@ -410,6 +415,22 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
             # Up to 50 routed PAPER positions; this cap applies ONLY on a
             # separately opt-in LOOPBACK-only endpoint, never public HTTP.
             self._json(200, report, max_bytes=96_000)
+            return
+        if self.path == "/api/last-public-paper-lease":
+            directory = type(self).last_public_paper_lease_directory
+            if directory is None:
+                self._json(503, {"status": "last_public_paper_lease_not_enabled",
+                                 "orders_sent": False})
+                return
+            try:
+                report = read_last_paper_lease(
+                    directory=directory, now_ms=time.time_ns() // 1_000_000,
+                )
+            except LastPaperLeaseUnavailable:
+                self._json(503, {"status": "last_public_paper_lease_unavailable",
+                                 "orders_sent": False})
+                return
+            self._json(200, report, max_bytes=4096)
             return
         if self.path == "/api/resident-paper-status":
             directory = type(self).resident_paper_directory
@@ -569,6 +590,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--allow-paper-worker-loopback", action="store_true")
     parser.add_argument("--allow-resident-paper-status-loopback", action="store_true")
     parser.add_argument("--resident-paper-status-directory", type=Path)
+    parser.add_argument("--allow-last-public-paper-lease-loopback", action="store_true")
+    parser.add_argument("--last-public-paper-lease-directory", type=Path)
     parser.add_argument("--paper-worker-directory", type=Path)
     parser.add_argument("--allow-prospective-research-loopback", action="store_true")
     parser.add_argument("--prospective-research-directory", type=Path)
@@ -591,6 +614,11 @@ def main(argv: list[str] | None = None) -> int:
             "status": "private_health_explicit_optin_and_directory_required",
             "orders_sent": False,
         }, sort_keys=True))
+        return 65
+    if args.allow_last_public_paper_lease_loopback != (
+            args.last_public_paper_lease_directory is not None):
+        print(json.dumps({"status": "last_public_paper_lease_explicit_optin_required",
+                          "orders_sent": False}, sort_keys=True))
         return 65
     if args.allow_resident_paper_status_loopback != (args.resident_paper_status_directory is not None):
         print(json.dumps({"status": "resident_paper_status_explicit_optin_required",
@@ -619,6 +647,17 @@ def main(argv: list[str] | None = None) -> int:
         try: _owned_directory(args.prospective_research_directory)
         except (OSError, DataValidationError):
             print(json.dumps({"status": "prospective_research_owner_directory_unavailable", "orders_sent": False}, sort_keys=True)); return 65
+    if args.allow_last_public_paper_lease_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({"status": "last_public_paper_lease_nonroot_required",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+        try:
+            _owned_directory(args.last_public_paper_lease_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({"status": "last_public_paper_lease_owner_directory_unavailable",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
     if args.allow_resident_paper_status_loopback:
         if os.name != "posix" or os.geteuid() == 0:
             print(json.dumps({"status": "resident_paper_status_nonroot_required",
@@ -710,6 +749,10 @@ def main(argv: list[str] | None = None) -> int:
     LoopbackPanelHandler.resident_paper_directory = (
         args.resident_paper_status_directory
         if args.allow_resident_paper_status_loopback else None
+    )
+    LoopbackPanelHandler.last_public_paper_lease_directory = (
+        args.last_public_paper_lease_directory
+        if args.allow_last_public_paper_lease_loopback else None
     )
     LoopbackPanelHandler.prospective_research_directory = (
         args.prospective_research_directory if args.allow_prospective_research_loopback else None
