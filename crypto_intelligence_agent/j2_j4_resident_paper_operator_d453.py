@@ -262,11 +262,13 @@ def run_resident_paper_observer(
                 or policy.max_cycles is None):
             raise DataValidationError("D453 offline test hooks require bounded owner test")
     else:
-        if any(x is not None for x in (sleep, clock_ms, should_stop)):
-            raise DataValidationError("D453 real resident operator has no injected clocks")
+        if (sleep is not None or clock_ms is not None
+                or (should_stop is not None and not callable(should_stop))):
+            raise DataValidationError("D453 real resident mode forbids injected clocks")
         sleep = time.sleep
         clock_ms = lambda: time.time_ns() // 1_000_000
-        should_stop = lambda: False
+        if should_stop is None:
+            should_stop = lambda: False
         primary_lease = lambda: run_dynamic_public_paper_lease_once(
             private_j2_directory=j2home, private_paper_directory=home,
             config=config, budget=policy.budget,
