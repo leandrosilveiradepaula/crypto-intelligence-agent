@@ -1,0 +1,263 @@
+"""D461: complete REST 24h N50 historical research bootstrap, separate from WS.
+
+One immutable, SHA-256-checksummed owner-only snapshot of 50 complete REST
+windows. Public REST historical candles are NEVER rewritten as WS confirm=true
+or appended to the WS-only D451 journal. One bounded GET per symbol; no
+private account endpoints, trading, unbounded retries, or funding claims.
+
+All 50 rows must validate before ANY snapshot is committed. A frozen
+snapshot can be reread/audited without another HTTP request after restart.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Decimal
+from hashlib import sha256
+import json
+import os
+from pathlib import Path
+import re
+import time
+
+from .bybit_linear_candle_research import stage_bybit_linear_kline
+from .bybit_public_j1_transport import (
+    BoundedBybitPublicClient, kline_url, HOUR_MS,
+)
+from .j2_dynamic_public_n50_d451 import DynamicPublicN50
+from .j4_private_paper_ws_operator_d425 import _private_directory
+from .j4_automatic_entry_materializer_d448 import (
+    _atomic_private_write, _read_owner_bytes,
+)
+from .market_data import ClosedCandle, DataGapError, DataValidationError
+
+_SCHEMA = "d461-public-rest-n50-24h-history-v1"
+_SOURCE = "public_rest_historical_closed_unverified"
+_QUALITY = "bybit_public_rest_historical_closed_unverified"
+_WINDOW = 24
+_MAX_BYTES = 500_000
+_DIGEST = re.compile(r"[a-f0-9]{64}\Z")
+
+
+def _canonical(value: dict) -> bytes:
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
+        allow_nan=False,
+    ).encode("ascii")
+
+
+@dataclass(frozen=True)
+class RestN50History:
+    scope_sha256: str
+    window_end_ms: int
+    captured_at_ms: int
+    digest_sha256: str
+    source_mode: str
+    series: tuple[tuple[str, tuple[ClosedCandle, ...]], ...]
+    snapshot_file: Path | None = None
+
+    @property
+    def symbols(self) -> tuple[str, ...]:
+        return tuple(symbol for symbol, _ in self.series)
+
+    def sanitized_report(self) -> dict:
+        return {
+            "schema_version": _SCHEMA,
+            "status": "historical_rest_n50_24h_research_ready",
+            "eligible_members": len(self.series),
+            "validated_closed_candles": sum(len(bars) for _, bars in self.series),
+            "window_end_ms": self.window_end_ms,
+            "captured_at_ms": self.captured_at_ms,
+            "sha256": self.digest_sha256,
+            "source_mode": self.source_mode,
+            "provenance": _SOURCE,
+            "websocket_confirmed_candles": 0,
+            "real_time_market_data_verified": False,
+            "source_authenticated": False,
+            "marketwide_crypto_identity_verified": False,
+            "approved_for_live_trading": False,
+            "orders_sent": False,
+            "j1_touched": False,
+        }
+
+
+def _name(fingerprint: str, until: int) -> str:
+    if (type(fingerprint) is not str or _DIGEST.fullmatch(fingerprint) is None
+            or type(until) is not int or until <= 0
+            or until % HOUR_MS):
+        raise DataValidationError("D461 exact cohort fingerprint and hour required")
+    return "rest-history-d461-" + fingerprint[:18] + "-" + str(until) + ".json"
+
+
+def _decode(envelope: dict, *, snapshot: DynamicPublicN50,
+            end_ms: int, path: Path | None) -> RestN50History:
+    if (type(envelope) is not dict or set(envelope) != {"schema", "payload", "sha256"}
+            or envelope["schema"] != _SCHEMA
+            or type(envelope["sha256"]) is not str
+            or _DIGEST.fullmatch(envelope["sha256"]) is None
+            or type(envelope["payload"]) is not dict
+            or sha256(_canonical(envelope["payload"])).hexdigest() != envelope["sha256"]):
+        raise DataGapError("D461 invalid or tampered immutable REST history")
+    p = envelope["payload"]
+    if (set(p) != {"cohort_sha256", "window_end_ms", "captured_at_ms",
+                    "member_symbols", "source_mode", "rows"}
+            or p["cohort_sha256"] != snapshot.fingerprint_sha256
+            or p["window_end_ms"] != end_ms
+            or type(p["captured_at_ms"]) is not int
+            or not end_ms <= p["captured_at_ms"] < end_ms + HOUR_MS
+            or p["source_mode"] != snapshot.source_mode
+            or type(p["member_symbols"]) is not list
+            or p["member_symbols"] != sorted(snapshot.symbols)
+            or type(p["rows"]) is not dict
+            or set(p["rows"]) != set(snapshot.symbols)
+            or len(p["rows"]) != 50):
+        raise DataGapError("D461 REST history scope/window changed")
+    series = []
+    for symbol in p["member_symbols"]:
+        raw = p["rows"][symbol]
+        if (type(raw) is not list or len(raw) != _WINDOW
+                or any(type(row) is not list or len(row) != 7
+                       or any(type(item) is not str for item in row) for row in raw)):
+            raise DataGapError("D461 incomplete or untyped historical page")
+        page = stage_bybit_linear_kline(
+            {"retCode": 0, "result": {
+                "category": "linear", "symbol": symbol, "list": raw,
+            }},
+            symbol=symbol, quote_currency="USDT",
+            contract_type="LinearPerpetual", contract_status="Trading",
+            contract_observed_at_ms=snapshot.scope.observed_at_ms,
+            observed_at_ms=p["captured_at_ms"],
+            max_contract_age_ms=86_400_000,
+            interval="1h", start_open_ms=end_ms-_WINDOW*HOUR_MS,
+            end_open_ms=end_ms, max_candles=_WINDOW,
+        )
+        bars = tuple(ClosedCandle(
+            exchange="bybit_v5_public", market="linear_perpetual", symbol=symbol,
+            interval="1h", open_time_ms=bar.open_time_ms,
+            close_time_ms=bar.close_time_ms,
+            open=bar.open, high=bar.high, low=bar.low, close=bar.close,
+            base_volume=bar.documented_base_volume,
+            quote_volume=bar.documented_quote_turnover,
+            quality=_QUALITY,
+        ) for bar in page.candles)
+        series.append((symbol, bars))
+    return RestN50History(
+        snapshot.fingerprint_sha256, end_ms, p["captured_at_ms"],
+        envelope["sha256"], snapshot.source_mode, tuple(series), path,
+    )
+
+
+def capture_rest_n50_24h(
+    *, snapshot: DynamicPublicN50, private_j2_directory: Path,
+    allow_public_network: bool = False,
+    confirm_personal_readonly_research: bool = False,
+    confirm_region_eligible: bool = False,
+    confirm_public_data_rights: bool = False,
+    client: BoundedBybitPublicClient | None = None,
+    wall_ms=None,
+) -> RestN50History:
+    """Capture 50 complete rows in one UTC window with atomic all-or-none write.
+
+    The existing J1 bounded GET helper is used ONLY as transport; none of
+    J1's state/DB/timers are accessed. Injected offline captures are marked.
+    """
+    flags = (allow_public_network, confirm_personal_readonly_research,
+             confirm_region_eligible, confirm_public_data_rights)
+    if any(type(v) is not bool for v in flags) or not all(flags):
+        raise DataValidationError("D461 four explicit public research opt-ins required")
+    if (type(snapshot) is not DynamicPublicN50
+            or len(snapshot.symbols) != 50
+            or not isinstance(private_j2_directory, Path)
+            or any(s.startswith("j1-") for s in private_j2_directory.parts)):
+        raise DataValidationError("D461 requires exact N50 and distinct J2 owner scope")
+    home = _private_directory(private_j2_directory)
+    if snapshot.source_mode not in (
+        "public_rest_observed_unverified", "injected_offline_protocol_replay",
+    ):
+        raise DataValidationError("D461 unsupported market provenance")
+    injected = client is not None
+    if injected:
+        if (type(client) is not BoundedBybitPublicClient
+                or client.transport is None or not callable(wall_ms)
+                or snapshot.source_mode != "injected_offline_protocol_replay"):
+            raise DataValidationError("D461 injected REST must be separately labeled offline")
+    else:
+        if (wall_ms is not None or snapshot.source_mode != "public_rest_observed_unverified"
+                or os.name != "posix" or not hasattr(os,"geteuid")
+                or os.geteuid() == 0):
+            raise DataValidationError("D461 public REST requires nonroot real owner")
+        wall_ms = lambda: time.time_ns() // 1_000_000
+        client = BoundedBybitPublicClient()
+    started = wall_ms()
+    if type(started) is not int or started < snapshot.ticker_received_ms:
+        raise DataValidationError("D461 REST history cannot predate N50 snapshot")
+    end_ms = started // HOUR_MS * HOUR_MS
+    if end_ms <= 0 or started - snapshot.ticker_received_ms > 300_000:
+        raise DataValidationError("D461 fresh public N50 membership required")
+    filename = _name(snapshot.fingerprint_sha256, end_ms)
+    path = home / filename
+    if path.exists() or path.is_symlink():
+        # A replay uses the same immutable bytes, never refetches or overwrites.
+        return read_rest_n50_24h(snapshot=snapshot, private_j2_directory=home,
+                                 window_end_ms=end_ms)
+    rows = {}
+    for symbol in sorted(snapshot.symbols):
+        _, payload = client.get(kline_url(symbol, end_ms-_WINDOW*HOUR_MS, end_ms))
+        received = wall_ms()
+        if (type(received) is not int or received < started
+                or received >= end_ms + HOUR_MS):
+            raise DataGapError("D461 UTC window changed during REST capture")
+        validated = stage_bybit_linear_kline(
+            payload, symbol=symbol, quote_currency="USDT",
+            contract_type="LinearPerpetual", contract_status="Trading",
+            contract_observed_at_ms=snapshot.scope.observed_at_ms,
+            observed_at_ms=received, max_contract_age_ms=86_400_000,
+            interval="1h", start_open_ms=end_ms-_WINDOW*HOUR_MS,
+            end_open_ms=end_ms, max_candles=_WINDOW,
+        )
+        rows[symbol] = [[
+            str(c.open_time_ms), format(c.open, "f"),
+            format(c.high, "f"), format(c.low, "f"),
+            format(c.close, "f"), format(c.documented_base_volume, "f"),
+            format(c.documented_quote_turnover, "f"),
+        ] for c in reversed(validated.candles)]
+    last = wall_ms()
+    if type(last) is not int or last >= end_ms + HOUR_MS:
+        raise DataGapError("D461 cohort REST capture crossed UTC window")
+    p = {"cohort_sha256": snapshot.fingerprint_sha256,
+         "window_end_ms": end_ms, "captured_at_ms": last,
+         "member_symbols": sorted(snapshot.symbols),
+         "source_mode": snapshot.source_mode, "rows": rows}
+    envelope = {"schema": _SCHEMA, "payload": p,
+                "sha256": sha256(_canonical(p)).hexdigest()}
+    raw = _canonical(envelope)
+    if len(raw) > _MAX_BYTES:
+        raise DataValidationError("D461 historical snapshot size exceeded")
+    # Validate exactly what the immutable reader will later trust, before
+    # any disk writes; never turn REST history into a WS-confirmed event.
+    parsed = _decode(envelope, snapshot=snapshot, end_ms=end_ms, path=path)
+    _atomic_private_write(home, filename, raw)
+    return parsed
+
+
+def read_rest_n50_24h(*, snapshot: DynamicPublicN50,
+                      private_j2_directory: Path, window_end_ms: int) -> RestN50History:
+    if type(snapshot) is not DynamicPublicN50 or not isinstance(private_j2_directory, Path):
+        raise DataValidationError("D461 typed replay requires the exact frozen cohort")
+    home = _private_directory(private_j2_directory)
+    filename = _name(snapshot.fingerprint_sha256, window_end_ms)
+    raw = _read_owner_bytes(home, filename, _MAX_BYTES)
+    try:
+        doc = json.loads(raw.decode("ascii"), object_pairs_hook=_unique)
+    except (ValueError, UnicodeError, TypeError):
+        raise DataGapError("D461 corrupt owner historical REST bytes") from None
+    return _decode(doc, snapshot=snapshot, end_ms=window_end_ms,
+                   path=home/filename)
+
+
+def _unique(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise DataGapError("D461 repeated JSON historical field")
+        result[key] = value
+    return result
