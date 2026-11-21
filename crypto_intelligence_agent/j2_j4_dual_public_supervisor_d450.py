@@ -41,8 +41,10 @@ class DualPaperLeaseBudget:
         if (type(self.kline) is not WSRunBudget
                 or type(self.ticker) is not TickerLeaseBudget
                 or self.kline.max_seconds != self.ticker.max_seconds
-                or self.kline.max_sessions != 1
-                or self.ticker.max_sessions != 1
+                # D471: bounded retries for transport failure are already
+                # implemented in D386 and J2; never retry malformed data.
+                or not 1 <= self.kline.max_sessions <= 3
+                or self.ticker.max_sessions != self.kline.max_sessions
                 or self.kline.max_seconds > 3600):
             raise DataValidationError("D450 matched bounded public leases required")
 
