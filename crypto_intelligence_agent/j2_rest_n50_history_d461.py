@@ -216,9 +216,17 @@ def capture_rest_n50_24h(
     filename = _name(snapshot.fingerprint_sha256, end_ms)
     path = home / filename
     if path.exists() or path.is_symlink():
-        # A replay uses the same immutable bytes, never refetches or overwrites.
-        return read_rest_n50_24h(snapshot=snapshot, private_j2_directory=home,
-                                 window_end_ms=end_ms)
+        # A later N50 ticker refresh must NOT re-date the first historical
+        # REST capture. Reuse frozen owner bytes when the exact membership,
+        # source mode and UTC hour still match, without new network GETs.
+        frozen = reopen_frozen_rest_n50_for_research(
+            private_j2_directory=home, filename=filename,
+        )
+        if (frozen.scope_sha256 != snapshot.fingerprint_sha256
+                or frozen.source_mode != snapshot.source_mode
+                or frozen.window_end_ms != end_ms):
+            raise DataGapError("D461 frozen cohort cannot be relabelled")
+        return frozen
     rows = {}
     for symbol in sorted(snapshot.symbols):
         _, payload = client.get(kline_url(symbol, end_ms-_WINDOW*HOUR_MS, end_ms))
