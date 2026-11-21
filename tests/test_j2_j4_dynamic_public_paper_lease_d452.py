@@ -187,6 +187,16 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         self.assertEqual(result["status"],"finite_public_paper_research_closed")
         self.assertTrue(result["preclosed_rest_history_warmup_enabled"])
         self.assertEqual(result["dual_public_streams"]["accepted_closed_callbacks"],50)
+        from crypto_intelligence_agent.j2_rest_ws_causal_warmup_d462 import (
+            read_causal_rest_warmup_ws_close,
+        )
+        joined = read_causal_rest_warmup_ws_close(
+            history=history, scope=selected().scope,
+            journal_path=next(self.j2.glob("n50-d451-*.sqlite")),
+            symbol="BTCUSDT", open_ms=history.window_end_ms,
+            received_ms=history.window_end_ms + HOUR_MS + 2000,
+        )
+        self.assertEqual(len(joined.series.candles),25)
         counts = result["dual_public_streams"]["paper_cycle"]["event_counts"]
         self.assertEqual(
             result["dual_public_streams"]["accepted_public_ticker_callbacks"],
