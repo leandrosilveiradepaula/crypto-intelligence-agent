@@ -588,3 +588,8 @@ D449 recebe closes J2 auditados dos contratos da mesma hora (1..50), compara com
 ## D451/D452 — evolução contínua de J2 e J4 sem reiniciar J1
 
 J2 obtém N50 **provisório** a partir de Bybit instruments-info paginado e ticker rolling turnover24h, com BTC sempre como contexto. Persistência de coorte por membros e filtros protege o histórico de 24h contra reset de ranking e impede misturar epochs; atualizações de composição criam novo journal e precisam de novo warmup. J4 substitui observação sempre-zero de tests pela reconstrução de risco dos diários AUTO2/AUTO4 e mark público posterior. A ligação D450 seleciona ranking, abre duas streams públicas em paralelo e conduz hipóteses D435/D447/D448 a PAPER e à tela J5. Ainda sem serviço VPS, captura pública contínua, PnL líquido validado, funding/liquidação ou ordens. Ver docs/J2_DYNAMIC_PUBLIC_N50_PAPER_D451_D452.md.
+
+
+## J2/J4/J6 — entrega D462/D463 (21/11/2026)
+
+**Implementado no GitHub:** seleção dinâmica N50, 50×24h histórico REST selado, unificação somente no leitor com última hora WS confirmada, D435→D447/PRE11/RiskGate/PAPER, renovação assíncrona de contratos com cotação pós-GET, e parâmetro de aquecimento REST automático no candidato de serviço J6. **Comprovado até aqui:** D461 1.200 candles históricos reais e 9 hipóteses de pesquisa reproduzíveis; D462 ensaio integrado offline com 50 WS `confirm:true` e coorte pesquisada. **Não comprovado:** última vela de 1h WS real no código D462/D463, abertura PAPER dinâmica real, reinício com posição nova, serviço/painel publicado ou resultado líquido validado. Foco da continuação: trial ao vivo finito como `cia-probe`, fechamento verificável, testes de metadados pós-GET, saída de posições PAPER no J5; não reabrir J1.
