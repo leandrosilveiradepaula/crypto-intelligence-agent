@@ -25,6 +25,7 @@ from crypto_intelligence_agent.j2_j4_public_paper_cycle_d449 import PublicPaperC
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import load_private_paper_routes
 from crypto_intelligence_agent.j4_durable_paper_risk_d452 import DurablePaperRiskSource
 from crypto_intelligence_agent.paper_position_reservations import SQLitePaperPositionJournal
+from crypto_intelligence_agent.market_data import DataValidationError
 from test_j2_j4_public_paper_cycle_d449 import (
     FIRST, LAST, RECEIPT, SIZE, SETTINGS,
     contract, frame, paper_risk, scope_and_symbols,
@@ -373,6 +374,86 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
                 self.assertLess(kc.mono_time, 10)
                 self.assertLess(tc.mono_time, 10)
                 self.assertFalse(report["orders_sent"])
+
+
+    def test_recover_transport_disconnect_inside_same_bounded_paper_lease(self):
+        # The first ticker ACK is followed by an OSError. The second public
+        # session must re-ACK and provide fresh BBO while the kline supervisor
+        # retains 50 journaled closes. All protocols are in-memory fixtures.
+        ready = threading.Event()
+        kc, tc = Clock(), Clock()
+        kline = Session(
+            kc, [(ack(), RECEIPT)]
+            + [frame(s, 24) for s in self.symbols],
+            signal_done=ready,
+        )
+
+        class DropAfterAck(Session):
+            def recv(self, timeout):
+                if self.frames:
+                    return super().recv(timeout)
+                raise OSError("offline transport interruption")
+
+        first = DropAfterAck(tc, [(ack("cia-ticker-1"), RECEIPT)])
+        second = Session(tc, [
+            (ack("cia-ticker-1"), RECEIPT),
+            (market_quote(ts=RECEIPT - 100, cs=10), RECEIPT),
+            (market_quote(ts=RECEIPT + 400, cs=11), RECEIPT + 500),
+            (market_quote(ts=RECEIPT + 1100, cs=12, mark="107.3"),
+             RECEIPT + 1200),
+        ], after_close=ready)
+        attempts = iter((first, second))
+        budget = DualPaperLeaseBudget(
+            WSRunBudget(max_sessions=2, max_frames=200, max_seconds=15),
+            TickerLeaseBudget(max_sessions=2, max_frames=200, max_seconds=15),
+        )
+        with patch(
+            "socket.create_connection",
+            side_effect=AssertionError("transport replay must remain offline"),
+        ):
+            result = run_finite_n50_paper_streams(
+                cycle=self.cycle, scope=self.scope,
+                journal_path=self.closed, budget=budget,
+                allow_public_network=True, allow_public_websocket=True,
+                confirm_personal_readonly_research=True,
+                confirm_region_eligible=True, confirm_public_data_rights=True,
+                enable_hypothetical_paper_cycle=True,
+                kline_session_factory=lambda: kline,
+                ticker_session_factory=lambda: next(attempts),
+                kline_clock_args={
+                    "clock": kc.monotonic, "wall_ms": kc.wall, "sleeper": kc.sleeper,
+                },
+                ticker_clock_args={
+                    "clock": tc.monotonic, "wall_ms": tc.wall, "sleeper": tc.sleeper,
+                },
+            )
+        self.assertTrue(first.closed)
+        self.assertTrue(second.closed)
+        self.assertTrue(kline.closed)
+        self.assertEqual(result["status"], "finite_public_paper_research_closed")
+        self.assertEqual(result["kline_confirmed_events_appended"], SIZE)
+        self.assertEqual(result["accepted_closed_callbacks"], SIZE)
+        self.assertEqual(result["ticker_acks"], 2)
+        self.assertEqual(result["ticker_reconnects"], 1)
+        self.assertEqual(result["accepted_public_ticker_callbacks"], 3)
+        self.assertEqual(result["paper_cycle"]["held_paper_contract_count"], 1)
+        self.assertFalse(result["orders_sent"])
+
+    def test_reconnect_sessions_must_match_and_never_exceed_three(self):
+        DualPaperLeaseBudget(
+            WSRunBudget(max_sessions=3, max_frames=200, max_seconds=15),
+            TickerLeaseBudget(max_sessions=3, max_frames=200, max_seconds=15),
+        )
+        with self.assertRaises(DataValidationError):
+            DualPaperLeaseBudget(
+                WSRunBudget(max_sessions=2, max_frames=200, max_seconds=15),
+                TickerLeaseBudget(max_sessions=1, max_frames=200, max_seconds=15),
+            )
+        with self.assertRaises(DataValidationError):
+            DualPaperLeaseBudget(
+                WSRunBudget(max_sessions=4, max_frames=200, max_seconds=15),
+                TickerLeaseBudget(max_sessions=4, max_frames=200, max_seconds=15),
+            )
 
     def test_denied_without_explicit_optins_no_sockets(self):
         report, k, t = self.run_streams(allow=False)
