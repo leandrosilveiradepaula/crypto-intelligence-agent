@@ -1,5 +1,30 @@
 # Jornadas — plano de execução
 
+## D445/D446 — positions multicontrato e interface ligada ao SQLite
+
+O worker D444 passou de BTCUSDT para até 50 contratos de posições PAPER já mantidas (D445), mesmo que fora do ranking N50, usando scan REST paginado e o mesmo AUTO4. Para o usuário visualizar o resultado sem importar arquivos, D446 adiciona leitura owner-only do mesmo diário em transação SQLite ro e alimenta o console em português no loopback com saldos e reservas PAPER. O navegador continua separado das simulações locais e não envia ordens. Ainda falta colocar o worker em execução contínua na VPS, ampliar o motor de entrada J2 para o universo dinâmico N50 e provar retorno ajustado ao risco J3, sem transformar CI em comprovação de rentabilidade.
+
+
+## D445 — múltiplas posições PAPER sem depender do N50 (20/11/2026)
+
+Implementado código J4 capaz de acompanhar todos os contratos de posições existentes no arquivo AUTO4 (limite 50) numa mesma assinatura WS, inclusive aqueles fora do ranking corrente. A lista vem do manifesto privado D425 em cada ciclo; a elegibilidade de *monitorar posição já aberta* independe da classificação de oportunidades da J2. REST usa paginação limitada para verificar o instrumento, não per-symbol GET; D443 foi generalizada com compatibilidade do piloto BTC, e D444 chama a nova rotina multicontrato. Testes cobrem BTC e ETH simultâneos no mesmo SQLite com parcial, stop protetivo, nenhuma redução artificial por ticker, replay idempotente e caminho sem opt-ins. **Não implica nova posição, sinais autorizados nem cobertura comprovada.** Sem merge/deploy/VPS, sem J1 ou ordens reais. Próximo marco de desenvolvimento: seleção N50 dinâmica como fonte de *novas* oportunidades e J3 prospectivo/OOS com custos reais de pesquisa; worker de posições já não depende desse ranking.
+
+
+## D444 — desenvolvimento de worker PAPER em ciclo contínuo (20/11/2026)
+
+O código passou de sessões J4 finitas isoladas para um **worker de ciclo contínuo** com D443, reutilizando D425/D390/D391/AUTO4 e a posição PAPER persistida. Possui reconexão/backoff, orçamento por lease, limite de degradação, lock do worker e estado owner-only para interface futura, com CLI opt-in. A cada novo ciclo preserva journal/ordens PAPER; só declara último lease saudável quando há cotação pós-ACK válida. Limites: ainda BTCUSDT, não há serviço implantado, a operação real não foi demonstrada, e não há cobertura ininterrupta/ordem real. Nenhum diagnóstico ou mudança na J1. Próximo marco de produto: conectar worker às rotas de todas as posições existentes e seleção N50 dinâmica; depois interface J5 com estado terminal/stale e sinal J2/J3 validado. Documento `docs/J4_CONTINUOUS_PAPER_MONITOR_D444.md`.
+
+
+## D443 — J4 PAPER persistido, cotação pública BTC, sem dependência da J1 (19/11/2026 UTC)
+
+Entrega codificada na mesma branch/revisão draft de J2/J3/J4: D443 carrega rotas PAPER existentes via D425 e mantém o lock de exclusividade, valida BTCUSDT em REST D441 e usa D390/D385/D386 para alimentar apenas o D391/D389/AUTO4. Diferentemente da demonstração D442 que descarta a posição fictícia, D443 preserva o **arquivo de posição PAPER** e a reserva REDUCE_ONLY ao fim de uma sessão FINITA. Os testes verificam (em SQLite de teste) parcial, stop-first, ausência de fill por ticker e não duplicação no reinício. Sem diagnóstico/alteração da J1, ranking N50, fill real, lucro, proteção de stop nativo ou daemon 24x7. Os gates de CI para o HEAD final e uma futura captura pública real ainda precisam ser concluídos; PR permanece draft. CLI com cinco opt-ins em scripts/run_j4_held_btc_paper_d443_once.py. Prioridade seguinte: liveness/reconexão 24x7 J6, N50 dinâmico/posições fora do ranking, sinais J2 validados OOS e J3 custos/risco realista, sem autorizar ordens.
+
+
+## J2→J3→J4 D442 — triagem de custos e margem no fluxo PAPER (19/11/2026)
+
+Integração de **um único contrato de pesquisa** BTCUSDT, desacoplada da J1 e restrita a uma sessão pública finita: D441 REST para metadados atuais → D385/D386 ticker ACK/snapshot/delta → J3/PRE2 custos explícitos + veto de stop hipotético que já exauriria a margem → D426/D391/D389/AUTO4 para abertura declaradamente fictícia e reserva de saída automática sem FILL inferido. Sem nova estratégia, ranking N50, orders, testnet, mudanças VPS ou aceitação de retorno. CI/verificação e prova pública ainda são gates separados. Documento: `docs/J2_J3_J4_BTC_SHADOW_D442.md`.
+
+
 ## J5/J6 D432 — projeção local sem importação manual
 
 Uma execução offline pode publicar o relatório integrado para o Console loopback já existente, que o lê automaticamente com `fetch` somente em `127.0.0.1`. O artefato é uma projeção de leitura, owner-only e fail-closed; não transforma a demo em supervisão contínua nem em PAPER prospectivo.
@@ -543,3 +568,28 @@ O operador D436 reutiliza os contratos de close confirmado, journal e D434/D435.
 ## J2/J5 D436 — sessão WS finita de pesquisa e terminal no Console
 
 O D436 está preparado para processar frames públicos Bybit modelados durante uma sessão supervisionada com transporte injetável, sem ordens. Callback pós-ACK/pós-append publica no J5 um relatório versionado e não autorizante; ao término a interface deve mostrar “Sessão encerrada”, expirar dados e bloquear hipóteses antigas. Prova de fake socket + journal D434 + D435, regressões backend/browser e CI Linux/Windows/Chrome **aprovadas** na PR #733, merge SHA `4ca5f3db8417771154e28341e1636405a148d782` (HEAD de CI `7c41d285ceb14ba6c7c0d8945e0d39a0320665be`). A observação real/operador PAPER contínuo J6 **não está** aceito por esta entrega; #677 permanece aberta.
+
+
+## J2 → J3 → J4 / D447 — entrada observada até intenção PAPER
+
+**Implementação da fronteira, ainda sem homologação:** série de candles públicos confirmados D434/D435 pode produzir hipótese LONG/SHORT pesquisada; ticker D385 fresco posterior ao close, filtro J3/PRE2 de alvo líquido e risco hipotético, margem PRE11 e AUTO8/RiskGate determinam se uma intenção OPEN PENDING é reservada no AUTO2, com alavancagem da nova entrada em receipt. Repetição é bloqueada transacionalmente, sem um fill ou posição inventados. A jornada de produto ainda depende de escopo dinâmico N50, entrada integrada ao worker D444, execução PAPER honesta, validação J3 OOS e prova operacional J6; no momento nada foi implantado na VPS e a PR #734 segue draft. Contrato `docs/J2_J3_PAPER_ENTRY_D447.md`.
+
+
+## J2/J3/J4/J5 D448 — percurso PAPER integrado, sem ordens
+
+D436 recebe closes confirmados no journal J2; D435 pesquisa hipótese causal; D447 passa por custos/risco e só cria OPEN PENDING; D448 exige BBO posterior e condições conservadoras para FILL de **simulação** no AUTO2. O mesmo evento e receipt alimentam AUTO4 e o plano de stops/parciais; o manifesto D425 alimenta o monitor D444/D445 e a consulta J5/D446. Falhas no meio das gravações podem ser retomadas sem novas intenções/quantidades. Demonstração determinística LONG/SHORT com parser de frames D436, SQLite real, parcial D391 e J5: `scripts.demo_j2_j4_observed_paper_cycle_d448`. O ciclo ainda não tem fonte N50 real contínua, prova de fill/liquidação ou serviço PAPER implantado; J3 OOS e J6 permanecem gates, sem negociação real.
+
+
+## J2/J3/J4/J5 — D449/D450: integração de dois feeds públicos a PAPER
+
+D449 recebe closes J2 auditados dos contratos da mesma hora (1..50), compara com BTC e conduz a hipótese D435 às telas de custo J3 e risco D447, intenção PAPER AUTO2, BBO posterior D448 e posição AUTO4 com plano de saídas J4. Prioriza o ticker das posições mantidas para stops e parciais, independentemente da disponibilidade dos 49 demais ativos. D450 usa supervisores de kline.60 e tickers.* existentes em paralelo, sob opt-ins e lease finito. A coorte dinâmica real e os dados de risco/fees/funding/liquidação ainda não foram conectados como serviço na VPS, logo não há trading real ou produto 24x7. A prova atual é protocol replay com 50 membros, sem websocket genuíno nesta unidade.
+
+
+## D451/D452 — evolução contínua de J2 e J4 sem reiniciar J1
+
+J2 obtém N50 **provisório** a partir de Bybit instruments-info paginado e ticker rolling turnover24h, com BTC sempre como contexto. Persistência de coorte por membros e filtros protege o histórico de 24h contra reset de ranking e impede misturar epochs; atualizações de composição criam novo journal e precisam de novo warmup. J4 substitui observação sempre-zero de tests pela reconstrução de risco dos diários AUTO2/AUTO4 e mark público posterior. A ligação D450 seleciona ranking, abre duas streams públicas em paralelo e conduz hipóteses D435/D447/D448 a PAPER e à tela J5. Ainda sem serviço VPS, captura pública contínua, PnL líquido validado, funding/liquidação ou ordens. Ver docs/J2_DYNAMIC_PUBLIC_N50_PAPER_D451_D452.md.
+
+
+## J2/J4/J6 — entrega D462/D463 (21/11/2026)
+
+**Implementado no GitHub:** seleção dinâmica N50, 50×24h histórico REST selado, unificação somente no leitor com última hora WS confirmada, D435→D447/PRE11/RiskGate/PAPER, renovação assíncrona de contratos com cotação pós-GET, e parâmetro de aquecimento REST automático no candidato de serviço J6. **Comprovado até aqui:** D461 1.200 candles históricos reais e 9 hipóteses de pesquisa reproduzíveis; D462 ensaio integrado offline com 50 WS `confirm:true` e coorte pesquisada. **Não comprovado:** última vela de 1h WS real no código D462/D463, abertura PAPER dinâmica real, reinício com posição nova, serviço/painel publicado ou resultado líquido validado. Foco da continuação: trial ao vivo finito como `cia-probe`, fechamento verificável, testes de metadados pós-GET, saída de posições PAPER no J5; não reabrir J1.

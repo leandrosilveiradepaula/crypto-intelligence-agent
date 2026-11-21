@@ -147,6 +147,14 @@ class PaperIntrahourQuoteRouter:
         """Read-only ticker membership required by the D401 public bridge."""
         return frozenset(self._by_symbol)
 
+    @property
+    def monitored_position_ids(self) -> tuple[str, ...]:
+        """Existing, explicitly routed AUTO4 IDs for owner-only UI readback.
+
+        This is never returned in a public WS report or count-only status.
+        """
+        return tuple(sorted(route.position_id for route in self._by_symbol.values()))
+
     def fresh_held_contract_count(
         self, *, at_ms: int, max_age_ms: int = MAX_NETWORK_LAG_MS,
     ) -> int:

@@ -95,8 +95,12 @@ class PersistedPaperMobileD407Tests(unittest.TestCase):
         source=(ROOT / "web/app/persisted-paper.js").read_text(encoding="utf-8")
         self.assertIn("paper_positions_snapshot_v1",source)
         self.assertIn("market-pulse-row",source)
+        self.assertIn('global.fetch("/api/owner-paper-positions"', source)
+        self.assertIn('credentials: "omit"', source)
+        self.assertIn('redirect: "error"', source)
+        self.assertIn("isLocal()", source)
         for forbidden in (
-            "localStorage.", "sessionStorage.", "indexedDB.", "fetch(",
+            "localStorage.", "sessionStorage.", "indexedDB.",
             "XMLHttpRequest", "new WebSocket", "innerHTML", "document.write",
             "sendBeacon", "eval(",
         ):

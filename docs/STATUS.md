@@ -1,4 +1,34 @@
 # STATUS — Crypto Intelligence Agent
+
+## D446 — posições AUTO4 salvas aparecem diretamente no console localhost (20/11/2026)
+
+Implementado leitor read-only de todas as posições explicitamente roteadas no manifesto privado D425, usando `inspect_paper_positions` e o formato D407 já aceito pelo navegador. O servidor local J5 requer opt-in independente `--allow-owner-paper-positions-loopback --owner-paper-positions-directory` e só atende em 127.0.0.1. A UI deixa de exigir importação de JSON quando este opt-in está ativo; atualiza a cada 15s, identifica origem local e remove snapshot antigo se a leitura falhar, sem adulterar cenários locais. Sem novas posições, fills ou ordens; nenhuma escrita no journal, J1 ou produção. Proteção da corretora não é inferida. Testes exercitam owner 0700/0600, duas posições no mesmo SQLite, conteúdo de resposta no loopback e bloqueio de Host e métodos de escrita.
+
+
+## D445 — múltiplas posições PAPER sem depender do N50 (20/11/2026)
+
+Implementado código J4 capaz de acompanhar todos os contratos de posições existentes no arquivo AUTO4 (limite 50) numa mesma assinatura WS, inclusive aqueles fora do ranking corrente. A lista vem do manifesto privado D425 em cada ciclo; a elegibilidade de *monitorar posição já aberta* independe da classificação de oportunidades da J2. REST usa paginação limitada para verificar o instrumento, não per-symbol GET; D443 foi generalizada com compatibilidade do piloto BTC, e D444 chama a nova rotina multicontrato. Testes cobrem BTC e ETH simultâneos no mesmo SQLite com parcial, stop protetivo, nenhuma redução artificial por ticker, replay idempotente e caminho sem opt-ins. **Não implica nova posição, sinais autorizados nem cobertura comprovada.** Sem merge/deploy/VPS, sem J1 ou ordens reais. Próximo marco de desenvolvimento: seleção N50 dinâmica como fonte de *novas* oportunidades e J3 prospectivo/OOS com custos reais de pesquisa; worker de posições já não depende desse ranking.
+
+
+## D444 — desenvolvimento de worker PAPER em ciclo contínuo (20/11/2026)
+
+O código passou de sessões J4 finitas isoladas para um **worker de ciclo contínuo** com D443, reutilizando D425/D390/D391/AUTO4 e a posição PAPER persistida. Possui reconexão/backoff, orçamento por lease, limite de degradação, lock do worker e estado owner-only para interface futura, com CLI opt-in. A cada novo ciclo preserva journal/ordens PAPER; só declara último lease saudável quando há cotação pós-ACK válida. Limites: ainda BTCUSDT, não há serviço implantado, a operação real não foi demonstrada, e não há cobertura ininterrupta/ordem real. Nenhum diagnóstico ou mudança na J1. Próximo marco de produto: conectar worker às rotas de todas as posições existentes e seleção N50 dinâmica; depois interface J5 com estado terminal/stale e sinal J2/J3 validado. Documento `docs/J4_CONTINUOUS_PAPER_MONITOR_D444.md`.
+
+
+## D443 — J4 PAPER persistido, cotação pública BTC, sem dependência da J1 (19/11/2026 UTC)
+
+Entrega codificada na mesma branch/revisão draft de J2/J3/J4: D443 carrega rotas PAPER existentes via D425 e mantém o lock de exclusividade, valida BTCUSDT em REST D441 e usa D390/D385/D386 para alimentar apenas o D391/D389/AUTO4. Diferentemente da demonstração D442 que descarta a posição fictícia, D443 preserva o **arquivo de posição PAPER** e a reserva REDUCE_ONLY ao fim de uma sessão FINITA. Os testes verificam (em SQLite de teste) parcial, stop-first, ausência de fill por ticker e não duplicação no reinício. Sem diagnóstico/alteração da J1, ranking N50, fill real, lucro, proteção de stop nativo ou daemon 24x7. Os gates de CI para o HEAD final e uma futura captura pública real ainda precisam ser concluídos; PR permanece draft. CLI com cinco opt-ins em scripts/run_j4_held_btc_paper_d443_once.py. Prioridade seguinte: liveness/reconexão 24x7 J6, N50 dinâmico/posições fora do ranking, sinais J2 validados OOS e J3 custos/risco realista, sem autorizar ordens.
+
+
+## J2→J3→J4 D442 — triagem de custos e margem no fluxo PAPER (19/11/2026)
+
+Integração de **um único contrato de pesquisa** BTCUSDT, desacoplada da J1 e restrita a uma sessão pública finita: D441 REST para metadados atuais → D385/D386 ticker ACK/snapshot/delta → J3/PRE2 custos explícitos + veto de stop hipotético que já exauriria a margem → D426/D391/D389/AUTO4 para abertura declaradamente fictícia e reserva de saída automática sem FILL inferido. Sem nova estratégia, ranking N50, orders, testnet, mudanças VPS ou aceitação de retorno. CI/verificação e prova pública ainda são gates separados. Documento: `docs/J2_J3_J4_BTC_SHADOW_D442.md`.
+
+
+## J2 — piloto Bybit isolado D441 (19/11/2026)
+
+J1 D360 mantém o aceite de pesquisa. Corrigida a dependência indevida D438/D439 que levava piloto público J2 a revalidar a J1. Novo piloto é single-BTCUSDT com um REST público de metadados e uma sessão WSS finita; isolado de estado, bancos e timers J1. A CI e captura pública genuína são gates separados. Sem ordens e sem produção. Referência: `docs/OPERATIONAL_STATE.md`.
+
 ## D436 — pesquisa J2→J5 supervisionada integrada, somente offline verificado (18/11/2026 UTC)
 
 Na branch `codex/issue-677-prospective-research-feed`, a pesquisa de closes públicos Bybit confirmados foi conectada ao supervisor WS injetável existente, D434/D435 e projeção owner-only 0700/0600 no J5. A demonstração `python -m scripts.demo_j2_prospective_bybit_research_d436` executa agora um **socket FAKE sem rede**, com ACK, frame aberto, close confirmado, journal, hipótese LONG/SHORT/sem hipótese, projeção terminal explícita e retransmissão sem duplicação. Browser J5 usa módulo `prospective-research.js` com validação estrita v2, polling somente loopback, revogação em HTTP 503, resposta atrasada e sessão encerrada. Testes backend, Node e navegador passaram na **PR #733**, merge `4ca5f3db8417771154e28341e1636405a148d782`, com HEAD revisado `7c41d285ceb14ba6c7c0d8945e0d39a0320665be` e CI de PR Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS**. A CI após o merge é evidência independente. Não alegar observação pública real, 24×7, entrada PAPER, PnL, stop nativo, ordem, credencial ou liberação do RiskGate. Nenhum serviço J1 owner/VPS foi alterado. Custo R$0.
@@ -1974,3 +2004,78 @@ A D391→D394 foi integrada na `main` SHA `74008194a4ab07af70e7de3837bbc9b5a2e50
 ## J2 D434 — ponte causal read-only integrada (18/11/2026 UTC)
 
 PR #731 incorporada à main SHA `cd54ea7ed8e720d6214f41f83cefe899c774547b` após revisão do head `76856a663c06722343e0e8db358454cc936a9232` e CI Linux/Python/docs, Windows/offline e Chrome/mobile **SUCCESS**. A fronteira lê 24h+ candles Bybit `kline.60` confirmados do journal offline já existente e entrega `ClosedCandle` de qualidade `bybit_public_ws_confirmed_unverified`, sem acesso J1 owner ou autorização para sinais. Revisão corrigiu risco de duas transações: os candles agora saem **do mesmo snapshot SQLite** auditado (digest/PIT/gaps). Regressão verifica alteração concorrente posterior ao snapshot, escopo e atraso. Sem ingestão prospectiva real nem J2 quantitative live, ordens, testnet, VPS ou 24×7. Próximo marco: fluxo público Bybit WS isolado com candles observados + avaliação de pesquisa J2 causal sem autorização AUTO2 e estado temporal observável; depois gates de risco para PAPER. Custo R$0.
+
+
+## D447 — hipótese observada ligada à reserva de entrada PAPER (20/11/2026)
+
+A PR #734 draft recebeu o módulo D447: pesquisa causal D435 com candles públicos fechados e ticker posterior D385 → filtro J3/PRE2 de alvo líquido e perda hipotética no stop versus margem → PRE11/RiskGate/AUTO8 → intenção OPEN PENDING durável AUTO2. Inclui deduplicação da mesma hora em restart e regressões LONG/SHORT, stale/future, custos, margem, kill-switch e histórico adulterado. Não são sinais autorizados, posições AUTO4, fills, stops reais ou ordens; o worker D444 permanece apenas monitorando posições PAPER que já existem. Código e docs no GitHub, homologação da suíte do SHA exato ainda a verificar; sem alteração VPS/J1 ou release. Ver `docs/J2_J3_PAPER_ENTRY_D447.md`.
+
+
+## D448 — ciclo observado de entrada PAPER, posição, parcial e leitura J5 (20/11/2026 UTC)
+
+A ponte D447 agora tem continuação funcional D448: uma OPEN PENDING só recebe FILL **hipotético** sob cotação BBO posterior à intenção, custo/slippage explicitamente assumidos, stop otimista sob margem e liquidez aparente suficiente. O AUTO2 mantém evento único e recibo de margem/alavancagem; AUTO4 materializa uma posição com saída parcial, stop e runner residual sem criar segundo ledger. O manifesto D425 é registrado automaticamente para que D444/D445 acompanhem a posição existente no próximo ciclo e J5/D446 a exiba. Testes incluem LONG/SHORT, stops/parciais, falhas entre os writes, retomada sem duplo FILL e kill-switch sob lock. Demonstração reprodutível: `python -m scripts.demo_j2_j4_observed_paper_cycle_d448` (protocolo FAKE, sem rede). Ainda **não** é operação prospectiva N50, serviço implantado, fill de corretora, backtest financeiro ou 24x7; CI do SHA completo deve ser conferida. Documento `docs/J2_J3_J4_OBSERVED_PAPER_LIFECYCLE_D448.md`. Custo R$0.
+
+
+## D449/D450 — seleção por coorte de 50 e dois supervisores públicos integrados (20/11/2026)
+
+O ciclo já demonstrado D448 agora recebe um coordenador event-driven D449 para 1–50 contratos simultâneos: candles fechados do journal J2, condição de mesma hora e 24h, BTC-relative, custos J3, risco PRE11/AUTO8, OPEN PENDING AUTO2, simulação de FILL posterior e registro AUTO4/rotas D425, respeitando stops de posições atuais antes das entradas. Rejeita grupo parcial/velho sem paralisar saídas; recupera intenções armadas/posições após restart. Testes Linux D449 no SHA e2f4abc3570bcb803b447fd3e3b351b024045c46: 3.474 OK (incluindo jornada fixture de 50). D450 liga dois WebSockets já existentes em paralelo com ACK/snapshot e callback pós-append; o teste inicial recusou ACK fixture incompleto, corrigido em d72126ade971d6185443b207212527fdc8fc3dac, aguardando CI final. Nenhuma sessão real Bybit, N50 dinâmica comprovada, VPS, serviço, ordens, stop nativo ou backtest OOS homologado. Documento docs/J2_J4_PUBLIC_N50_PAPER_D450.md.
+
+
+## N50 dinâmico e riscos persistidos D451/D452 (20/11/2026 UTC)
+
+Implementação funcional nova: catálogo paginado e ticker Bybit REST público selecionam 50 perpétuos USDT por volume móvel e BTC contextual; snapshot versionado e owner-only conserva 24h de candles confirmados entre atualizações do mesmo conjunto, rotacionando sem misturar históricos quando o conjunto mudar. AUTO2/AUTO4 alimentam risco PAPER real local: contagem de PENDING, kill-switch, exposições a mark fresco e falha fechada quando falta preço/contabilidade de PnL. Um runner finito coordena seleção/rest + epoch + os dois WS públicos paralelos + posição PAPER e J5. Novos testes de seleção, segurança do epoch, risco do diário e runner de duas sessões injetadas. CI final do novo SHA ainda deve ser comprovada, dados REST/WS de TESTE não equivalem a sessão real, nenhum release VPS, J1 ou ordem. Contrato docs/J2_DYNAMIC_PUBLIC_N50_PAPER_D451_D452.md.
+
+
+### Captura REST pública real, somente leitura, ambiente VPS (20/11/2026 UTC)
+
+Acesso real de API pública confirmado via gateway VPS, comando Python GET sem escrita/serviço: /v5/market/tickers?category=linear respondeu retCode=0, 946 tickers. /v5/market/instruments-info?category=linear&limit=1000 respondeu retCode=0, 939 linhas, cursor terminal e 831 perpétuos LINEAR/USDT em estado Trading. Entre os maiores 50 por turnover indiscriminado havia 22 com categoria/atributos não aptos ao filtro conservador cripto (classificações de ações/ETF/commodity e similares). Com o filtro de identidade estruturada de D451, 370 contratos elegíveis *provisórios* apresentavam ticker com turnover positivo; BTC estava na seleção top50 dessa coorte. Isso NÃO autentica identidade econômica de todos os contratos, nem é sessão WS ou prova de 24h/negociação. Não foram enviados pedidos de ordem nem tocada J1. O primeiro teste Windows identificou import POSIX fcntl no carregamento; corrigido por import tardio em 4b354e0ac6368326119ea4159ff634ccf094acfc. As CI desse HEAD exigem confirmação; captura real REST é evidência de transporte, não de PAPER 24x7.
+
+
+## D453/D454 — observação PAPER residente e resultado condicionado de fills (20/11/2026 UTC)
+
+O monitor D453 pode repetir leases públicos para N50 e, quando REST ou a pesquisa principal falham, operar uma sessão ticker independente para **posições PAPER já abertas**, mantendo prioridade de stops/parciais e sem criar novas entradas. Lock exclusivo impede dois monitores no mesmo owner; estado local 0600 informa sessão/degradação e falha terminal sem alegar stop nativo. Novo CLI owner-only com arquivo de política de margem, alavancagem, custos e saídas parciais; nenhum serviço VPS instalado. D394/D448 agora colocam preço BBO **hipotético** no próprio evento FILL AUTO2/AUTO4 sem migrar o SQLite; D454 reconstrói em Decimal o resultado condicional das parciais LONG/SHORT antes de funding e o J5 disponibiliza leitura opcional. Nenhum lucro real, funding liquidado, API privada, stop na exchange, trade ou liberação de múltiplas aberturas foi afirmado. Suítes e navegador do SHA final devem ser confirmados. Docs: docs/J2_J4_RESIDENT_PAPER_OPERATOR_D453.md e docs/J3_J4_DURABLE_HYPOTHETICAL_PNL_D454.md.
+
+
+## D455 — resultado estimado de parciais PAPER no próprio painel J5 (20/11/2026)
+
+Entrega de produto: o endpoint LOOPBACK existente `/api/owner-paper-positions` opta pela projeção D454 dos mesmos FILLs hipotéticos persistidos AUTO2/AUTO4; a interface J5 exibe valor condicional em USDT, taxas e slippage estimados, e aviso explícito de funding e liquidação não verificados. O browser aceita posições legadas sem relatório e recusa PnL falso ou custo alterado com validação Decimal BigInt. Testes: `tests/test_j5_conditional_paper_pnl_d455.py` e regressões D454, D407, servidor local. Essa melhoria não prova lucro real ou liberação de múltiplas posições, não instala serviço e não altera J1. Contrato: `docs/J5_PAPER_CONDITIONAL_PNL_D455.md`. Validar o SHA integralmente antes de aceitar a entrega.
+
+
+## D456/D457 — avanço da Entrega 1: operador PAPER residente na VPS (21/11/2026)
+
+Código entregue na branch: status D453 owner-only 0600 com leitor D456/endpoint J5 loopback opt-in e visualização em português; graceful shutdown SIGTERM no CLI residente; preflight D457 offline para usuário não-root, diretórios J2 e PAPER separados 0700 e ambiente `websockets.sync.client`; unidade systemd **candidata desativada** com sandbox de recursos. Evidência VPS WSS pública real: 101 Switching Protocols, ACK ticker BTCUSDT e 13 frames; ACK kline.60 BTCUSDT, 1 frame em formação e 0 closes confirmados na amostra curta. Bloqueio de host comprovado: `runuser: cannot set groups: Operation not permitted`, gateway não acessa checkout de `cia-probe`. Logo, **não** houve execução integrada real do operador, coleta N50 J2+PAPER com closes no host, instalação de systemd ou liberação de ordens. CI no HEAD final continua gate de aceite. Contrato detalhado: `docs/J6_PAPER_VPS_DEPLOYMENT_D456_D457.md`. J1 intocada, R$0 extra.
+
+
+## D458 — primeira execução PAPER integrada com Bybit pública real na VPS (21/11/2026)
+
+Avanço de produto comprovado, sem nova PR: `systemd-run --uid=cia-probe` resolveu bloqueio de `runuser`; stage isolado D458, preflight D457 PASS, 1 lease D453 completo, 1 lease D450 real com 939 instrumentos / 370 elegíveis / N50=50, dois ACKs WSS e **3.390 cotações aceitas**, depois 2 leases D453 consecutivas completas sem rotacionar journal. Nenhum candle horário confirmado nestas janelas curtas; nenhuma posição PAPER criada e nenhum trade real. Job finito de até 58 min para captura do próximo close iniciado e registrado como `093979aec3ad464b9143c3c95d9d7cc4` (`running` no registro inicial), usando SHA `5591506bb9e208f2af1cfabd4b0dc5f30782814c`. Nenhum serviço permanente instalado. O painel J5 antigo ainda ocupa porta 8765, sem novos endpoints; publicação e atualização dependem do gate de release. Fonte de verdade operacional e critérios de acompanhamento: `docs/OPERATIONAL_STATE.md`. Custo adicional R$0, J1 intocada.
+
+
+## D459 — regressão real do teste horário, sem fechar J6 (21/11/2026)
+
+O trial D458 `093979aec3ad464b9143c3c95d9d7cc4` finalizou com `degraded_no_held_coverage` e **0 closes 1h**, não foi homologado; nenhum trade real e nenhuma mudança J1. Encontrado erro de orçamento em contingência: principal 3480s encaminhado à fallback de máximo 180s. D459 corrige essa incompatibilidade e adiciona diagnóstico seguro, persistente e privado com status kline/ticker para identificar a próxima falha do fluxo principal. Ainda sem prova da causa original do canal kline. Não reivindicar prontidão VPS ou J6.
+
+
+## D460 — campo temporal real da Bybit corrigido (21/11/2026)
+
+Prova pública read-only de `kline.1.BTCUSDT` na VPS UID999: ACK válido, `confirm:true`, envelope `data/topic/ts/type`, 11 campos esperados, `timestamp=end+202ms`, `server_ts=end+202ms`, recebimento 207ms após servidor. No pipeline D450 a política antiga `allow_server_bounded_trade_clock=False` rejeitava essa vela válida porque exigia timestamp do último negócio <= end. D460 reutiliza o validador J1 existente com os flags de bounded trade clock + temporal discard, sob limites estritos da fonte (trade<=server, server<=receipt, <=120s após close, clock coerente) e registra contagens/diagnósticos da sessão. Teste regressivo com 50 candles confirmados pós-close no próprio journal offline PAPER (sem inventar prova de close horário live). Continuidade longa D458 anterior já terminou degradada e NÃO é considerada homologada; nova prova horária pública é gate separado. Sem ordens reais, J1 intocada.
+
+
+## D461 — N50 com histórico real imediato e pesquisa J2 operacional (21/11/2026)
+
+**Entrega concreta na VPS:** sessão pública REST como `cia-probe` executou o N50 completo (50), validou **1.200 candles fechados de 1h** (24 por ativo), gravou um arquivo privado **98.136 bytes, modo 0600**, hash validado `9ea87ed1101352e1ac9f221df0e833a136c04bff957fa8c2697edd7fdda5162d`, e executou o motor J2 D435 sobre todos os 50 ativos (**9 hipóteses históricas de pesquisa, não sinais autorizados**). A execução terminou em **104,8 segundos**, status `historical_n50_research_completed`, job `227e8d049ef44006991e6d93c1bde0e3`, código SHA `87479504883f50e25ad7bcaf7db2b72c02a1c66d`. 5 testes D461 PASS na VPS, client pública com 2s entre GETs. Fonte do arquivo `public_rest_observed_unverified` e **0 candles falsamente etiquetados como WS**, sem alterar journal WS existente, ordens, instalação ou J1. A pesquisa histórica já está abastecida sem aguardar 24h de sessões WebSocket; entradas PAPER continuam sob gate causal último close WS e risco. Documento de entrega: `docs/J2_REAL_N50_REST_RESEARCH_D461.md`. CI do SHA integral da branch continua sujeita à verificação exata.
+
+
+## D462/D463 — histórico REST + fechamento WS causal e metadados novos para PAPER (21/11/2026)
+
+Implementação integrada na mesma frente J2/J4/J6: D462 lê **24 candles REST históricos + uma vela nova WS confirm:true** para cada membro do N50, mantendo separados os hashes e as qualidades; D435/D449 avaliam coorte única, BTC e estratégias, D447/PRE11/RiskGate/AUTO2/AUTO4 são os únicos admitidos para PAPER. Teste integrado offline injetado da ligação de 50 históricos + 50 closes + D435 **PASS na VPS no SHA `ee0c222a`**; os testes negativos e autoaquecer foram acrescentados depois e exigem CI do SHA atual. D463 já implementa renovação assíncrona sob consulta REST pública de contratos candidatos, após comprovação das regras e antes de uma **nova** cotação, sem travar o ticker de saídas. A nova flag `--auto-capture-rest-warmup` está na CLI owner e unidade systemd candidata desativada. **Ainda não** existe prova online dos 50 fechamentos de 1h com esse código, nem serviço implantado; D461 é a prova real disponível (1.200 candles REST, 9 hipóteses históricas). O resultado quantitativo precisa validação OOS, funding e risco antes de conclusões financeiras. J1 intocada, nenhuma ordem real, R$0 extra.
+
+
+## D464 — primeiro close horário WS real recebido em 13h BRT (21/11/2026)
+
+Trial finito real na VPS, SHA `1e634fbe` CI verde, usuário `cia-probe` UID999, REST N50 histórico selado e 1 candle `XRPUSDT` `confirm:true` persistido pelo WS em 13:00:00,309 BRT. **Estado preliminar:** 1/50 WS closes no journal após cerca de 1m40s; não chamar N50 completo nem abrir posição PAPER. Job `3fe867f9fac54850ac699ad8fb6a7178` permanecia `running`. Aguardar o desfecho finito para classificar causa com diagnóstico D459; nenhum serviço permanente/ordem real/J1 alterado. O orçamento ticker de longa lease no CLI foi corrigido na branch (não muda o job em execução). Ver `docs/OPERATIONAL_STATE.md`.
+
+
+## D464–D466 — primeiro fechamento real e correção de interoperação WS/PAPER (21/11/2026)
+
+D464 comprovou a primeira vela `confirm:true` de 1h real no journal isolado, XRPUSDT às 13:00:00,309 BRT, com 1.200 candles REST íntegros e **305.877** cotações Bybit públicas processadas; mas a coorte falhou: **1/50 closes, 0 callbacks de PAPER**, kline `ws_fail_closed_abstain`. Não homologada. D466 corrigiu divergência entre o validador de envelopes mistos (1 close + 1 open admitidos) e o callback D450 (antes exigia 1 linha só), preservando validade de todos os rows e sem gerar candle artificial; 9 testes integrados PASS na VPS UID999. D465 acrescentou categorias de falha só para literais do validador, sem vazar payload. **Novo job público finito D466** `f39fd7e3d2184468802d0e2d76bb695d` iniciou com SHA `26bfdb33d2f34fb683e8f98d9626616598f6cb36` para observar o fechamento das 14h BRT; resultado ainda pendente, não duplicar teste. Browser QA da versão PASS; CI Linux/Windows ainda em andamento ao registrar. Nenhuma ordem real/J1 alterada, sem release persistente, R$0 extra.

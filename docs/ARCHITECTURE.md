@@ -669,3 +669,18 @@ D418 continua sendo o operador finito read-only de mercado Bybit sobre N50 J1. O
 ## J5/D422 — adaptador de saúde sanitizada apenas loopback
 
 `D418/Bybit public WS` → `D421/arquivo owner 0600` → `D422/GET localhost 8765` → `J5/paper-ws-health.js`. A fonte de cotações e o owner N50 continuam os mesmos; backend apenas lê o resumo D421 de um diretório próprio e configurado, com proteção contra symlink, permissões indevidas, arquivo antigo, contagens inconsistentes e falso status live. O endpoint está desligado sem opt-in duplo; `Host` e `Origin` devem satisfazer a defesa anti-DNS-rebinding do servidor existente. HTTP 503 remove a amostra automática anterior, sem emular preço corrente. O navegador `file://` não inicia requisições, e o servidor não atende clientes remotos. A J5 móvel acessível por rede só poderá ser planejada com autenticação e autorização de release, não com exposição do localhost.
+
+
+## D449/D450 — ingresso de mercado e ciclo PAPER coordenado
+
+D449 acrescenta camada de orquestração fina em cima de J2 D434/D435, J3 PRE2/PRE11, D447/D448, AUTO2/AUTO4, D389/D391/D425 e J5. D450 combina, em sessões PUBLIC ONLY separadas e simultâneas, o coletor WS de velas fechadas e o ticker D385/D386 pós-ACK. A seleção N50 não é recriada por esta camada: é dependência tipada externa, não assume classificação de crypto ou fonte atual autenticada. Caminho de saída tem prioridade sobre admissão de novas posições; falhas na coorte invalidam somente novos sinais, sem declarar stops nativos. Nenhum livro financeiro duplicado, credenciais ou mudanças no coletor J1. Ver docs/J2_J4_PUBLIC_N50_PAPER_D450.md.
+
+
+## D451/D452 — camada de seleção dinâmica e risco PAPER baseado em diários
+
+Nova fronteira J2: Bybit REST GET público, seleção provisória turnover24h, scope epoch durável J2 independente de J1. D450 recebe scope pinned e inicia em paralelo os coletores D434/kline e D385/D386/ticker. D449 aplica regime/força BTC e entrada D447/PRE11, D448 simula FILL explícito, AUTO4/D425 conservam stops/parciais e J5 lê o mesmo ledger. D452 injeta risco do replay read-only AUTO2/AUTO4 e mark público fresco; não há subsistema financeiro paralelo nem aceitação de PnL sem custo/execução. Em caso de mudança de N50, novo journal é criado mas posições abertas continuam monitoradas como held extras. Sem trade privado ou coleta J1. Doc docs/J2_DYNAMIC_PUBLIC_N50_PAPER_D451_D452.md.
+
+
+## D462/D463 — coorte N50 REST24 + candle WS e renovação não bloqueante de contratos (21/11/2026)
+
+O pipeline J2/J4 existente agora admite, **somente sob opt-in**, um snapshot REST selado de 50×24 candles históricos D461, seguido por um evento 1h `confirm:true` recebido após ACK e escrito no diário WS SQLite D451. O leitor D462 valida fingerprints e tempos independentes e fornece 25 candles com origens distintas ao motor D435. D449/D447 só admitem o caminho misto explicitamente autorizado e ainda passam por PRE11/RiskGate/AUTO2/AUTO4; REST puro nunca gera nova abertura. O D463 acrescenta um terceiro worker FINITO de GET público de instrumento individual para refrescar metadados de **candidatos** sem bloquear o ticker de saída: contrato antigo recebe abstention e apenas BBO **posterior ao GET** pode gerar novo PAPER OPEN; regras divergentes vetam a operação. O serviço candidato J6 segue desativado. Documentos: `docs/J2_J4_CAUSAL_REST_WS_PAPER_D462.md` e `docs/J4_ASYNC_PUBLIC_CONTRACT_REFRESH_D463.md`.

@@ -1,0 +1,42 @@
+# D457 RELEASE CANDIDATE ONLY - OFF BY DEFAULT; NOT INSTALLED.
+# PAPER only: public REST + two Bybit public WSS; simulated AUTO2/AUTO4
+# FILL/stop. No private exchange API/credentials, no live order sender.
+# Fill @REPO@, @PYTHON@, @J2_DIR@, @PAPER_DIR@, @POLICY@ ONLY
+# after owner preflight, exact-SHA gate and explicit VPS release consent.
+[Unit]
+Description=CIA J2/J4 Bybit PUBLIC/PAPER research operator (NO REAL ORDERS)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=cia-probe
+Group=cia-probe
+WorkingDirectory=@REPO@
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=@PYTHON@ -m scripts.preflight_j2_j4_paper_resident_d457 --j2-directory @J2_DIR@ --paper-directory @PAPER_DIR@ --policy-file @POLICY@
+ExecStart=@PYTHON@ -m scripts.run_j2_j4_public_paper_resident_d453 --j2-directory @J2_DIR@ --paper-directory @PAPER_DIR@ --policy-file @POLICY@ --lease-seconds 60 --pause-seconds 1 --allow-public-network --allow-public-websocket --confirm-personal-readonly-research --confirm-region-eligible --confirm-public-data-rights --enable-hypothetical-paper-cycle --auto-capture-rest-warmup
+Restart=on-failure
+RestartSec=15s
+TimeoutStartSec=30
+TimeoutStopSec=90
+KillSignal=SIGTERM
+CPUQuota=25%
+MemoryMax=384M
+TasksMax=80
+LimitNOFILE=2048
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=@J2_DIR@ @PAPER_DIR@
+ReadOnlyPaths=@POLICY@
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal
