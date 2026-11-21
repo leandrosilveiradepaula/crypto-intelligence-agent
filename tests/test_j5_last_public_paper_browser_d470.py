@@ -38,7 +38,7 @@ const get=id=>nodes.get(id).textContent;
 assert.match(get('last-public-paper-status'),/degradada/);
 assert.match(get('last-public-paper-market'),/50/);
 assert.match(get('last-public-paper-ticker'),/causa não registrada/);
-assert.match(get('last-public-paper-summary'),/não representa conexão atual/);
+assert.match(get('last-public-paper-summary'),/Não representa conexão atual/);
 assert.doesNotMatch(get('last-public-paper-market'),/stop nativo instalado/);
 ui.view(null);
 assert.match(get('last-public-paper-status'),/Sem diagnóstico/);
