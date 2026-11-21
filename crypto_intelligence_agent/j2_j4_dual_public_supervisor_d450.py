@@ -352,6 +352,15 @@ def run_dynamic_public_paper_lease_once(
         "marketwide_crypto_identity_verified": False,
         "public_feed_confirmed_24h_continuous": False,
         "preclosed_rest_history_warmup_enabled": rest_history is not None,
+        "historical_rest_validated_closed_candles": (
+            24 * len(rest_history.series) if rest_history else 0
+        ),
+        "historical_rest_digest_sha256": (
+            rest_history.digest_sha256 if rest_history else None
+        ),
+        "historical_rest_window_end_ms": (
+            rest_history.window_end_ms if rest_history else None
+        ),
         "live_venue_liquidation_and_funding_verified": False,
         "orders_sent": False,
         "approved_for_live_use": False,
