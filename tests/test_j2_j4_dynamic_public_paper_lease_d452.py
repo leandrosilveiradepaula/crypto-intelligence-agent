@@ -191,6 +191,8 @@ class DynamicEndToEndPublicPaperLeaseTests(unittest.TestCase):
         )
         self.assertEqual(result["status"],"finite_public_paper_research_closed")
         self.assertTrue(result["preclosed_rest_history_warmup_enabled"])
+        self.assertEqual(result["historical_rest_validated_closed_candles"],1200)
+        self.assertEqual(len(result["historical_rest_digest_sha256"]),64)
         self.assertEqual(result["dual_public_streams"]["accepted_closed_callbacks"],50)
         from crypto_intelligence_agent.j2_rest_ws_causal_warmup_d462 import (
             read_causal_rest_warmup_ws_close,
