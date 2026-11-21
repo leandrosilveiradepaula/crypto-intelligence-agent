@@ -13,6 +13,7 @@ from unittest.mock import patch
 from crypto_intelligence_agent.bybit_public_j1_transport import BoundedBybitPublicClient
 from crypto_intelligence_agent.j2_rest_n50_history_d461 import (
     capture_rest_n50_24h, read_rest_n50_24h, research_rest_n50_24h,
+    reopen_frozen_rest_n50_for_research,
 )
 from crypto_intelligence_agent.j2_observed_bybit_research import (
     evaluate_observed_bybit_research,
@@ -101,6 +102,13 @@ class ImmutableRestN50Tests(unittest.TestCase):
             window_end_ms=END,
         )
         self.assertEqual(history, reopened)
+        # The original frozen REST history must remain usable after the
+        # ticker cohort/membership/clock moves; research reads no new GETs.
+        frozen = reopen_frozen_rest_n50_for_research(
+            private_j2_directory=self.home,
+            filename=history.snapshot_file.name,
+        )
+        self.assertEqual(frozen, history)
         self.assertEqual(len(self.calls), 50)
         report = research_rest_n50_24h(history=history,
                                        config=SETTINGS.research)
@@ -119,6 +127,24 @@ class ImmutableRestN50Tests(unittest.TestCase):
         with self.assertRaises(DataGapError):
             self.capture()
         self.assertEqual(list(self.home.iterdir()), [])
+
+    def test_frozen_replay_is_not_a_fresh_ws_or_auto2_signal(self):
+        history = self.capture()
+        replayed = reopen_frozen_rest_n50_for_research(
+            private_j2_directory=self.home,
+            filename=history.snapshot_file.name,
+        )
+        scan = research_rest_n50_24h(
+            history=replayed, config=SETTINGS.research,
+        )
+        self.assertEqual(scan["closed_candles_analyzed"], 1200)
+        self.assertEqual(scan["websocket_confirmed_candles"], 0)
+        self.assertFalse(scan["approved_for_signals"])
+        with self.assertRaises(DataValidationError):
+            reopen_frozen_rest_n50_for_research(
+                private_j2_directory=self.home,
+                filename="../" + history.snapshot_file.name,
+            )
 
     def test_tamper_and_duplicate_json_fail_without_refetch(self):
         history = self.capture()
