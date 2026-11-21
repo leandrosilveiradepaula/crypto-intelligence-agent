@@ -277,6 +277,85 @@ class ResidentPaperOperatorTests(unittest.TestCase):
         self.assertEqual(diagnostic["accepted_public_ticker_callbacks"], 3390)
         self.assertFalse(diagnostic["real_orders_sent"])
 
+    def test_d469_records_ticker_abstention_and_causal_cohort_without_untrusted_text(self):
+        # D466 proved 50 closes but was degraded: the ticker reason must be
+        # reported separately from kline's 50/50 success and PAPER health.
+        primary = {
+            "status": "finite_public_paper_research_degraded",
+            "orders_sent": False,
+            "historical_rest_validated_closed_candles": 1200,
+            "dual_public_streams": {
+                "kline_lease_status": "ws_budget_ended_research_only",
+                "ticker_lease_status": "lease_abstained",
+                "kline_acks": 1, "ticker_acks": 1,
+                "accepted_closed_callbacks": 50,
+                "kline_confirmed_events_appended": 50,
+                "accepted_public_ticker_callbacks": 51045,
+                "ticker_failure_category": "reconnect_budget_exhausted",
+                "ticker_frames_seen": 51234,
+                "ticker_sessions_attempted": 1,
+                "ticker_reconnects": 0,
+                "paper_cycle": {
+                    "research_cohort_contracts": 50,
+                    "research_cohort_complete": True,
+                    "eligible_relative_btc_hypotheses": 2,
+                    "pending_paper_open_count": 0,
+                    "event_counts": {"cohort_researched": 1},
+                },
+            },
+        }
+        def run(given):
+            return run_resident_paper_observer(
+                private_j2_directory=self.j2,
+                private_paper_directory=self.paper,
+                config=SETTINGS,
+                policy=ResidentPaperRunPolicy(self.budget, 0, 1),
+                primary_lease=lambda: given,
+                held_fallback_lease=lambda: {
+                    "status": "no_held_paper_positions", "orders_sent": False,
+                },
+                sleep=lambda _: None, clock_ms=lambda: 1_800_000_000_000,
+                should_stop=lambda: False, **self.flags,
+            )
+        outcome = run(primary)
+        self.assertEqual(outcome["status"], "bounded_run_completed")
+        self.assertEqual(outcome["primary_leases_completed"], 0)
+        self.assertEqual(outcome["held_only_fallbacks"], 1)
+        diagnostic_path = self.paper / "paper-last-public-lease-d459.json"
+        report = json.loads(diagnostic_path.read_text())
+        self.assertEqual(report["kline_confirmed_events_appended"], 50)
+        self.assertEqual(report["accepted_confirmed_close_callbacks"], 50)
+        self.assertEqual(report["historical_rest_validated_closed_candles"], 1200)
+        self.assertEqual(report["ticker_lease_status"], "lease_abstained")
+        self.assertEqual(report["ticker_failure_category"], "reconnect_budget_exhausted")
+        self.assertEqual(report["ticker_frames_seen"], 51234)
+        self.assertEqual(report["ticker_sessions_attempted"], 1)
+        self.assertEqual(report["ticker_reconnects"], 0)
+        self.assertEqual(report["paper_research_cohort_contracts"], 50)
+        self.assertIs(report["paper_research_cohort_complete"], True)
+        self.assertEqual(report["paper_relative_btc_hypotheses"], 2)
+        self.assertEqual(report["paper_pending_open_count"], 0)
+        self.assertEqual(report["paper_cohort_researched_count"], 1)
+        self.assertFalse(report["real_orders_sent"])
+        self.assertEqual(diagnostic_path.stat().st_mode & 0o777, 0o600)
+        malicious = {
+            **primary, "dual_public_streams": {
+                **primary["dual_public_streams"],
+                "ticker_failure_category": "PRIVATE_OR_SECRET_VENUE_PAYLOAD",
+                "paper_cycle": {
+                    **primary["dual_public_streams"]["paper_cycle"],
+                    "event_counts": {"cohort_researched": "PRIVATE_EVENT"},
+                },
+            },
+        }
+        run(malicious)
+        raw = diagnostic_path.read_text()
+        self.assertNotIn("PRIVATE_OR_SECRET", raw)
+        self.assertNotIn("PRIVATE_EVENT", raw)
+        safe = json.loads(raw)
+        self.assertEqual(safe["ticker_failure_category"], "none_or_unknown")
+        self.assertIsNone(safe["paper_cohort_researched_count"])
+
     def test_private_diagnostic_never_echoes_unknown_provider_error(self):
         def broken():
             raise RuntimeError("SECRET_PRIVATE_VENUE_DATA")

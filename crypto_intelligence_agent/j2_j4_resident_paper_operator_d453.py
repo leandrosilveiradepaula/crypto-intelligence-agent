@@ -22,6 +22,7 @@ import time
 from .bybit_public_ticker_state_d385 import BybitPublicTickerBook
 from .bybit_public_ticker_supervisor_d386 import (
     TickerLeaseBudget, supervise_public_tickers,
+    _FAILURE_CLASSES as _TICKER_FAILURE_CLASSES,
 )
 from .bybit_public_ws_once import ENDPOINT
 from .j2_j4_dual_public_supervisor_d450 import (
@@ -371,6 +372,24 @@ def run_resident_paper_observer(
                 "paired_public_stream_stopped",
             ))
             return value if type(value) is str and value in safe else "none_or_unknown"
+        # D469: the D466 evidence retained 50/50 real confirmed closes
+        # but lost the ticker's lease_abstained reason in D459. Only admit
+        # local, fixed diagnostic categories, never raw provider exceptions.
+        def ticker_failure() -> str:
+            value = stream.get("ticker_failure_category")
+            safe = set(_TICKER_FAILURE_CLASSES.values())
+            safe.update((
+                "reconnect_budget_exhausted", "reconnect_deferred",
+                "frame_budget_exceeded", "receive_loop_budget_exceeded",
+                "no_subscription_ack", "time_budget_exceeded",
+                "paired_public_stream_stopped", "internal_validation_failure",
+                "invalid_market_data",
+            ))
+            return value if type(value) is str and value in safe else "none_or_unknown"
+        paper = stream.get("paper_cycle")
+        paper = paper if type(paper) is dict else {}
+        events = paper.get("event_counts")
+        events = events if type(events) is dict else {}
         contract = stream.get("public_contract_refresh")
         contract = contract if type(contract) is dict else {}
         def bounded(value) -> int | None:
@@ -399,6 +418,27 @@ def run_resident_paper_observer(
             "ticker_subscription_acks": counter("ticker_acks"),
             "accepted_confirmed_close_callbacks": counter("accepted_closed_callbacks"),
             "accepted_public_ticker_callbacks": counter("accepted_public_ticker_callbacks"),
+            "ticker_failure_category": ticker_failure(),
+            "ticker_frames_seen": counter("ticker_frames_seen"),
+            "ticker_sessions_attempted": counter("ticker_sessions_attempted"),
+            "ticker_reconnects": counter("ticker_reconnects"),
+            "paper_research_cohort_contracts": bounded(
+                paper.get("research_cohort_contracts"),
+            ),
+            "paper_research_cohort_complete": (
+                paper["research_cohort_complete"]
+                if type(paper.get("research_cohort_complete")) is bool
+                else None
+            ),
+            "paper_relative_btc_hypotheses": bounded(
+                paper.get("eligible_relative_btc_hypotheses"),
+            ),
+            "paper_pending_open_count": bounded(
+                paper.get("pending_paper_open_count"),
+            ),
+            "paper_cohort_researched_count": bounded(
+                events.get("cohort_researched"),
+            ),
             "kline_failure_category": bounded_failure("kline_failure_category"),
             "kline_confirmed_events_appended": counter("kline_confirmed_events_appended"),
             "kline_postclose_trade_clock_accepted": counter("kline_postclose_trade_clock_accepted"),

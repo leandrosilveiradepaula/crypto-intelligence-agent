@@ -271,6 +271,12 @@ def run_finite_n50_paper_streams(
         "ticker_lease_status": ticker_result.status,
         "kline_failure_category": kline_result.failure_category,
         "ticker_failure_category": ticker_result.failure_category,
+        # D469: expose count-only transport context to the owner diagnostic.
+        # A failed ticker after 50 confirmed kline closes must never be
+        # flattened into a successful, healthy two-stream lease.
+        "ticker_frames_seen": ticker_result.frames_seen,
+        "ticker_sessions_attempted": ticker_result.sessions_attempted,
+        "ticker_reconnects": ticker_result.reconnects,
         "kline_confirmed_events_appended": kline_result.closed_events_appended,
         "kline_postclose_trade_clock_accepted": (
             kline_result.accepted_postclose_trade_clock
