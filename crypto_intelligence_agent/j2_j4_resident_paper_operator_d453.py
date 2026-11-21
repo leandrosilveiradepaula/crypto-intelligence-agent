@@ -234,6 +234,7 @@ def run_resident_paper_observer(
     sleep: Callable | None = None,
     clock_ms: Callable | None = None,
     should_stop: Callable | None = None,
+    rest_warmup_filename: str | None = None,
 ) -> dict:
     """Repeat real D451/D450 + D452 across leases with fail-closed held fallback.
 
