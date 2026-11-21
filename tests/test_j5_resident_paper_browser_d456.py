@@ -65,9 +65,9 @@ class D456ResidentPaperBrowserTests(unittest.TestCase):
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertIn("D456_RESIDENT_PAPER_BROWSER_PASS",result.stdout)
     def test_app_loads_resident_operator_ui(self):
-        html=(ROOT/"web/app/index.html").read_text()
-        script=(ROOT/"web/app/resident-paper.js").read_text()
-        server=(ROOT/"scripts/serve_j5_local_readonly.py").read_text()
+        html=(ROOT/"web/app/index.html").read_text(encoding="utf-8")
+        script=(ROOT/"web/app/resident-paper.js").read_text(encoding="utf-8")
+        server=(ROOT/"scripts/serve_j5_local_readonly.py").read_text(encoding="utf-8")
         self.assertIn('src="./resident-paper.js"',html)
         self.assertIn('id="resident-paper-status"',html)
         self.assertIn('"/resident-paper.js"',server)
