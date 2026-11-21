@@ -2103,3 +2103,8 @@ Estado proprietário J5 deve permanecer legível durante leases públicas longas
 ## D470 — separar prova histórica de mercado e monitoramento PAPER atual (21/11/2026)
 
 A interface deve apresentar a última lease Bybit D459/D469 por leitor proprietário e endpoint opt-in LOCAL de diagnóstico; relatório de sessão concluída nunca é prova de que o operador está conectado agora ou de que stops são nativos. Permitir esquema legado D466 (campos D469 indisponíveis) e novo D469, com allowlist estrita, faixas seguras, período histórico máximo de 7 dias, owner-only 0700/0600, sem raw frames, símbolos ou lucro inferido. O painel J5 de estado D456 permanece separado; publicação da unit candidata exige gate e não deve competir na porta 8765. Custo adicional zero, J1 e ordens reais intocados.
+
+
+## D471 — reconexão de transporte no par público PAPER (21/11/2026)
+
+A D450 anteriormente exigia `max_sessions=1` embora os supervisores J2 e D386 já suportassem reconexão limitada após `OSError/RuntimeError` do transporte. A CLI D453 agora permite `--public-ws-sessions 1..3`, padrão 3, simétrico para kline e ticker, mantendo o mesmo orçamento total da lease e os mesmos diários privados. Somente queda transportável é recuperada; ACK inválido, clocks impossíveis e dados corrompidos continuam falhando fechado. D467 interrompe o par apenas quando um supervisor termina degradado após esgotar as próprias tentativas; nenhuma vela ou preço é inventado. A regressão integrada simula 50 callbacks WS e desconexão de ticker seguida de novo ACK/BBO causal, com PAPER no diário e zero ordens reais. Essa alteração não diagnostica retroativamente a falha D466 nem prova funcionamento contínuo na VPS; ainda exige teste real pós-CI, sem release/J1/custos adicionais.
