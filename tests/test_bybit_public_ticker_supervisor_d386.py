@@ -223,6 +223,86 @@ class PublicTickerSupervisorD386Tests(unittest.TestCase):
         self.assertFalse(report.sanitized_report()["orders_sent"])
         self.assertTrue(sock.closed)
 
+
+    def test_verified_sequence_gap_reconnects_and_requires_new_snapshot(self):
+        # D473: a single out-of-order post-ACK delta cannot kill a whole
+        # 50-member lease after 250k previously valid quotes. Drop ALL prior
+        # book state, re-ACK and require a fresh snapshot before PAPER.
+        clock = FakeClock()
+        first = Session(clock, [
+            ack(), ticker(cs=100, ts=NOW-200),
+            ticker(cs=99, ts=NOW-100, kind="delta",
+                   lastPrice="100.8"),
+        ])
+        second = Session(clock, [
+            ack(), ticker(cs=1, ts=NOW+5000),
+            ticker(cs=2, ts=NOW+5100, kind="delta",
+                   lastPrice="101.1"),
+        ])
+        b = make_book()
+        quotes = []
+        r = run(b, clock, [first, second],
+                budget=TickerLeaseBudget(max_sessions=2,
+                                         max_frames=100, max_seconds=14),
+                on_quote=quotes.append)
+        self.assertEqual(r.status, "lease_completed")
+        self.assertEqual(r.sessions_attempted, 2)
+        self.assertEqual(r.subscriptions_acknowledged, 2)
+        self.assertEqual(r.reconnects, 1)
+        self.assertEqual(r.ticker_frames_accepted, 3)
+        self.assertEqual([q.cross_sequence for q in quotes], [100, 1, 2])
+        self.assertTrue(first.closed)
+        self.assertTrue(second.closed)
+        self.assertFalse(r.sanitized_report()["orders_sent"])
+
+    def test_resnapshot_must_abstain_without_budget_for_new_ack(self):
+        clock = FakeClock()
+        sock = Session(clock, [
+            ack(), ticker(cs=100, ts=NOW-200),
+            ticker(cs=99, ts=NOW-100, kind="delta",
+                   lastPrice="100.8"),
+        ])
+        b = make_book()
+        report = run(b, clock, [sock],
+                     budget=TickerLeaseBudget(max_sessions=1,
+                                              max_frames=100, max_seconds=14))
+        self.assertEqual(report.status, "lease_abstained")
+        self.assertEqual(report.failure_category, "sequence_regression")
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW))
+        self.assertEqual(report.sessions_attempted, 1)
+
+    def test_rejected_payload_never_retried_and_consumer_failure_separate(self):
+        clock = FakeClock()
+        malformed = Session(clock, [
+            ack(), ticker(), ticker(cs=2, kind="delta", markPrice="-1"),
+        ])
+        never = Session(clock, [ack(), ticker(cs=3)])
+        b = make_book()
+        result = run(b, clock, [malformed, never],
+                     budget=TickerLeaseBudget(max_sessions=3,
+                                              max_frames=100, max_seconds=20))
+        self.assertEqual(result.status, "lease_abstained")
+        self.assertEqual(result.sessions_attempted, 1)
+        self.assertFalse(never.closed)
+        self.assertIsNone(b.current("BTCUSDT", at_ms=NOW))
+        self.assertFalse(result.sanitized_report()["orders_sent"])
+
+        from crypto_intelligence_agent.market_data import DataValidationError
+        clock2 = FakeClock()
+        consumed = Session(clock2, [ack(), ticker()])
+        retry = Session(clock2, [ack(), ticker(cs=2)])
+        def failed_paper_gate(quote):
+            raise DataValidationError("D449 local PAPER receipt failure")
+        result2 = run(make_book(), clock2, [consumed, retry],
+                      budget=TickerLeaseBudget(max_sessions=3,
+                                               max_frames=100, max_seconds=20),
+                      on_quote=failed_paper_gate)
+        self.assertEqual(result2.status, "lease_abstained")
+        self.assertEqual(result2.failure_category, "paper_cycle_callback_failed")
+        self.assertEqual(result2.sessions_attempted, 1)
+        self.assertFalse(retry.closed)
+        self.assertFalse(result2.sanitized_report()["orders_sent"])
+
     def test_bad_market_payload_stops_without_reconnect(self):
         clock = FakeClock()
         b = make_book()
