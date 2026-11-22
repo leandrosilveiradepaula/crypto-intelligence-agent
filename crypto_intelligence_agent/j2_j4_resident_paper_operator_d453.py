@@ -384,6 +384,9 @@ def run_resident_paper_observer(
                 "no_subscription_ack", "time_budget_exceeded",
                 "paired_public_stream_stopped", "internal_validation_failure",
                 "invalid_market_data",
+                # D475: D473's PAPER callback status was omitted from
+                # D469 owner-only diagnostics, hiding the useful cause.
+                "paper_cycle_callback_failed",
             ))
             return value if type(value) is str and value in safe else "none_or_unknown"
         paper = stream.get("paper_cycle")

@@ -24,6 +24,6 @@ Aceite apenas com: HEAD conferido, regressões e CI verdes, relatório de teste 
 
 ## Como invocar quando Factory estiver conectado
 
-`droid exec --mission -f .factory/missions/paper-end-to-end.md`
+`droid exec --mission --auto high -f .factory/missions/paper-end-to-end.md`
 
 O arquivo é a entrada da missão, não prova de que a CLI, uma conta autenticada ou seus créditos já estejam disponíveis. Não executar um Droid pago sem direito existente comprovado e autorização para quaisquer gastos adicionais.

@@ -355,6 +355,16 @@ class ResidentPaperOperatorTests(unittest.TestCase):
         safe = json.loads(raw)
         self.assertEqual(safe["ticker_failure_category"], "none_or_unknown")
         self.assertIsNone(safe["paper_cohort_researched_count"])
+        run({
+            **primary, "dual_public_streams": {
+                **primary["dual_public_streams"],
+                "ticker_failure_category": "paper_cycle_callback_failed",
+            },
+        })
+        self.assertEqual(
+            json.loads(diagnostic_path.read_text())["ticker_failure_category"],
+            "paper_cycle_callback_failed",
+        )
 
     def test_private_diagnostic_never_echoes_unknown_provider_error(self):
         def broken():

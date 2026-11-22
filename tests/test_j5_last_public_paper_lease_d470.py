@@ -109,6 +109,19 @@ class LastLeaseOwnerTests(unittest.TestCase):
         self.assertEqual(v["paper_cohort_researched_count"], 1)
         self.assertFalse(v["current_ticker_coverage_verified"])
 
+    def test_paper_consumer_fault_is_reported_without_claiming_venue_error(self):
+        self.write(extended(
+            ticker_lease_status="lease_abstained",
+            ticker_failure_category="paper_cycle_callback_failed",
+            paper_relative_btc_hypotheses=0,
+        ))
+        value = self.read()
+        self.assertEqual(value["ticker_failure_category"],
+                         "paper_cycle_callback_failed")
+        self.assertEqual(value["paper_relative_btc_hypotheses"], 0)
+        self.assertFalse(value["current_ticker_coverage_verified"])
+        self.assertFalse(value["orders_sent"])
+
     def test_recent_complete_session_is_still_not_a_current_feed(self):
         self.write(extended(
             observed_at_ms=NOW-1000,

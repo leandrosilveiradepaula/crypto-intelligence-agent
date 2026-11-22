@@ -56,7 +56,7 @@ _TICKER_FAILURES = frozenset(_TICKER_CLASSES.values()) | frozenset((
     "frame_budget_exceeded", "receive_loop_budget_exceeded",
     "no_subscription_ack", "time_budget_exceeded",
     "paired_public_stream_stopped", "internal_validation_failure",
-    "invalid_market_data",
+    "invalid_market_data", "paper_cycle_callback_failed",
 ))
 _MAX_BYTES = 4096
 _MAX_HISTORY_MS = 7 * 86_400_000
