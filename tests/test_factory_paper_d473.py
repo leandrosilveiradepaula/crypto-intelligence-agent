@@ -23,7 +23,7 @@ class FactoryPaperProjectContract(unittest.TestCase):
     def test_factory_mission_is_a_whole_paper_product_without_live_orders(self):
         path = ROOT / ".factory" / "missions" / "paper-end-to-end.md"
         text = path.read_text(encoding="utf-8")
-        for term in ("droid exec --mission -f", "253.263", "50/50",
+        for term in ("droid exec --mission --auto high -f", "253.263", "50/50",
                      "PAPER", "J5", "SQLite", "restart",
                      "R$0", "gates humanos"):
             self.assertIn(term, text)
