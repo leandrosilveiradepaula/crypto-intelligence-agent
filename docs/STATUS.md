@@ -2113,3 +2113,13 @@ D472 provou 50/50 velas WS e 253.263 cotações ticker reais, mas nenhuma posiç
 ## D475 — 22/11: pesquisa válida, mas sem oportunidade nesta coorte
 
 O D474 recebeu **50/50 velas e 338.140 callbacks de ticker**, concluiu uma pesquisa da coorte integral, e obteve **zero candidatos de entrada que passaram pelo filtro relativo ao BTC**. Por isso, não registrou nenhuma posição PAPER. Essa ausência de sinal não é falha de coleta nem razão para reduzir os filtros ou fabricar trades. A sessão terminou degradada, ticker `lease_abstained` com motivo antigo `none_or_unknown`; D475 corrige a perda da classificação segura `paper_cycle_callback_failed` do supervisor para o diagnóstico 0600 e leitor J5. O defeito exato de D474 permanece indeterminado até uma nova ocorrência com logging seguro. Prioridade do produto: observar múltiplas coortes, preservar condições de risco, registrar entradas válidas, saídas e UI. Factory configurada, sem runtime autenticado.
+
+
+## D477 — saída parcial PAPER efetivamente preenchida no simulador (22/11/2026)
+
+O motor LONG e SHORT foi exercitado em VPS não-root com protocolo offline injetado e journals descartáveis: ACK/25 candles confirmados, J2 hipótese, risco J3, OPEN PENDING AUTO2, FILL hipotético de entrada, posição persistida AUTO4, disparo de alvo REDUCE_ONLY, **fill hipotético da saída parcial a partir de um segundo BBO posterior** e cálculo condicional de resultado antes do funding, com leitura pela interface J5 e sem duplicar fills. Regressão do executável D448 passou nos dois lados. Isso é prova de fluxo **simulado**, não resultado de ticker público, não fill de corretora, não lucro validado. O ensaio D476 em múltiplas coortes permanece como próximo teste de mercado, sem modificar J1 ou enviar ordens.
+
+
+## D476 — pesquisa pública de cinco coortes INICIADA em 22/11/2026
+
+Após CI Linux/Windows/mobile verde no SHA fixado `ed2914aeef5430f496cba8513ae545f467595ad4`, foi iniciada a unidade transitória `cia-d476-paper-20261122T211706Z.service` na VPS sob UID 999, com owner preflight PASS, processo `MainPID=3271771` ativo às 21:17 UTC e `D476_CYCLE_STARTED=1 LEASE=2656`. No máximo cinco tentativas de coortes horárias; mesmo SQLite entre ciclos, sem ordens reais/serviço permanente/alteração J1. Isso é apenas início confirmado, não resultado de cinco ciclos, posição real ou lucratividade. A implantação é de pesquisa isolada, não release. A branch pode evoluir com D477 sem alterar o SHA pinado desta execução.

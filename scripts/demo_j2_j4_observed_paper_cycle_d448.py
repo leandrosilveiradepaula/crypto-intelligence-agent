@@ -28,6 +28,7 @@ from crypto_intelligence_agent.j4_automatic_entry_materializer_d448 import (
     PaperEntryExitPolicy, arm_observed_paper_entry, materialize_observed_paper_entry,
 )
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import load_private_paper_routes
+from crypto_intelligence_agent.j4_paper_conditional_pnl_d454 import conditional_paper_pnl_from_existing_fills
 from crypto_intelligence_agent.j5_owner_paper_positions_d446 import read_owner_paper_positions
 from crypto_intelligence_agent.paper_margin_preflight import (
     PaperLinearContractFixture, PaperMarginPreflightRequest,
@@ -179,7 +180,9 @@ def run(*, side: str = "LONG") -> dict:
             enable_hypothetical_open_fill=True,
         )
         assert filled["status"] == "paper_position_routed_for_continuous_held_monitor"
-        router = load_private_paper_routes(home)
+        router = load_private_paper_routes(
+            home, enable_hypothetical_exit_fills=True,
+        )
         assert router.monitored_symbols == frozenset({SYMBOL})
         if side == "LONG":
             mark_after = Decimal("107.3")
@@ -199,6 +202,37 @@ def run(*, side: str = "LONG") -> dict:
         assert len(position.exit_orders) == 1
         assert position.exit_orders[0].snapshot.filled_total_units == Decimal(0)
         assert position.leverage_at_intent == 50
+
+        # D477: the target reservation is NOT a fill. Only a later,
+        # independent post-latency BBO may conditionally fill AUTO4.
+        exit_fill_quote = replace(
+            next_quote,
+            exchange_at_ms=next_quote.exchange_at_ms + 500,
+            received_at_ms=next_quote.received_at_ms + 500,
+            cross_sequence=14,
+        )
+        router.process(exit_fill_quote)
+        after_exit_fill = positions.load(router.monitored_position_ids[0])
+        assert len(after_exit_fill.exit_orders) == 1
+        first_exit = after_exit_fill.exit_orders[0]
+        assert first_exit.snapshot.filled_total_units > Decimal(0)
+        filled_exit_units = first_exit.snapshot.filled_total_units
+        event_count = len(first_exit.events)
+        # Same public quote cannot silently double-fill on duplicate delivery.
+        router.process(exit_fill_quote)
+        after_replay = positions.load(router.monitored_position_ids[0])
+        assert after_replay.exit_orders[0].snapshot.filled_total_units == filled_exit_units
+        assert len(after_replay.exit_orders[0].events) == event_count
+        pnl = conditional_paper_pnl_from_existing_fills(
+            private_paper_directory=home,
+            position_id=router.monitored_position_ids[0],
+        )
+        assert pnl.status == "conditional_paper_reference_before_unverified_funding"
+        assert pnl.realized_exit_units == filled_exit_units
+        assert pnl.conditional_realized_before_funding_quote is not None
+        inspected = read_owner_paper_positions(directory=home)
+        assert len(inspected["positions"]) == 1
+
         replay = materialize_observed_paper_entry(
             private_paper_directory=home, intent_id=pending.intent_id,
             quote=None, as_of_ms=next_quote.received_at_ms + 1_000,
@@ -213,6 +247,11 @@ def run(*, side: str = "LONG") -> dict:
             "durable_hypothetical_open_fills": len(orders.load(pending.intent_id).events),
             "persisted_auto4_positions": len(inspected["positions"]),
             "partial_exit_intents_reserved": len(position.exit_orders),
+            "hypothetical_partial_exit_fills_recorded": event_count,
+            "hypothetical_partial_exit_units": format(filled_exit_units, "f"),
+            "duplicate_hypothetical_exit_fills": 0,
+            "conditional_pnl_before_funding_available": True,
+            "funding_settlement_verified": False,
             "duplicate_open_fills_after_restart": 0,
             "position_visible_in_j5": True,
             "financial_returns_validated": False, "native_stop_installed": False,

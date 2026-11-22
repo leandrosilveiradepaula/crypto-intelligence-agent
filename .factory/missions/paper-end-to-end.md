@@ -10,7 +10,7 @@ Uma execução PAPER pública finita que percorra a cadeia inteira:
 
 1. Bybit REST fornece histórico N50 da mesma coorte; WebSocket kline confirma 50 fechamentos legítimos da mesma hora; WebSocket ticker tem ACK e BBO causal atualizado.
 2. J2 avalia hipóteses e força relativa ao BTC; J3 aplica custos, limites, frescor, risco, alavancagem gravada e abstenção quando inelegível.
-3. J4 registra intenção OPEN PENDING em SQLite owner-only, exige novo BBO pós-latência para FILL hipotético, cria posição persistida, reserva saídas parciais ou stop e recupera sem duplicatas em reinício.
+3. J4 registra intenção OPEN PENDING em SQLite owner-only, exige novo BBO pós-latência para FILL hipotético, cria posição persistida, reserva saídas parciais ou stop, exige BBO posterior independente para FILL hipotético de REDUCE_ONLY (não só reserva), calcula PnL condicional antes de funding e recupera sem duplicatas em reinício.
 4. J5 mostra a posição PAPER e o estado dos feeds, deixando claro histórico versus conexão ativa e falta de stop nativo/ordens reais.
 5. Testes finitos sem rede provam o ciclo inclusive recuperação de ticker após falha de estado, perda de ACK, dados inválidos, queda de consumer, restart e ausência de posição quando risco barra. Uma prova pública de VPS demonstra somente o que de fato ocorreu.
 

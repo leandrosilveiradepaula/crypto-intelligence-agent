@@ -2119,3 +2119,8 @@ Factory: manter um Droid nativo em `.factory/droids/paper-delivery.md` e uma mis
 ## D475 — ausência de sinal não justifica abrir uma operação (22/11/2026)
 
 D474 confirmou captura real 50/50 e 338.140 cotações, pesquisa de coorte executada e 0 hipóteses elegíveis relativas ao Bitcoin. Não afrouxar critérios de risco, criar fills ou ordens falsas para demonstrar sucesso; investigar e medir múltiplos fechamentos. A categorização técnica `paper_cycle_callback_failed` agora é permitida no resumo privado e no leitor J5, sem expor payload do provedor ou transformar falha de consumidor em falha de mercado. Factory Mission Mode exige `--auto high`, sujeito à confirmação de acesso e custo R$0; configurar arquivos não é executar Factory.
+
+
+## D477 — definir "saída parcial" por FILL PAPER, não apenas reserva (22/11/2026)
+
+Critério de produto: não declarar que saídas parciais foram executadas quando só há intenção REDUCE_ONLY. Exigir nova cotação válida após latência e usar D394 para escrever exclusivamente FILL **hipotético** com idempotência no AUTO4; calcular resultado D454 antes de funding como condicional, jamais PnL líquido realizável, e confirmar leitura J5. Os testes/demo LONG e SHORT devem verificar separadamente reserva, fill e replay sem duplicação. Custo R$0; negociação real continua proibida.

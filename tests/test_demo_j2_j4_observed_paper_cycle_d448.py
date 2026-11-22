@@ -1,5 +1,6 @@
 """D448 end-to-end executable demonstration, hermetic and owner-only."""
 import os
+from decimal import Decimal
 import unittest
 from unittest.mock import patch
 
@@ -23,6 +24,11 @@ class ObservedFullPaperCycleDemoTests(unittest.TestCase):
                 self.assertEqual(report["durable_hypothetical_open_fills"], 1)
                 self.assertEqual(report["persisted_auto4_positions"], 1)
                 self.assertEqual(report["partial_exit_intents_reserved"], 1)
+                self.assertEqual(report["hypothetical_partial_exit_fills_recorded"], 1)
+                self.assertGreater(Decimal(report["hypothetical_partial_exit_units"]), 0)
+                self.assertEqual(report["duplicate_hypothetical_exit_fills"], 0)
+                self.assertTrue(report["conditional_pnl_before_funding_available"])
+                self.assertFalse(report["funding_settlement_verified"])
                 self.assertEqual(report["duplicate_open_fills_after_restart"], 0)
                 self.assertTrue(report["position_visible_in_j5"])
                 for field in (
