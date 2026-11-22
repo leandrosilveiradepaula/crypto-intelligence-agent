@@ -157,6 +157,24 @@ def _safe_failure(error: Exception) -> str:
     return "internal_validation_failure"
 
 
+def _callback_failure(error: Exception) -> str:
+    """Keep existing read-only coverage/held-feed contracts intact.
+
+    In a shared WS supervisor callbacks also serve N50 coverage and held
+    monitoring: their known DataGap categories must NOT be overwritten with
+    an invented financial-consumer label. D449/D452/D463 callbacks are the
+    PAPER chain we need to distinguish from a Bybit parser rejection.
+    """
+    if isinstance(error, (DataGapError, DataValidationError)):
+        if str(error).startswith((
+            "D449 ", "D452 ", "D463 ", "D447 ", "D448 ",
+            "D425 ", "D391 ", "D394 ", "D453 ",
+        )):
+            return "paper_cycle_callback_failed"
+        return _safe_failure(error)
+    return "paper_cycle_callback_failed"
+
+
 def _monotonic(clock: Callable[[], float]) -> float:
     result = clock()
     if type(result) not in (int, float) or not math.isfinite(result):
@@ -307,10 +325,10 @@ def supervise_public_tickers(
                         # invalid_market_data or silently retry it.
                         try:
                             on_acked_poll()
-                        except Exception:
+                        except Exception as error:
                             book.mark_disconnected()
                             return report("lease_abstained",
-                                          "paper_cycle_callback_failed")
+                                          _callback_failure(error))
                     if remaining <= 0:
                         return report("lease_completed" if acknowledged
                                       else "lease_abstained",
@@ -408,10 +426,10 @@ def supervise_public_tickers(
                     if on_quote is not None:
                         try:
                             on_quote(quote)
-                        except Exception:
+                        except Exception as error:
                             book.mark_disconnected()
                             return report("lease_abstained",
-                                          "paper_cycle_callback_failed")
+                                          _callback_failure(error))
         except _ResnapshotRequired as error:
             # This session has lost causal continuity. No old data crosses
             # into another ACKed connection or the next PAPER fill.
