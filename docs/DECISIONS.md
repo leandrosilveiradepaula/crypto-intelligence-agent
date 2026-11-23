@@ -1,5 +1,12 @@
 # Decisões do produto
 
+## D504 — incorporação de D502/D503 sem mutação operacional (23/11/2026)
+
+Após validação no SHA `9c14a0a8739e694f37d9723df360a4d4e45d87d4` (Linux/Windows 3.590 testes, mobile QA verde), PR #735 foi mesclada em `main=090e4e07accb0a50958c40a9d13227625ac4300c`, exclusivamente código e documentação, **sem release VPS**. D503 permite ao usuário ativar cruzamento de três EMAs parametrizadas na pesquisa horária em modo PAPER, preservando breakout quando ausente o opt-in e validação causal com histórico suficiente. D502 preserva o ledger financeiro AUTO4 e arquiva apenas rotas integralmente encerradas em sidecars privados imutáveis, permitindo que histórico acumulado supere 50 sem exceder 50 rotas técnicas de monitoramento simultâneo. UI apresenta histórico paginado no loopback.
+
+A decisão não autoriza compra, ordens reais, testnet, credenciais, deploy de produção, mudança de stop nativo, nem alteração retroativa da alavancagem/margem de posições PAPER anteriores. J3 retorno OOS, duas saídas prospectivas por TARGET e homologação de release ainda faltam. Código integrado/CI verde não equivale a feature em operação VPS ou validação financeira.
+
+
 ## D502 — preservação do histórico sem diluir limite operacional do monitor
 
 Manter máximo de 50 *rotas monitoradas simultaneamente* por supervisor para controle de recursos; não impor esse teto ao arquivo histórico acumulado. Quando o manifesto estiver cheio, somente uma rota com `remaining=0`, `reserved_unfilled=0` e `filled_exit=initial` no ledger AUTO4 pode ser migrada para sidecar owner-only individual, imutável e verificável. Não escrever no journal financeiro nem remover histórico. Gravar e fsync o arquivo **antes** de substituir atomicamente o manifesto; retries não sobrescrevem arquivo. Leitura paginada a partir do SQLite com fallback para rota arquivada, sem listar IDs publicamente. Se todo o manifesto estiver ativo, rejeitar nova entrada e manter proteção existente.

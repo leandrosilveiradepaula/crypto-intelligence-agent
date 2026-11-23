@@ -1,5 +1,14 @@
 # STATUS — Crypto Intelligence Agent
 
+## D504 — integração D502/D503, código validado sem release (23/11/2026 UTC)
+
+**PR #735 integrada na main**, SHA de merge `090e4e07accb0a50958c40a9d13227625ac4300c`, HEAD revisado `9c14a0a8739e694f37d9723df360a4d4e45d87d4`. CI no HEAD: Linux/documentação **3.590 testes OK** (run 45271593728), Windows **3.590 testes OK, 665 skips POSIX esperados** (mesmo run), Chrome/mobile **SUCCESS** (run 45271593753). Nenhuma revisão ou thread impeditiva. CI após o squash não foi atestada como concluída na conferência inicial.
+
+**Produto em código:** estratégia horária alternativa de cruzamento de três EMAs configuráveis (exemplo 10/30/60), com warmup causal REST até 122h e confirmação WS final, mantendo o perfil legado breakout por padrão; gestão J4 arquiva exclusivamente rotas PAPER totalmente encerradas em arquivos owner-only imutáveis, conserva o SQLite AUTO4 e mantém o monitor com limite de 50 rotas atuais; J5 oferece histórico paginado e read-only. Sem migração ou alteração de serviço nesta integração.
+
+**VPS não atualizada pela PR:** `cia-paper-research-d498.service` e `cia-paper-config-d498.service` seguem active/enabled; `cia-j1-n50-ws.timer` active/waiting/enabled. Última leitura do diário existente: **0 posições PAPER abertas, 1 encerrada ARBUSDT SHORT por STOP**, sem ordens reais. Não alegar que EMA cross ou arquivamento foram exercidos sobre dados públicos no host, que 51ª operação foi observada ou que alvos duplos foram executados por sinais genuínos. Próxima etapa funcional: homologação isolada de configuração e histórico do novo código; cutover do operador VPS sujeito aos gates de release, seguido de observação prospectiva de TARGET1/TARGET2, reingresso e resultados ajustados aos custos. Sem custo adicional nem ordens reais.
+
+
 ## D502 — arquivo imutável de rotas CLOSED e histórico J5 paginado (código em validação, 23/11/2026)
 
 O manifesto D425 continua limitado a **50 rotas simultâneas**, mas deixa de usar o teto como limite para a quantidade total de operações históricas. Quando uma abertura PAPER nova encontra o manifesto cheio, D448 arquiva **somente rotas totalmente encerradas**, com journal AUTO4 reconciliado, como sidecars owner-only `paper-closed-route-<SHA256>.json` imutáveis. Arquivo é gravado e sincronizado ANTES da substituição atômica do manifesto. Reinício ou erro entre os passos não perde a rota original nem duplica o arquivo; entradas de posições ativas, parciais ou reservas pendentes não são removidas. O SQLite financeiro nunca é truncado, migrado ou destruído.

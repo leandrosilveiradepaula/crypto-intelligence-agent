@@ -1,5 +1,14 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D504 — checkpoint operacional após integração J2/J4/J5 (23/11/2026)
+
+**Código oficial** `main=090e4e07accb0a50958c40a9d13227625ac4300c`, PR #735 squash **MERGED**, HEAD validado `9c14a0a8739e694f37d9723df360a4d4e45d87d4`. CI do HEAD: Linux 3.590 PASS, Windows 3.590 PASS (665 skipped de POSIX) em run 45271593728; mobile/Chrome 45271593753 SUCCESS. Branch `codex/paper-strategy-history-d502-d503` permanece como histórico; não abrir PR paralela para mesma entrega.
+
+**D503**: regra EMA-cross opt-in com períodos 2..120, 10/30/60 de exemplo; perfil legado breakout preservado, warmup REST D461 de 24 até 122h e close WS D462 causal; interface local de configuração somente sessões futuras. **D502**: arquivos imutáveis de rotas de posição PAPER totalmente CLOSED antes da substituição do manifest D425 cheio, histórico J5 paginado a partir do SQLite AUTO4, sem apagar posições ou escrever ordens. Limite de 50 rotas atuais segue como limite técnico do monitor, não limite de histórico.
+
+**VPS D498 permanece sem cutover**: via MCP somente leitura após merge `cia-paper-research-d498.service` e `cia-paper-config-d498.service` active/enabled; J1 N50 WS timer active/waiting/enabled. Perfil real 50x/1USDT e journal não foram escritos nesta sessão. Estado conhecido 0 open/1 closed ARBUSDT SHORT por STOP hipotético, fonte Bybit pública, `orders_sent=false`. Não extrapolar 24x7, proteção nativa, PnL de corretora ou execução de dois TARGETs. **Próxima ação segura**: evidência em cópia isolada owner para arquivos/indicadores já integrados e plano de cutover D498 sujeito a gate de release VPS, sem interromper J1 nem alterar controles financeiros. Registrar SHA/CI e resultado antes de qualquer implantação.
+
+
 ## D502 — evolução do monitor e histórico PAPER (23/11/2026)
 
 Branch `codex/paper-strategy-history-d502-d503`, PR #735. Em novo registro PAPER quando o manifesto D425 atinge 50 entradas, D448 libera espaço exclusivamente por arquivamento individual de rotas **CLOSED** persistidas, após revalidar saldos e reservas no mesmo journal AUTO4 já existente. Sidecar SHA256/0600/owner e publicação imutável com fsync e hardlink; arquivo existente deve corresponder byte a byte à rota original. Parada/crash antes do replace mantém o manifesto antigo válido. Não altera engine stop/target, order sender, J1 ou SQL. Leitura J5 de arquivo histórico paginada usando IDs explicitamente selecionados do mesmo SQLite e DTO sanitizado, sem fazer rede externa. Testes de rollover sob capacidade reduzida, idempotência, capacidade só ativa e arquivo corrompido adicionados.
