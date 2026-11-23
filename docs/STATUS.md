@@ -1,5 +1,10 @@
 # STATUS — Crypto Intelligence Agent
 
+## D482 — demonstração PAPER durável com preço público real (23/11/2026)
+
+O Product Owner autorizou **explicitamente testar a gestão abrindo uma operação fictícia sem esperar o sinal horário**; a estratégia de entradas reais/PAPER não deve ser relaxada silenciosamente. `scripts/run_j4_persistent_public_demo_d482.py` abre, com opt-ins específicos, **uma** posição LONG/SHORT `BTCUSDT` etiquetada `EXPLICIT_PAPER_DEMO_NOT_J2_SIGNAL`: valida contrato público REST, recebe apenas cotação ticker Bybit após ACK WSS, aplica J3 custos e buffer mínimo de margem, ancora um **FILL totalmente fabricado** via AUTO4 D426, persiste o diário e manifesto owner-only 0600, valida restauração D425 e leitura J5 D446. **Nenhum sinal quantitativo aprovado, conta, ordem, dinheiro, fill de corretora, stop nativo ou prazo fixo de permanência.** Diretório deve estar vazio 0700 e owner não-root. Não desabilitar risco financeiro para forçar demonstração; caso mercado não ofereça cotação elegível, registrar abstenção. Seguir demonstrando monitoração intra-hora com o mesmo D444/D445 e saída reduzida PAPER; tudo isolado da J1 e do operador de pesquisa D453. A prova com dados públicos reais e a monitoração devem ser documentadas após executar este SHA, nunca inferidas do teste offline.
+
+
 ## D481 — escopo fechado de operação PAPER horária + gestão intra-hora (decisão do Product Owner em 23/11/2026)
 
 **Entradas:** identificar e classificar novas oportunidades exclusivamente após o fechamento confirmado de cada vela de **1h** da Bybit para o universo elegível dinâmico N50, usando contexto BTC, estratégia e risco. A avaliação pode consumir ticks subsequentes para verificar preço, spread, profundidade, custo, margem e registrar uma entrada PAPER elegível, mas **não recalcula nem descobre novas hipóteses intra-hora**. A análise horária deve ter um resultado visível no aplicativo: candidatos/entradas elegíveis ou **nenhuma oportunidade** com estado e critérios de abstenção; não transformar ausência de sinal em falha nem forçar operações.
