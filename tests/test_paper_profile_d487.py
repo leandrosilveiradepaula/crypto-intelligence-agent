@@ -1,0 +1,97 @@
+"""Owner-only profile editor, without network/real orders."""
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import shutil
+import tempfile
+import unittest
+
+from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.paper_profile_d487 import save, snapshot
+from scripts.run_j2_j4_public_paper_resident_d453 import read_owner_paper_policy
+
+SAMPLE = (Path(__file__).resolve().parents[1] / "docs/examples"
+          / "d453_public_paper_policy.example.json")
+
+
+@unittest.skipUnless(os.name == "posix" and os.geteuid() != 0,
+                     "unprivileged owner required")
+class OwnerPaperProfileTests(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory(prefix="cia-d487-")
+        self.addCleanup(temp.cleanup)
+        self.home = Path(temp.name)
+        self.home.chmod(0o700)
+        self.file = self.home / "strategy.json"
+        shutil.copyfile(SAMPLE, self.file)
+        self.file.chmod(0o600)
+
+    def test_user_can_edit_indicators_and_fully_close_in_two_paper_tranches(self):
+        first = snapshot(self.file)
+        self.assertEqual(first["research"]["ema_period"], 2)
+        out = save(self.file, revision=first["revision"], edits={
+            "research": {
+                "ema_period": 20, "atr_period": 14,
+                "extrema_period": 10, "quote_volume_period": 10,
+                "compression_bars": 5, "baseline_bars": 5,
+                "max_atr_ratio": "1.5", "min_quote_volume_ratio": "0.7",
+                "experimental_paper_relaxation": True,
+            },
+            "paper": {
+                "margin_quote": "5", "leverage": 50,
+                "stop_distance_bps": "50",
+                "target_distances_bps": ["100", "200"],
+                "tranches": [
+                    {"basis":"INITIAL_POSITION","percent":"50"},
+                    {"basis":"INITIAL_POSITION","percent":"50"},
+                ],
+                "runner_floor_percent":"0",
+            },
+        })
+        self.assertNotEqual(out["revision"], first["revision"])
+        cfg = read_owner_paper_policy(self.file)
+        self.assertEqual(cfg.research.features.ema_period, 20)
+        self.assertEqual(cfg.research.features.atr_period, 14)
+        self.assertEqual(cfg.exits.runner_floor_percent, 0)
+        self.assertEqual(tuple(cfg.exits.target_distances_bps), (100,200))
+        self.assertEqual(self.file.stat().st_mode & 0o777,0o600)
+        self.assertEqual(out["applies_to"],"future_paper_sessions_only")
+        self.assertFalse(out["orders_sent"])
+        with self.assertRaises(DataValidationError):
+            save(self.file, revision=first["revision"],
+                 edits={"research":{"ema_period": 15}})
+
+    def test_invalid_research_leverage_and_tranches_keep_existing_bytes(self):
+        old=snapshot(self.file)
+        original=self.file.read_bytes()
+        invalid = (
+            {"research":{"ema_period": 1}},
+            {"research":{"ema_period": 501}},
+            {"research":{"ema_period": True}},
+            {"research":{"max_atr_ratio":"1.5"}},
+            {"paper":{"leverage": 250}},
+            {"paper":{"target_distances_bps":["200","100"]}},
+            {"paper":{"tranches":[
+                {"basis":"INITIAL_POSITION","percent":"85"},
+                {"basis":"INITIAL_POSITION","percent":"30"}]}},
+            {"risk":{"max_order_notional_quote":"50000"}},
+        )
+        for change in invalid:
+            with self.subTest(change=change),self.assertRaises(DataValidationError):
+                save(self.file,revision=old["revision"],edits=change)
+            self.assertEqual(self.file.read_bytes(),original)
+
+    def test_no_symlink_or_unsafe_mode(self):
+        linked=self.home/"linked.json"
+        linked.symlink_to(self.file)
+        with self.assertRaises(DataValidationError):
+            snapshot(linked)
+        self.file.chmod(0o644)
+        with self.assertRaises(DataValidationError):
+            snapshot(self.file)
+
+
+if __name__ == "__main__":
+    unittest.main()

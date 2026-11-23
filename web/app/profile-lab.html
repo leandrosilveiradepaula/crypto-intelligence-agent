@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'">
+<meta name="color-scheme" content="dark">
+<title>Crypto Intelligence — Configurar PAPER</title>
+<script src="/profile-lab.js" defer></script>
+<style>
+:root{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color-scheme:dark;--bg:#0c1421;--card:#17253a;--line:#33475f;--text:#eff6fc;--muted:#aebed3;--green:#81e7cd;--warn:#ffe0a0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);line-height:1.5}
+main{max-width:980px;padding:25px 18px 75px;margin:auto}h1{margin:2px 0 6px;font-size:clamp(1.8rem,5vw,2.55rem)}h2{margin:0 0 12px;font-size:1.1rem}p{color:var(--muted);margin:0 0 17px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.mark{color:var(--green);font-size:.72rem;letter-spacing:.15em;font-weight:800}
+.pill{border:1px solid #518d85;border-radius:30px;color:var(--green);padding:7px 12px;font-size:.78rem;font-weight:750}
+.card{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:20px;margin:18px 0}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+label{display:block;font-size:.79rem;font-weight:650;color:#d4e2f1}
+label input,label select{display:block;width:100%;min-height:45px;background:#0d192a;border:1px solid #526981;color:var(--text);padding:10px;border-radius:10px;margin-top:6px;font-size:1rem}
+label small{display:block;color:var(--muted);font-weight:400;margin-top:5px}
+button{min-height:47px;font-size:.93rem;font-weight:800;padding:12px 18px;border-radius:10px;border:1px solid #537c7b;background:#82e7cc;color:#112b2e;cursor:pointer}
+button.secondary{background:#293f57;color:#ecf6ff;border-color:#4c6682}button:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap}.actions button{flex:1;min-width:195px}
+a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px}
+#status{padding:13px;border:1px solid #4d7c77;background:#193830;border-radius:11px;margin:15px 0;font-size:.88rem}
+#status[data-error=true]{background:#44262c;border-color:#c58084;color:#ffd4d6}
+.notice{border-left:3px solid #cfaf67;padding:12px 14px;background:#30291d;color:#ffe8ba;font-size:.86rem}
+.results{display:grid;gap:9px}
+.row{background:#102033;border:1px solid #2d4764;border-radius:9px;padding:12px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.mono{font-variant-numeric:tabular-nums;font-weight:780}
+.muted{color:var(--muted);font-size:.8rem}
+.check{display:flex;gap:9px;align-items:center;padding:13px;background:#1c3343;border-radius:10px;margin:8px 0}
+.check input{width:19px;height:19px;accent-color:#81e7cd}footer{padding:24px 0;color:var(--muted);font-size:.77rem}
+@media(max-width:720px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:15px}}
+@media(max-width:450px){.grid{grid-template-columns:1fr}.actions{flex-direction:column}.actions button{min-width:0;width:100%}}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><span class="mark">CRYPTO INTELLIGENCE AGENT</span><span class="pill">PAPER · SEM ORDENS</span></div>
+<h1>Configure. Teste. Acompanhe.</h1>
+<p>Escolha seus indicadores e suas saídas. Salvar altera apenas o perfil do <strong>próximo ciclo PAPER</strong>, não posições abertas. A pesquisa acontece depois da vela de 1 hora; stops e alvos podem ser acompanhados intra-hora pelo monitor separado.</p>
+<div id="status" role="status" aria-live="polite">Carregando perfil do servidor local…</div>
+<section class="card">
+<h2>1. Indicadores da entrada horária</h2>
+<p>Todos os períodos são ajustáveis. A estratégia atual é rompimento após filtro de volatilidade/volume. Você poderá trocar os números sem mudar o código.</p>
+<div class="grid">
+<label>EMA (candles de 1h)<input id="r-ema_period" type="number" min="2" max="500" value="2"></label>
+<label>ATR (candles de 1h)<input id="r-atr_period" type="number" min="2" max="500" value="2"></label>
+<label>Rompimento (candles)<input id="r-extrema_period" type="number" min="2" max="500" value="2"></label>
+<label>Média de volume (candles)<input id="r-quote_volume_period" type="number" min="2" max="500" value="2"></label>
+<label>Compressão recente (candles)<input id="r-compression_bars" type="number" min="2" max="500" value="2"></label>
+<label>Base de compressão (candles)<input id="r-baseline_bars" type="number" min="2" max="500" value="2"></label>
+<label>Limite ATR recente / base<input id="r-max_atr_ratio" type="text" inputmode="decimal" value="1.5"></label>
+<label>Volume mínimo / média<input id="r-min_quote_volume_ratio" type="text" inputmode="decimal" value="0.7"></label>
+<label>Intervalo sem repetir sinal (velas)<input id="r-cooldown_bars" type="number" min="0" max="500" value="0"></label>
+</div>
+<label class="check"><input type="checkbox" id="r-experimental_paper_relaxation" checked> Permitir filtros experimentais mais permissivos (somente PAPER)</label>
+<p class="notice">Médias de 10, 20, 30 ou 60 períodos podem ser configuradas. A análise atual da VPS dispõe de 24 candles por ativo: configurações maiores exigem mais histórico para emitir resultado. <strong>Cruzamento de múltiplas médias ainda não é uma regra ativa de sinal</strong> nesta versão; não será tratado como se já estivesse funcionando.</p>
+</section>
+<section class="card">
+<h2>2. Margem, alvos e saídas parciais</h2>
+<p>Os alvos abaixo são expressos em <strong>retorno bruto percentual sobre a margem</strong> da simulação. Exemplo: em 50x, 50% sobre a margem corresponde aproximadamente a 1% de movimento favorável do ativo, antes de custos.</p>
+<div class="grid">
+<label>Margem por posição (USDT)<input id="p-margin_quote" inputmode="decimal" value="5"></label>
+<label>Alavancagem novas posições<input id="p-leverage" type="number" min="1" max="100" value="50"></label>
+<label>Stop bruto (% sobre margem)<input id="p-stop_roi" inputmode="decimal" value="25"></label>
+<label>Alvo 1 bruto (% sobre margem)<input id="p-target1_roi" inputmode="decimal" value="50"></label>
+<label>Alvo 2 bruto (% sobre margem)<input id="p-target2_roi" inputmode="decimal" value="100"></label>
+<label>Saída 1 (% da posição inicial)<input id="p-partial1" inputmode="decimal" value="50"></label>
+<label>Saída 2 (% da posição inicial)<input id="p-partial2" inputmode="decimal" value="50"></label>
+<label>Parcela residual (runner, %)<input id="p-runner_floor_percent" inputmode="decimal" value="0"></label>
+</div>
+<p class="muted">Você pode escolher duas parciais que somem 100% e finalizar toda a posição, ou deixar uma parcela residual aberta por tempo indeterminado. Taxas, funding, slippage, spread e liquidação são avaliados separadamente; não há retorno garantido.</p>
+</section>
+<div class="actions">
+<button id="save" disabled>Salvar para o próximo PAPER</button>
+<button id="preview" class="secondary" disabled>Analisar histórico real disponível</button>
+</div>
+<section class="card">
+<h2>3. O que os candles reais mostram com este perfil?</h2>
+<p>Pesquisa de histórico público REST, não sinal validado por WebSocket e não execução PAPER. A amostra não autoriza negociação.</p>
+<div id="preview-details" class="muted">Clique em “Analisar histórico real disponível”.</div>
+<div id="preview-rows" class="results" aria-live="polite"></div>
+</section>
+<footer>Ferramenta local e privada · R$ 0,00 adicional · Dados Bybit somente públicos · Ordens reais desativadas. O monitor de saídas e o coletor J1 não são alterados por esta página.</footer>
+</main>
+</body>
+</html>
