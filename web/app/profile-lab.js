@@ -220,8 +220,13 @@ async function loadMoreHistory() {
       throw new Error("Página de histórico não validada.");
     }
     historyOffset += page.positions.length;
-    loadedHistory = loadedHistory.concat(page.positions);
-    showPositions("history-rows",loadedHistory,"Sem operações mais antigas.");
+    // Open/partial positions are already pinned at the top of the live
+    // list, including positions older than the latest 50. Historical
+    // pagination displays CLOSED operations only, without duplicating them.
+    loadedHistory = loadedHistory.concat(
+      page.positions.filter(p => p.status === "CLOSED")
+    );
+    showPositions("history-rows",loadedHistory,"Sem operações encerradas mais antigas.");
     button.disabled = !page.more_available;
   } catch(error) {
     $("history-rows").textContent="Histórico indisponível: "+error.message;
