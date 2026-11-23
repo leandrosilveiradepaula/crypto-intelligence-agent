@@ -49,33 +49,43 @@ from crypto_intelligence_agent.j5_resident_paper_status_d456 import (
 HOST, PORT = "127.0.0.1", 8766
 HTML = Path(__file__).resolve().parents[1] / "web/app/profile-lab.html"
 JS = Path(__file__).resolve().parents[1] / "web/app/profile-lab.js"
-_NAME = re.compile(r"rest-history-d461-[0-9a-f]{18}-[0-9]{13}(?:-w[0-9]{2,3})?[.]json\Z")
+_NAME = re.compile(r"rest-history-d461-[0-9a-f]{18}-([0-9]{13})(?:-w([0-9]{2,3}))?[.]json\Z")
 
 
 def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
     _private_directory(history_directory)
-    filenames = sorted(
-        (x.name for x in history_directory.iterdir()
-         if _NAME.fullmatch(x.name) and x.is_file() and not x.is_symlink())
-    )
-    if not filenames:
+    cfg = read_owner_paper_policy(paper_file)
+    if cfg.research.entry_mode == "ema_cross":
+        min_required = max(
+            24, cfg.research.ema_cross_periods[-1] + 2,
+            cfg.research.features.quote_volume_period + 1,
+        )
+    else:
+        min_required = max(
+            cfg.research.features.ema_period,
+            cfg.research.features.atr_period,
+            cfg.research.features.extrema_period,
+            cfg.research.features.quote_volume_period,
+            cfg.research.compression_bars + cfg.research.baseline_bars + 2,
+            24,
+        )
+    archive_candidates = []
+    for entry in history_directory.iterdir():
+        match = _NAME.fullmatch(entry.name)
+        if (match is not None and entry.is_file() and not entry.is_symlink()):
+            hours = int(match.group(2) or 24)
+            archive_candidates.append((int(match.group(1)), hours, entry.name))
+    if not archive_candidates:
         return {
             "status": "historical_data_not_available",
             "candidate_count": 0, "orders_sent": False,
         }
-    file = filenames[-1]
+    sufficient = [x for x in archive_candidates if x[1] >= min_required]
+    # Prefer latest causal sample meeting the chosen lookback. When no
+    # adequate history exists, report insufficiency, never fake a signal.
+    _, _, file = max(sufficient or archive_candidates)
     history = reopen_frozen_rest_n50_for_research(
         private_j2_directory=history_directory, filename=file,
-    )
-    cfg = read_owner_paper_policy(paper_file)
-    min_required = max(
-        cfg.research.features.ema_period,
-        cfg.research.features.atr_period,
-        cfg.research.features.extrema_period,
-        cfg.research.features.quote_volume_period,
-        cfg.research.compression_bars + cfg.research.baseline_bars + 2,
-        (cfg.research.ema_cross_periods[-1] + 2
-         if cfg.research.entry_mode == "ema_cross" else 24),
     )
     if min_required > history.history_hours:
         return {
