@@ -269,6 +269,12 @@ def observe_existing_held_paper_once(
             enable_hypothetical_exit_fills=simulate_explicit_demo_exit_fills,
         )
         held = tuple(sorted(router.monitored_symbols))
+        if not held:
+            return {
+                **denied, "status": "no_held_paper_positions",
+                "network_attempted": False,
+                "private_paper_journal_accessed": True,
+            }
         try:
             scope = fetch_held_scope_from_public_rest(held)
         except (J1BybitCaptureError, DataGapError, DataValidationError,

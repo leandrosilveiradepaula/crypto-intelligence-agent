@@ -134,7 +134,7 @@ def _project_positions(*, directory: Path) -> list[dict]:
     projected = []
     for position in original["positions"]:
         symbol = position["symbol_fixture"]
-        route = router._by_symbol.get(symbol)
+        route = router.route_for_position(position["position_id"])
         if route is None:
             raise DataValidationError("PAPER manifest missing a reported position")
         b = inspect_paper_position(

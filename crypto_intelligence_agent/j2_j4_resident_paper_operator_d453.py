@@ -154,7 +154,12 @@ def run_held_paper_without_n50(
         home, enable_hypothetical_exit_fills=True,
     )
     held = tuple(sorted(router.monitored_symbols))
-    if not 1 <= len(held) <= _MAX_HELD:
+    if not held:
+        # Manifest may contain only CLOSED historical PAPER positions.
+        # No active quote subscription or false fallback success needed.
+        return {**denied, "status": "no_held_paper_positions",
+                "private_paper_journal_accessed": True}
+    if len(held) > _MAX_HELD:
         raise DataValidationError("D453 held-only subscription exceeds bounded scope")
     injected = session_factory is not None
     if injected:
