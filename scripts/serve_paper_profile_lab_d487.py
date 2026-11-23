@@ -33,6 +33,9 @@ from crypto_intelligence_agent.paper_position_inspection import _read_database
 from crypto_intelligence_agent.j5_owner_paper_positions_d446 import (
     read_owner_paper_positions, OwnerPaperPositionsUnavailable,
 )
+from crypto_intelligence_agent.paper_position_reservations import (
+    _TABLES as POSITION_TABLES, _VERSION as POSITION_VERSION,
+)
 
 HOST, PORT = "127.0.0.1", 8766
 HTML = Path(__file__).resolve().parents[1] / "web/app/profile-lab.html"
@@ -140,12 +143,27 @@ def _paper_session_read(*, directory: Path) -> dict:
                 "filled_units":str(entry.snapshot.filled_total_units),
                 "created_at_ms":entry.intent.created_at_ms,
             })
-    reader=read_owner_paper_positions(directory=directory)
+    # The existing J5 owner reader deliberately abstains when no position
+    # has EVER been materialized. Distinguish verified empty journal from a
+    # corrupt/unreadable nonempty journal rather than masking both as zero.
+    with _read_database(
+        positions, POSITION_TABLES, "paper_position_meta", POSITION_VERSION,
+    ) as position_db:
+        materialized_count = position_db.execute(
+            "SELECT COUNT(*) FROM paper_positions",
+        ).fetchone()[0]
+    if materialized_count:
+        reader = read_owner_paper_positions(directory=directory)
+        position_count = len(reader["positions"])
+        if position_count != materialized_count:
+            raise DataValidationError("PAPER position readback mismatch")
+    else:
+        position_count = 0
     return {
         "schema_version":"d487-local-paper-session-readback-v1",
         "status":"paper_journal_readback",
         "intents":intents,
-        "position_count":len(reader["positions"]),
+        "position_count":position_count,
         "orders_sent":False,
         "source":"owner_only_local_paper_sqlite",
         "live_trading_authorized":False,
