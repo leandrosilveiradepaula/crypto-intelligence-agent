@@ -7,6 +7,7 @@ const RESEARCH_INT = ["ema_period","atr_period","extrema_period",
   "quote_volume_period","compression_bars","baseline_bars","cooldown_bars"];
 const RESEARCH_DEC = ["max_atr_ratio","min_quote_volume_ratio"];
 let snapshot = null, edited = false;
+let historyCount = null, historyOffset = 50, loadedHistory = [];
 const status = (msg, error=false) => {
   $("status").textContent = msg;
   $("status").dataset.error = error ? "true" : "false";
@@ -161,8 +162,9 @@ async function loadPaperSession() {
     const d=await getJson("/api/paper-session");
     $("paper-session-details").textContent =
       d.open_position_count+" em aberto · "+d.closed_position_count+
-      " encerrada(s) · "+d.intents.length+
-      " intenção(ões) PAPER. Ordens reais: NÃO.";
+      " encerrada(s) · "+(d.intent_count ?? d.intents.length)+
+      " intenção(ões) PAPER (mais recentes: "+d.intents.length+
+      "). Ordens reais: NÃO.";
     const container=$("paper-session-rows");
     container.replaceChildren();
     for (const intent of d.intents) {
@@ -178,6 +180,13 @@ async function loadPaperSession() {
       container.append(row);
     }
     showPositions("paper-position-rows",d.positions || [],"Nenhuma posição automática preenchida.");
+    if (historyCount !== d.position_count) {
+      historyCount = d.position_count;
+      historyOffset = 50;
+      loadedHistory = [];
+      $("history-rows").replaceChildren();
+    }
+    $("history-next").disabled = !(d.position_count > historyOffset);
   } catch(e) {
     $("paper-session-details").textContent =
       "Diário da sessão ainda indisponível. Não presumir posições ou fills.";
@@ -198,6 +207,25 @@ async function loadPaperSession() {
       "Nenhuma posição demonstrativa registrada.");
   } catch(e) {
     $("paper-demo-rows").textContent="Diário demonstrativo indisponível.";
+  }
+}
+
+async function loadMoreHistory() {
+  const button = $("history-next");
+  button.disabled = true;
+  try {
+    const page = await getJson("/api/paper-history?offset="+historyOffset+"&limit=25");
+    if (page.schema_version !== "d502-owner-paper-history-page-v1" ||
+        page.orders_sent !== false || !Array.isArray(page.positions)) {
+      throw new Error("Página de histórico não validada.");
+    }
+    historyOffset += page.positions.length;
+    loadedHistory = loadedHistory.concat(page.positions);
+    showPositions("history-rows",loadedHistory,"Sem operações mais antigas.");
+    button.disabled = !page.more_available;
+  } catch(error) {
+    $("history-rows").textContent="Histórico indisponível: "+error.message;
+    button.disabled = false;
   }
 }
 
@@ -300,7 +328,8 @@ async function preview() {
 document.addEventListener("DOMContentLoaded",()=>{
   $("save").addEventListener("click",save);
   $("preview").addEventListener("click",preview);
-  document.querySelectorAll("input").forEach(node=>{
+  $("history-next").addEventListener("click",loadMoreHistory);
+  document.querySelectorAll("input,select").forEach(node=>{
     node.addEventListener("input",()=>{edited=true;});
     node.addEventListener("change",()=>{edited=true;});
   });
