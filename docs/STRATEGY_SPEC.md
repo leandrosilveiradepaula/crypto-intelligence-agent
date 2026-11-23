@@ -1,5 +1,12 @@
 # Estratégias e gestão de vencedores
 
+## D503 — cruzamento de médias configurável sem hardcode de períodos
+
+A estratégia pode ser selecionada pelo usuário no perfil PAPER, sem modificar a implementação: `breakout` (compatível com o atual) ou `ema_cross`. O segundo modo recebe três períodos EMA crescentes, e.g. 10/30/60, com cruzamento somente na vela fechada mais recente e confirmação de tendência pela média longa. Volume relativo mínimo segue editável. O critério de compressão ATR/rompimento não é obrigatório no modo cruzamento; nenhum filtro financeiro de ordens/risco foi desabilitado.
+
+As EMAs são calculadas com Decimal e seed SMA causal, sem comparação look-ahead. Para períodos superiores à janela antiga de 24h, D461 passa a consultar até EMA longa +2 velas no mesmo GET por ativo, com snapshot privado imutável e extensão explícita do nome; D462 exige evento final WS confirmado, horário, digest, universo e fonte. Sem dados suficientes ocorre abstenção, nunca backfill forjado. Perfis antigos preservam a escolha `breakout`. A interface local modifica somente sessões PAPER futuras; não altera alavancagem de posições já abertas, nem habilita ordens reais.
+
+
 ## D485 — pesquisa de sinais horários mais permissiva exclusivamente em PAPER (23/11/2026)
 
 Decisão autorizada pelo Product Owner: **testar mais sinais sem esperar filtro raro**, mas **somente para PAPER**. O padrão `CompressionBreakoutConfig` permanece rigoroso (`ATR_ratio <= 1`, `volume_ratio >= 1`) quando `experimental_paper_relaxation` está ausente/`false`. Com **opt-in booleano verdadeiro** no arquivo privado D453, as faixas de pesquisa experimentais passam a aceitar `ATR_ratio <= 2` e `volume_ratio >= 0.5`. O exemplo D485 e a sessão VPS usam **1.5 e 0.7**, respectivamente. Razão ATR >1 **não é compressão comprovada**: a identificação é `experimental_paper_relaxed_breakout`. O sinal experimental não comprova expectativa de lucro.
