@@ -8,7 +8,10 @@ from __future__ import annotations
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
-import fcntl
+try:
+    import fcntl
+except ImportError:  # Windows CI imports the POSIX owner-only module.
+    fcntl = None
 import json
 import os
 from pathlib import Path
@@ -169,6 +172,8 @@ def _apply(document: dict, edits: dict) -> dict:
 
 @contextmanager
 def _owner_lock(home: Path):
+    if fcntl is None:
+        raise DataValidationError("POSIX owner-only lock unavailable")
     lock = home / ".paper-profile.lock"
     fd = os.open(lock, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
