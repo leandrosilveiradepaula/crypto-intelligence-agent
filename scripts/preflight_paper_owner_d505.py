@@ -15,6 +15,7 @@ from pathlib import Path
 import sys
 
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.j5_owner_paper_positions_d446 import OwnerPaperPositionsUnavailable
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import _private_directory
 from scripts.run_j2_j4_public_paper_resident_d453 import read_owner_paper_policy
 from scripts.serve_paper_profile_lab_d487 import (
@@ -89,8 +90,8 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
         return 0
-    except (DataValidationError, OSError, ValueError, TypeError,
-            OverflowError):
+    except (DataValidationError, OwnerPaperPositionsUnavailable, OSError,
+            ValueError, TypeError, OverflowError):
         print(json.dumps({
             "schema_version": _SCHEMA, "status": "owner_paper_preflight_denied",
             "orders_sent": False, "read_only": True,
