@@ -67,6 +67,7 @@ class PaperPublicCycleConfig:
     leverage: SyntheticLeverageSettings
     margin_quote: Decimal
     max_contract_age_ms: int = 30_000
+    paper_demo_ignore_book_depth: bool = False
 
     def __post_init__(self) -> None:
         if (type(self.research) is not CompressionBreakoutConfig
@@ -78,7 +79,8 @@ class PaperPublicCycleConfig:
                 or not self.margin_quote.is_finite()
                 or not Decimal("0.01") <= self.margin_quote <= Decimal("10000")
                 or type(self.max_contract_age_ms) is not int
-                or not 1 <= self.max_contract_age_ms <= 60_000):
+                or not 1 <= self.max_contract_age_ms <= 60_000
+                or type(self.paper_demo_ignore_book_depth) is not bool):
             raise DataValidationError("D449 complete bounded PAPER policy required")
         first = self.exits.tranches[0]
         if (self.entry.target_distance_bps != self.exits.target_distances_bps[0]
@@ -390,6 +392,7 @@ class PublicPaperCycle:
                     intent_id=pending_id, quote=quote,
                     as_of_ms=quote.received_at_ms,
                     enable_hypothetical_open_fill=True,
+                    paper_demo_ignore_book_depth=self._config.paper_demo_ignore_book_depth,
                 )
                 if outcome["status"] == "paper_position_routed_for_continuous_held_monitor":
                     del self._pending[quote.symbol]
@@ -501,6 +504,7 @@ class PublicPaperCycle:
                     len(self._router.monitored_symbols) if self._router else 0,
                 "event_counts": dict(sorted(self._counts.items())),
                 "historical_rest_warmup_enabled": self._rest_warmup is not None,
+                "paper_demo_depth_assumption_enabled": self._config.paper_demo_ignore_book_depth,
                 "marketwide_n50_independently_verified": False,
                 "financial_backtest_approved": False,
                 "real_fills_verified": False,

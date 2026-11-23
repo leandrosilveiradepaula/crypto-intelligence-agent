@@ -501,6 +501,7 @@ def materialize_observed_paper_entry(
     *, private_paper_directory: Path, intent_id: str,
     quote: BybitTickerQuote | None, as_of_ms: int,
     enable_hypothetical_open_fill: bool = False,
+    paper_demo_ignore_book_depth: bool = False,
 ) -> dict:
     """Full-simulated-fill or recover FULL AUTO2 -> AUTO4 -> held D425 route.
 
@@ -508,8 +509,9 @@ def materialize_observed_paper_entry(
     retry with quote=None reconstructs the SAME position without another FILL.
     A PAPER entry is not tradable, and a route is NOT a venue-native stop.
     """
-    if type(enable_hypothetical_open_fill) is not bool:
-        raise DataValidationError("D448 simulated fill opt-in must be bool")
+    if (type(enable_hypothetical_open_fill) is not bool
+            or type(paper_demo_ignore_book_depth) is not bool):
+        raise DataValidationError("D448 simulated fill opt-ins must be boolean")
     if not enable_hypothetical_open_fill:
         return _report("hypothetical_open_fill_optin_required")
     now = _utc_ms(as_of_ms, "D448 accounting timestamp")
@@ -580,8 +582,12 @@ def materialize_observed_paper_entry(
                 simulated_available = (
                     depth * policy.max_book_participation_bps / BPS_DENOMINATOR
                 )
-                if simulated_available < entry.intent.requested_units:
+                if (not paper_demo_ignore_book_depth
+                        and simulated_available < entry.intent.requested_units):
                     return _report("paper_entry_top_book_liquidity_veto")
+                # D491: only a PAPER demo may assume unlimited matching depth;
+                # all inputs still come from a real, fresh public quote.
+                # The resulting FILL is HYPOTHETICAL, never a broker event.
             target_net, stop_buffer = _net_target_and_stop_buffer(
                 planned, policy, quote, entry.intent.requested_units,
                 receipt.requested_margin_quote,

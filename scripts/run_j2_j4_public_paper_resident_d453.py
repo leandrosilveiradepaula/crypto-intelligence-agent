@@ -193,6 +193,10 @@ def main(argv: list[str] | None = None) -> int:
                         help="1..3 bounded public WSS transport attempts per lease")
     parser.add_argument("--max-cycles", type=int, default=None)
     parser.add_argument("--pause-seconds", type=float, default=1.0)
+    parser.add_argument(
+        "--paper-demo-ignore-book-depth", action="store_true",
+        help="PAPER DEMO ONLY: assume full fill at public BBO despite displayed size; no broker orders",
+    )
     for flag in (
         "allow-public-network", "allow-public-websocket",
         "confirm-personal-readonly-research", "confirm-region-eligible",
@@ -211,6 +215,9 @@ def main(argv: list[str] | None = None) -> int:
         }, sort_keys=True))
         return 2
     config = read_owner_paper_policy(args.policy_file)
+    if args.paper_demo_ignore_book_depth:
+        from dataclasses import replace
+        config = replace(config, paper_demo_ignore_book_depth=True)
     stopping = {"requested": False}
     def graceful_stop(_signal, _frame):
         stopping["requested"] = True

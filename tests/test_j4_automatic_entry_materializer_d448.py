@@ -233,6 +233,47 @@ class D448PaperLifecycleTests(unittest.TestCase):
             quote=fresh, as_of_ms=fresh.received_at_ms)["status"],
             "hypothetical_open_fill_optin_required")
 
+    def test_d491_explicit_paper_demo_ignores_only_book_depth_not_other_gates(self):
+        intent, args = self.pending()
+        self.arm(intent)
+        low_depth = replace(self.fill_quote(args),
+            ask_size=Decimal("0.01"), bid_size=Decimal("0.01"))
+        self.assertEqual(
+            self.complete(intent, low_depth, low_depth.received_at_ms)["status"],
+            "paper_entry_top_book_liquidity_veto",
+        )
+        done = materialize_observed_paper_entry(
+            private_paper_directory=self.home, intent_id=intent,
+            quote=low_depth, as_of_ms=low_depth.received_at_ms,
+            enable_hypothetical_open_fill=True,
+            paper_demo_ignore_book_depth=True,
+        )
+        self.assertEqual(
+            done["status"], "paper_position_routed_for_continuous_held_monitor")
+        self.assertTrue(done["hypothetical_open_fill_written"])
+        self.assertFalse(done["fills_at_exchange_verified"])
+        self.assertFalse(done["orders_sent"])
+        pos_id=load_private_paper_routes(self.home).monitored_position_ids[0]
+        self.assertEqual(self.positions.load(pos_id).leverage_at_intent, 50)
+        self.assertEqual(self.positions.load(pos_id).requested_margin_quote, Decimal("5"))
+
+    def test_d491_paper_depth_override_does_not_override_spread_or_cost(self):
+        intent, args = self.pending()
+        self.arm(intent)
+        quote = replace(self.fill_quote(args),
+            bid_size=Decimal("0.01"), ask_size=Decimal("0.01"),
+            ask_price=Decimal("109"), bid_price=Decimal("100"))
+        result = materialize_observed_paper_entry(
+            private_paper_directory=self.home, intent_id=intent,
+            quote=quote, as_of_ms=quote.received_at_ms,
+            enable_hypothetical_open_fill=True,
+            paper_demo_ignore_book_depth=True,
+        )
+        self.assertEqual(result["status"], "paper_entry_spread_veto")
+        self.assertEqual(self.orders.load(intent).snapshot.status,
+                         PaperOrderStatus.PENDING)
+        self.assertFalse((self.home / "paper-routes.json").exists())
+
     def test_d489_expired_pending_open_is_cancelled_without_fictitious_fill(self):
         intent, args = self.pending()
         self.arm(intent)
