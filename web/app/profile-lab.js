@@ -209,10 +209,13 @@ function showPositions(id,positions,emptyText) {
       " / "+p.initial_units+" · encerrado: "+p.filled_exit_units;
     const levels=document.createElement("div");
     levels.className="muted";
-    levels.textContent="Stop (mark): "+p.stop_mark_price+
-      " · Alvos: "+(p.target_prices || []).join(" / ")+
+    const marginTerms=(p.requested_margin_quote===null ||
+      p.leverage_at_intent===null) ?
+      " · Margem/alavancagem não informadas nesta demonstração" :
       " · Margem: "+p.requested_margin_quote+" USDT · "+
       p.leverage_at_intent+"x";
+    levels.textContent="Stop (mark): "+p.stop_mark_price+
+      " · Alvos: "+(p.target_prices || []).join(" / ")+marginTerms;
     const summary=document.createElement("div");
     summary.className="muted";
     if (p.closure_reason && p.closure_reason!=="NONE") {

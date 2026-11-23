@@ -168,6 +168,8 @@ def _project_positions(*, directory: Path) -> list[dict]:
             else None
         )
         margin = position["margin_intent_requested"]
+        if margin is not None and type(margin) is not dict:
+            raise DataValidationError("invalid PAPER margin receipt")
         projected.append({
             "symbol": symbol,
             "side": position["side"],
@@ -178,8 +180,12 @@ def _project_positions(*, directory: Path) -> list[dict]:
             "initial_units": position["initial_confirmed_units"],
             "remaining_units": position["confirmed_remaining_units"],
             "filled_exit_units": position["filled_exit_units"],
-            "leverage_at_intent": margin["leverage_at_intent"],
-            "requested_margin_quote": margin["requested_margin_quote"],
+            "leverage_at_intent": (
+                None if margin is None else margin["leverage_at_intent"]
+            ),
+            "requested_margin_quote": (
+                None if margin is None else margin["requested_margin_quote"]
+            ),
             "stop_mark_price": str(route.stop_rule.stop_mark_price),
             "target_prices": [
                 str(x) for x in route.target_policy.prices
