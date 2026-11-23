@@ -63,7 +63,7 @@ def _decode(blob: bytes) -> dict:
 
 
 def _read(path: Path) -> bytes:
-    if type(path) is not Path or not path.is_absolute() or path.suffix != ".json":
+    if not isinstance(path, Path) or not path.is_absolute() or path.suffix != ".json":
         raise DataValidationError("absolute owner policy .json required")
     _private_directory(path.parent)
     if path.is_symlink():
