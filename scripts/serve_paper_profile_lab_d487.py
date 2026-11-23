@@ -50,6 +50,7 @@ HOST, PORT = "127.0.0.1", 8766
 HTML = Path(__file__).resolve().parents[1] / "web/app/profile-lab.html"
 JS = Path(__file__).resolve().parents[1] / "web/app/profile-lab.js"
 _NAME = re.compile(r"rest-history-d461-[0-9a-f]{18}-([0-9]{13})(?:-w([0-9]{2,3}))?[.]json\Z")
+_MAX_SESSION_POSITIONS = 50  # recent history; older active positions are always pinned
 
 
 def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
@@ -293,16 +294,38 @@ def _paper_session_read(*, directory: Path) -> dict:
         ).fetchone()[0]
         newest_ids = tuple(x[0] for x in position_db.execute(
             "SELECT position_id FROM paper_positions "
-            "ORDER BY checkpoint_at_ms DESC, position_id DESC LIMIT 50"
+            "ORDER BY checkpoint_at_ms DESC, position_id DESC LIMIT ?",
+            (_MAX_SESSION_POSITIONS,),
         ))
     if materialized_count:
-        displayed = _project_positions(
-            directory=directory, position_ids=newest_ids,
-        )
         router = load_private_paper_routes(directory)
+        # D505: checkpoint times on CLOSED positions advance on exit. Thus
+        # a still-OPEN older position can fall outside the latest 50 rows.
+        # Always pin ALL presently monitored non-flat positions to the J5
+        # readback, while preserving the latest 50 for consistent pagination.
+        active_ids = tuple(
+            ident for ident in router.monitored_position_ids
+            if inspect_paper_position(
+                positions, ident,
+            ).balance.confirmed_remaining_units > 0
+        )
         active_count = len(router.monitored_symbols)
-        if active_count > materialized_count:
-            raise DataValidationError("PAPER active position count invalid")
+        if (len(active_ids) != active_count or active_count > 50
+                or active_count > materialized_count):
+            raise DataValidationError("PAPER active route inventory mismatch")
+        recent = set(newest_ids)
+        pinned = tuple(ident for ident in active_ids if ident not in recent)
+        displayed = _project_positions(
+            directory=directory, position_ids=newest_ids + pinned,
+        )
+        if (len(displayed) != len(newest_ids) + len(pinned)
+                or sum(p["status"] != "CLOSED" for p in displayed)
+                   != active_count):
+            raise DataValidationError("PAPER visible active position count mismatch")
+        displayed.sort(
+            key=lambda p: (p["status"] == "CLOSED", -p["as_of_ms"],
+                           p["symbol"], p["side"]),
+        )
     else:
         displayed, active_count = [], 0
     position_count = materialized_count
@@ -314,7 +337,7 @@ def _paper_session_read(*, directory: Path) -> dict:
         "open_position_count":active_count,
         "closed_position_count":position_count - active_count,
         "displayed_position_count":len(displayed),
-        "more_history_available":position_count > len(displayed),
+        "more_history_available":position_count > len(newest_ids),
         "intent_count":intent_count,
         "intents_more_available":intent_count > len(intents),
         "positions":displayed,
