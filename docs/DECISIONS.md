@@ -1,5 +1,14 @@
 # Decisões do produto
 
+## D481 — escopo fechado de operação PAPER horária + gestão intra-hora (decisão do Product Owner em 23/11/2026)
+
+**Entradas:** identificar e classificar novas oportunidades exclusivamente após o fechamento confirmado de cada vela de **1h** da Bybit para o universo elegível dinâmico N50, usando contexto BTC, estratégia e risco. A avaliação pode consumir ticks subsequentes para verificar preço, spread, profundidade, custo, margem e registrar uma entrada PAPER elegível, mas **não recalcula nem descobre novas hipóteses intra-hora**. A análise horária deve ter um resultado visível no aplicativo: candidatos/entradas elegíveis ou **nenhuma oportunidade** com estado e critérios de abstenção; não transformar ausência de sinal em falha nem forçar operações.
+
+**Saídas:** para posições PAPER existentes, escutar **continuamente cotações públicas por WebSocket dentro da hora**, independentemente de elas continuarem no ranking N50, e avaliar stop-loss, take-profit, múltiplas realizações parciais, trailing e runner residual, inclusive entre os fechamentos de 1h. Um gatilho local não equivale a fill ou proteção nativa Bybit: exigir cotação posterior, latência e condições simuladas de BBO, manter idempotência, posição e custos. Enquanto o serviço estiver parado/degradado, não alegar cobertura de stop.
+
+**Prioridade de entrega:** concluir um único caminho J2 → J3 → J4 → J5 com candles reais, entradas após a hora, ordens/fills **hipotéticos** e acompanhamento intrahora no aplicativo. **Proibido expandir agora** o escopo para rastreador de novas oportunidades em 1m/5m/15m, trades, livro profundo, ML ou novo motor alternativo. Não reabrir J1 nem trocar Bybit. A meta final continua automação de entradas e saídas após gates, sem ordens reais nem publicação permanente não autorizada.
+
+
 ## D446 — exposição owner-only do diário PAPER real ao Console J5 (20/11/2026)
 
 O console mobile já suportava importação de snapshot PAPER D407, mas não lia o diário persistente sem importar JSON. D446 mantém **exatamente o mesmo contrato D407** e reutiliza `load_private_paper_routes`, `inspect_paper_positions` e `multi_paper_snapshot` para selecionar explicitamente as posições listadas no manifesto AUTO4 e lê-las em uma transação SQLite `mode=ro`. O servidor J5 expõe os dados privados somente por `GET /api/owner-paper-positions` em loopback 127.0.0.1 após opt-in separado e owner não-root, sem CORS, cookie ou verbos de escrita. Verificação de dono/mode/inode/symlink previne leitura insegura; falhas ou inconsistências resultam em 503 sanitizado. A UI passa a consultar o endpoint a cada 15 segundos somente em localhost e remove o snapshot local anterior se a leitura falhar, mas conserva a importação manual independente. Não alegar proteção ativa, ordens, PnL, funding ou execução de corretora; a UI não modifica journal nem posições.

@@ -1,5 +1,14 @@
 # Especificação do produto
 
+## D481 — escopo fechado de operação PAPER horária + gestão intra-hora (decisão do Product Owner em 23/11/2026)
+
+**Entradas:** identificar e classificar novas oportunidades exclusivamente após o fechamento confirmado de cada vela de **1h** da Bybit para o universo elegível dinâmico N50, usando contexto BTC, estratégia e risco. A avaliação pode consumir ticks subsequentes para verificar preço, spread, profundidade, custo, margem e registrar uma entrada PAPER elegível, mas **não recalcula nem descobre novas hipóteses intra-hora**. A análise horária deve ter um resultado visível no aplicativo: candidatos/entradas elegíveis ou **nenhuma oportunidade** com estado e critérios de abstenção; não transformar ausência de sinal em falha nem forçar operações.
+
+**Saídas:** para posições PAPER existentes, escutar **continuamente cotações públicas por WebSocket dentro da hora**, independentemente de elas continuarem no ranking N50, e avaliar stop-loss, take-profit, múltiplas realizações parciais, trailing e runner residual, inclusive entre os fechamentos de 1h. Um gatilho local não equivale a fill ou proteção nativa Bybit: exigir cotação posterior, latência e condições simuladas de BBO, manter idempotência, posição e custos. Enquanto o serviço estiver parado/degradado, não alegar cobertura de stop.
+
+**Prioridade de entrega:** concluir um único caminho J2 → J3 → J4 → J5 com candles reais, entradas após a hora, ordens/fills **hipotéticos** e acompanhamento intrahora no aplicativo. **Proibido expandir agora** o escopo para rastreador de novas oportunidades em 1m/5m/15m, trades, livro profundo, ML ou novo motor alternativo. Não reabrir J1 nem trocar Bybit. A meta final continua automação de entradas e saídas após gates, sem ordens reais nem publicação permanente não autorizada.
+
+
 ## Objetivo
 Plataforma de inteligência quantitativa para futuros perpétuos. **Produto-alvo: robô que detecta oportunidades, abre, acompanha e encerra posições automaticamente, sem confirmação manual a cada operação**, incluindo saídas parciais e residual; interface móvel para acompanhar, configurar e pausar. Desenvolvimento atual em PAPER, ordens reais somente após gate específico. Nenhuma promessa de rentabilidade.
 

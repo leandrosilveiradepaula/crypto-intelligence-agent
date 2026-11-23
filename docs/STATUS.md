@@ -1,5 +1,20 @@
 # STATUS — Crypto Intelligence Agent
 
+## D481 — escopo fechado de operação PAPER horária + gestão intra-hora (decisão do Product Owner em 23/11/2026)
+
+**Entradas:** identificar e classificar novas oportunidades exclusivamente após o fechamento confirmado de cada vela de **1h** da Bybit para o universo elegível dinâmico N50, usando contexto BTC, estratégia e risco. A avaliação pode consumir ticks subsequentes para verificar preço, spread, profundidade, custo, margem e registrar uma entrada PAPER elegível, mas **não recalcula nem descobre novas hipóteses intra-hora**. A análise horária deve ter um resultado visível no aplicativo: candidatos/entradas elegíveis ou **nenhuma oportunidade** com estado e critérios de abstenção; não transformar ausência de sinal em falha nem forçar operações.
+
+**Saídas:** para posições PAPER existentes, escutar **continuamente cotações públicas por WebSocket dentro da hora**, independentemente de elas continuarem no ranking N50, e avaliar stop-loss, take-profit, múltiplas realizações parciais, trailing e runner residual, inclusive entre os fechamentos de 1h. Um gatilho local não equivale a fill ou proteção nativa Bybit: exigir cotação posterior, latência e condições simuladas de BBO, manter idempotência, posição e custos. Enquanto o serviço estiver parado/degradado, não alegar cobertura de stop.
+
+**Prioridade de entrega:** concluir um único caminho J2 → J3 → J4 → J5 com candles reais, entradas após a hora, ordens/fills **hipotéticos** e acompanhamento intrahora no aplicativo. **Proibido expandir agora** o escopo para rastreador de novas oportunidades em 1m/5m/15m, trades, livro profundo, ML ou novo motor alternativo. Não reabrir J1 nem trocar Bybit. A meta final continua automação de entradas e saídas após gates, sem ordens reais nem publicação permanente não autorizada.
+
+## D481 — prova real D480 da coorte das 09h BRT e próximo aceite funcional (23/11/2026)
+
+A execução pública finita `cia-d480-paper-20261123T1139Z.service`, usuário `cia-probe`, SHA fixado `0a53606d7159767f35b9195da139a4187d88563d`, terminou `Result=success`, `ExitMainStatus=0`, `bounded_run_completed` e **1 lease primário concluído** sem fallback nem falha sanitizada. Relatório privado D459: `finite_public_paper_research_closed`, `ws_budget_ended_research_only`, `lease_completed`, **50 callbacks fechados confirmados de 50 símbolos**, **229.707 callbacks ticker pós-ACK**, **0 hipóteses de força relativa ao BTC**, **0 intenções de abertura e 0 posições**, **real_orders_sent=false**. Diário J2 continha 50 candles fechados; arquivo de erros da execução tinha 0 bytes. J1 timer permaneceu ativo e J5 localhost retornou HTTP 200; **esse J5 instalado não é prova de que o resultado D480 apareça nele**.
+
+Conclusão: integração de dados reais, processamento da coorte e conclusão dos dois WS passaram na D480; a inexistência de entrada neste horário foi **abstenção legítima**, não falha do callback. **Ainda não está demonstrado no feed público o ciclo candidato → intenção PAPER → fill hipotético → stop/parcial/trailing → persistência e visibilidade no Console**. Não afrouxar filtros ou fabricar sinais para produzir uma posição. Prosseguir no mesmo trabalho integrado sem descoberta intra-hora nova, sem daemon PAPER permanente e sem ordens reais. Requer resultado horário visível, separando sem sinal de erro; manter monitoramento de posições existentes intrahora.
+
+
 ## D479 — correção de integração PAPER após dados reais D476 (23/11/2026)
 
 D476 concluiu cinco coortes com **2.468.755** callbacks ticker públicos, closes **50+50+0+0+0**, seis hipóteses relativas ao BTC no ciclo 2, mas zero intenções e posições. Ciclos 1/2: `paper_cycle_callback_failed` sem causa interna preservada; ciclos 3/5: `frame_budget_exhausted`; ciclo 4: `ws_journal_gap_limit`. Não atribuir a falha antiga à Bybit ou ao motor de risco sem a exceção exata.
