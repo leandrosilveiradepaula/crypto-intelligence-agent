@@ -1,5 +1,13 @@
 # Plano de validação e gates
 
+## D505 — impedir desaparecimento de posição aberta no histórico
+
+- Montar diário AUTO4 real isolado com duas posições; concluir a mais recente, mantendo a mais antiga OPEN. Reduzir apenas o limite de visualização de 50 para 1 no teste. Exigir lista J5 com ambas, posição OPEN no topo e contagens preservadas; não escrever no diário por leitura.
+- Exibir as últimas 50 operações independentemente de posições antigas, fixar todas as OPEN/PARTIAL restantes (máximo técnico 50) e evitar duplicação delas no histórico paginado CLOSED. Saída do painel sem IDs, endereços ou alegação de ordens reais.
+- Executar preflight owner POSIX não-root sobre arquivos owner 0700/0600 existentes, sem criar SQLite vazio, chamada pública, startup, liberação de trading ou mudança de perfil; negar permissões inseguras e apresentar apenas contagens. Gate separado: testar preflight contra uma cópia privada da VPS como `cia-probe`, comparar antes/depois do estado e só então considerar cutover reversível com supervisão do operador, sem J1.
+- Testar suíte Linux/Windows/Chrome no SHA final. CI verde não atesta download de arquivos privados da VPS, supervisão contínua ou viabilidade de estratégia.
+
+
 ## D502/D503 — critérios adicionais da entrega integradora
 
 - Cross EMA opt-in: períodos 10/30/60 reproduzíveis em Decimal; sinal apenas no candle fechado mais recente, com filtro de EMA longa; período inválido/insuficiente causa abstenção, sem impacto em configuração legada. Warmup até 122h preserva 50 GETs por coorte e snapshots imutáveis separados do 24h original. REST histórico nunca é contado como WS confirmado.
