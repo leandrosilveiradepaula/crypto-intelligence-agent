@@ -97,9 +97,17 @@ class DurablePaperRiskSource:
         Reject bounded server-future or delayed events as financial inputs,
         without killing the public feed or manufacturing a fresh mark.
         """
-        _checked_market(quote)
+        # D385 can legitimately deliver a type-checked server-future
+        # envelope within transport skew. D394's _checked_market rejects
+        # future clocks, so check the timing BEFORE invoking that stricter
+        # financial validator. No skipped quote reaches PAPER actions.
+        if type(quote) is not BybitTickerQuote:
+            raise DataValidationError("D452 requires typed public ticker")
         age = quote.received_at_ms - quote.exchange_at_ms
-        return 0 <= age <= self._limit
+        if age < 0 or age > self._limit:
+            return False
+        _checked_market(quote)
+        return True
 
     def observe_public_quote(self, quote: BybitTickerQuote) -> None:
         """Only D386 post-ACK callback should call this; no provider auth claim."""
