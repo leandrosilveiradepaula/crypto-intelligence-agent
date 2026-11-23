@@ -18,6 +18,11 @@ import sys
 import time
 
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.paper_closed_route_archive_d502 import (
+    read_closed_route_archive,
+)
+from scripts.inspect_paper_positions import multi_paper_snapshot
+from crypto_intelligence_agent.paper_position_inspection import inspect_paper_positions
 from crypto_intelligence_agent.paper_profile_d487 import save, snapshot
 from crypto_intelligence_agent.j2_rest_n50_history_d461 import (
     reopen_frozen_rest_n50_for_research, research_rest_n50_24h,
@@ -44,7 +49,7 @@ from crypto_intelligence_agent.j5_resident_paper_status_d456 import (
 HOST, PORT = "127.0.0.1", 8766
 HTML = Path(__file__).resolve().parents[1] / "web/app/profile-lab.html"
 JS = Path(__file__).resolve().parents[1] / "web/app/profile-lab.js"
-_NAME = re.compile(r"rest-history-d461-[0-9a-f]{18}-[0-9]{13}[.]json\Z")
+_NAME = re.compile(r"rest-history-d461-[0-9a-f]{18}-[0-9]{13}(?:-w[0-9]{2,3})?[.]json\Z")
 
 
 def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
@@ -69,13 +74,14 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
         cfg.research.features.extrema_period,
         cfg.research.features.quote_volume_period,
         cfg.research.compression_bars + cfg.research.baseline_bars + 2,
-        24,
+        (cfg.research.ema_cross_periods[-1] + 2
+         if cfg.research.entry_mode == "ema_cross" else 24),
     )
-    if min_required > 24:
+    if min_required > history.history_hours:
         return {
             "status": "more_closed_candles_required",
             "needed_candles": min_required,
-            "available_candles": 24,
+            "available_candles": history.history_hours,
             "snapshot_closed_end_ms": history.window_end_ms,
             "candidate_count": 0, "orders_sent": False,
         }
@@ -105,7 +111,7 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
         "status": "historical_research_only",
         "closed_end_ms": history.window_end_ms,
         "candle_interval": "1h",
-        "closed_bars_per_symbol": 24,
+        "closed_bars_per_symbol": history.history_hours,
         "symbols": len(history.series),
         "raw_hypotheses": result["potential_hypothesis_count"],
         "candidate_count": len(candidates),
@@ -119,15 +125,37 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
 
 
 
-def _project_positions(*, directory: Path) -> list[dict]:
-    """Project checked AUTO4 PAPER balances, exits, and route levels to UI.
+def _project_positions(*, directory: Path,
+                       position_ids: tuple[str, ...] | None = None) -> list[dict]:
+    """Project selected AUTO4 balances and route levels; never a broker fill.
 
-    Never treat a recorded hypothetical FILL as a Bybit execution, nor
-    expose private position/order identifiers or a live exchange account.
+    Explicit paged IDs are obtained only from the owner SQLite journal, with
+    full replay/digest validation and archive fallback for closed routes.
     """
-    original = read_owner_paper_positions(
-        directory=directory, include_conditional_pnl=True,
-    )
+    if position_ids is None:
+        original = read_owner_paper_positions(
+            directory=directory, include_conditional_pnl=True,
+        )
+    else:
+        records = inspect_paper_positions(
+            directory / "paper-positions.sqlite", position_ids,
+        )
+        original = multi_paper_snapshot(records)
+        from crypto_intelligence_agent.j4_paper_conditional_pnl_d454 import (
+            conditional_paper_pnl_from_existing_fills,
+        )
+        for position in original["positions"]:
+            if position["position_id"].startswith("fixture_d448_pos_"):
+                outcome = conditional_paper_pnl_from_existing_fills(
+                    private_paper_directory=directory,
+                    position_id=position["position_id"],
+                )
+                position["conditional_paper_pnl"] = outcome.sanitized_report()
+            else:
+                position["conditional_paper_pnl"] = {
+                    "status": "legacy_paper_position_without_priced_strategy",
+                    "true_realized_net_pnl_available": False,
+                }
     if original.get("orders_sent") is not False:
         raise DataValidationError("PAPER-only snapshot required")
     router = load_private_paper_routes(directory)
@@ -135,10 +163,15 @@ def _project_positions(*, directory: Path) -> list[dict]:
     for position in original["positions"]:
         symbol = position["symbol_fixture"]
         route = router.route_for_position(position["position_id"])
+        archived = None
         if route is None:
-            raise DataValidationError("PAPER manifest missing a reported position")
+            archived = read_closed_route_archive(
+                directory, position["position_id"],
+            )
+            if archived is None:
+                raise DataValidationError("PAPER route missing from manifest and archive")
         b = inspect_paper_position(
-            directory / "paper-positions.sqlite", route.position_id,
+            directory / "paper-positions.sqlite", position["position_id"],
         ).balance
         if (b.symbol != symbol or b.side.value != position["side"]
                 or str(b.initial_confirmed_units) != position["initial_confirmed_units"]
@@ -186,10 +219,14 @@ def _project_positions(*, directory: Path) -> list[dict]:
             "requested_margin_quote": (
                 None if margin is None else margin["requested_margin_quote"]
             ),
-            "stop_mark_price": str(route.stop_rule.stop_mark_price),
-            "target_prices": [
-                str(x) for x in route.target_policy.prices
-            ],
+            "stop_mark_price": (
+                archived["stop_mark_price"] if archived is not None
+                else str(route.stop_rule.stop_mark_price)
+            ),
+            "target_prices": (
+                archived["target_prices"] if archived is not None
+                else [str(x) for x in route.target_policy.prices]
+            ),
             "exit_orders": [{
                 "kind": ("STOP" if x.tranche_step == -1 else "TARGET"),
                 "status": x.snapshot.status.value,
@@ -216,12 +253,14 @@ def _paper_session_read(*, directory: Path) -> dict:
     with _read_database(
         orders, ORDER_TABLES, "paper_order_meta", ORDER_VERSION
     ) as db:
+        intent_count = db.execute(
+            "SELECT COUNT(*) FROM paper_order_intents WHERE effect='OPEN'"
+        ).fetchone()[0]
         names = [x[0] for x in db.execute(
             "SELECT intent_id FROM paper_order_intents "
-            "WHERE effect='OPEN' ORDER BY intent_id LIMIT 51"
+            "WHERE effect='OPEN' "
+            "ORDER BY checkpoint_as_of_ms DESC, intent_id DESC LIMIT 50"
         )]
-        if len(names)>50:
-            raise DataValidationError("PAPER profile intent count bound exceeded")
         intents=[]
         for ident in names:
             entry=SQLitePaperOrderJournal._checked_entry(db,ident)
@@ -242,28 +281,66 @@ def _paper_session_read(*, directory: Path) -> dict:
         materialized_count = position_db.execute(
             "SELECT COUNT(*) FROM paper_positions",
         ).fetchone()[0]
+        newest_ids = tuple(x[0] for x in position_db.execute(
+            "SELECT position_id FROM paper_positions "
+            "ORDER BY checkpoint_at_ms DESC, position_id DESC LIMIT 50"
+        ))
     if materialized_count:
-        displayed = _project_positions(directory=directory)
-        position_count = len(displayed)
-        if position_count != materialized_count:
-            raise DataValidationError("PAPER position readback mismatch")
+        displayed = _project_positions(
+            directory=directory, position_ids=newest_ids,
+        )
+        router = load_private_paper_routes(directory)
+        active_count = len(router.monitored_symbols)
+        if active_count > materialized_count:
+            raise DataValidationError("PAPER active position count invalid")
     else:
-        position_count, displayed = 0, []
+        displayed, active_count = [], 0
+    position_count = materialized_count
     return {
         "schema_version":"d487-local-paper-session-readback-v1",
         "status":"paper_journal_readback",
         "intents":intents,
         "position_count":position_count,
-        "open_position_count":sum(
-            1 for p in displayed if p["status"] != "CLOSED"
-        ),
-        "closed_position_count":sum(
-            1 for p in displayed if p["status"] == "CLOSED"
-        ),
+        "open_position_count":active_count,
+        "closed_position_count":position_count - active_count,
+        "displayed_position_count":len(displayed),
+        "more_history_available":position_count > len(displayed),
+        "intent_count":intent_count,
+        "intents_more_available":intent_count > len(intents),
         "positions":displayed,
         "orders_sent":False,
         "source":"owner_only_local_paper_sqlite",
         "live_trading_authorized":False,
+    }
+
+
+def _paper_history_page(*, directory: Path, offset: int, limit: int) -> dict:
+    """Read one bounded page of immutable owner AUTO4 history, no writes."""
+    _private_directory(directory)
+    if (type(offset) is not int or not 0 <= offset <= 1_000_000
+            or type(limit) is not int or not 1 <= limit <= 50):
+        raise DataValidationError("D502 bounded history pagination required")
+    with _read_database(
+        directory / "paper-positions.sqlite",
+        POSITION_TABLES, "paper_position_meta", POSITION_VERSION,
+    ) as db:
+        total = db.execute("SELECT COUNT(*) FROM paper_positions").fetchone()[0]
+        ids = tuple(x[0] for x in db.execute(
+            "SELECT position_id FROM paper_positions "
+            "ORDER BY checkpoint_at_ms DESC, position_id DESC LIMIT ? OFFSET ?",
+            (limit, offset),
+        ))
+    displayed = (
+        _project_positions(directory=directory, position_ids=ids)
+        if ids else []
+    )
+    return {
+        "schema_version": "d502-owner-paper-history-page-v1",
+        "status": "paper_history_readonly",
+        "offset": offset, "limit": limit,
+        "position_count": total, "positions": displayed,
+        "more_available": offset + len(displayed) < total,
+        "orders_sent": False, "approved_for_live_use": False,
     }
 
 
@@ -316,6 +393,24 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
             except (DataValidationError, OSError, ValueError,
                     TypeError, OwnerPaperPositionsUnavailable):
                 return self._respond(503, {"status":"paper_session_not_ready"})
+        if self.path.startswith("/api/paper-history"):
+            path = type(self).paper_session_directory
+            if path is None:
+                return self._respond(503, {"status":"paper_history_reader_disabled"})
+            matched = re.fullmatch(
+                r"/api/paper-history[?]offset=([0-9]{1,7})&limit=([0-9]{1,2})",
+                self.path,
+            )
+            if matched is None:
+                return self._respond(400, {"status":"invalid_history_pagination"})
+            try:
+                page = _paper_history_page(
+                    directory=path, offset=int(matched[1]), limit=int(matched[2]),
+                )
+                return self._respond(200, page)
+            except (DataValidationError, OSError, ValueError, TypeError,
+                    OwnerPaperPositionsUnavailable):
+                return self._respond(503, {"status":"paper_history_not_ready"})
         if self.path == "/api/paper-operator":
             path = type(self).paper_session_directory
             if path is None:
