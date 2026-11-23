@@ -41,6 +41,9 @@ function marginRoiFromPriceBps(bps, leverage) {
 function fill(model) {
   RESEARCH_INT.forEach(k => $("r-"+k).value = model.research[k]);
   RESEARCH_DEC.forEach(k => $("r-"+k).value = model.research[k]);
+  $("r-entry_mode").value = model.research.entry_mode || "breakout";
+  const cross = model.research.ema_cross_periods || [10,30,60];
+  ["fast","mid","trend"].forEach((k,i) => $("r-ma_"+k).value = cross[i]);
   $("r-experimental_paper_relaxation").checked =
     model.research.experimental_paper_relaxation === true;
   $("p-margin_quote").value = model.paper.margin_quote;
@@ -64,6 +67,16 @@ function collect() {
   RESEARCH_DEC.forEach(k => research[k] = numeric("r-"+k,100));
   research.experimental_paper_relaxation =
     $("r-experimental_paper_relaxation").checked;
+  research.entry_mode = $("r-entry_mode").value;
+  if (!["breakout","ema_cross"].includes(research.entry_mode)) {
+    throw new Error("Selecione uma regra de entrada válida.");
+  }
+  research.ema_cross_periods = ["fast","mid","trend"].map(
+    k => integer("r-ma_"+k,120,2));
+  const [fast,mid,trend] = research.ema_cross_periods;
+  if (!(fast < mid && mid < trend)) {
+    throw new Error("As EMAs devem ter períodos crescentes.");
+  }
   const leverage=integer("p-leverage",100,1);
   const t1=numeric("p-target1_roi",5000);
   const t2=numeric("p-target2_roi",5000);
