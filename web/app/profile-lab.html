@@ -46,8 +46,12 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <div id="status" role="status" aria-live="polite">Carregando perfil do servidor local…</div>
 <section class="card">
 <h2>1. Indicadores da entrada horária</h2>
-<p>Todos os períodos são ajustáveis. A estratégia atual é rompimento após filtro de volatilidade/volume. Você poderá trocar os números sem mudar o código.</p>
+<p>Escolha entre rompimento e cruzamento de EMAs. As alterações serão consideradas apenas nas próximas sessões PAPER; novas médias precisam de histórico causal suficiente.</p>
 <div class="grid">
+<label>Regra de entrada<select id="r-entry_mode"><option value="breakout">Rompimento com filtros</option><option value="ema_cross">Cruzamento EMA + tendência</option></select></label>
+<label>EMA rápida (velas de 1h)<input id="r-ma_fast" type="number" min="2" max="120" value="10"></label>
+<label>EMA intermediária (velas de 1h)<input id="r-ma_mid" type="number" min="2" max="120" value="30"></label>
+<label>EMA de tendência (velas de 1h)<input id="r-ma_trend" type="number" min="2" max="120" value="60"></label>
 <label>EMA (candles de 1h)<input id="r-ema_period" type="number" min="2" max="500" value="2"></label>
 <label>ATR (candles de 1h)<input id="r-atr_period" type="number" min="2" max="500" value="2"></label>
 <label>Rompimento (candles)<input id="r-extrema_period" type="number" min="2" max="500" value="2"></label>
@@ -59,7 +63,7 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <label>Intervalo sem repetir sinal (velas)<input id="r-cooldown_bars" type="number" min="0" max="500" value="0"></label>
 </div>
 <label class="check"><input type="checkbox" id="r-experimental_paper_relaxation" checked> Permitir filtros experimentais mais permissivos (somente PAPER)</label>
-<p class="notice">Médias de 10, 20, 30 ou 60 períodos podem ser configuradas. A análise atual da VPS dispõe de 24 candles por ativo: configurações maiores exigem mais histórico para emitir resultado. <strong>Cruzamento de múltiplas médias ainda não é uma regra ativa de sinal</strong> nesta versão; não será tratado como se já estivesse funcionando.</p>
+<p class="notice">O cruzamento usa EMA rápida acima/abaixo da intermediária na última vela fechada, com preço do mesmo lado da EMA de tendência. Ao selecionar períodos maiores, a pesquisa REST amplia o aquecimento histórico sem fabricar candles nem mudar os stops de posições abertas. Se não houver dados suficientes, não ocorre entrada.</p>
 </section>
 <section class="card">
 <h2>2. Margem, alvos e saídas parciais</h2>
