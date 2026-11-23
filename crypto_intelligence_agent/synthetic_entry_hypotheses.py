@@ -56,8 +56,13 @@ class CompressionBreakoutConfig:
                     or any(type(x) is not int or not 2 <= x <= 120 for x in periods)
                     or not periods[0] < periods[1] < periods[2]):
                 raise DataValidationError("D503 strictly ordered EMA 2..120 periods required")
-        if self.entry_mode == "ema_cross" and periods is None:
-            raise DataValidationError("D503 EMA cross requires explicit periods")
+        if self.entry_mode == "ema_cross":
+            if periods is None:
+                raise DataValidationError("D503 EMA cross requires explicit periods")
+            if self.features.quote_volume_period + 1 > 122:
+                raise DataValidationError(
+                    "D503 EMA cross requires volume history within 122 closed bars"
+                )
         _numeric(self.max_atr_ratio, "max_atr_ratio", strictly_positive=True)
         max_atr = (
             Decimal("2") if self.experimental_paper_relaxation else Decimal("1")
