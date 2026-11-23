@@ -1,5 +1,14 @@
 # STATUS — Crypto Intelligence Agent
 
+## D505 — preflight owner e posições antigas ainda abertas (23/11/2026)
+
+**Implementação candidata, sem deploy:** o painel de PAPER D487 reserva a visão das últimas 50 operações do AUTO4, mas agora **fixa adicionalmente todas as posições atuais não encerradas**, mesmo que uma operação antiga e ainda aberta tenha saído da janela por checkpoint de operações fechadas. Posições OPEN/PARTIAL aparecem antes de CLOSED. Histórico paginado mantém operações encerradas sem duplicar posições abertas na área de histórico. O monitor financeiro, rotas e diário persistente são inalterados.
+
+Novo `scripts/preflight_paper_owner_d505.py`: comando unprivileged/owner-only e read-only que valida o perfil D453, a integridade da leitura D487 e uma página D502 do SQLite real, com coerência de contagem, zero ordens enviadas e resposta sanitizada sem símbolos, preços, caminhos ou IDs. **Não reinicia serviços, não libera trading e não executa release.** Testes incluídos com diário real isolado e perfil EMA configurável 10/30/60.
+
+**Situação observada na VPS antes do cutover**: D498 ativo, J1 N50 ativo, diário PAPER 0 abertas e 1 ARBUSDT SHORT CLOSED/STOP, sem ordens reais; `/api/paper-history` ainda 404 no serviço da VPS, logo funcionalidades recém-integradas **não estão implantadas**. MCP permite leitura de HTTP/systemd mas não tem permissão para entrar como `cia-probe` e escrever checkout/diretórios owner. Falta executor autorizado para a homologação com diário privado e cutover PAPER sujeito aos gates aplicáveis. Isto não é sinal de falha do produto, nem pode ser resolvido fingindo acesso.
+
+
 ## D504 — integração D502/D503, código validado sem release (23/11/2026 UTC)
 
 **PR #735 integrada na main**, SHA de merge `090e4e07accb0a50958c40a9d13227625ac4300c`, HEAD revisado `9c14a0a8739e694f37d9723df360a4d4e45d87d4`. CI no HEAD: Linux/documentação **3.590 testes OK** (run 45271593728), Windows **3.590 testes OK, 665 skips POSIX esperados** (mesmo run), Chrome/mobile **SUCCESS** (run 45271593753). Nenhuma revisão ou thread impeditiva. CI após o squash não foi atestada como concluída na conferência inicial.

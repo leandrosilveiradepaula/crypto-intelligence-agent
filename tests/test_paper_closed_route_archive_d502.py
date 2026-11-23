@@ -127,6 +127,54 @@ class ClosedRouteArchiveD502Tests(unittest.TestCase):
             _route_position(self.home, planned)
         self.assertEqual(len(list(self.home.glob("paper-closed-route-*.json"))), 1)
 
+    def test_d505_older_open_position_stays_visible_beyond_recent_limit(self):
+        # Two REAL AUTO4 rows and a one-row display limit reproduce the
+        # failure that otherwise needs 51 positions to observe.
+        extra_position(self.store)
+        eth_route = {
+            "position_id": ETH_ID, "plan_version": PLAN_VERSION,
+            "stop_mark_price": "99", "target_prices": ["101", "103"],
+            "max_spread_bps": "30", "runner": None,
+        }
+        self.manifest.write_text(json.dumps({
+            "schema_version": SCHEMA,
+            "positions": [self.route, eth_route],
+        }), encoding="ascii")
+        self.manifest.chmod(0o600)
+        router = load_private_paper_routes(self.home)
+        trigger = router.process(tick(
+            T + 12 * MIN, seq=1, mark="98", bid="98",
+            symbol="ETHUSDT",
+        ))
+        self.assertIsNotNone(trigger.created_intent_id)
+        self.store.append_exit_events(
+            ETH_ID, trigger.created_intent_id,
+            (PaperOrderEvent(
+                "fixture_d505_eth_closed", PaperOrderEventKind.FILL,
+                T + 12 * MIN + 200, Decimal(100),
+            ),),
+            as_of_ms=T + 12 * MIN + 200,
+        )
+        self.assertEqual(self.store.load(ETH_ID).confirmed_remaining_units, 0)
+        self.assertEqual(self.store.load(POSITION_ID).confirmed_remaining_units, 100)
+        order_db = self.home / "paper-orders.sqlite"
+        SQLitePaperOrderJournal(order_db)
+        order_db.chmod(0o600)
+
+        with patch("scripts.serve_paper_profile_lab_d487._MAX_SESSION_POSITIONS", 1):
+            session = _paper_session_read(directory=self.home)
+        self.assertEqual(session["position_count"], 2)
+        self.assertEqual(session["open_position_count"], 1)
+        self.assertEqual(session["closed_position_count"], 1)
+        self.assertEqual(session["displayed_position_count"], 2)
+        self.assertTrue(session["more_history_available"])
+        self.assertEqual([p["symbol"] for p in session["positions"]],
+                         ["BTCUSDT", "ETHUSDT"])
+        self.assertEqual([p["status"] for p in session["positions"]],
+                         ["OPEN", "CLOSED"])
+        self.assertFalse(session["orders_sent"])
+        self.assertFalse(tuple(self.home.glob("paper-closed-route-*.json")))
+
     def test_full_capacity_with_only_active_routes_never_archives(self):
         extra_position(self.store)
         planned = {
