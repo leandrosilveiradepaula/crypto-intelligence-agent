@@ -75,6 +75,18 @@ class ConfigurableEmaCrossTests(unittest.TestCase):
                 self.assertFalse(out.hypotheses)
                 self.assertFalse(out.orders_sent)
 
+    def test_ema_cross_does_not_require_unused_atr_compression_window(self):
+        # The chosen strategy uses close/EMA cross and quote-volume history,
+        # not the legacy breakout/ATR compression gate.
+        config = replace(CONFIG, compression_bars=200, baseline_bars=200)
+        series, now = case("113")
+        result = evaluate_observed_bybit_research(
+            series, config=config, decision_at_ms=now,
+        )
+        self.assertEqual(len(result.hypotheses), 1)
+        self.assertIsNone(result.hypotheses[0].atr_compression_ratio)
+        self.assertEqual(result.hypotheses[0].entry_rule, "ema_cross")
+
     def test_invalid_ordered_periods_and_default_legacy_mode(self):
         for vals in ((10, 10, 60), (30, 10, 60), (10, 30, 121),
                      (True, 30, 60), [10, 30, 60]):
