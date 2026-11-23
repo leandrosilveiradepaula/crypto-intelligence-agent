@@ -1,5 +1,25 @@
 # Estratégias e gestão de vencedores
 
+## D485 — pesquisa de sinais horários mais permissiva exclusivamente em PAPER (23/11/2026)
+
+Decisão autorizada pelo Product Owner: **testar mais sinais sem esperar filtro raro**, mas **somente para PAPER**. O padrão `CompressionBreakoutConfig` permanece rigoroso (`ATR_ratio <= 1`, `volume_ratio >= 1`) quando `experimental_paper_relaxation` está ausente/`false`. Com **opt-in booleano verdadeiro** no arquivo privado D453, as faixas de pesquisa experimentais passam a aceitar `ATR_ratio <= 2` e `volume_ratio >= 0.5`. O exemplo D485 e a sessão VPS usam **1.5 e 0.7**, respectivamente. Razão ATR >1 **não é compressão comprovada**: a identificação é `experimental_paper_relaxed_breakout`. O sinal experimental não comprova expectativa de lucro.
+
+**Invariantes mantidos**: entrada somente após vela Bybit **1h confirmada**, histórico causal/24h, rompimento e EMA2, força relativa direcional BTC, conjunto N50, identidade e validade do contrato, spread e BBO, custo líquido, idade do sinal, slippage e latência, margem/alavancagem e controles J3/J4. Nenhuma descoberta nova intra-hora; saídas PAPER acompanhadas intra-hora. Limites de risco e política de saída iguais ao padrão, sem ordem real, sem gate de liberação e sem relaxar filtro de conta. Não gerar sinal, fill ou candle falso para aumentar estatísticas.
+
+**Evidências**: leitura de histórico REST Bybit real D480 (50x24) gerou 7 rompimentos e 5 após BTC; 2 hipóteses no perfil padrão e 5 no experimental. A leitura REST real mais recente D485 (`window_end_ms=1795438800000`, 50x24) gerou **14** hipóteses originais, **15** experimentais; **10** em cada caso após o critério BTC. Ambas são pesquisas **REST-only**, não comprovam o fechamento pelo WS, entrada PAPER ou fill na corretora. D485 foi fixada em SHA `ad889569abf42ae7085ab89b38e25f43909ae3e9`, `policy-relaxed.json` privado owner 0600 validado com risco, alavancagem e saídas idênticos ao original. **20 testes focados PASS** como `cia-probe` na VPS; CI do SHA ainda em andamento na criação da nota.
+
+**Execução autorizada e iniciada**: `cia-d485-hourly-relaxed-paper.service` owner UID 999 com coorte WS pública, warmup REST causal, sessão única com orçamento finito **3038s** iniciada `2026-11-23T13:11:22Z`, para observar fechamento 11h de Brasília (~14:00 UTC), gravando resultados sanitizados em diretório privado isolado. A execução D483 PAPER-DEMO e timer J1 permaneceram ativos, **sem interferência entre diários**. Não classificar o serviço como operação residente permanente. Ao concluir: verificar 50 closes, ticks, candidatos depois do BTC, veto financeiro, intents, posições, saídas, e 0 ordens reais. Nenhuma oportunidade válida também é resultado legítimo. O histórico REST das 10h não deve ser reclassificado como evento WS confirmado.
+
+
+## D481 — escopo fechado de operação PAPER horária + gestão intra-hora (decisão do Product Owner em 23/11/2026)
+
+**Entradas:** identificar e classificar novas oportunidades exclusivamente após o fechamento confirmado de cada vela de **1h** da Bybit para o universo elegível dinâmico N50, usando contexto BTC, estratégia e risco. A avaliação pode consumir ticks subsequentes para verificar preço, spread, profundidade, custo, margem e registrar uma entrada PAPER elegível, mas **não recalcula nem descobre novas hipóteses intra-hora**. A análise horária deve ter um resultado visível no aplicativo: candidatos/entradas elegíveis ou **nenhuma oportunidade** com estado e critérios de abstenção; não transformar ausência de sinal em falha nem forçar operações.
+
+**Saídas:** para posições PAPER existentes, escutar **continuamente cotações públicas por WebSocket dentro da hora**, independentemente de elas continuarem no ranking N50, e avaliar stop-loss, take-profit, múltiplas realizações parciais, trailing e runner residual, inclusive entre os fechamentos de 1h. Um gatilho local não equivale a fill ou proteção nativa Bybit: exigir cotação posterior, latência e condições simuladas de BBO, manter idempotência, posição e custos. Enquanto o serviço estiver parado/degradado, não alegar cobertura de stop.
+
+**Prioridade de entrega:** concluir um único caminho J2 → J3 → J4 → J5 com candles reais, entradas após a hora, ordens/fills **hipotéticos** e acompanhamento intrahora no aplicativo. **Proibido expandir agora** o escopo para rastreador de novas oportunidades em 1m/5m/15m, trades, livro profundo, ML ou novo motor alternativo. Não reabrir J1 nem trocar Bybit. A meta final continua automação de entradas e saídas após gates, sem ordens reais nem publicação permanente não autorizada.
+
+
 ## Entradas: hipóteses, não promessas
 - A: expansão depois de compressão de volatilidade, com validação de volume, liquidez e contexto.
 - B: continuação de tendência após correção e retomada.
@@ -357,3 +377,8 @@ Os sinais quantitativos e a gestão automática deste documento passam a ter Byb
 ## D387 / J4 — gatilhos de realização parcial intrahorários PAPER (16/11/2026)
 
 Primeira implementação #676 em `paper_intrahour_target_step_d387.py`. Após uma entrada PAPER **já confirmada por fill**, uma cotação tipada Bybit D385 pode disparar automaticamente uma intenção `REDUCE_ONLY` para a tranche PRE1/AUTO4 compatível. LONG usa melhor bid >= alvo; SHORT usa melhor ask <= alvo. Os níveis da política são `Decimal` e coerentes com a versão imutável do plano; a quantidade é calculada **somente** pelo journal já existente (INITIAL_POSITION / REMAINING_BALANCE, lot-step sintético e floor do runner). Preço tocado **não** gera fill nem PnL: apenas reserva PAPER com ID determinístico; UNKNOWN/pending/partial fill e ordens terminais exigem reconciliação, sem reenvio automático. Até a integração de stop anterior às parciais e trailing com gatilho intrahorário, **não declarar a J4 concluída ou pronta para execução real**. Especificação `docs/J4_INTRAHOUR_AUTO_TARGET_D387.md`.
+
+
+## D462/D463 — dados da hipótese PAPER ao vivo, sem retrocausalidade (21/11/2026)
+
+A entrada PAPER não pode tratar candles históricos REST como `confirm:true` WS. O aquecimento consiste em 24 candles **fechados no REST** e o candidato é calculado **somente após** 1 nova vela confirmada pelo WebSocket e a coorte sincronizada N50. A análise D435 calcula 25 candles contíguos, usa BTC como referência, depois D447 avalia spread, alvo/stop, taxas/slippage, risco, lote e alavancagem; D463 revalida os termos de contrato sob consulta pública limitada e exige nova cotação causal antes de qualquer reserva. Ausência de um único fechamento, mudança de regras, falta de book, PnL ou funding insuficiente continuam bloqueadores; o runner PAPER e saídas parciais não viram ordens reais. A implementação foi demonstrada em protocolo offline injetado com 50 membros, não constitui validação preditiva OOS nem homologação em mercado ao vivo.

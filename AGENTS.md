@@ -1,7 +1,7 @@
 # Crypto Intelligence Agent — regras para agentes
 
 ## Responsabilidades
-O Product Owner decide o produto. ChatGPT coordena engenharia, backlog, GitHub, revisão, testes e continuidade. Codex é executor preferencial de implementações complexas. Factory só será integrada após comprovar autonomia.
+O Product Owner decide o produto. ChatGPT coordena engenharia, backlog, GitHub, revisão, testes e continuidade. Codex é executor preferencial de implementações complexas. Factory passa a ter configuração de projeto versionada em `.factory/` (D473), com um Droid especializado em entregar o primeiro ciclo PAPER funcional. A presença de arquivos Factory **não** significa que a CLI esteja instalada/autenticada ou que uma missão foi executada; nenhuma cobrança adicional é autorizada.
 
 ## Autonomia por jornada — obrigatória
 Uma jornada aprovada cobre todas as tarefas seguras e reversíveis de seu escopo.

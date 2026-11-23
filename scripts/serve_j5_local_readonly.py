@@ -28,6 +28,18 @@ from crypto_intelligence_agent.j5_local_health_reader_d422 import (
 from crypto_intelligence_agent.j5_paper_watch_d427 import (
     PaperWatchUnavailable, read_paper_watch,
 )
+from crypto_intelligence_agent.j5_owner_paper_positions_d446 import (
+    OwnerPaperPositionsUnavailable, read_owner_paper_positions,
+)
+from crypto_intelligence_agent.j4_continuous_paper_worker_d444 import (
+    WorkerStatusUnavailable, read_private_worker_status,
+)
+from crypto_intelligence_agent.j5_resident_paper_status_d456 import (
+    ResidentPaperStatusUnavailable, read_resident_paper_status,
+)
+from crypto_intelligence_agent.j5_last_public_paper_lease_d470 import (
+    LastPaperLeaseUnavailable, read_last_paper_lease,
+)
 from crypto_intelligence_agent.j2_prospective_bybit_research_d436 import read_projection
 from crypto_intelligence_agent.bybit_public_j1_transport import J1BybitCaptureError
 from crypto_intelligence_agent.bybit_public_rest_price_pulse_d403 import capture_public_rest_price_pulse
@@ -52,6 +64,8 @@ _STATIC_FILES: dict[str, tuple[str, str]] = {
     "/research-scorebook.js": ("research-scorebook.js", "text/javascript; charset=utf-8"),
     "/paper-ws-health.js": ("paper-ws-health.js", "text/javascript; charset=utf-8"),
     "/paper-watch.js": ("paper-watch.js", "text/javascript; charset=utf-8"),
+    "/resident-paper.js": ("resident-paper.js", "text/javascript; charset=utf-8"),
+    "/last-public-paper-lease.js": ("last-public-paper-lease.js", "text/javascript; charset=utf-8"),
     "/prospective-research.js": ("prospective-research.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
 }
@@ -286,6 +300,10 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
     # OFF by default; only a same-owner POSIX 0700 directory can enable it.
     public_health_directory: Path | None = None
     paper_watch_directory: Path | None = None  # separate opt-in; 0700/0600, count-only
+    persisted_paper_directory: Path | None = None  # D446 read-only detail, opt-in
+    paper_worker_directory: Path | None = None  # D444 owner state, count-only
+    resident_paper_directory: Path | None = None  # D453 resident PAPER owner-only status
+    last_public_paper_lease_directory: Path | None = None  # D470 last lease; NOT live feed
     prospective_research_directory: Path | None = None
     protocol_version = "HTTP/1.1"
     server_version = "CIA-Local-ReadOnly"
@@ -323,11 +341,11 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
         self.close_connection = True
 
-    def _json(self, code: int, obj: dict[str, Any]) -> None:
+    def _json(self, code: int, obj: dict[str, Any], *, max_bytes: int = 32_768) -> None:
         body = json.dumps(
             obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
         ).encode("ascii")
-        if len(body) > 32_768:
+        if len(body) > max_bytes:
             body = b'{"status":"projection_too_large_abstain"}'
             code = 503
         self._response(code, body, "application/json; charset=utf-8")
@@ -378,6 +396,77 @@ class LoopbackPanelHandler(BaseHTTPRequestHandler):
                                  "orders_sent": False})
                 return
             cls.market_cached = report
+            self._json(200, report)
+            return
+        if self.path == "/api/owner-paper-positions":
+            directory = type(self).persisted_paper_directory
+            if directory is None:
+                self._json(503, {"status": "owner_paper_positions_not_enabled",
+                                 "orders_sent": False})
+                return
+            try:
+                report = read_owner_paper_positions(
+                    directory=directory, include_conditional_pnl=True,
+                )
+            except OwnerPaperPositionsUnavailable:
+                self._json(503, {"status": "owner_paper_positions_unavailable",
+                                 "orders_sent": False})
+                return
+            # Up to 50 routed PAPER positions; this cap applies ONLY on a
+            # separately opt-in LOOPBACK-only endpoint, never public HTTP.
+            self._json(200, report, max_bytes=96_000)
+            return
+        if self.path == "/api/last-public-paper-lease":
+            directory = type(self).last_public_paper_lease_directory
+            if directory is None:
+                self._json(503, {"status": "last_public_paper_lease_not_enabled",
+                                 "orders_sent": False})
+                return
+            try:
+                report = read_last_paper_lease(
+                    directory=directory, now_ms=time.time_ns() // 1_000_000,
+                )
+            except LastPaperLeaseUnavailable:
+                self._json(503, {"status": "last_public_paper_lease_unavailable",
+                                 "orders_sent": False})
+                return
+            self._json(200, report, max_bytes=4096)
+            return
+        if self.path == "/api/resident-paper-status":
+            directory = type(self).resident_paper_directory
+            if directory is None:
+                self._json(503, {"status": "resident_paper_status_not_enabled",
+                                 "orders_sent": False})
+                return
+            try:
+                report = read_resident_paper_status(
+                    directory=directory, now_ms=time.time_ns() // 1_000_000,
+                )
+            except ResidentPaperStatusUnavailable:
+                self._json(503, {"status": "resident_paper_status_unavailable",
+                                 "orders_sent": False})
+                return
+            self._json(200, report, max_bytes=4096)
+            return
+        if self.path == "/api/paper-worker":
+            directory = type(self).paper_worker_directory
+            if directory is None:
+                self._json(503, {
+                    "status": "paper_worker_loopback_not_enabled",
+                    "orders_sent": False,
+                })
+                return
+            try:
+                report = read_private_worker_status(
+                    directory=directory,
+                    now_ms=time.time_ns() // 1_000_000,
+                )
+            except WorkerStatusUnavailable:
+                self._json(503, {
+                    "status": "paper_worker_stopped_or_unavailable",
+                    "orders_sent": False,
+                })
+                return
             self._json(200, report)
             return
         if self.path == "/api/paper-watch":
@@ -496,6 +585,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--private-health-directory", type=Path)
     parser.add_argument("--allow-paper-watch-loopback", action="store_true")
     parser.add_argument("--paper-watch-directory", type=Path)
+    parser.add_argument("--allow-owner-paper-positions-loopback", action="store_true")
+    parser.add_argument("--owner-paper-positions-directory", type=Path)
+    parser.add_argument("--allow-paper-worker-loopback", action="store_true")
+    parser.add_argument("--allow-resident-paper-status-loopback", action="store_true")
+    parser.add_argument("--resident-paper-status-directory", type=Path)
+    parser.add_argument("--allow-last-public-paper-lease-loopback", action="store_true")
+    parser.add_argument("--last-public-paper-lease-directory", type=Path)
+    parser.add_argument("--paper-worker-directory", type=Path)
     parser.add_argument("--allow-prospective-research-loopback", action="store_true")
     parser.add_argument("--prospective-research-directory", type=Path)
     parser.add_argument("--market-symbols", default="", help="1..50 reviewed USDT symbols")
@@ -518,6 +615,23 @@ def main(argv: list[str] | None = None) -> int:
             "orders_sent": False,
         }, sort_keys=True))
         return 65
+    if args.allow_last_public_paper_lease_loopback != (
+            args.last_public_paper_lease_directory is not None):
+        print(json.dumps({"status": "last_public_paper_lease_explicit_optin_required",
+                          "orders_sent": False}, sort_keys=True))
+        return 65
+    if args.allow_resident_paper_status_loopback != (args.resident_paper_status_directory is not None):
+        print(json.dumps({"status": "resident_paper_status_explicit_optin_required",
+                          "orders_sent": False}, sort_keys=True))
+        return 65
+    if args.allow_paper_worker_loopback != (args.paper_worker_directory is not None):
+        print(json.dumps({"status": "paper_worker_explicit_optin_and_directory_required",
+                          "orders_sent": False}, sort_keys=True))
+        return 65
+    if args.allow_owner_paper_positions_loopback != (args.owner_paper_positions_directory is not None):
+        print(json.dumps({"status": "owner_paper_positions_explicit_optin_required",
+                          "orders_sent": False}, sort_keys=True))
+        return 65
     if args.allow_paper_watch_loopback != (args.paper_watch_directory is not None):
         print(json.dumps({
             "status": "paper_watch_explicit_optin_and_directory_required",
@@ -533,6 +647,50 @@ def main(argv: list[str] | None = None) -> int:
         try: _owned_directory(args.prospective_research_directory)
         except (OSError, DataValidationError):
             print(json.dumps({"status": "prospective_research_owner_directory_unavailable", "orders_sent": False}, sort_keys=True)); return 65
+    if args.allow_last_public_paper_lease_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({"status": "last_public_paper_lease_nonroot_required",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+        try:
+            _owned_directory(args.last_public_paper_lease_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({"status": "last_public_paper_lease_owner_directory_unavailable",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+    if args.allow_resident_paper_status_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({"status": "resident_paper_status_nonroot_required",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+        try:
+            _owned_directory(args.resident_paper_status_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({"status": "resident_paper_status_directory_unavailable",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+    if args.allow_paper_worker_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({"status": "paper_worker_unprivileged_owner_required",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+        try:
+            _owned_directory(args.paper_worker_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({"status": "paper_worker_owner_directory_unavailable",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+    if args.allow_owner_paper_positions_loopback:
+        if os.name != "posix" or os.geteuid() == 0:
+            print(json.dumps({"status": "owner_paper_positions_nonroot_required",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
+        try:
+            _owned_directory(args.owner_paper_positions_directory)
+        except (OSError, DataValidationError):
+            print(json.dumps({"status": "owner_paper_positions_directory_unavailable",
+                              "orders_sent": False}, sort_keys=True))
+            return 65
     if args.allow_paper_watch_loopback:
         if os.name != "posix" or os.geteuid() == 0:
             print(json.dumps({
@@ -580,6 +738,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     LoopbackPanelHandler.paper_watch_directory = (
         args.paper_watch_directory if args.allow_paper_watch_loopback else None
+    )
+    LoopbackPanelHandler.persisted_paper_directory = (
+        args.owner_paper_positions_directory
+        if args.allow_owner_paper_positions_loopback else None
+    )
+    LoopbackPanelHandler.paper_worker_directory = (
+        args.paper_worker_directory if args.allow_paper_worker_loopback else None
+    )
+    LoopbackPanelHandler.resident_paper_directory = (
+        args.resident_paper_status_directory
+        if args.allow_resident_paper_status_loopback else None
+    )
+    LoopbackPanelHandler.last_public_paper_lease_directory = (
+        args.last_public_paper_lease_directory
+        if args.allow_last_public_paper_lease_loopback else None
     )
     LoopbackPanelHandler.prospective_research_directory = (
         args.prospective_research_directory if args.allow_prospective_research_loopback else None

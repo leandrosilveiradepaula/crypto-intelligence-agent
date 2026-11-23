@@ -4,7 +4,8 @@ CRYPTO INTELLIGENCE AGENT — APLICATIVO PAPER (PT-BR)
 1) Extraia TODOS os arquivos na mesma pasta, sem renomear: index.html,
    style.css, engine.js, app.js, public-market.js, persisted-paper.js,
    integrated-paper-cycle.js, research-scorebook.js,
-   paper-ws-health.js, paper-watch.js, prospective-research.js e
+   paper-ws-health.js, paper-watch.js, resident-paper.js,
+   last-public-paper-lease.js, prospective-research.js e
    LEIA-ME.txt. Se faltar
    algum script, a interface pode abrir parcialmente e omitir relatórios.
 2) Abra index.html no Chrome, Edge, Firefox ou navegador moderno.

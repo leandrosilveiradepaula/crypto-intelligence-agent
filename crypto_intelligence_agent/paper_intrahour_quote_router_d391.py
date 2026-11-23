@@ -85,23 +85,32 @@ class PaperIntrahourQuoteRouter:
             raise DataValidationError("PAPER quote router bounded configuration invalid")
         self._path = Path(position_path)
         self._by_symbol: dict[str, PaperQuoteRoute] = {}
-        identities = set()
+        # Preserve manifest-selected CLOSED routes for owner-only history;
+        # only NONZERO balances subscribe to public prices and own symbols.
+        # A closed historical ARB may coexist with one later active ARB.
+        self._routes_by_id: dict[str, PaperQuoteRoute] = {}
         for r in routes:
-            if r.position_id in identities:
+            if r.position_id in self._routes_by_id:
                 raise DataValidationError("PAPER quote route duplicate position")
-            identities.add(r.position_id)
             balance = inspect_paper_position(self._path, r.position_id).balance
             if (balance.venue is not PaperVenue.BYBIT_V5
-                    or balance.symbol in self._by_symbol
                     or balance.plan_version != r.target_policy.plan_version
                     or len(balance.tranches) != len(r.target_policy.prices)):
-                raise DataValidationError("PAPER quote route mismatch or duplicate net symbol")
+                raise DataValidationError("PAPER quote route mismatch")
             if r.runner_path is not None and (
                 Path(r.runner_path).resolve(strict=False)
                 == self._path.resolve(strict=False)
             ):
                 raise DataValidationError("PAPER runner mark and financial ledgers must be separate")
-            self._by_symbol[balance.symbol] = r
+            if balance.confirmed_remaining_units > 0:
+                if balance.symbol in self._by_symbol:
+                    raise DataValidationError("two active PAPER routes on same net symbol")
+                self._by_symbol[balance.symbol] = r
+            elif (balance.confirmed_remaining_units != 0
+                  or balance.reserved_unfilled_units != 0
+                  or balance.filled_exit_units != balance.initial_confirmed_units):
+                raise DataValidationError("PAPER closed route conservation invalid")
+            self._routes_by_id[r.position_id] = r
         self._last: dict[str, BybitTickerQuote] = {}
         # Preserve timestamp monotonicity across transport reconnects even
         # when exchange cross-sequence restarts with a new snapshot.
@@ -146,6 +155,20 @@ class PaperIntrahourQuoteRouter:
     def monitored_symbols(self) -> frozenset[str]:
         """Read-only ticker membership required by the D401 public bridge."""
         return frozenset(self._by_symbol)
+
+    @property
+    def monitored_position_ids(self) -> tuple[str, ...]:
+        """Existing, explicitly routed AUTO4 IDs for owner-only UI readback.
+
+        This is never returned in a public WS report or count-only status.
+        """
+        return tuple(sorted(self._routes_by_id))
+
+    def route_for_position(self, position_id: str) -> PaperQuoteRoute | None:
+        """Checked local owner route; never a public ticker or market signal."""
+        if type(position_id) is not str:
+            raise DataValidationError("PAPER route position id must be a string")
+        return self._routes_by_id.get(position_id)
 
     def fresh_held_contract_count(
         self, *, at_ms: int, max_age_ms: int = MAX_NETWORK_LAG_MS,

@@ -59,12 +59,19 @@ def _intent_json(intent: PaperOrderIntent) -> str:
 
 
 def _event_json(event: PaperOrderEvent) -> str:
-    return _json({
+    payload = {
         "event_id": event.event_id,
         "kind": event.kind.value,
         "event_at_ms": event.event_at_ms,
         "filled_units": str(event.filled_units),
-    })
+    }
+    # Canonical legacy JSON stays byte-for-byte identical; price is persisted
+    # only when the newer explicitly HYPOTHETICAL event supplies one.
+    if event.hypothetical_reference_price_quote is not None:
+        payload["hypothetical_reference_price_quote"] = str(
+            event.hypothetical_reference_price_quote
+        )
+    return _json(payload)
 
 
 def _snapshot_json(snapshot: PaperOrderSnapshot) -> str:
@@ -116,6 +123,12 @@ def _decode_event(payload: str) -> PaperOrderEvent:
             kind=PaperOrderEventKind(value["kind"]),
             event_at_ms=value["event_at_ms"],
             filled_units=Decimal(value["filled_units"]),
+            hypothetical_reference_price_quote=(
+                Decimal(value["hypothetical_reference_price_quote"])
+                if "hypothetical_reference_price_quote" in value
+                and type(value["hypothetical_reference_price_quote"]) is str
+                else None
+            ),
         )
         if _event_json(event) != payload:
             raise ValueError("non-canonical paper event")
@@ -544,6 +557,7 @@ class SQLitePaperOrderJournal:
     def append_events(
         self, intent_id: str, events: tuple[PaperOrderEvent, ...],
         *, as_of_ms: int,
+        opening_paper_health_path: str | Path | None = None,
     ) -> PaperJournalEntry:
         """Atomically append hypothetical events AND checkpoint after full replay.
 
@@ -562,6 +576,24 @@ class SQLitePaperOrderJournal:
             from .paper_open_health import _verify_locked_order_schema
             _verify_locked_order_schema(conn)
             previous = self._checked_entry(conn, intent_id)
+            if opening_paper_health_path is not None:
+                # D448: a new assumed OPEN fill must not bypass durable
+                # kill-switch or race another AUTO2 fill while risk is stale.
+                # Both controls are read under this SAME BEGIN IMMEDIATE.
+                if (previous.intent.effect is not PaperOrderEffect.OPEN
+                        or not events
+                        or any(e.kind is not PaperOrderEventKind.FILL for e in events)):
+                    raise DataValidationError("guarded PAPER fill requires OPEN FILL events")
+                from .paper_operator_kill_switch import _read_locked
+                from .paper_open_health import _audit_paper_open_health_locked
+                if _read_locked(conn).active:
+                    raise DataValidationError("PAPER kill switch blocks new hypothetical OPEN fills")
+                health = _audit_paper_open_health_locked(
+                    conn, self.path, opening_paper_health_path,
+                    decision_at_ms=cutoff,
+                )
+                if not health.new_open_allowed:
+                    raise DataValidationError("PAPER position health blocks new OPEN fill")
             if cutoff < previous.snapshot.as_of_ms:
                 raise DataValidationError("paper checkpoint cannot go backwards")
             known = {e.event_id: _event_json(e) for e in previous.events}

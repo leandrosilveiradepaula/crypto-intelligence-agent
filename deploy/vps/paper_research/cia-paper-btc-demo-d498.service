@@ -1,0 +1,35 @@
+[Unit]
+Description=Crypto Intelligence isolated BTC PAPER-DEMO residual-price monitor (no native stop)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=cia-probe
+Group=cia-probe
+WorkingDirectory=/home/cia-probe/agent/d482-demo-20261123/repo-d483
+UMask=0077
+ExecStart=/home/cia-probe/agent/ws-venv/bin/python -m scripts.run_j4_continuous_paper_d444 \
+    --private-paper-directory /home/cia-probe/agent/d482-demo-20261123/paper \
+    --status-directory /home/cia-probe/agent/d482-demo-20261123/monitor \
+    --max-cycles 0 --lease-seconds 45 --max-frames 40000 \
+    --max-consecutive-failures 8 --simulate-explicit-demo-exit-fills \
+    --allow-public-network --allow-public-websocket \
+    --confirm-personal-readonly-research --confirm-region-eligible \
+    --confirm-public-data-rights --allow-private-paper-reservations \
+    --enable-continuous-worker
+Restart=always
+RestartSec=15
+TimeoutStopSec=25
+CPUQuota=20%
+MemoryMax=512M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/cia-probe/agent/d482-demo-20261123
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -51,6 +51,8 @@ jobs:
             web/app/research-scorebook.js
             web/app/paper-ws-health.js
             web/app/paper-watch.js
+            web/app/resident-paper.js
+            web/app/last-public-paper-lease.js
             web/app/prospective-research.js
             web/app/app.js
             web/app/LEIA-ME.txt

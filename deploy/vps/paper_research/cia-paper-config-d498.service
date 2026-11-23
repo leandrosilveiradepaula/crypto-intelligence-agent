@@ -1,0 +1,31 @@
+[Unit]
+Description=Crypto Intelligence PAPER local configuration and portfolio view (127.0.0.1 only)
+After=network.target
+
+[Service]
+Type=simple
+User=cia-probe
+Group=cia-probe
+WorkingDirectory=/home/cia-probe/agent/d497-mobile-readback-20261123/repo
+UMask=0077
+ExecStart=/home/cia-probe/agent/ws-venv/bin/python -m scripts.serve_paper_profile_lab_d487 \
+    --enable-owner-paper-profile \
+    --policy-file /home/cia-probe/agent/d487-profile-20261123/strategy.json \
+    --historical-directory /home/cia-probe/agent/d495-resident-20261123/j2 \
+    --paper-session-directory /home/cia-probe/agent/d487-profile-20261123/paper_live \
+    --demo-position-directory /home/cia-probe/agent/d482-demo-20261123/paper
+Restart=on-failure
+RestartSec=12
+TimeoutStopSec=15
+CPUQuota=15%
+MemoryMax=192M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/cia-probe/agent/d487-profile-20261123
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

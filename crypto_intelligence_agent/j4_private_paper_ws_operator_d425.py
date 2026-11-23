@@ -23,6 +23,7 @@ from .bybit_public_ticker_supervisor_d386 import TickerLeaseBudget
 from .j2_j4_current_n50_paper_lease_d410 import run_current_n50_paper_lease_once
 from .market_data import DataValidationError
 from .paper_intrahour_emergency_stop_d388 import PaperEmergencyStopRule
+from .paper_causal_fill_d394 import PaperObservedFillAssumptions
 from .paper_intrahour_quote_router_d391 import (
     PaperIntrahourQuoteRouter, PaperQuoteRoute,
 )
@@ -105,13 +106,23 @@ def _no_duplicate_pairs(pairs: list[tuple[str, object]]) -> dict:
     return result
 
 
-def load_private_paper_routes(directory: Path) -> PaperIntrahourQuoteRouter:
+def load_private_paper_routes(
+    directory: Path, *,
+    enable_hypothetical_exit_fills: bool = False,
+    exit_fill_policy: PaperObservedFillAssumptions | None = None,
+) -> PaperIntrahourQuoteRouter:
     """Map EXISTING AUTO4 positions to exact stop/target/runner policies.
 
     The manifest contains only private PAPER identifiers and hypothetical
     trigger prices; there is no account identity or venue secret. All routes
     are verified before opening the WebSocket or changing PAPER reservations.
     """
+    if (type(enable_hypothetical_exit_fills) is not bool
+            or (exit_fill_policy is not None
+                and type(exit_fill_policy) is not PaperObservedFillAssumptions)
+            or (not enable_hypothetical_exit_fills
+                and exit_fill_policy is not None)):
+        raise DataValidationError("D425 explicit PAPER-only fill modeling gate invalid")
     home = _private_directory(directory)
     try:
         fd = _owner_file(home, _MANIFEST)
@@ -195,6 +206,11 @@ def load_private_paper_routes(directory: Path) -> PaperIntrahourQuoteRouter:
             ))
         return PaperIntrahourQuoteRouter(
             position_path=journal, routes=tuple(routes),
+            enable_synthetic_ledger_fills=enable_hypothetical_exit_fills,
+            fill_assumptions=(
+                exit_fill_policy or PaperObservedFillAssumptions()
+                if enable_hypothetical_exit_fills else None
+            ),
         )
     except (OSError, ValueError, UnicodeError, TypeError,
             ArithmeticError, OverflowError) as exc:

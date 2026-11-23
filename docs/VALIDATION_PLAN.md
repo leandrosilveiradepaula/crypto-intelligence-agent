@@ -1,5 +1,30 @@
 # Plano de validação e gates
 
+## D446 — leitura real do PAPER persistido no Console
+
+Testar seleção exclusivamente por manifesto D425 com dois contratos diferentes no mesmo SQLite owner, leitura RO de saldos e reservas, owner 0700/0600, symlink e troca de arquivo, manifest inválido e falha fechada. No HTTP loopback J5: GET-only, 503 sem opt-in, host/origin restritos, falha sanitizada sem path privado e resposta de tamanho limitado. No navegador mobile: contrato D407 permanece estrito e não há `localStorage` para snapshots, novo fetch apenas `/api/owner-paper-positions` quando localhost, sem credenciais, sem redirect, e importação JSON manual continua válida. Nenhuma solicitação HTTP externa, financeira ou com ordem real.
+
+
+## D445 — teste integrado multicontrato PAPER
+
+Exigir scan REST paginado completo com cursors causais e limites, reconhecimento estrito de contratos USDT lineares já presentes no diário, rejeição de contrato sumido/duplicado/sem negociação/TradFi; nenhum pedido de rede por símbolo individual. Receber ACK de uma assinatura `tickers.BTCUSDT` + `tickers.ETHUSDT` em replay hermético; disparar target BTC e stop ETH sobre *um mesmo journal AUTO4 real* de teste, verificar reservas persistentes e FILL de saída zero, reiniciar roteador e comprovar idempotência. Ausência de uma quote deve degradar a cobertura total sem cancelar reserva do outro ativo. Sem N50 como condição de saída. CI Linux/Windows/mobile do SHA final e prova real no host em gate posterior.
+
+
+## D444 — worker repetido de posições PAPER, não apenas sessão finita
+
+Em ambiente hermético, verificar sequência de leases saudáveis, duas falhas de transporte seguidas de recuperação automática sem FILL, backoff 2–60s, parada após degradação persistente, interrupção entre ciclos, programa sem flags não acessa owner nem rede, limites inválidos falham antes do transporte, relatório contraditório que alegue ordem/live/J1 é encerrado, e estado owner-only 0700/0600 fica atômico sem símbolos nem preços. Comprovar limites de temporizador e lock em Linux POSIX, sem necessidade de execução WSS pública para esta etapa de desenvolvimento. Validar também integração com D443 sobre o SQLite PAPER real de testes, e suites Linux/Windows/mobile do HEAD. O monitor não afirma stop nativo ou que a conexão permaneça ativa depois do processo terminar.
+
+
+## D443 — validação de posição PAPER existente (sem reiniciar J1)
+
+Teste integrado real do SQLite AUTO4 criado no teste, com fill de abertura explicitamente fictício anterior ao ticker. Sem mockar o writer AUTO4: ACK + ticker BTC de alvo devem reservar uma parcial (30 unidades de 100), sem alterar quantidade preenchida; ACK + ticker BTC adverso devem reservar stop protetivo antes de target; reiniciar o roteador no **mesmo SQLite** e reapresentar ticker não pode duplicar reserva. Sem ACK/sem ticker, não exibir posição protegida. Sem opt-ins e com orçamento inválido, não ler pasta privada nem abrir REST/WS. Em modo real, proibir escopo/socket/clock injetáveis e root. Testes test_j4_held_btc_public_d443.py e test_j4_held_btc_paper_d443_cli.py no Linux/Windows (POSIX gates quando aplicável), suíte completa, navegador mobile e revisão do SHA. Sem serviços, deploy, ordens ou J1.
+
+
+## D442 — validação do fluxo J2 → J3 → J4
+
+Validar no HEAD exato da branch D441/D442 os contratos de origem REST atual e ticker ACK/snapshot/delta, o cálculo J3/PRE2 com Decimal de primeira tranche e de stop hipotético na posição inteira, e o envio ao mesmo D391/D389/AUTO4 de LONG/SHORT e stop-first. Cenários negativos obrigatórios: evento pré-ACK, ausência de quote posterior, preço/relógio stale, stop com margem exaurida, custo de entrada/saída maior que alvo, cap de alavancagem insuficiente, opt-ins não fornecidos, custo NaN/float, root POSIX e funções de teste injetadas em transporte real. Nenhum fill automático a partir do ticker. Testar `python -m unittest discover -s tests -p test_j2_j3_j4_btc_paper_shadow_d442.py -v`, suite completa Linux/Windows e mobile/Chrome. Evidência de CI não equivale a captura pública, edge ou execução de ordens. Separar a eventual homologação na VPS, sempre sem escrever na J1.
+
+
 Toda entrega deve vincular issue, PR, SHA, testes reais e limitações. Implementação não é evidência de retorno financeiro.
 
 - J0: documentos e decisões coerentes, testes de integridade documental e backlog rastreável.
@@ -1477,3 +1502,33 @@ Testar `test_j3_ws_owner_forward_tick.py`: opt-ins, owner POSIX, UTC HH:17–HH:
 ## J4/D387 — regressão de saídas parciais PAPER intrahora
 
 Exigir testes com uma única hora UTC: entrada OPEN fictícia CONFIRMADA às 10h05, primeira intenção automática `REDUCE_ONLY` às 10h12, nenhuma duplicação sob replay/UNKNOWN e nenhuma segunda tranche sem fill confirmado, depois outra intenção às 10h19 após fill explícito e runner preservado. LONG usa bid, SHORT usa ask; Last/Mark não são preço de fill. Cotações stale, spread excessivo, book vazio, símbolo incorreto, relógio futuro ou conflito de plano suspendem reserva; cancel/reject/partial/UNKNOWN nunca recebem reenvio cego; duas threads concorrentes não geram segunda intenção. Verificar `orders_sent=false`, `order_submission_enabled=false`, `native_stop_verified=false`, `real_fill_verified=false` e `net_pnl_verified=false`. Não reivindicar proteção de stop/trailing anterior às parciais antes de nova implementação e teste específico #676. Sem rede, testnet ou live.
+
+
+## D447 — testes de entrada observada em diário PAPER, sem ordens
+
+Validar com `python -m unittest -v tests.test_j2_observed_paper_entry_d447` e suíte completa (Linux/Windows/mobile) no SHA exato. Casos: sinal LONG/SHORT no último close público; ticker D385 pós-close e fresco em relógio exchange/recepção; vedação a stale, futuro, troca de símbolo/fonte e BBO cruzado; primeiro alvo parcial líquido de taxas e slippage >0; stop hipotético+custos abaixo da margem, lembrando que isto não prova liquidação; PRE11 com leverage imutável da abertura; kill-switch, risco AUTO8, journal AUTO2 PENDING com receipt; restart/replay sem duplicação; histórico público adulterado recusado, sem reclassificar quality; nenhum FILL, posição AUTO4, rede ou ordem. EVIDÊNCIA pendente de CI e prova operacional; sem homologação de feed real 24x7, worker D444 ou retorno financeiro OOS. Detalhes `docs/J2_J3_PAPER_ENTRY_D447.md`.
+
+
+## D448 — aceite da abertura observada ao monitor PAPER
+
+Reexecutar `tests.test_j2_observed_paper_entry_d447`, `tests.test_j4_automatic_entry_materializer_d448` e `tests.test_demo_j2_j4_observed_paper_cycle_d448` em Linux não-root e suíte completa Linux/Windows/Chrome do SHA final. Verificar contrato D434/D435 sem reclassificar origem, dois ticks causais D385 com ACK e latência pós-OPEN, PRE2 custo alvo/stop, PRE11 margem 50x por posição, AUTO2 FILL explicitamente fictício e único, AUTO4 mesma intenção/evento/receipt, D425 manifesto seguro e D444/J5 leitores. Injetar crashes entre AUTO2→AUTO4 e AUTO4→manifesto, kill-switch e replay, stop-first e primeira parcial, veto custo/spread/liquidez, alteração de plano/permissão. Demonstrar sem rede/ordem `scripts.demo_j2_j4_observed_paper_cycle_d448` LONG/SHORT. CI apenas valida código; operação pública contínua, coorte N50 real, PnL OOS, funding/liquidação e release são gates independentes.
+
+
+## D449/D450 — critérios de aceite da integração pública/ PAPER (20/11/2026)
+
+Executar no SHA exato Linux (incluindo POSIX não-root, 0700/0600), Windows-offline e Chrome; o teste D449 monta 50 instrumentos de registry fixture, 25 closes/hora por contrato e verifica disciplina temporal, força relativa BTC, veto à coorte incompleta, stale e custos, D447/AUTO2 → D448/AUTO4, reserva parcial D391, retorno J5 e recuperação de restart sem duplo FILL. D450 testa dois supervisores reais do código D386 e WS-WORK1 com sockets injetados: ACK correlacionado, pós-ACK, kline pós-append, grupo 50, ticker intrahora, parcial, ausência de uma vela, ACK ruim e opt-ins. Nenhuma CI prova procedência da Bybit, equity real, disponibilidade contínua, auto-stop nativo ou rentabilidade. Prova de host, variação de universo, observação real pública, exposição/realized loss PAPER, cálculo J3 walk-forward/intrabar/funding/liquidação e gate de release são independentes.
+
+
+## D451/D452 — aceite N50 dinâmico, epoch e risco PAPER
+
+Executar Linux nonroot e Windows com testes de paginação multi-GET e turnover público, exclusão TradFi/futuros/USDC, BTC context, conversão correta qty(base)→notional(USDT), 50 membros e opt-ins sem rede. Epoch D451 deve manter mesmo journal após mudança somente na ordem de ranking; trocar membros/filtros/fonte deve criar novo journal sem relabel, rejeitando ponteiros adulterados. Risco D452 lê estado real AUTO2/AUTO4, confere cross-journal receipt, exposures e marcas frescas, blocos por kill-switch/UNKNOWN e PnL desconhecido após FILL. Runner D450 executa REST dinâmica, dois WS D386 e kline pós-ACK e PAPER com sockets inteiramente injetados, incluindo duas horas consecutivas sem perder o journal. CI Linux/Windows/mobile no SHA final; prova pública real, legalidade de fontes, J3 custos/funding/liquidação OOS, serviço VPS/J6 são gates separados, sem ordens reais. Doc docs/J2_DYNAMIC_PUBLIC_N50_PAPER_D451_D452.md.
+
+
+## D453/D454 — gates finais de integração PAPER residente e PnL hipotético
+
+Linux não-root: sessão N50 principal sucesso, REST/WS degradado acionando fallback ticker de posições existentes, ACK e quote posterior acionando reserva D391 seguida de FILL sintético D394 em AUTO4, restart sem duplicação, lock único, status final degradação sem proteção alegada, recusa sem flags, symlink/perm/JSON float/duplicate em política. D454: event JSON legado idêntico, FILL novo com BBO no AUTO2/AUTO4, custo J3 da política imutável D448, resultado condicional positivo/negativo LONG/SHORT e preço reproduzido após reinício, UI J5 opt-in marcada `true_realized_net_pnl_available=false`. Exigir CI do SHA exato; nenhum teste de fixture demonstra captura WSS genuína, lucro, funding/stop ou liberação de ordens. A execução nonroot no host segue condicionada ao caminho de execução com privilégio do usuário cia-probe; gateway Python root não conseguiu alternar UID.
+
+
+## Gate D462/D463 — aceitação do produto PAPER misto (21/11/2026)
+
+Antes de homologar, comprovar: (1) arquivo real REST D461 de 1.200 candles com hash e checksum, já observado na VPS; (2) em sessão pública ao vivo D450, ACK de 50 `kline.60` e `tickers` e pelo menos 1 fechamento horário atual por símbolo no journal WS, com `timestamp` posterior ao fim permitido somente sob clock servidor coerente; (3) leitura D462 da série mista 24+1 e pesquisa D435 com digest combinado e sem retranscrever REST como WS; (4) no cenário negativo 49/50 candles, *nenhuma* nova abertura; (5) D463 fresh public single-instrument GET revalida mesmas regras, sem GET no callback ticker, sem usar quote anterior ao contrato, e sem novas ordens quando mudou o lote/alavancagem; (6) RiskGate AUTO2/AUTO4 continua fail-closed, especialmente funding e perda desconhecida; (7) restart e retenção owner-only sem duplicações; (8) CI Linux/Windows/browser no SHA de release e trial real sem ordens; (9) instalação systemd e atualização do painel J5 somente após gate de publicação. Confiabilidade de código e testes sintéticos **não** demonstram lucratividade nem proteção de corretora.

@@ -112,6 +112,58 @@ class RouterD391Tests(unittest.TestCase):
         self.assertEqual(len(self.store.load(self.position_id).exit_orders),1)
         self.assertEqual(self.store.load(self.position_id).exit_orders[0].tranche_step,-1)
 
+    def test_closed_history_kept_and_later_same_symbol_can_be_monitored(self):
+        opened = self.router.process(tick(T+12*MIN,seq=1,mark="98",bid="98"))
+        self.assertEqual(opened.decision,PaperIntrahourDecision.STOP_RESERVED)
+        self.store.append_exit_events(
+            self.position_id, opened.created_intent_id,
+            (PaperOrderEvent("fixture_d501_close_old",PaperOrderEventKind.FILL,
+                             T+12*MIN+200,D(100)),),
+            as_of_ms=T+12*MIN+200,
+        )
+        old=self.store.load(self.position_id)
+        self.assertEqual(old.confirmed_remaining_units,D(0))
+        new_id="fixture_d501_reopened_btc"
+        new_time=T+16*MIN
+        self.store.create_position(
+            position_id=new_id,
+            opening_intent=PaperOrderIntent(
+                "fixture_d501_new_open","fixture_d501_new_signal",
+                PaperVenue.BYBIT_V5,"BTCUSDT",SyntheticSide.LONG,
+                PaperOrderSide.BUY,PaperOrderEffect.OPEN,D(50),new_time-10,
+            ),
+            opening_events=(PaperOrderEvent(
+                "fixture_d501_new_open_fill",PaperOrderEventKind.FILL,
+                new_time,D(50)),),
+            exit_plan=SyntheticExitPlan(
+                initial_units=D(50),
+                tranches=(SyntheticExitTranche(ExitBasis.INITIAL_POSITION,D(30)),
+                          SyntheticExitTranche(ExitBasis.INITIAL_POSITION,D(20))),
+                residual_floor_percent=D(50),
+            ),
+            plan_version="d501-plan",synthetic_lot_step_units=D(1),
+            as_of_ms=new_time,
+        )
+        replacement=PaperQuoteRoute(
+            new_id,PaperEmergencyStopRule(D(99)),
+            PaperIntrahourTargetPolicy("d501-plan",(D(101),D(103))),
+        )
+        reopened=PaperIntrahourQuoteRouter(
+            position_path=self.path,routes=(self.route,replacement),
+        )
+        self.assertEqual(reopened.monitored_symbols,frozenset({"BTCUSDT"}))
+        self.assertEqual(set(reopened.monitored_position_ids),
+                         {self.position_id,new_id})
+        self.assertEqual(reopened.route_for_position(self.position_id),
+                         self.route)
+        self.assertEqual(reopened.route_for_position(new_id),replacement)
+        self.assertEqual(
+            reopened.process(tick(T+20*MIN,seq=2,mark="100",bid="100")).decision,
+            PaperIntrahourDecision.TARGET_HOLD,
+        )
+        self.assertEqual(self.store.load(self.position_id).confirmed_remaining_units,D(0))
+        self.assertEqual(self.store.load(new_id).confirmed_remaining_units,D(50))
+
     def test_exact_replay_not_reprocessed_or_refreshed(self):
         q=tick(T+12*MIN,mark="100",bid="101")
         a=self.router.process(q)

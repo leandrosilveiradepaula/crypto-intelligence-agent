@@ -32,6 +32,7 @@ class CompressionBreakoutConfig:
     max_atr_ratio: Decimal
     min_quote_volume_ratio: Decimal
     cooldown_bars: int = 0
+    experimental_paper_relaxation: bool = False
 
     def __post_init__(self) -> None:
         if type(self.features) is not FeatureConfig:
@@ -42,15 +43,23 @@ class CompressionBreakoutConfig:
                 raise DataValidationError(f"{key} must be integer 2..500")
         if type(self.cooldown_bars) is not int or not 0 <= self.cooldown_bars <= MAX_COOLDOWN:
             raise DataValidationError("cooldown_bars must be integer 0..500")
+        if type(self.experimental_paper_relaxation) is not bool:
+            raise DataValidationError("explicit experimental PAPER bool required")
         _numeric(self.max_atr_ratio, "max_atr_ratio", strictly_positive=True)
-        if self.max_atr_ratio > Decimal(1):
-            raise DataValidationError("compression ratio threshold must be <= 1")
+        max_atr = (
+            Decimal("2") if self.experimental_paper_relaxation else Decimal("1")
+        )
+        if self.max_atr_ratio > max_atr:
+            raise DataValidationError("ATR ratio exceeds selected research profile")
         _numeric(
             self.min_quote_volume_ratio, "min_quote_volume_ratio",
             strictly_positive=True,
         )
-        if self.min_quote_volume_ratio < Decimal(1):
-            raise DataValidationError("volume multiplier must be >= 1")
+        min_volume = (
+            Decimal("0.5") if self.experimental_paper_relaxation else Decimal("1")
+        )
+        if self.min_quote_volume_ratio < min_volume:
+            raise DataValidationError("volume multiplier below selected research profile")
 
 
 @dataclass(frozen=True)

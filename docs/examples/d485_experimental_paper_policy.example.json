@@ -1,0 +1,52 @@
+{
+  "schema_version": "d453-public-paper-research-policy-v1",
+  "research": {
+    "ema_period": 2,
+    "atr_period": 2,
+    "extrema_period": 2,
+    "quote_volume_period": 2,
+    "compression_bars": 2,
+    "baseline_bars": 2,
+    "max_atr_ratio": "1.5",
+    "min_quote_volume_ratio": "0.7",
+    "cooldown_bars": 0,
+    "experimental_paper_relaxation": true
+  },
+  "paper": {
+    "leverage": 50,
+    "margin_quote": "5",
+    "stop_distance_bps": "50",
+    "target_distances_bps": [
+      "200",
+      "300"
+    ],
+    "tranches": [
+      {
+        "basis": "INITIAL_POSITION",
+        "percent": "30"
+      },
+      {
+        "basis": "INITIAL_POSITION",
+        "percent": "20"
+      }
+    ],
+    "runner_floor_percent": "50",
+    "synthetic_lot_step_units": "0.01",
+    "entry_fee_bps": "6",
+    "exit_fee_bps": "6",
+    "entry_adverse_slippage_bps": "3",
+    "exit_adverse_slippage_bps": "3",
+    "max_spread_bps": "30",
+    "max_book_participation_bps": "2500",
+    "min_fill_latency_ms": 150,
+    "max_fill_wait_ms": 60000
+  },
+  "risk": {
+    "max_order_notional_quote": "1000",
+    "max_symbol_exposure_quote": "2000",
+    "max_portfolio_exposure_quote": "5000",
+    "max_realized_loss_today_quote": "50",
+    "max_pending_open_orders": 5,
+    "max_market_age_ms": 3000
+  }
+}

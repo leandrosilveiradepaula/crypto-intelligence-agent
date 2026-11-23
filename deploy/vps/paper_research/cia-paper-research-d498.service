@@ -1,0 +1,36 @@
+[Unit]
+Description=Crypto Intelligence PAPER research: hourly 50 assets and existing-position exits (NO LIVE ORDERS)
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/home/cia-probe/agent/d487-profile-20261123/strategy.json
+
+[Service]
+Type=simple
+User=cia-probe
+Group=cia-probe
+WorkingDirectory=/home/cia-probe/agent/d495-resident-20261123/repo
+UMask=0077
+ExecStart=/home/cia-probe/agent/ws-venv/bin/python -m scripts.run_j2_j4_public_paper_resident_d453 \
+    --j2-directory /home/cia-probe/agent/d495-resident-20261123/j2 \
+    --paper-directory /home/cia-probe/agent/d487-profile-20261123/paper_live \
+    --policy-file /home/cia-probe/agent/d487-profile-20261123/strategy.json \
+    --lease-seconds 3590 --public-ws-sessions 3 --pause-seconds 1 --max-cycles 1 \
+    --auto-capture-rest-warmup --paper-demo-ignore-book-depth \
+    --allow-public-network --allow-public-websocket \
+    --confirm-personal-readonly-research --confirm-region-eligible \
+    --confirm-public-data-rights --enable-hypothetical-paper-cycle
+Restart=always
+RestartSec=8
+TimeoutStopSec=25
+CPUQuota=30%
+MemoryMax=640M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/home/cia-probe/agent/d495-resident-20261123 /home/cia-probe/agent/d487-profile-20261123/paper_live
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=multi-user.target

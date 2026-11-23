@@ -24,6 +24,8 @@ from .synthetic_feature_engine import (
 from .synthetic_position_state import SyntheticSide
 
 _QUALITY = "bybit_public_ws_confirmed_unverified"
+_REST_HISTORICAL_QUALITY = "bybit_public_rest_historical_closed_unverified"
+_MIXED_STATUS = "research_only_mixed_rest24_ws1_closed_series"
 _STATUS = "research_only_public_closed_series"
 _HOUR_MS = 3_600_000
 
@@ -68,11 +70,19 @@ class ObservedBybitResearch:
 def _validated_observed_candles(
     series: BybitClosedResearchSeries, *,
     decision_at_ms: int, close_safety_ms: int,
+    allow_rest_historical_research: bool = False,
+    allow_causal_rest_ws_warmup: bool = False,
 ) -> tuple[ClosedCandle, ...]:
     if (type(series) is not BybitClosedResearchSeries
-            or series.status != _STATUS
+            or series.status not in (
+                (_STATUS, _MIXED_STATUS) if allow_causal_rest_ws_warmup
+                else (_STATUS,)
+            )
             or type(decision_at_ms) is not int or decision_at_ms <= 0
             or type(close_safety_ms) is not int
+            or type(allow_rest_historical_research) is not bool
+            or type(allow_causal_rest_ws_warmup) is not bool
+            or (allow_rest_historical_research and allow_causal_rest_ws_warmup)
             or not 1 <= close_safety_ms <= 60_000):
         raise DataValidationError("observed J2 research needs a valid typed decision")
     if (type(series.journal_digest_sha256) is not str
@@ -88,15 +98,29 @@ def _validated_observed_candles(
     first = candles[0]
     if type(first) is not ClosedCandle:
         raise DataValidationError("observed J2 candles must be canonical")
-    identity = (first.exchange, first.market, first.symbol, first.interval, first.quality)
+    identity = (first.exchange, first.market, first.symbol, first.interval)
+    mixed = allow_causal_rest_ws_warmup and series.status == _MIXED_STATUS
+    if mixed:
+        if (len(candles) != 25
+                or any(c.quality != _REST_HISTORICAL_QUALITY
+                       for c in candles[:-1])
+                or candles[-1].quality != _QUALITY):
+            raise DataValidationError("D462 requires 24 REST historical and final WS confirmed")
+    allowed_quality = (
+        (_REST_HISTORICAL_QUALITY,) if mixed else
+        (_QUALITY, _REST_HISTORICAL_QUALITY)
+        if allow_rest_historical_research else (_QUALITY,)
+    )
     if (first.exchange != "bybit_v5_public" or first.market != MARKET
-            or first.interval != "1h" or first.quality != _QUALITY
+            or first.interval != "1h" or first.quality not in allowed_quality
             or not first.symbol.endswith("USDT")):
         raise DataValidationError("observed J2 source is not supported")
     for i, c in enumerate(candles):
         if type(c) is not ClosedCandle or (
-            c.exchange, c.market, c.symbol, c.interval, c.quality
-        ) != identity:
+            c.exchange, c.market, c.symbol, c.interval
+        ) != identity or (
+            not mixed and c.quality != first.quality
+        ):
             raise DataValidationError("observed J2 mixed series identity")
         if (type(c.open_time_ms) is not int
                 or type(c.close_time_ms) is not int
@@ -124,6 +148,8 @@ def evaluate_observed_bybit_research(
     config: CompressionBreakoutConfig,
     decision_at_ms: int,
     close_safety_ms: int = 1,
+    allow_rest_historical_research: bool = False,
+    allow_causal_rest_ws_warmup: bool = False,
 ) -> ObservedBybitResearch:
     """Research the latest completed candle without granting an AUTO2 signal.
 
@@ -136,6 +162,8 @@ def evaluate_observed_bybit_research(
         raise DataValidationError("explicit J2 compression config required")
     cs = _validated_observed_candles(
         series, decision_at_ms=decision_at_ms, close_safety_ms=close_safety_ms,
+        allow_rest_historical_research=allow_rest_historical_research,
+        allow_causal_rest_ws_warmup=allow_causal_rest_ws_warmup,
     )
     rows: list[CausalFeatureRow] = []
     with localcontext(_MATH_CONTEXT):

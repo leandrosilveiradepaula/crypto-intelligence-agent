@@ -53,11 +53,36 @@ _FAILURE_CLASSES = {
     "ticker_same_sequence_conflicting_payload": "conflicting_replay",
     "ticker_delta_without_snapshot": "snapshot_required",
     "ticker_transport_clock_stale_or_future": "stale_or_future",
+    "ticker_future_universe_at_receive": "scope_clock_invalid",
+    "ticker_event_type_invalid": "bad_event_type",
+    "ticker_cross_sequence_invalid": "bad_cross_sequence",
+    "ticker_payload_value_shape_invalid": "invalid_payload_shape",
+    "ticker_snapshot_price_fields_missing": "incomplete_snapshot",
+    "ticker_funding_rate_invalid": "invalid_funding",
+    "ticker_exchange_utc_ms_invalid": "invalid_exchange_time",
+    "ticker_received_utc_ms_invalid": "invalid_receipt_time",
     "ticker_crossed_best_bid_ask": "bad_best_quotes",
     "paper_held_quote_silence_exceeded": "held_paper_feed_silent",
     "ticker_universe_rotation_invalid": "scope_clock_invalid",
     "duplicate market JSON keys are forbidden": "duplicate_json_keys",
 }
+
+
+# D473: known gaps in a market STATE can be recovered only after destroying
+# all quotes and obtaining a new ACK plus a fresh snapshot on a new socket.
+# Invalid prices, malformed frames, unexpected topics, ACKs and consumer
+# failures remain fail-closed. Nothing can reuse a pre-fault quote as a fill.
+_RESNAPSHOT_GAPS = frozenset((
+    "ticker_retrograde_sequence_or_time",
+    "ticker_same_sequence_conflicting_payload",
+    "ticker_delta_without_snapshot",
+    "ticker_transport_clock_stale_or_future",
+    "ticker_crossed_best_bid_ask",
+))
+
+
+class _ResnapshotRequired(Exception):
+    """A local control signal, never raw provider content."""
 
 
 @dataclass(frozen=True)
@@ -132,6 +157,33 @@ def _safe_failure(error: Exception) -> str:
     return "internal_validation_failure"
 
 
+_PAPER_STAGED_FAILURES = {
+    "D450 PAPER risk callback failed": "paper_risk_callback_failed",
+    "D450 PAPER cycle callback failed": "paper_execution_callback_failed",
+}
+
+
+def _callback_failure(error: Exception) -> str:
+    """Keep existing read-only coverage/held-feed contracts intact.
+
+    In a shared WS supervisor callbacks also serve N50 coverage and held
+    monitoring: their known DataGap categories must NOT be overwritten with
+    an invented financial-consumer label. D449/D452/D463 callbacks are the
+    PAPER chain we need to distinguish from a Bybit parser rejection.
+    """
+    if isinstance(error, (DataGapError, DataValidationError)):
+        stage = _PAPER_STAGED_FAILURES.get(str(error))
+        if stage is not None:
+            return stage
+        if str(error).startswith((
+            "D449 ", "D452 ", "D463 ", "D447 ", "D448 ",
+            "D425 ", "D391 ", "D394 ", "D453 ",
+        )):
+            return "paper_cycle_callback_failed"
+        return _safe_failure(error)
+    return "paper_cycle_callback_failed"
+
+
 def _monotonic(clock: Callable[[], float]) -> float:
     result = clock()
     if type(result) not in (int, float) or not math.isfinite(result):
@@ -159,6 +211,7 @@ def supervise_public_tickers(
     on_quote: Callable[[BybitTickerQuote], None] | None = None,
     on_session_reset: Callable[[], None] | None = None,
     on_acked_poll: Callable[[], None] | None = None,
+    stop_requested: Callable[[], bool] | None = None,
 ) -> TickerLeaseReport:
     """Receive real-time ticker data from injected sessions for a finite lease.
 
@@ -174,7 +227,10 @@ def supervise_public_tickers(
     callbacks, and are discarded if ACK fails or the connection closes.
     An invalid staged message fails the entire lease closed. Reconnect resets
     both staged state and the book; no prior session seed is carried over.
-    Transport errors alone trigger bounded reconnect.
+    Transport errors and a fixed list of recoverable post-ACK sequence/state
+    gaps trigger bounded reconnect; malformed payloads/ACKs never do.
+    Consumer PAPER failures are separately classified and never disguised as
+    a bad Bybit frame, or retried as a new market connection.
 
     The optional callback is strictly a caller-supplied PAPER/monitoring hook,
     not an order/exchange adapter. It runs synchronously with no buffered queue.
@@ -192,7 +248,8 @@ def supervise_public_tickers(
             or type(budget) is not TickerLeaseBudget
             or (on_quote is not None and not callable(on_quote))
             or (on_session_reset is not None and not callable(on_session_reset))
-            or (on_acked_poll is not None and not callable(on_acked_poll))):
+            or (on_acked_poll is not None and not callable(on_acked_poll))
+            or (stop_requested is not None and not callable(stop_requested))):
         raise DataValidationError("ticker_ws_injected_dependencies_invalid")
     topics = _topic_args(book)
     allowed = frozenset(topics)
@@ -201,6 +258,7 @@ def supervise_public_tickers(
     )
     sessions = sends = acks = frames = accepted = preack = pings = pongs = 0
     bootstrap_validated = 0
+    last_resync_category: str | None = None
     bins = [0, 0, 0, 0]
     started = _monotonic(clock)
     book.mark_disconnected()
@@ -227,11 +285,18 @@ def supervise_public_tickers(
         )
 
     for attempt in range(budget.max_sessions):
+        if stop_requested is not None and stop_requested():
+            book.mark_disconnected()
+            return report("lease_abstained", "paired_public_stream_stopped")
         if attempt:
             delay = min(RECONNECT_WAIT_SECONDS * 2 ** (attempt - 1), 20.0)
             if _monotonic(clock) + delay >= started + budget.max_seconds:
-                return report("lease_abstained", "reconnect_deferred")
+                return report("lease_abstained",
+                              last_resync_category or "reconnect_deferred")
             sleeper(delay)
+            if stop_requested is not None and stop_requested():
+                book.mark_disconnected()
+                return report("lease_abstained", "paired_public_stream_stopped")
         if _monotonic(clock) - started >= budget.max_seconds:
             return report("lease_abstained", "time_budget_exceeded")
         if frames >= budget.max_frames:
@@ -258,13 +323,21 @@ def supervise_public_tickers(
                 attempts = 0
 
                 while True:
+                    if stop_requested is not None and stop_requested():
+                        book.mark_disconnected()
+                        return report("lease_abstained", "paired_public_stream_stopped")
                     now = _monotonic(clock)
                     remaining = started + budget.max_seconds - now
                     if acknowledged and on_acked_poll is not None:
-                        # Check BEFORE lease completion: an invalid/stale held
-                        # feed cannot be hidden by a successful subscribe ACK
-                        # or by busy updates from unrelated N50 contracts.
-                        on_acked_poll()
+                        # This is a PAPER consumer gate, NOT a Bybit parser.
+                        # Do not mislabel an internal callback failure as
+                        # invalid_market_data or silently retry it.
+                        try:
+                            on_acked_poll()
+                        except Exception as error:
+                            book.mark_disconnected()
+                            return report("lease_abstained",
+                                          _callback_failure(error))
                     if remaining <= 0:
                         return report("lease_completed" if acknowledged
                                       else "lease_abstained",
@@ -342,14 +415,36 @@ def supervise_public_tickers(
                         preack_staged_bytes += packet_bytes
                         continue
                     received = wall_ms()
-                    quote = book.ingest(raw, received_at_ms=received)
+                    try:
+                        quote = book.ingest(raw, received_at_ms=received)
+                    except DataGapError as error:
+                        # Only AFTER ACK, with a fresh new socket available.
+                        # The book has already erased every quote on failure.
+                        # Pre-ACK staged frames and malformed JSON are NEVER
+                        # eligible for this recovery.
+                        if (str(error) in _RESNAPSHOT_GAPS
+                                and attempt + 1 < budget.max_sessions):
+                            raise _ResnapshotRequired(
+                                _safe_failure(error)) from None
+                        raise
                     accepted += 1
                     latency = max(0, received - quote.exchange_at_ms)
                     index = (0 if latency <= 100 else 1 if latency <= 1000
                              else 2 if latency <= 5000 else 3)
                     bins[index] += 1
                     if on_quote is not None:
-                        on_quote(quote)
+                        try:
+                            on_quote(quote)
+                        except Exception as error:
+                            book.mark_disconnected()
+                            return report("lease_abstained",
+                                          _callback_failure(error))
+        except _ResnapshotRequired as error:
+            # This session has lost causal continuity. No old data crosses
+            # into another ACKed connection or the next PAPER fill.
+            last_resync_category = str(error)
+            book.mark_disconnected()
+            continue
         except (DataGapError, DataValidationError, ValueError, TypeError) as error:
             book.mark_disconnected()
             return report("lease_abstained", _safe_failure(error))

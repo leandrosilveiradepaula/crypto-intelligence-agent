@@ -15,6 +15,8 @@
   <script src="./research-scorebook.js" defer></script>
   <script src="./paper-ws-health.js" defer></script>
   <script src="./paper-watch.js" defer></script>
+  <script src="./resident-paper.js" defer></script>
+  <script src="./last-public-paper-lease.js" defer></script>
   <script src="./prospective-research.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
@@ -288,16 +290,16 @@
             <h3 id="persisted-paper-title">Posições registradas no diário PAPER</h3>
             <span class="status-label" id="persisted-paper-status">Sem diário PAPER</span>
           </div>
-          <p class="muted fine">Importe pelo seletor JSON um relatório de posições já persistidas no diário AUTO4. Este painel é independente dos cenários criados no navegador: mostra reservas, parciais, saldo e necessidade de reconciliação.</p>
+          <p class="muted fine">O servidor local autorizado mostra automaticamente as posições realmente salvas no diário AUTO4. Sem autorização local, é possível importar JSON manualmente. Este painel é independente dos cenários criados no navegador: mostra reservas, parciais, saldo e necessidade de reconciliação.</p>
           <div id="persisted-paper-empty" class="empty">
-            <strong>Nenhum diário de posições importado</strong>
-            <p>Não existe monitoramento de corretora ou acesso ao SQLite privado por esta página.</p>
+            <strong>Nenhum diário de posições disponível</strong>
+            <p>Somente o servidor localhost explicitamente autorizado pode ler o diário privado. Sem acesso remoto à corretora.</p>
           </div>
           <div id="persisted-paper-loaded" hidden>
             <p id="persisted-paper-summary" class="muted fine" role="status" aria-live="polite"></p>
             <div id="persisted-paper-rows" class="market-pulse-rows" aria-label="Posições fictícias persistidas"></div>
           </div>
-          <p class="muted fine">Somente leitura e sessão atual. Sem ordens, preço ao vivo, stop nativo, resultado financeiro ou agregação de unidades diferentes. Os dados importados não alteram o laboratório PAPER.</p>
+          <p class="muted fine">Somente leitura e sessão atual. As parciais podem mostrar resultado PAPER estimado, com taxas e slippage assumidos; funding e liquidação não verificados. Não é lucro real, nem ordem ou stop nativo. Os dados importados não alteram o laboratório PAPER.</p>
         </div>
         <div class="panel" aria-label="Demonstração integrada PAPER">
           <div class="panel-heading"><h3>Ciclo PAPER integrado</h3><span class="status-label">Leitura</span></div>
@@ -341,6 +343,36 @@
             <p id="paper-watch-warning" class="muted fine" role="status" aria-live="polite"></p>
           </div>
           <p class="muted fine">Sempre encerra como sessão FINITA; desaparece após três minutos ou falha de leitura. Não garante vigilância 24×7, proteção nativa, FILL, lucro, posição verdadeira ou execução automática de ordens.</p>
+        </div>
+        <div class="panel" aria-labelledby="resident-paper-title">
+          <div class="panel-heading">
+            <h3 id="resident-paper-title">Operador PAPER residente</h3>
+            <span id="resident-paper-status" class="status-label">Sem estado residente recente</span>
+          </div>
+          <p id="resident-paper-summary" class="muted fine" role="status" aria-live="polite">Nenhuma sessão PAPER residente comprovada. Verifique no servidor local autorizado.</p>
+          <p class="muted fine">Status em leitura local opcional. Uma sessão aberta não comprova monitoramento ininterrupto, stop nativo, funding ou ordens na corretora. Se o status ficar antigo, o painel revoga a informação.</p>
+        </div>
+        <div class="panel" aria-labelledby="last-public-paper-title">
+          <div class="panel-heading">
+            <h3 id="last-public-paper-title">Última sessão Bybit N50 → PAPER</h3>
+            <span id="last-public-paper-status" class="status-label">Sem diagnóstico de sessão</span>
+          </div>
+          <p id="last-public-paper-summary" class="muted fine" role="status" aria-live="polite">Sem diagnóstico privado disponível.</p>
+          <div class="market-pulse-rows" aria-label="Resultado da última sessão pública">
+            <p id="last-public-paper-market" class="muted fine">Velas e histórico: indisponíveis.</p>
+            <p id="last-public-paper-ticker" class="muted fine">Ticker: indisponível.</p>
+            <p id="last-public-paper-research" class="muted fine">Pesquisa/aberturas: indisponíveis.</p>
+          </div>
+          <p class="muted fine">Resultado histórico, separado da saúde atual do operador. Relatório privado não substitui conferência do diário SQLite nem garante feed, stops, posição, lucro ou execução financeira real.</p>
+        </div>
+        <div class="panel" aria-labelledby="paper-worker-title">
+          <div class="panel-heading">
+            <h3 id="paper-worker-title">Processo de acompanhamento PAPER</h3>
+            <span id="paper-worker-status" class="status-label">Não iniciado</span>
+          </div>
+          <p id="paper-worker-summary" class="muted fine" role="status" aria-live="polite">O processo de acompanhamento de posições ainda não está conectado ao painel.</p>
+          <div id="paper-worker-rows" class="market-pulse-rows" aria-label="Ciclos do processo PAPER"></div>
+          <p class="muted fine">Informações locais do último ciclo: reconexão, cotação válida e falhas. Não garante WebSocket ininterrupto, execução financeira ou stop nativo. Se o estado ficar antigo, será mostrado como indisponível.</p>
         </div>
         <div class="panel risk-audit-panel" aria-labelledby="risk-audit-title">
           <div class="panel-heading">

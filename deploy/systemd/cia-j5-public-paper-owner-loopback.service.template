@@ -1,0 +1,35 @@
+# D457 RELEASE CANDIDATE ONLY - OFF BY DEFAULT; NOT INSTALLED.
+# Local J5 PAPER dashboard status/positions on 127.0.0.1:8765 ONLY.
+# Must replace any existing J5 loopback unit instead of competing on port 8765.
+# @REPO@ @PYTHON@ @PAPER_DIR@ are immutable release/owner-only paths.
+[Unit]
+Description=CIA PAPER local-only read-only mobile status (NO EXCHANGE ORDERS)
+After=network-online.target
+
+[Service]
+Type=simple
+User=cia-probe
+Group=cia-probe
+WorkingDirectory=@REPO@
+UMask=0077
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=@PYTHON@ -m scripts.serve_j5_local_readonly --allow-loopback-readonly-http --allow-resident-paper-status-loopback --resident-paper-status-directory @PAPER_DIR@ --allow-last-public-paper-lease-loopback --last-public-paper-lease-directory @PAPER_DIR@ --allow-owner-paper-positions-loopback --owner-paper-positions-directory @PAPER_DIR@
+Restart=on-failure
+RestartSec=15s
+TimeoutStartSec=30
+CPUQuota=15%
+MemoryMax=256M
+TasksMax=64
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadOnlyPaths=@PAPER_DIR@
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET
+SystemCallArchitectures=native
+StandardOutput=journal
+StandardError=journal

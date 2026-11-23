@@ -144,8 +144,107 @@
       refreshing = false;
     }
   }
+
+  /* D444: progress of an owner-only worker, never evidence of an exchange stop. */
+  const WORKER_KEYS = Object.freeze([
+    "schema_version", "phase", "updated_at_ms", "last_good_lease_at_ms",
+    "lease_attempts", "healthy_lease_count", "consecutive_lease_failures",
+    "accepted_quote_events_total", "last_lease_outcome", "source_mode",
+    "lease_active", "native_stop_active", "exchange_source_authenticated",
+    "uninterrupted_coverage_verified", "paper_positions_automatically_filled",
+    "j1_state_accessed", "orders_sent", "approved_for_live_use"
+  ]);
+  const WORKER_PHASES = new Set([
+    "starting", "lease_started", "between_leases", "stopped_by_operator",
+    "failed_closed", "stopped_after_repeated_degradation",
+    "completed_finite_cycles"
+  ]);
+  function validateWorker(raw, now = Date.now()) {
+    valid(raw && typeof raw === "object" && !Array.isArray(raw));
+    valid(Object.keys(raw).length === WORKER_KEYS.length &&
+      WORKER_KEYS.every(k => Object.prototype.hasOwnProperty.call(raw, k)));
+    valid(raw.schema_version === "j4-btc-continuous-paper-worker-d444-v1");
+    valid(WORKER_PHASES.has(raw.phase));
+    valid(raw.source_mode === "public_ws_observed_unverified" ||
+      raw.source_mode === "injected_offline_protocol_replay");
+    valid(Number.isSafeInteger(raw.updated_at_ms) &&
+      Number.isSafeInteger(now) && raw.updated_at_ms <= now &&
+      now - raw.updated_at_ms <= (
+        ["stopped_by_operator", "failed_closed",
+         "stopped_after_repeated_degradation",
+         "completed_finite_cycles"].includes(raw.phase) ? 86400000 : 120000));
+    valid(raw.last_good_lease_at_ms === null ||
+      (Number.isSafeInteger(raw.last_good_lease_at_ms) &&
+       raw.last_good_lease_at_ms <= raw.updated_at_ms));
+    valid(["lease_attempts", "healthy_lease_count", "consecutive_lease_failures",
+           "accepted_quote_events_total"].every(
+      k => Number.isSafeInteger(raw[k]) && raw[k] >= 0 && raw[k] <= 100000000
+    ));
+    valid(raw.healthy_lease_count <= raw.lease_attempts);
+    valid(typeof raw.lease_active === "boolean" &&
+      raw.lease_active === (raw.phase === "lease_started"));
+    valid(["native_stop_active", "exchange_source_authenticated",
+           "uninterrupted_coverage_verified",
+           "paper_positions_automatically_filled", "j1_state_accessed",
+           "orders_sent", "approved_for_live_use"].every(k => raw[k] === false));
+    return Object.freeze({...raw});
+  }
+  function renderWorker(raw) {
+    const status = document.getElementById("paper-worker-status");
+    const summary = document.getElementById("paper-worker-summary");
+    const rows = document.getElementById("paper-worker-rows");
+    if (!status || !summary || !rows) return;
+    rows.replaceChildren();
+    if (!raw) {
+      status.textContent = "Indisponível";
+      summary.textContent = "Nenhum estado recente do processo PAPER. Não presumir acompanhamento ativo.";
+      return;
+    }
+    const labels = {
+      starting: "Processo inicializando",
+      lease_started: "Tentativa de sessão em andamento",
+      between_leases: "Entre sessões / reconexão",
+      stopped_by_operator: "Processo encerrado",
+      failed_closed: "Processo interrompido",
+      stopped_after_repeated_degradation: "Interrompido por falhas",
+      completed_finite_cycles: "Ciclos de teste concluídos"
+    };
+    status.textContent = labels[raw.phase] || "Indisponível";
+    summary.textContent = "Último estado: " +
+      new Date(raw.updated_at_ms).toISOString().slice(0, 16).replace("T", " ") +
+      " UTC. Uma sessão pode terminar sem proteção contínua de stop.";
+    for (const [label, count] of [
+      ["Ciclos iniciados", raw.lease_attempts],
+      ["Sessões com cotação fresca ao encerrar", raw.healthy_lease_count],
+      ["Falhas consecutivas", raw.consecutive_lease_failures],
+      ["Cotações encaminhadas nos ciclos", raw.accepted_quote_events_total]
+    ]) {
+      const cell = document.createElement("div");
+      cell.className = "market-pulse-row";
+      cell.append(node("span", label), node("strong", count));
+      rows.append(cell);
+    }
+  }
+  async function refreshWorkerLocal() {
+    if (!isLocal()) return;
+    try {
+      const response = await global.fetch("/api/paper-worker", {
+        method: "GET", credentials: "omit", cache: "no-store", redirect: "error"
+      });
+      if (response.status !== 200 || !response.ok ||
+          !(response.headers.get("content-type") || "").startsWith("application/json")) {
+        throw new Error("Worker status unavailable");
+      }
+      const body = await response.text();
+      if (body.length < 2 || body.length > 4096) throw new Error("Worker status invalid");
+      renderWorker(validateWorker(JSON.parse(body)));
+    } catch (_) {
+      renderWorker(null);
+    }
+  }
   global.CIAPaperWatch = Object.freeze({
-    validateReport, installLocal, clearLocal, refreshLocal
+    validateReport, installLocal, clearLocal, refreshLocal,
+    validateWorker, refreshWorkerLocal
   });
   if (typeof module === "object" && module && module.exports) {
     module.exports = global.CIAPaperWatch;
@@ -154,7 +253,9 @@
     render();
     if (isLocal()) {
       void refreshLocal();
+      void refreshWorkerLocal();
       global.setInterval(() => { void refreshLocal(); }, 30000);
+      global.setInterval(() => { void refreshWorkerLocal(); }, 10000);
     }
   }
 })(typeof globalThis !== "undefined" ? globalThis : this);

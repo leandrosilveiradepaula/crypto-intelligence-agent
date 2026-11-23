@@ -39,7 +39,7 @@ class AppLayoutContractTests(unittest.TestCase):
                      "script-src 'self'", "form-action 'none'", "base-uri 'none'"):
             self.assertIn(rule, csp[0])
         scripts = [a.get("src") for t,a in tags if t=="script"]
-        self.assertEqual(scripts, ["./engine.js", "./public-market.js", "./persisted-paper.js", "./integrated-paper-cycle.js", "./research-scorebook.js", "./paper-ws-health.js", "./paper-watch.js", "./prospective-research.js", "./app.js"])
+        self.assertEqual(scripts, ["./engine.js", "./public-market.js", "./persisted-paper.js", "./integrated-paper-cycle.js", "./research-scorebook.js", "./paper-ws-health.js", "./paper-watch.js", "./resident-paper.js", "./last-public-paper-lease.js", "./prospective-research.js", "./app.js"])
         self.assertTrue(any(t=="link" and a.get("href")=="./style.css"
                             for t,a in tags))
         self.assertTrue(any(t=="a" and a.get("href")=="#conteudo"
