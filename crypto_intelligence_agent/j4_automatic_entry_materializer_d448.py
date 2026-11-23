@@ -23,6 +23,8 @@ from .j4_private_paper_ws_operator_d425 import (
     exclusive_paper_operator_lock, load_private_paper_routes,
 )
 from .market_data import DataValidationError
+from .paper_closed_route_archive_d502 import archive_closed_route
+from .paper_position_inspection import inspect_paper_position
 from .paper_causal_fill_d394 import _checked_market
 from .paper_margin_receipt import PaperMarginIntentReceipt
 from .paper_order_store import SQLitePaperOrderJournal
@@ -464,13 +466,30 @@ def _route_position(home: Path, planned: dict) -> None:
         if len(named) != 1 or named[0] != route:
             raise DataValidationError("D448 existing PAPER route conflicts with saved plan")
     else:
-        if len(existing) >= _MAX_POSITIONS:
-            raise DataValidationError("D448 held position capacity reached")
-        # D391 enforces one-way netting: no two active routes for a symbol.
+        # D391 enforces one-way netting: one active route per symbol.
         if existing:
             book = load_private_paper_routes(home)
             if planned["symbol"] in book.monitored_symbols:
                 raise DataValidationError("D448 another PAPER position already owns symbol")
+        # D502: when the 50-route manifest fills, archive only fully
+        # reconciled CLOSED routes, never open/partial/reserved positions.
+        # Each archived route is durably published BEFORE atomic manifest
+        # replacement. Crash after archive but before replace is idempotent.
+        if len(existing) >= _MAX_POSITIONS:
+            retained = []
+            for old in existing:
+                balance = inspect_paper_position(
+                    home / _JOURNAL, old["position_id"],
+                ).balance
+                if (balance.confirmed_remaining_units == 0
+                        and balance.reserved_unfilled_units == 0
+                        and balance.filled_exit_units == balance.initial_confirmed_units):
+                    archive_closed_route(home, old)
+                else:
+                    retained.append(old)
+            existing = retained
+        if len(existing) >= _MAX_POSITIONS:
+            raise DataValidationError("D448 active PAPER route capacity reached")
         existing.append(route)
         _atomic_private_write(
             home, _MANIFEST, _json({
