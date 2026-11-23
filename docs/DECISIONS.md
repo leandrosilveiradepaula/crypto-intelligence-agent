@@ -1,5 +1,12 @@
 # Decisões do produto
 
+## D506 — histórico sem ocultar operações abertas e pré-teste obrigatório (23/11/2026)
+
+Posições OPEN/PARTIAL devem ser exibidas no topo do J5 mesmo quando antigas e fora das 50 mais recentes por timestamp de checkpoint. A paginação continua exibindo as últimas 50 e permite consultar CLOSED do mesmo ledger, sem misturar ativo e arquivado. O pré-cutover de novas versões PAPER deve ler, como mesmo UID owner, a estratégia D453 e o diário AUTO4 existente via D505 read-only; CI offline e testes unitários não substituem essa prova. Não migrar ou substituir diários para uma atualização apenas de código.
+
+Decisão incorporada na main pelo merge PR #736 (SHA `e36037a72c2d58f58036a8be1f06756a11efade6`), testes do head exato Linux/Windows 3.594 PASS e mobile aprovado. Autorização genérica para jornada segura não confere root nem libera release de produção; permissões owner ampliadas, serviço externo acessível, ordens financeiras e migrations exigem gate próprio. Instalação VPS não executada nesta entrega.
+
+
 ## D504 — incorporação de D502/D503 sem mutação operacional (23/11/2026)
 
 Após validação no SHA `9c14a0a8739e694f37d9723df360a4d4e45d87d4` (Linux/Windows 3.590 testes, mobile QA verde), PR #735 foi mesclada em `main=090e4e07accb0a50958c40a9d13227625ac4300c`, exclusivamente código e documentação, **sem release VPS**. D503 permite ao usuário ativar cruzamento de três EMAs parametrizadas na pesquisa horária em modo PAPER, preservando breakout quando ausente o opt-in e validação causal com histórico suficiente. D502 preserva o ledger financeiro AUTO4 e arquiva apenas rotas integralmente encerradas em sidecars privados imutáveis, permitindo que histórico acumulado supere 50 sem exceder 50 rotas técnicas de monitoramento simultâneo. UI apresenta histórico paginado no loopback.

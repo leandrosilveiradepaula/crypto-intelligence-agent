@@ -1,5 +1,14 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D506 — checkpoint terminal desta sessão: código aprovado, operador VPS sem cutover (23/11/2026 UTC)
+
+**GitHub**: PR #736 MERGED, commit de produto `e36037a72c2d58f58036a8be1f06756a11efade6`, head de revisão/CI `62203404cebf10b65ba8e9833909b0e3cd64b001`. Runs CI: 45281771023 Linux/docs 3.594 PASS, Windows 3.594 PASS/669 skipped de caso POSIX; 45281771044 browser mobile SUCCESS; base SHA exata `9ca33f8c19d28d5002890551e190186cd7c4c806` conferida antes de merge. Sem PR paralela e sem release VPS. D505 preflight owner-only e pin de posição antiga aberta já constam em main.
+
+**VPS**: J1 `cia-j1-n50-ws.timer` active/waiting, motor `cia-paper-research-d498.service` active/running com lease encerrada normalmente e relançada em 22:42:49 UTC, `NRestarts=4`, `ExecMainStatus=0`; painel `cia-paper-config-d498.service` active/running. Diário original ainda 0 OPEN, 1 CLOSED/STOP ARBUSDT, resultado PAPER condicional anterior em D499, sem ordens reais. Perfil existente 1 USDT/50x, modo breakout EMA2 e alvos 50/50, não alterado. Visão REST historical N50 50 símbolos, 13 hipóteses e 7 candidatos relativos BTC, **não** ordens/sinais WS confirmados.
+
+**Bloqueio externo comprovado**: o MCP conectado só alcança leituras públicas/loopback e observação systemd. `stat` de checkout owner resultou permission denied, `runuser -u cia-probe` não pode ajustar grupos. Sem acesso owner de escrita, não houve pré-teste D505 contra SQLite privado, troca de checkout, reinício do serviço novo, publicação mobile ou migração. Não assumir acesso root. **Próxima ação concreta**: com executor owner legitimamente habilitado, validar o SHA final em staging `cia-probe`, rodar `scripts.preflight_paper_owner_d505` apontando ao diário e perfil privados existentes, verificar contagens/digests sem escrita e então solicitar/aplicar gate de cutover seguro das duas unidades PAPER; J1 intocada, rollback pronto. Se acesso não estiver disponível, prosseguir frentes independentes de pesquisa/teste, sem pedir 'prossiga'.
+
+
 ## D505 — continuação executada, bloqueio de acesso VPS preservado (23/11/2026)
 
 Repositório verificado: `main=9ca33f8c19d28d5002890551e190186cd7c4c806`, sem PRs abertas na leitura inicial. Ramificação de desenvolvimento `codex/paper-owner-qa-active-history-d505` (pendente revisão/merge). Desvio funcional detectado em D502: lista J5 limitada às 50 últimas posições por checkpoint poderia ocultar uma posição antiga ainda aberta. Correção proposta mantém últimas 50 + fixa posições abertas fora da janela, ordena abertas primeiro e não duplica abertas como histórico CLOSED. Teste real AUTO4 em diretório isolado reduz o limite de exibição a 1 para reproduzir evento com 2 posições; nenhuma posição/stop real é alterado.

@@ -1,5 +1,16 @@
 # STATUS — Crypto Intelligence Agent
 
+## D506 — integração D505 e bloqueio de cutover PAPER (23/11/2026 UTC)
+
+**Código finalizado e integrado**: PR #736, head validado `62203404cebf10b65ba8e9833909b0e3cd64b001`, squash na main `e36037a72c2d58f58036a8be1f06756a11efade6`. CI HEAD Linux/documentação **3.594 testes OK** e Windows **3.594 testes OK (669 skips POSIX)** no run 45281771023, navegador mobile **SUCCESS** no run 45281771044. O fechamento foi sem produção e sem ordens. Não equiparar CI verde com lucro nem implantação.
+
+**Valor entregue em código**: posições PAPER abertas antigas continuam no topo do painel J5 mesmo após ficarem fora das 50 operações mais recentes; CLOSED antigo permanece acessível por paginação, sem duplicar OPEN na lista de encerradas. O novo `scripts/preflight_paper_owner_d505.py` valida perfil owner, inventário do journal AUTO4 e histórico D502 em modo read-only sem criar SQLite, importar credenciais, acessar rede nem reiniciar serviços. Prova da suíte foi em arquivos de teste isolados, **não sobre o diretório real da VPS**.
+
+**VPS atual preservada:** unidade de pesquisa D498 e serviço J5 D498 active/running, J1 N50 timer active/waiting, `orders_sent=false`; 0 abertas, 1 encerrada ARBUSDT SHORT por STOP no journal antigo. O serviço de pesquisa fechou mais uma lease com `bounded_run_completed` e reinício programado às **22:42:49 UTC**, `ExecMainStatus=0`, NRestarts=4 (não inferir falha). `/api/paper-history` continua não disponível no deploy antigo. São dois checkouts owner privados diferentes (motor e painel), logo cada um exige troca controlada.
+
+**Bloqueio operacional verificado:** MCP VPS atual não consegue acessar/sincronizar os diretórios privados como `cia-probe` (`stat` negado; `runuser` devolveu `Operation not permitted`). Não contornar a barreira nem declarar release realizado. Para o cutover, falta executor autorizado sob o dono dos arquivos, com gate de ampliação de acesso se necessário; primeiro rodar D505 na cópia owner isolada, conferir SHA e diários, depois atualizar motor e J5 preservando J1 e oferecendo rollback, sempre sem ordens reais.
+
+
 ## D505 — preflight owner e posições antigas ainda abertas (23/11/2026)
 
 **Implementação candidata, sem deploy:** o painel de PAPER D487 reserva a visão das últimas 50 operações do AUTO4, mas agora **fixa adicionalmente todas as posições atuais não encerradas**, mesmo que uma operação antiga e ainda aberta tenha saído da janela por checkpoint de operações fechadas. Posições OPEN/PARTIAL aparecem antes de CLOSED. Histórico paginado mantém operações encerradas sem duplicar posições abertas na área de histórico. O monitor financeiro, rotas e diário persistente são inalterados.
