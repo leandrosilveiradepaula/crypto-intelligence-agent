@@ -260,10 +260,10 @@ def evaluate_observed_bybit_research(
                 if i < cross_periods[-1] + 1:
                     continue
                 previous = cross_history[i - 1]
-                current = cross_history[i]
-                if any(v is None for v in previous + current):
+                current_cross_emas = cross_history[i]
+                if any(v is None for v in previous + current_cross_emas):
                     continue
-                fast, middle, trend = current
+                fast, middle, trend = current_cross_emas
                 was_fast, was_middle, _ = previous
                 if was_fast <= was_middle and fast > middle and row.close > trend:
                     side = SyntheticSide.LONG
