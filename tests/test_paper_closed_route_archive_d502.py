@@ -19,6 +19,8 @@ from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_closed_route_archive_d502 import (
     archive_closed_route, read_closed_route_archive,
 )
+from crypto_intelligence_agent.paper_order_store import SQLitePaperOrderJournal
+from scripts.serve_paper_profile_lab_d487 import _paper_session_read
 from crypto_intelligence_agent.paper_intrahour_proof_d392 import (
     _new_position, POSITION_ID, PLAN_VERSION,
 )
@@ -112,10 +114,31 @@ class ClosedRouteArchiveD502Tests(unittest.TestCase):
         self.assertEqual({p["symbol"] for p in page["positions"]},
                          {"BTCUSDT", "ETHUSDT"})
         self.assertFalse(page["orders_sent"])
+        orders = self.home / "paper-orders.sqlite"
+        SQLitePaperOrderJournal(orders)
+        orders.chmod(0o600)
+        session = _paper_session_read(directory=self.home)
+        self.assertEqual(session["open_position_count"], 1)
+        self.assertEqual(session["closed_position_count"], 1)
+        self.assertEqual(session["position_count"], 2)
+        self.assertFalse(session["orders_sent"])
         # Replaying same position after rollover cannot duplicate a route.
         with patch("crypto_intelligence_agent.j4_automatic_entry_materializer_d448._MAX_POSITIONS", 1):
             _route_position(self.home, planned)
         self.assertEqual(len(list(self.home.glob("paper-closed-route-*.json"))), 1)
+
+    def test_full_capacity_with_only_active_routes_never_archives(self):
+        extra_position(self.store)
+        planned = {
+            "position_id": ETH_ID, "plan_version": PLAN_VERSION,
+            "stop_mark_price": "99", "target_prices": ["101", "103"],
+            "symbol": "ETHUSDT", "policy": _policy_payload(POLICY),
+        }
+        with patch("crypto_intelligence_agent.j4_automatic_entry_materializer_d448._MAX_POSITIONS", 1):
+            with self.assertRaises(DataValidationError):
+                _route_position(self.home, planned)
+        self.assertEqual(list(self.home.glob("paper-closed-route-*.json")), [])
+        self.assertEqual(len(load_private_paper_routes(self.home).monitored_position_ids), 1)
 
     def test_tampered_or_unsafe_archive_fails_closed(self):
         self.close_original()
