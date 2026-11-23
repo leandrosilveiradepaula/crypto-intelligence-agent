@@ -30,6 +30,9 @@ def main(argv: list[str] | None = None) -> int:
                  "confirm-region-eligible", "confirm-public-data-rights",
                  "allow-private-paper-reservations", "enable-continuous-worker"):
         parser.add_argument("--" + flag, action="store_true")
+    parser.add_argument("--simulate-explicit-demo-exit-fills",
+                        action="store_true",
+                        help="D483: simulate delayed BBO fills only for the D482 fixture journal")
     a = parser.parse_args(argv)
     gates = (
         a.allow_public_network, a.allow_public_websocket,
@@ -66,6 +69,7 @@ def main(argv: list[str] | None = None) -> int:
             confirm_personal_readonly_research=True,
             confirm_region_eligible=True, confirm_public_data_rights=True,
             allow_private_paper_reservations=True, enable_continuous_worker=True,
+            simulate_explicit_demo_exit_fills=a.simulate_explicit_demo_exit_fills,
             should_stop=lambda: stopped["requested"],
         )
     except (DataValidationError, OSError, ValueError, TypeError, RuntimeError):

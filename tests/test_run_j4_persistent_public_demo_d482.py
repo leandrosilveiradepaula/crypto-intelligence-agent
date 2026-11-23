@@ -82,6 +82,40 @@ class PersistentDemoTests(unittest.TestCase):
             )
         self.assertEqual(len(read_owner_paper_positions(directory=self.home)["positions"]), 1)
 
+
+    def test_explicit_demo_exit_fills_only_after_later_realistic_quote(self):
+        from crypto_intelligence_agent.paper_position_reservations import (
+            SQLitePaperPositionJournal,
+        )
+        router, created = create_persistent_demo(
+            paper_directory=self.home, quote=self.quote,
+            policy=self.policy, universe_at_ms=NOW-2000,
+        )
+        later = replace(
+            self.quote, exchange_at_ms=NOW+1000, received_at_ms=NOW+1100,
+            cross_sequence=11, mark_price=Decimal("92000"),
+            last_price=Decimal("92000"), index_price=Decimal("92000"),
+            bid_price=Decimal("91999"), ask_price=Decimal("92001"),
+        )
+        # The trigger only reserves; it cannot itself fill.
+        router.process(later)
+        book = SQLitePaperPositionJournal(self.home/"paper-positions.sqlite")
+        initial = book.load(router.monitored_position_ids[0])
+        self.assertEqual(initial.filled_exit_units, 0)
+        self.assertEqual(len(initial.exit_orders), 1)
+        fill_router = load_private_paper_routes(
+            self.home, enable_hypothetical_exit_fills=True,
+        )
+        subsequent = replace(
+            later, exchange_at_ms=NOW+2000, received_at_ms=NOW+2100,
+            cross_sequence=12,
+        )
+        fill_router.process(subsequent)
+        filled = book.load(router.monitored_position_ids[0])
+        self.assertGreater(filled.filled_exit_units, 0)
+        self.assertLess(filled.confirmed_remaining_units,
+                        initial.confirmed_remaining_units)
+
     def test_denies_stale_quote_without_side_effect(self):
         with self.assertRaises(DataValidationError):
             create_persistent_demo(

@@ -270,6 +270,7 @@ def run_owner_continuous_paper_worker(
     confirm_public_data_rights: bool = False,
     allow_private_paper_reservations: bool = False,
     enable_continuous_worker: bool = False,
+    simulate_explicit_demo_exit_fills: bool = False,
     should_stop: Callable[[], bool] | None = None,
 ) -> dict:
     """One resident owner process, no daemon installation or account API.
@@ -286,7 +287,8 @@ def run_owner_continuous_paper_worker(
         "network_attempted": False, "private_paper_journal_accessed": False,
         "orders_sent": False, "approved_for_live_use": False,
     }
-    if any(type(x) is not bool for x in flags):
+    if (any(type(x) is not bool for x in flags)
+            or type(simulate_explicit_demo_exit_fills) is not bool):
         raise DataValidationError("D444 explicit owner flags required")
     if not all(flags):
         return denied
@@ -315,6 +317,7 @@ def run_owner_continuous_paper_worker(
                     confirm_personal_readonly_research=True,
                     confirm_region_eligible=True,
                     allow_private_paper_reservations=True,
+                    simulate_explicit_demo_exit_fills=simulate_explicit_demo_exit_fills,
                     budget=TickerLeaseBudget(1, policy.max_frames,
                                              policy.lease_seconds),
                 ),

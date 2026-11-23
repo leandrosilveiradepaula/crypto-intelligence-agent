@@ -194,6 +194,7 @@ def observe_existing_held_paper_once(
     confirm_personal_readonly_research: bool = False,
     confirm_region_eligible: bool = False,
     allow_private_paper_reservations: bool = False,
+    simulate_explicit_demo_exit_fills: bool = False,
     budget: TickerLeaseBudget = TickerLeaseBudget(1, 20_000, 30),
     session_factory: Callable | None = None,
     offline_scope: OfflineReviewedStreamScope | None = None,
@@ -212,7 +213,8 @@ def observe_existing_held_paper_once(
         "j1_state_accessed": False, "orders_sent": False,
         "approved_for_live_use": False,
     }
-    if any(type(x) is not bool for x in gates):
+    if (any(type(x) is not bool for x in gates)
+            or type(simulate_explicit_demo_exit_fills) is not bool):
         raise DataValidationError("D445 gate types invalid")
     if not all(gates):
         return denied
@@ -222,6 +224,10 @@ def observe_existing_held_paper_once(
         raise DataValidationError("D445 finite multi-PAPER budget required")
     real = session_factory is None
     if not real:
+        if simulate_explicit_demo_exit_fills:
+            # Tests inject an already-configured router. Never alter it
+            # implicitly by supplying a side-channel runtime option.
+            raise DataValidationError("D483 demo fill mode requires real owner routes")
         if (not callable(session_factory)
                 or type(offline_router) is not PaperIntrahourQuoteRouter
                 or type(offline_scope) is not OfflineReviewedStreamScope
@@ -250,7 +256,18 @@ def observe_existing_held_paper_once(
         raise DataValidationError("D445 dedicated existing PAPER journal required")
     fd = exclusive_paper_operator_lock(private_paper_directory)
     try:
-        router = load_private_paper_routes(private_paper_directory)
+        if simulate_explicit_demo_exit_fills:
+            preview = load_private_paper_routes(private_paper_directory)
+            if preview.monitored_position_ids != (
+                "fixture_d426_ephemeral_position",
+            ):
+                # Opt-in is ONLY for the explicit D482 isolated demo,
+                # never for ordinary PAPER journals or account-like data.
+                raise DataValidationError("D483 demo-only route identity required")
+        router = load_private_paper_routes(
+            private_paper_directory,
+            enable_hypothetical_exit_fills=simulate_explicit_demo_exit_fills,
+        )
         held = tuple(sorted(router.monitored_symbols))
         try:
             scope = fetch_held_scope_from_public_rest(held)
@@ -277,6 +294,7 @@ def observe_existing_held_paper_once(
         report.update(
             data_mode="public_ws_observed_unverified",
             network_attempted=True, private_paper_journal_accessed=True,
+            explicit_demo_exit_fill_assumptions_enabled=simulate_explicit_demo_exit_fills,
         )
         return report
     finally:
