@@ -1,5 +1,12 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D503 — estado operacional na branch de produto (23/11/2026 UTC)
+
+Base verificada: `main` em `93142ca08f0c17cecd1ccc0944b5f23527a63679` após integração da PR #734. Branch de desenvolvimento `codex/paper-strategy-history-d502-d503`. Adicionado código de cruzamento configurável EMA [10,30,60] (períodos 2..120), warmup REST histórico adaptativo até 122 candles por ativo, validador D462 causal e interface de perfil PAPER. Os defaults existentes não mudam as operações ativas; a gravação de perfil continua exclusiva do owner e vale somente para sessões futuras. Regressões e CI pendentes neste ponto; nenhum checkout VPS, serviço, timer ou diário privado foi alterado.
+
+Última leitura administrativa antes das mudanças: `cia-paper-research-d498.service`, `cia-paper-config-d498.service`, `cia-j1-n50-ws.timer` ativos; 0 posições PAPER abertas, 1 ARBUSDT encerrada por STOP, `orders_sent=false`. A prioridade de implementação seguinte continua **arquivamento de rotas encerradas** e consulta de histórico sem permitir destruição de registros e sem usar múltiplos escritores financeiros. Não confundir código em branch, merge e release.
+
+
 ## D501 — reutilização segura de símbolos e histórico preservado (23/11/2026)
 
 Jornada de produto PAPER continuada após ARBUSDT SHORT **automaticamente fechado por STOP** em 18:23:50 UTC com saldo 0/437,1, sem ordem real e resultado condicional antes de funding de **-0,3349488558 USDT** (não é perda real).
