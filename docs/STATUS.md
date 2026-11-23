@@ -1,5 +1,12 @@
 # STATUS — Crypto Intelligence Agent
 
+## D503 — EMAs configuráveis com histórico ampliado (código em validação, 23/11/2026)
+
+Adicionado `entry_mode=ema_cross` opt-in no perfil owner, com períodos editáveis ordenados `ema_cross_periods=[10,30,60]` (faixa 2–120). A EMA rápida cruza a intermediária no último candle **confirmado** e o preço precisa ficar do mesmo lado da EMA de tendência. Volume mínimo continua configurável; o cruzamento não exige rompimento nem o veto de compressão ATR. Os cálculos usam Decimal, SMA de inicialização, somente candles fechados. Perfis legados sem novos campos permanecem no modo `breakout`.
+
+D461 amplia, somente quando necessário, o warmup REST imutável de 24 para no máximo 122 horas por ativo, mantendo 50 GETs para a coorte N50 e timestamps de observação originais; D462 continua exigindo 1 close WS final validado, sem promover o histórico REST a sinal confirmado. A UI configura apenas **novas sessões PAPER** e não altera posições existentes. Testes e CI ainda precisam ser conferidos; **não implantado na VPS**, não há ordem real, rentabilidade nem confirmação live de cruzamento. Histórico de posições e arquivo de rotas seguem como frente distinta D502, não declarar resolvidos.
+
+
 ## D501 — reutilização segura de símbolos e histórico preservado (23/11/2026)
 
 Jornada de produto PAPER continuada após ARBUSDT SHORT **automaticamente fechado por STOP** em 18:23:50 UTC com saldo 0/437,1, sem ordem real e resultado condicional antes de funding de **-0,3349488558 USDT** (não é perda real).
