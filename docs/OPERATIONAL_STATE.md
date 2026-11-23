@@ -1,5 +1,14 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D505 — continuação executada, bloqueio de acesso VPS preservado (23/11/2026)
+
+Repositório verificado: `main=9ca33f8c19d28d5002890551e190186cd7c4c806`, sem PRs abertas na leitura inicial. Ramificação de desenvolvimento `codex/paper-owner-qa-active-history-d505` (pendente revisão/merge). Desvio funcional detectado em D502: lista J5 limitada às 50 últimas posições por checkpoint poderia ocultar uma posição antiga ainda aberta. Correção proposta mantém últimas 50 + fixa posições abertas fora da janela, ordena abertas primeiro e não duplica abertas como histórico CLOSED. Teste real AUTO4 em diretório isolado reduz o limite de exibição a 1 para reproduzir evento com 2 posições; nenhuma posição/stop real é alterado.
+
+Novo pré-cutover `scripts/preflight_paper_owner_d505.py` valida exatamente o perfil owner seguro, contagens de posições e paginação D502 por inspeção read-only; sem rede, sem escrita, sem ordem, sem restart. Testes de dados AUTO4, perfil legado e EMA 10/30/60, permissão insegura, e sanitização de saída. Ainda não executado contra diário privado da VPS.
+
+**VPS lida pelo MCP:** `cia-paper-research-d498.service` e `cia-paper-config-d498.service` ativos, `cia-j1-n50-ws.timer` ativo; paper-session 0 open/1 closed ARBUSDT STOP; perfil owner atual EMA2, 1 USDT, 50x, alvos 50%/50%; research-preview 50 contratos, 13 hipóteses históricas, 7 candidatos relativos BTC (não são entradas WS). `/api/paper-history` responde 404 indicando binário anterior. `systemctl` exibe NRestarts=3 com ExecMainStatus=0 e um ciclo concluído normalmente, sem conclusão de parada permanente. Tentativa de `runuser` retornou "cannot set groups: Operation not permitted"; exec e stat de diretório privado owner falharam por acesso. **Bloqueio externo**: executar preflight owner e cutover não é possível com privilégios do MCP atual; não ampliar permissões sem gate. Próxima ação permitida: fechar CI/revisão no GitHub, integrar, preparar execução owner isolada para quando existir executor autorizado. Não exigir "prossiga" do PO nem afirmar release feito.
+
+
 ## D504 — checkpoint operacional após integração J2/J4/J5 (23/11/2026)
 
 **Código oficial** `main=090e4e07accb0a50958c40a9d13227625ac4300c`, PR #735 squash **MERGED**, HEAD validado `9c14a0a8739e694f37d9723df360a4d4e45d87d4`. CI do HEAD: Linux 3.590 PASS, Windows 3.590 PASS (665 skipped de POSIX) em run 45271593728; mobile/Chrome 45271593753 SUCCESS. Branch `codex/paper-strategy-history-d502-d503` permanece como histórico; não abrir PR paralela para mesma entrega.
