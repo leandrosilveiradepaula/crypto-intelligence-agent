@@ -44,6 +44,27 @@ class OwnerPaperConfigTests(unittest.TestCase):
         self.assertEqual(config.entry.first_tranche_fraction, Decimal("0.3"))
         self.assertEqual(config.limits.max_pending_open_orders, 5)
 
+    def test_d485_separate_optin_only_for_experimental_paper_profile(self):
+        data = json.loads(self.policy.read_text())
+        data["research"]["max_atr_ratio"] = "1.5"
+        data["research"]["min_quote_volume_ratio"] = "0.7"
+        self.policy.write_text(json.dumps(data))
+        with self.assertRaises(DataValidationError):
+            read_owner_paper_policy(self.policy)
+        data["research"]["experimental_paper_relaxation"] = True
+        self.policy.write_text(json.dumps(data))
+        experimental = read_owner_paper_policy(self.policy)
+        self.assertTrue(experimental.research.experimental_paper_relaxation)
+        self.assertEqual(experimental.research.max_atr_ratio, Decimal("1.5"))
+        self.assertEqual(experimental.research.min_quote_volume_ratio, Decimal("0.7"))
+        self.assertEqual(experimental.limits.max_market_age_ms, 3000)
+        self.assertEqual(experimental.leverage.for_new_positions, 50)
+        for invalid in ("true", 1, None):
+            data["research"]["experimental_paper_relaxation"] = invalid
+            self.policy.write_text(json.dumps(data))
+            with self.subTest(invalid=invalid), self.assertRaises(DataValidationError):
+                read_owner_paper_policy(self.policy)
+
     def test_long_finite_lease_reserves_enough_bounded_public_frames(self):
         with patch(
             "scripts.run_j2_j4_public_paper_resident_d453."

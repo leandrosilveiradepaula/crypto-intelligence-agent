@@ -92,11 +92,19 @@ def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
     )
     if root["schema_version"] != "d453-public-paper-research-policy-v1":
         raise DataValidationError("D453 unknown owner policy version")
-    r = _exact_keys(root["research"], {
+    required_research_keys = {
         "ema_period", "atr_period", "extrema_period", "quote_volume_period",
         "compression_bars", "baseline_bars", "max_atr_ratio",
         "min_quote_volume_ratio", "cooldown_bars",
-    }, "research")
+    }
+    r = root["research"]
+    if (type(r) is not dict or set(r) not in (
+            required_research_keys,
+            required_research_keys | {"experimental_paper_relaxation"})):
+        raise DataValidationError("D453 invalid research policy structure")
+    paper_relaxed = r.get("experimental_paper_relaxation", False)
+    if type(paper_relaxed) is not bool:
+        raise DataValidationError("D485 paper relaxation must be explicit boolean")
     features = FeatureConfig(
         r["ema_period"], r["atr_period"],
         r["extrema_period"], r["quote_volume_period"],
@@ -106,6 +114,7 @@ def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
         _d(r["max_atr_ratio"], "ATR ratio"),
         _d(r["min_quote_volume_ratio"], "volume ratio"),
         r["cooldown_bars"],
+        experimental_paper_relaxation=paper_relaxed,
     )
     p = _exact_keys(root["paper"], {
         "leverage", "margin_quote", "stop_distance_bps",

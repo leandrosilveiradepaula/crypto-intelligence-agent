@@ -130,6 +130,36 @@ class SyntheticEntryHypothesesTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             x.side = SyntheticSide.LONG
 
+    def test_d485_explicit_relaxed_paper_volume_is_not_silent_default(self):
+        from dataclasses import replace as dc_replace
+        sample = rows_long()
+        low_volume = sample[:-1] + (
+            dc_replace(sample[-1], quote_volume=D("7")),
+        )
+        standard = config(
+            max_atr_ratio=D("1"), min_quote_volume_ratio=D("1"),
+            cooldown_bars=0,
+        )
+        relaxed = config(
+            max_atr_ratio=D("1.5"), min_quote_volume_ratio=D("0.7"),
+            cooldown_bars=0, experimental_paper_relaxation=True,
+        )
+        self.assertEqual(len(run(low_volume, cfg=standard).candidates), 0)
+        observed = run(low_volume, cfg=relaxed)
+        self.assertEqual(len(observed.candidates), 1)
+        self.assertFalse(observed.approved_for_signals)
+        self.assertFalse(observed.orders_sent)
+        for args in (
+            {"max_atr_ratio": D("1.5")},
+            {"min_quote_volume_ratio": D("0.7")},
+            {"experimental_paper_relaxation": "yes"},
+            {"experimental_paper_relaxation": 1},
+            {"max_atr_ratio": D("2.01"), "experimental_paper_relaxation": True},
+            {"min_quote_volume_ratio": D("0.49"), "experimental_paper_relaxation": True},
+        ):
+            with self.subTest(args=args), self.assertRaises(DataValidationError):
+                config(**args)
+
     def test_strict_breakout_not_equal_barrier(self):
         xs = rows_long()
         modified = xs[:-1] + (replace(xs[-1], close=D(102), open=D(102)),)

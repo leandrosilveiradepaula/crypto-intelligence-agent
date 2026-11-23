@@ -484,6 +484,11 @@ class PublicPaperCycle:
                     and len({x[0] for x in self._closes.values()}) == 1,
                 "last_researched_closed_ms": self._prepared_close_ms,
                 "eligible_relative_btc_hypotheses": len(self._ranked),
+                "research_profile": (
+                    "experimental_paper_relaxed_breakout"
+                    if self._config.research.experimental_paper_relaxation
+                    else "strict_compression_breakout"
+                ),
                 "pending_paper_open_count": len(self._pending),
                 "held_paper_contract_count":
                     len(self._router.monitored_symbols) if self._router else 0,
