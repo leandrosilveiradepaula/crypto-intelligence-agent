@@ -147,8 +147,9 @@ async function loadPaperSession() {
   try {
     const d=await getJson("/api/paper-session");
     $("paper-session-details").textContent =
-      d.position_count+" posição(ões) persistida(s), "+
-      d.intents.length+" intenção(ões) PAPER. Ordens reais: NÃO.";
+      d.open_position_count+" em aberto · "+d.closed_position_count+
+      " encerrada(s) · "+d.intents.length+
+      " intenção(ões) PAPER. Ordens reais: NÃO.";
     const container=$("paper-session-rows");
     container.replaceChildren();
     for (const intent of d.intents) {
@@ -194,16 +195,41 @@ function showPositions(id,positions,emptyText) {
     root.textContent=emptyText;
     return;
   }
+  const statusLabel={OPEN:"Aberta",PARTIAL:"Saída parcial",CLOSED:"Encerrada"};
+  const closureLabel={STOP:"Stop PAPER",TARGETS:"Alvos PAPER",OTHER:"Outras saídas PAPER"};
   for (const p of positions) {
     const card=document.createElement("div");
-    card.className="row";
+    card.className="position-card";
     const symbol=document.createElement("strong");
-    symbol.textContent=p.symbol+" · "+p.side+" (PAPER)";
-    const detail=document.createElement("span");
+    symbol.textContent=p.symbol+" · "+p.side+" · "+
+      (statusLabel[p.status] || "PAPER");
+    const detail=document.createElement("div");
     detail.className="muted";
     detail.textContent="Saldo: "+p.remaining_units+
-      " / "+p.initial_units+" · saídas preenchidas: "+p.filled_exit_units;
-    card.append(symbol,detail);
+      " / "+p.initial_units+" · encerrado: "+p.filled_exit_units;
+    const levels=document.createElement("div");
+    levels.className="muted";
+    levels.textContent="Stop (mark): "+p.stop_mark_price+
+      " · Alvos: "+(p.target_prices || []).join(" / ")+
+      " · Margem: "+p.requested_margin_quote+" USDT · "+
+      p.leverage_at_intent+"x";
+    const summary=document.createElement("div");
+    summary.className="muted";
+    if (p.closure_reason && p.closure_reason!=="NONE") {
+      summary.textContent="Motivo do fechamento: "+
+        (closureLabel[p.closure_reason] || "saída PAPER");
+    }
+    const pnl=document.createElement("div");
+    pnl.className="muted";
+    if (p.conditional_result_before_funding_quote!==null &&
+        p.conditional_result_before_funding_quote!==undefined) {
+      pnl.textContent="Resultado PAPER estimado antes de funding: "+
+        p.conditional_result_before_funding_quote+" USDT"+
+        " (preços e custos hipotéticos; não é resultado na corretora)";
+    } else {
+      pnl.textContent="Resultado financeiro não disponível para esta demonstração.";
+    }
+    card.append(symbol,detail,levels,summary,pnl);
     root.append(card);
   }
 }

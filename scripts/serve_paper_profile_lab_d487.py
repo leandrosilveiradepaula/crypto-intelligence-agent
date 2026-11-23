@@ -23,14 +23,14 @@ from crypto_intelligence_agent.j2_rest_n50_history_d461 import (
     reopen_frozen_rest_n50_for_research, research_rest_n50_24h,
 )
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import (
-    _private_directory,
+    _private_directory, load_private_paper_routes,
 )
 from scripts.run_j2_j4_public_paper_resident_d453 import read_owner_paper_policy
 from crypto_intelligence_agent.paper_order_store import (
     SQLitePaperOrderJournal, _TABLES as ORDER_TABLES,
     _VERSION as ORDER_VERSION,
 )
-from crypto_intelligence_agent.paper_position_inspection import _read_database
+from crypto_intelligence_agent.paper_position_inspection import _read_database, inspect_paper_position
 from crypto_intelligence_agent.j5_owner_paper_positions_d446 import (
     read_owner_paper_positions, OwnerPaperPositionsUnavailable,
 )
@@ -120,18 +120,77 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
 
 
 def _project_positions(*, directory: Path) -> list[dict]:
-    """Project the existing validated J5 owner snapshot, not an alternate ledger."""
-    original = read_owner_paper_positions(directory=directory)
+    """Project checked AUTO4 PAPER balances, exits, and route levels to UI.
+
+    Never treat a recorded hypothetical FILL as a Bybit execution, nor
+    expose private position/order identifiers or a live exchange account.
+    """
+    original = read_owner_paper_positions(
+        directory=directory, include_conditional_pnl=True,
+    )
     if original.get("orders_sent") is not False:
         raise DataValidationError("PAPER-only snapshot required")
+    router = load_private_paper_routes(directory)
     projected = []
     for position in original["positions"]:
+        symbol = position["symbol_fixture"]
+        route = router._by_symbol.get(symbol)
+        if route is None:
+            raise DataValidationError("PAPER manifest missing a reported position")
+        b = inspect_paper_position(
+            directory / "paper-positions.sqlite", route.position_id,
+        ).balance
+        if (b.symbol != symbol or b.side.value != position["side"]
+                or str(b.initial_confirmed_units) != position["initial_confirmed_units"]
+                or str(b.confirmed_remaining_units) != position["confirmed_remaining_units"]
+                or str(b.filled_exit_units) != position["filled_exit_units"]):
+            raise DataValidationError("PAPER journal changed across readback")
+        status = (
+            "CLOSED" if b.confirmed_remaining_units == 0
+            else "PARTIAL" if b.filled_exit_units > 0 else "OPEN"
+        )
+        stop_fill = any(
+            x.tranche_step == -1 and x.snapshot.status.value == "FILLED"
+            for x in b.exit_orders
+        )
+        closure = (
+            "STOP" if status == "CLOSED" and stop_fill
+            else "TARGETS" if status == "CLOSED" and all(
+                x.filled_units == x.target_units for x in b.tranches
+            )
+            else "OTHER" if status == "CLOSED" else "NONE"
+        )
+        conditional = position.get("conditional_paper_pnl")
+        pnl = (
+            conditional.get("conditional_realized_before_funding_quote")
+            if type(conditional) is dict and conditional.get("status")
+               == "conditional_paper_reference_before_unverified_funding"
+            else None
+        )
+        margin = position["margin_intent_requested"]
         projected.append({
-            "symbol": position["symbol_fixture"],
+            "symbol": symbol,
             "side": position["side"],
+            "status": status,
+            "closure_reason": closure,
+            "opened_at_ms": b.opened_at_ms,
+            "as_of_ms": b.as_of_ms,
             "initial_units": position["initial_confirmed_units"],
             "remaining_units": position["confirmed_remaining_units"],
             "filled_exit_units": position["filled_exit_units"],
+            "leverage_at_intent": margin["leverage_at_intent"],
+            "requested_margin_quote": margin["requested_margin_quote"],
+            "stop_mark_price": str(route.stop_rule.stop_mark_price),
+            "target_prices": [
+                str(x) for x in route.target_policy.prices
+            ],
+            "exit_orders": [{
+                "kind": ("STOP" if x.tranche_step == -1 else "TARGET"),
+                "status": x.snapshot.status.value,
+                "filled_units": str(x.snapshot.filled_total_units),
+            } for x in b.exit_orders],
+            "conditional_result_before_funding_quote": pnl,
+            "funding_not_verified": True,
             "native_stop_verified": False,
             "real_orders_sent": False,
         })
@@ -145,7 +204,9 @@ def _paper_session_read(*, directory: Path) -> dict:
     positions = directory / "paper-positions.sqlite"
     if not orders.is_file() or not positions.is_file():
         return {"status":"paper_session_not_started",
-                "intents":[], "position_count":0, "positions":[], "orders_sent":False}
+                "intents":[], "position_count":0,
+                "open_position_count":0, "closed_position_count":0,
+                "positions":[], "orders_sent":False}
     with _read_database(
         orders, ORDER_TABLES, "paper_order_meta", ORDER_VERSION
     ) as db:
@@ -187,6 +248,12 @@ def _paper_session_read(*, directory: Path) -> dict:
         "status":"paper_journal_readback",
         "intents":intents,
         "position_count":position_count,
+        "open_position_count":sum(
+            1 for p in displayed if p["status"] != "CLOSED"
+        ),
+        "closed_position_count":sum(
+            1 for p in displayed if p["status"] == "CLOSED"
+        ),
         "positions":displayed,
         "orders_sent":False,
         "source":"owner_only_local_paper_sqlite",
