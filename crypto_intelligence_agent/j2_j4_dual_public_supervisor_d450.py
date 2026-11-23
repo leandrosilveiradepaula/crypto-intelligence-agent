@@ -150,11 +150,31 @@ def run_finite_n50_paper_streams(
         universe_at_ms=scope.observed_at_ms,
     )
     accepted = [0]
+    paper_clock_abstentions = [0]
 
     def handle_quote(quote) -> None:
         if risk_source is not None:
-            risk_source.observe_public_quote(quote)
-        cycle.on_public_quote(quote)
+            # D479: D385 admits bounded transport skew and lag; D452 may
+            # admit ONLY a fresh non-future mark into PAPER risk. Abstain
+            # on this quote, not on the healthy public socket. No order,
+            # synthetic fill, or held exit can use the rejected quote.
+            if not risk_source.usable_public_quote_clock(quote):
+                paper_clock_abstentions[0] += 1
+                return
+            try:
+                risk_source.observe_public_quote(quote)
+            except Exception as exc:
+                raise DataValidationError(
+                    "D450 PAPER risk callback failed"
+                ) from exc
+        try:
+            cycle.on_public_quote(quote)
+        except Exception as exc:
+            # Propagate rather than retry/ignore an unknown financial error.
+            # Only fixed stage labels reach status/Console, never error text.
+            raise DataValidationError(
+                "D450 PAPER cycle callback failed"
+            ) from exc
 
     def reset_session() -> None:
         if risk_source is not None:
@@ -216,6 +236,9 @@ def run_finite_n50_paper_streams(
             scope=scope, journal=journal, budget=budget.kline,
             on_confirmed_frame=confirmed,
             stop_requested=stop_paired_stream.is_set,
+            # Bounded gap marker in the existing SQLite journal, not a
+            # synthetic candle; J2 still requires causal complete history.
+            allow_declared_gaps=True,
             # D460: a real Bybit confirmed kline can legally carry its
             # latest-trade clock a few hundred milliseconds AFTER the
             # closed-hour end. The existing D1/J1 validator only permits
@@ -269,6 +292,7 @@ def run_finite_n50_paper_streams(
         "ticker_acks": ticker_result.subscriptions_acknowledged,
         "accepted_closed_callbacks": accepted[0],
         "accepted_public_ticker_callbacks": ticker_result.ticker_frames_accepted,
+        "paper_quote_clock_abstentions": paper_clock_abstentions[0],
         "kline_lease_status": kline_result.status,
         "ticker_lease_status": ticker_result.status,
         "kline_failure_category": kline_result.failure_category,

@@ -146,7 +146,7 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
 
     def run_streams(self, *, omit_close=None, omit_ack=False, allow=True,
                     risk_source=None, postclose_trade_clock=False,
-                    mixed_close_and_open=False):
+                    mixed_close_and_open=False, late_ticker_clock=False):
         ready = threading.Event()
         kc, tc = Clock(), Clock()
         last = [frame(s, 24) for s in self.symbols if s != omit_close]
@@ -184,7 +184,8 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
         kframes = ([] if omit_ack else [(ack(), RECEIPT)]) + last
         tframes = [
             (ack("cia-ticker-1"), RECEIPT),
-            (market_quote(ts=RECEIPT - 100, cs=10), RECEIPT),
+            (market_quote(ts=RECEIPT - (4000 if late_ticker_clock else 100),
+                          cs=10), RECEIPT),
             (market_quote(ts=RECEIPT + 400, cs=11), RECEIPT + 500),
             (market_quote(ts=RECEIPT + 1100, cs=12, mark="107.3"), RECEIPT + 1200),
         ]
@@ -214,6 +215,70 @@ class DualPublicStreamIntegrationTests(unittest.TestCase):
                 risk_source=risk_source,
             )
         return report, ks, ts
+
+    def test_d479_delayed_transport_ticker_does_not_kill_public_paper(self):
+        source = DurablePaperRiskSource(private_paper_directory=self.paper)
+        self.cycle._risk = source
+        result, _, _ = self.run_streams(
+            risk_source=source, late_ticker_clock=True,
+        )
+        self.assertEqual(result["status"], "finite_public_paper_research_closed")
+        self.assertEqual(result["paper_quote_clock_abstentions"], 1)
+        self.assertEqual(result["ticker_failure_category"], None)
+        self.assertEqual(result["accepted_public_ticker_callbacks"], 3)
+        self.assertFalse(result["orders_sent"])
+
+    def test_d479_future_and_lagged_marks_stay_out_of_paper_risk(self):
+        from crypto_intelligence_agent.bybit_public_ticker_state_d385 import BybitTickerQuote
+        from dataclasses import replace as dc_replace
+        source = DurablePaperRiskSource(private_paper_directory=self.paper)
+        q = BybitTickerQuote(
+            symbol="ETHUSDT", exchange_at_ms=RECEIPT + 500,
+            received_at_ms=RECEIPT, cross_sequence=1,
+            last_price=Decimal("105"), mark_price=Decimal("105"),
+            index_price=Decimal("105"), bid_price=Decimal("104.9"),
+            ask_price=Decimal("105.1"), bid_size=Decimal("1"),
+            ask_size=Decimal("1"), turnover_24h=None, volume_24h=None,
+            funding_rate=None,
+        )
+        self.assertFalse(source.usable_public_quote_clock(q))
+        self.assertFalse(source.usable_public_quote_clock(
+            dc_replace(q, exchange_at_ms=RECEIPT - 4000)))
+        self.assertTrue(source.usable_public_quote_clock(
+            dc_replace(q, exchange_at_ms=RECEIPT - 100)))
+
+    def test_d479_callback_stage_is_safe_and_not_labeled_bybit_failure(self):
+        source = DurablePaperRiskSource(private_paper_directory=self.paper)
+        self.cycle._risk = source
+        with patch.object(source, "observe_public_quote",
+                          side_effect=DataValidationError("D452 test")):
+            risk_report, _, _ = self.run_streams(risk_source=source)
+        self.assertEqual(risk_report["ticker_failure_category"],
+                         "paper_risk_callback_failed")
+        self.assertFalse(risk_report["orders_sent"])
+        with patch.object(self.cycle, "on_public_quote",
+                          side_effect=DataValidationError("D449 test")):
+            cycle_report, _, _ = self.run_streams(risk_source=source)
+        self.assertEqual(cycle_report["ticker_failure_category"],
+                         "paper_execution_callback_failed")
+        self.assertFalse(cycle_report["orders_sent"])
+
+    def test_d479_gap_enabled_only_as_explicit_journal_metadata(self):
+        from crypto_intelligence_agent.j2_j4_dual_public_supervisor_d450 import (
+            supervise_ws_research as actual,
+        )
+        options = []
+        def wrapped(**kwargs):
+            options.append(kwargs.get("allow_declared_gaps"))
+            return actual(**kwargs)
+        with patch(
+            "crypto_intelligence_agent.j2_j4_dual_public_supervisor_d450."
+            "supervise_ws_research", side_effect=wrapped,
+        ):
+            result, _, _ = self.run_streams()
+        self.assertEqual(options, [True])
+        self.assertEqual(result["accepted_closed_callbacks"], SIZE)
+        self.assertFalse(result["orders_sent"])
 
     def test_parallel_50_kline_and_ticker_ws_to_paper_and_partial(self):
         result, ks, ts = self.run_streams()

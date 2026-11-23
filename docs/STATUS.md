@@ -1,5 +1,14 @@
 # STATUS — Crypto Intelligence Agent
 
+## D479 — correção de integração PAPER após dados reais D476 (23/11/2026)
+
+D476 concluiu cinco coortes com **2.468.755** callbacks ticker públicos, closes **50+50+0+0+0**, seis hipóteses relativas ao BTC no ciclo 2, mas zero intenções e posições. Ciclos 1/2: `paper_cycle_callback_failed` sem causa interna preservada; ciclos 3/5: `frame_budget_exhausted`; ciclo 4: `ws_journal_gap_limit`. Não atribuir a falha antiga à Bybit ou ao motor de risco sem a exceção exata.
+
+D479 resolve duas incompatibilidades da integração: **(a)** D385 tolera até 30s de atraso/5s de skew futuro de envelopes para transporte, enquanto D452 só admite quote não futura com idade <=3s para pesquisa PAPER. D450 agora rejeita **somente essa cotação para ações PAPER** e mantém a sessão WSS, sem criar sinais, fills ou marcas artificiais; a saída interna registra `paper_quote_clock_abstentions`. **(b)** D450 utiliza `allow_declared_gaps=True` no journal J2 existente: horas não observadas entre leases ficam marcadas como lacunas transacionais limitadas a 168 horas, **nunca preenchidas por candles fictícios**, e a leitura causal J2 continua exigindo série válida antes de novas entradas. D478 já corrigiu o teto de 50k frames kline.
+
+Falhas desconhecidas continuam **fail-closed**, mas agora recebem classificação segura por estágio: `paper_risk_callback_failed` ou `paper_execution_callback_failed`; D453 e J5 leem apenas esses rótulos fixos. Regressões cobrem uma cotação transportada mas temporalmente inelegível, skew futuro, falhas de estágio e ativação do marcador de lacunas. **Implementação em branch não é prova de uma entrada PAPER pública**: exigir CI do SHA exato e nova prova pública FINITA antes de aceitar saúde, sem forçar sinal ou alterar regras financeiras. J1, serviço J5 instalado e negociações reais intocados; custo adicional zero.
+
+
 ## D478 — resultado real D476 e limite de frames J2 ajustado (23/11/2026)
 
 Na VPS `cia-d476-paper-20261122T211706Z.service` terminou **5/5 ciclos** (`D476_FIVE_CYCLES_FINISHED`, serviço inativo, saída 0) sob código fixado `ed2914aeef5430f496cba8513ae545f467595ad4`. Os closes reais confirmados por callback foram **[50, 50, 0, 0, 0]** e as cotações ticker públicas **[295328, 436380, 593925, 560061, 583061]**, total **2.468.755**. Todas as cinco tentativas terminaram `finite_public_paper_research_degraded`, com **0 intenções, 0 PENDING, 0 posições PAPER, nenhuma ordem real**. Primeiro ciclo: `ticker_failure_category=paper_cycle_callback_failed`, 0 hipóteses relativas ao BTC; segundo: mesma falha, mas **6 hipóteses relativas ao BTC**, ainda sem abertura. A causa interna do callback não consta no diagnóstico sanitizado, portanto não foi atribuída à Bybit ou ao risco sem prova. Terceiro e quinto: `kline_failure_category=frame_budget_exhausted`; quarto: `ws_journal_gap_limit`, sem fabricar candles faltantes. **Saída 0 do processo não significa operação PAPER saudável.**

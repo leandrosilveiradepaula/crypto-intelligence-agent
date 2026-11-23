@@ -157,6 +157,12 @@ def _safe_failure(error: Exception) -> str:
     return "internal_validation_failure"
 
 
+_PAPER_STAGED_FAILURES = {
+    "D450 PAPER risk callback failed": "paper_risk_callback_failed",
+    "D450 PAPER cycle callback failed": "paper_execution_callback_failed",
+}
+
+
 def _callback_failure(error: Exception) -> str:
     """Keep existing read-only coverage/held-feed contracts intact.
 
@@ -166,6 +172,9 @@ def _callback_failure(error: Exception) -> str:
     PAPER chain we need to distinguish from a Bybit parser rejection.
     """
     if isinstance(error, (DataGapError, DataValidationError)):
+        stage = _PAPER_STAGED_FAILURES.get(str(error))
+        if stage is not None:
+            return stage
         if str(error).startswith((
             "D449 ", "D452 ", "D463 ", "D447 ", "D448 ",
             "D425 ", "D391 ", "D394 ", "D453 ",

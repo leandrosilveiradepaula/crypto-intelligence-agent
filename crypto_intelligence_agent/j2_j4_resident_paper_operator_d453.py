@@ -387,6 +387,7 @@ def run_resident_paper_observer(
                 # D475: D473's PAPER callback status was omitted from
                 # D469 owner-only diagnostics, hiding the useful cause.
                 "paper_cycle_callback_failed",
+                "paper_risk_callback_failed", "paper_execution_callback_failed",
             ))
             return value if type(value) is str and value in safe else "none_or_unknown"
         paper = stream.get("paper_cycle")

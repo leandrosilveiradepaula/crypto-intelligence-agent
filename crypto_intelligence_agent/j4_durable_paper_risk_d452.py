@@ -91,6 +91,16 @@ class DurablePaperRiskSource:
         self._quotes: dict[str, BybitTickerQuote] = {}
         self._lock = threading.RLock()
 
+    def usable_public_quote_clock(self, quote: BybitTickerQuote) -> bool:
+        """A D385 transport-accepted quote may not be usable for PAPER.
+
+        Reject bounded server-future or delayed events as financial inputs,
+        without killing the public feed or manufacturing a fresh mark.
+        """
+        _checked_market(quote)
+        age = quote.received_at_ms - quote.exchange_at_ms
+        return 0 <= age <= self._limit
+
     def observe_public_quote(self, quote: BybitTickerQuote) -> None:
         """Only D386 post-ACK callback should call this; no provider auth claim."""
         _checked_market(quote)
