@@ -233,6 +233,31 @@ class D448PaperLifecycleTests(unittest.TestCase):
             quote=fresh, as_of_ms=fresh.received_at_ms)["status"],
             "hypothetical_open_fill_optin_required")
 
+    def test_d489_expired_pending_open_is_cancelled_without_fictitious_fill(self):
+        intent, args = self.pending()
+        self.arm(intent)
+        clock = args["now_ms"] + 60_500
+        expired = self.complete(intent, None, clock)
+        self.assertEqual(expired["status"], "paper_open_expired_cancelled")
+        entry = self.orders.load(intent)
+        self.assertEqual(entry.snapshot.status, PaperOrderStatus.CANCELLED)
+        self.assertEqual(len(entry.events), 1)
+        self.assertEqual(entry.events[0].kind.value, "CANCELLED")
+        self.assertEqual(entry.snapshot.filled_total_units, Decimal("0"))
+        self.assertFalse((self.home / "paper-routes.json").exists())
+
+    def test_d489_quote_after_fill_window_cannot_create_order_or_position(self):
+        intent, args = self.pending()
+        self.arm(intent)
+        delayed = replace(self.fill_quote(args),
+                          exchange_at_ms=args["now_ms"] + 61_000,
+                          received_at_ms=args["now_ms"] + 61_050)
+        expired = self.complete(intent, delayed, delayed.received_at_ms)
+        self.assertEqual(expired["status"], "paper_open_expired_cancelled")
+        self.assertEqual(self.orders.load(intent).snapshot.status,
+                         PaperOrderStatus.CANCELLED)
+        self.assertFalse((self.home / "paper-routes.json").exists())
+
     def test_immutable_plan_replay_tamper_and_permission_rejections(self):
         intent, args = self.pending()
         self.arm(intent)

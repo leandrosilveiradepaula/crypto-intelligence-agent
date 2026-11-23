@@ -14,6 +14,7 @@ from hashlib import sha256
 import os
 from pathlib import Path
 import threading
+import time
 from typing import Callable
 
 from .bybit_closed_stream_cache import HOUR_MS, OfflineReviewedStreamScope
@@ -260,6 +261,7 @@ class PublicPaperCycle:
                         intent_id=entry.intent.intent_id,
                         quote=None, as_of_ms=max(
                             entry.intent.created_at_ms, entry.snapshot.as_of_ms,
+                            time.time_ns() // 1_000_000,
                         ), enable_hypothetical_open_fill=True,
                     )
                 except DataValidationError:
@@ -271,6 +273,8 @@ class PublicPaperCycle:
                 elif result["status"] == "paper_position_routed_for_continuous_held_monitor":
                     self._reload_held()
                     self._count("recovered_position")
+                elif result["status"] == "paper_open_expired_cancelled":
+                    self._count("recovered_expired_paper_open")
                 else:
                     raise DataValidationError("D449 unknown recovered OPEN state")
 
@@ -391,6 +395,9 @@ class PublicPaperCycle:
                     del self._pending[quote.symbol]
                     self._reload_held()
                     self._count("paper_position_created")
+                elif outcome["status"] == "paper_open_expired_cancelled":
+                    del self._pending[quote.symbol]
+                    self._count("paper_open_expired_cancelled")
                 else:
                     self._count(outcome["status"])
                 return outcome["status"]

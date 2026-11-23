@@ -50,6 +50,7 @@ _MAX_MANIFEST_BYTES = 32_768
 _MAX_POSITIONS = 50
 _MAX_TIME_AGE_MS = 3_000
 _FILL_PREFIX = "fixture_d448_assumed_"
+_EXPIRE_PREFIX = "fixture_d448_expired_"
 
 
 def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict:
@@ -533,6 +534,25 @@ def materialize_observed_paper_entry(
         ):
             if saved.events:
                 raise DataValidationError("D448 unexpected OPEN state requires reconciliation")
+            # Expired PAPER openings must become terminal in the SAME AUTO2
+            # journal. No phantom FILL, position or broker order.
+            expired_at = (
+                now if quote is None else quote.received_at_ms
+            )
+            if expired_at - entry.intent.created_at_ms > policy.max_fill_wait_ms:
+                if quote is not None:
+                    _checked_market(quote)
+                    if quote.symbol != entry.intent.symbol:
+                        raise DataValidationError("D448 quote conflicts with OPEN expiry")
+                event = PaperOrderEvent(
+                    _EXPIRE_PREFIX + sha256(intent_id.encode("ascii")).hexdigest()[:24],
+                    PaperOrderEventKind.CANCELLED, expired_at,
+                )
+                orders.append_events(
+                    intent_id, (event,), as_of_ms=expired_at,
+                    opening_paper_health_path=position_path,
+                )
+                return _report("paper_open_expired_cancelled")
             if quote is None:
                 return _report("await_post_latency_bbo")
             _checked_market(quote)
