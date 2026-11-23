@@ -1,5 +1,10 @@
 # Jornadas — plano de execução
 
+## J4/J5 — D502 histórico de longa duração sem lista acumulada finita
+
+Arquivo de posições fechadas em sidecar privado imutável, somente quando 50 entradas ocupam o manifesto ativo. AUTO4 permanece fonte única de quantidades, eventos, PnL condicional e reentradas. Histórico de J5 em páginas de até 50, inclusive níveis de stop/alvos arquivados, com verificação de digest, owner e conservação. Não arquivar parcial, posição com reserva de saída não preenchida nem perder stop/target de posição ativa. **Sem publicação externa**, sem ordens reais e sem prometer proteção caso o processo pare.
+
+
 ## D501 — reutilização segura de símbolos e histórico preservado (23/11/2026)
 
 Jornada de produto PAPER continuada após ARBUSDT SHORT **automaticamente fechado por STOP** em 18:23:50 UTC com saldo 0/437,1, sem ordem real e resultado condicional antes de funding de **-0,3349488558 USDT** (não é perda real).
