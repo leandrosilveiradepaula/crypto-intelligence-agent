@@ -98,9 +98,12 @@ def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
         "min_quote_volume_ratio", "cooldown_bars",
     }
     r = root["research"]
-    if (type(r) is not dict or set(r) not in (
-            required_research_keys,
-            required_research_keys | {"experimental_paper_relaxation"})):
+    optional_research_keys = {
+        "experimental_paper_relaxation", "entry_mode", "ema_cross_periods",
+    }
+    if (type(r) is not dict
+            or not required_research_keys.issubset(r)
+            or set(r) - required_research_keys - optional_research_keys):
         raise DataValidationError("D453 invalid research policy structure")
     paper_relaxed = r.get("experimental_paper_relaxation", False)
     if type(paper_relaxed) is not bool:
@@ -115,6 +118,12 @@ def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
         _d(r["min_quote_volume_ratio"], "volume ratio"),
         r["cooldown_bars"],
         experimental_paper_relaxation=paper_relaxed,
+        entry_mode=r.get("entry_mode", "breakout"),
+        ema_cross_periods=(
+            tuple(r["ema_cross_periods"])
+            if type(r.get("ema_cross_periods")) is list else
+            r.get("ema_cross_periods")
+        ),
     )
     p = _exact_keys(root["paper"], {
         "leverage", "margin_quote", "stop_distance_bps",
