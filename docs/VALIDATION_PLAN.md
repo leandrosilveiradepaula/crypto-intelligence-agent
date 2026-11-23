@@ -1,5 +1,12 @@
 # Plano de validação e gates
 
+## D502/D503 — critérios adicionais da entrega integradora
+
+- Cross EMA opt-in: períodos 10/30/60 reproduzíveis em Decimal; sinal apenas no candle fechado mais recente, com filtro de EMA longa; período inválido/insuficiente causa abstenção, sem impacto em configuração legada. Warmup até 122h preserva 50 GETs por coorte e snapshots imutáveis separados do 24h original. REST histórico nunca é contado como WS confirmado.
+- Arquivo de posições: testar CLOSED arquivável, OPEN/partial não arquivável, idempotência e crash na fronteira arquivo/manifest; comparar contagens J5 vs journal intacto, acesso paginado seguro, arquivo manipulado/0600 inválido recusado, nunca alterar J1.
+- CI Linux, Windows e Chrome/mobile no SHA exato; revisão após falhas e merge sem implantação quando os gates verdes. Release VPS e ordens reais continuam exigindo gates próprios.
+
+
 ## D446 — leitura real do PAPER persistido no Console
 
 Testar seleção exclusivamente por manifesto D425 com dois contratos diferentes no mesmo SQLite owner, leitura RO de saldos e reservas, owner 0700/0600, symlink e troca de arquivo, manifest inválido e falha fechada. No HTTP loopback J5: GET-only, 503 sem opt-in, host/origin restritos, falha sanitizada sem path privado e resposta de tamanho limitado. No navegador mobile: contrato D407 permanece estrito e não há `localStorage` para snapshots, novo fetch apenas `/api/owner-paper-positions` quando localhost, sem credenciais, sem redirect, e importação JSON manual continua válida. Nenhuma solicitação HTTP externa, financeira ou com ordem real.
