@@ -7,6 +7,7 @@ const RESEARCH_INT = ["ema_period","atr_period","extrema_period",
   "quote_volume_period","compression_bars","baseline_bars","cooldown_bars"];
 const RESEARCH_DEC = ["max_atr_ratio","min_quote_volume_ratio"];
 let snapshot = null, edited = false;
+let historyCount = null, historyOffset = 50, loadedHistory = [];
 const status = (msg, error=false) => {
   $("status").textContent = msg;
   $("status").dataset.error = error ? "true" : "false";
@@ -41,6 +42,9 @@ function marginRoiFromPriceBps(bps, leverage) {
 function fill(model) {
   RESEARCH_INT.forEach(k => $("r-"+k).value = model.research[k]);
   RESEARCH_DEC.forEach(k => $("r-"+k).value = model.research[k]);
+  $("r-entry_mode").value = model.research.entry_mode || "breakout";
+  const cross = model.research.ema_cross_periods || [10,30,60];
+  ["fast","mid","trend"].forEach((k,i) => $("r-ma_"+k).value = cross[i]);
   $("r-experimental_paper_relaxation").checked =
     model.research.experimental_paper_relaxation === true;
   $("p-margin_quote").value = model.paper.margin_quote;
@@ -64,6 +68,16 @@ function collect() {
   RESEARCH_DEC.forEach(k => research[k] = numeric("r-"+k,100));
   research.experimental_paper_relaxation =
     $("r-experimental_paper_relaxation").checked;
+  research.entry_mode = $("r-entry_mode").value;
+  if (!["breakout","ema_cross"].includes(research.entry_mode)) {
+    throw new Error("Selecione uma regra de entrada válida.");
+  }
+  research.ema_cross_periods = ["fast","mid","trend"].map(
+    k => integer("r-ma_"+k,120,2));
+  const [fast,mid,trend] = research.ema_cross_periods;
+  if (!(fast < mid && mid < trend)) {
+    throw new Error("As EMAs devem ter períodos crescentes.");
+  }
   const leverage=integer("p-leverage",100,1);
   const t1=numeric("p-target1_roi",5000);
   const t2=numeric("p-target2_roi",5000);
@@ -148,8 +162,9 @@ async function loadPaperSession() {
     const d=await getJson("/api/paper-session");
     $("paper-session-details").textContent =
       d.open_position_count+" em aberto · "+d.closed_position_count+
-      " encerrada(s) · "+d.intents.length+
-      " intenção(ões) PAPER. Ordens reais: NÃO.";
+      " encerrada(s) · "+(d.intent_count ?? d.intents.length)+
+      " intenção(ões) PAPER (mais recentes: "+d.intents.length+
+      "). Ordens reais: NÃO.";
     const container=$("paper-session-rows");
     container.replaceChildren();
     for (const intent of d.intents) {
@@ -165,6 +180,13 @@ async function loadPaperSession() {
       container.append(row);
     }
     showPositions("paper-position-rows",d.positions || [],"Nenhuma posição automática preenchida.");
+    if (historyCount !== d.position_count) {
+      historyCount = d.position_count;
+      historyOffset = 50;
+      loadedHistory = [];
+      $("history-rows").replaceChildren();
+    }
+    $("history-next").disabled = !(d.position_count > historyOffset);
   } catch(e) {
     $("paper-session-details").textContent =
       "Diário da sessão ainda indisponível. Não presumir posições ou fills.";
@@ -185,6 +207,25 @@ async function loadPaperSession() {
       "Nenhuma posição demonstrativa registrada.");
   } catch(e) {
     $("paper-demo-rows").textContent="Diário demonstrativo indisponível.";
+  }
+}
+
+async function loadMoreHistory() {
+  const button = $("history-next");
+  button.disabled = true;
+  try {
+    const page = await getJson("/api/paper-history?offset="+historyOffset+"&limit=25");
+    if (page.schema_version !== "d502-owner-paper-history-page-v1" ||
+        page.orders_sent !== false || !Array.isArray(page.positions)) {
+      throw new Error("Página de histórico não validada.");
+    }
+    historyOffset += page.positions.length;
+    loadedHistory = loadedHistory.concat(page.positions);
+    showPositions("history-rows",loadedHistory,"Sem operações mais antigas.");
+    button.disabled = !page.more_available;
+  } catch(error) {
+    $("history-rows").textContent="Histórico indisponível: "+error.message;
+    button.disabled = false;
   }
 }
 
@@ -287,7 +328,8 @@ async function preview() {
 document.addEventListener("DOMContentLoaded",()=>{
   $("save").addEventListener("click",save);
   $("preview").addEventListener("click",preview);
-  document.querySelectorAll("input").forEach(node=>{
+  $("history-next").addEventListener("click",loadMoreHistory);
+  document.querySelectorAll("input,select").forEach(node=>{
     node.addEventListener("input",()=>{edited=true;});
     node.addEventListener("change",()=>{edited=true;});
   });

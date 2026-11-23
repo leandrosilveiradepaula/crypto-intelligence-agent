@@ -105,7 +105,7 @@ def read_causal_rest_warmup_ws_close(
             or frozen.captured_at_ms != history.captured_at_ms):
         raise DataGapError("D462 frozen historical archive was replaced")
     bars = dict(frozen.series)[symbol]
-    if (len(bars) != 24 or bars[-1].close_time_ms + 1 != open_ms
+    if (len(bars) != history.history_hours or bars[-1].close_time_ms + 1 != open_ms
             or any(c.quality != _REST for c in bars)
             or any(y.open_time_ms != x.open_time_ms + HOUR_MS
                    for x, y in zip(bars, bars[1:]))):
@@ -183,7 +183,7 @@ def read_causal_rest_warmup_ws_close(
         series=BybitClosedResearchSeries(
             recent, combined, registry, _STATUS,
         ),
-        rest_warmup_count=24,
+        rest_warmup_count=history.history_hours,
         ws_confirmed_close_count=1,
         last_ws_received_ms=received_ms,
         historical_rest_snapshot_sha256=frozen.digest_sha256,

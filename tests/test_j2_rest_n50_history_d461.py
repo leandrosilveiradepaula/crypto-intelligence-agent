@@ -31,7 +31,7 @@ END = NOW // HOUR * HOUR
 
 def historical_payload(symbol, start, end):
     bars = []
-    for n in range(23, -1, -1):
+    for n in range((end - start) // HOUR - 1, -1, -1):
         opened = start + n * HOUR
         v = Decimal("100") + Decimal(n) / Decimal(10)
         bars.append([
@@ -121,6 +121,46 @@ class ImmutableRestN50Tests(unittest.TestCase):
         self.assertTrue(all(row["provenance"].startswith("public_rest")
                             for row in report["rows"]))
         self.assertFalse(tuple(self.home.glob("paper-*.sqlite")))
+
+    def test_d503_ema60_history_uses_same_50_gets_and_separate_immutable_archive(self):
+        from crypto_intelligence_agent.synthetic_entry_hypotheses import CompressionBreakoutConfig
+        from crypto_intelligence_agent.synthetic_feature_engine import FeatureConfig
+        from decimal import Decimal
+        extended = capture_rest_n50_24h(
+            snapshot=self.snapshot, private_j2_directory=self.home,
+            client=self.client, wall_ms=lambda: NOW + 1500,
+            history_hours=62, **self.flags,
+        )
+        self.assertEqual(extended.history_hours, 62)
+        self.assertEqual(extended.sanitized_report()["validated_closed_candles"], 3100)
+        self.assertEqual(len(self.calls), 50)
+        self.assertIn("-w62.json", extended.snapshot_file.name)
+        opened = read_rest_n50_24h(
+            snapshot=self.snapshot, private_j2_directory=self.home,
+            window_end_ms=END, history_hours=62,
+        )
+        self.assertEqual(extended, opened)
+        again = reopen_frozen_rest_n50_for_research(
+            private_j2_directory=self.home,
+            filename=extended.snapshot_file.name,
+        )
+        self.assertEqual(again, extended)
+        cfg = CompressionBreakoutConfig(
+            FeatureConfig(2, 2, 2, 2), 2, 2,
+            Decimal("1"), Decimal("1"), entry_mode="ema_cross",
+            ema_cross_periods=(10, 30, 60),
+        )
+        study = research_rest_n50_24h(history=extended, config=cfg)
+        self.assertEqual(study["closed_candles_analyzed"], 3100)
+        self.assertEqual(len(self.calls), 50)
+        self.assertFalse(study["approved_for_signals"])
+        for invalid in (True, 23, 123):
+            with self.subTest(invalid=invalid), self.assertRaises(DataValidationError):
+                capture_rest_n50_24h(
+                    snapshot=self.snapshot, private_j2_directory=self.home,
+                    client=self.client, wall_ms=lambda: NOW + 1500,
+                    history_hours=invalid, **self.flags,
+                )
 
     def test_hourly_worker_reuses_same_frozen_1200_candles_after_new_n50_clock(self):
         initial = self.capture()

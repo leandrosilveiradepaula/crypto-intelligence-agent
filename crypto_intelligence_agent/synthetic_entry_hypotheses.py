@@ -33,6 +33,9 @@ class CompressionBreakoutConfig:
     min_quote_volume_ratio: Decimal
     cooldown_bars: int = 0
     experimental_paper_relaxation: bool = False
+    # D503: legacy profiles keep breakout. Cross strategy is explicit opt-in.
+    entry_mode: str = "breakout"
+    ema_cross_periods: tuple[int, int, int] | None = None
 
     def __post_init__(self) -> None:
         if type(self.features) is not FeatureConfig:
@@ -45,6 +48,21 @@ class CompressionBreakoutConfig:
             raise DataValidationError("cooldown_bars must be integer 0..500")
         if type(self.experimental_paper_relaxation) is not bool:
             raise DataValidationError("explicit experimental PAPER bool required")
+        if type(self.entry_mode) is not str or self.entry_mode not in ("breakout", "ema_cross"):
+            raise DataValidationError("D503 unknown J2 entry method")
+        periods = self.ema_cross_periods
+        if periods is not None:
+            if (type(periods) is not tuple or len(periods) != 3
+                    or any(type(x) is not int or not 2 <= x <= 120 for x in periods)
+                    or not periods[0] < periods[1] < periods[2]):
+                raise DataValidationError("D503 strictly ordered EMA 2..120 periods required")
+        if self.entry_mode == "ema_cross":
+            if periods is None:
+                raise DataValidationError("D503 EMA cross requires explicit periods")
+            if self.features.quote_volume_period + 1 > 122:
+                raise DataValidationError(
+                    "D503 EMA cross requires volume history within 122 closed bars"
+                )
         _numeric(self.max_atr_ratio, "max_atr_ratio", strictly_positive=True)
         max_atr = (
             Decimal("2") if self.experimental_paper_relaxation else Decimal("1")

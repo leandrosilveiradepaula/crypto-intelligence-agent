@@ -36,11 +36,12 @@ class ObservedBybitHypothesis:
     closed_at_ms: int
     earliest_research_at_ms: int
     close: Decimal
-    prior_breakout_level: Decimal
+    prior_breakout_level: Decimal | None
     ema_close: Decimal
-    atr_compression_ratio: Decimal
+    atr_compression_ratio: Decimal | None
     quote_volume_to_prior_mean: Decimal
     journal_digest_sha256: str
+    entry_rule: str = "breakout"
 
     @property
     def approved_for_signals(self) -> bool:
@@ -101,7 +102,7 @@ def _validated_observed_candles(
     identity = (first.exchange, first.market, first.symbol, first.interval)
     mixed = allow_causal_rest_ws_warmup and series.status == _MIXED_STATUS
     if mixed:
-        if (len(candles) != 25
+        if (not 25 <= len(candles) <= 123
                 or any(c.quality != _REST_HISTORICAL_QUALITY
                        for c in candles[:-1])
                 or candles[-1].quality != _QUALITY):
@@ -166,6 +167,11 @@ def evaluate_observed_bybit_research(
         allow_causal_rest_ws_warmup=allow_causal_rest_ws_warmup,
     )
     rows: list[CausalFeatureRow] = []
+    cross_periods = (
+        config.ema_cross_periods if config.entry_mode == "ema_cross" else ()
+    )
+    cross_state: list[Decimal | None] = [None for _ in cross_periods]
+    cross_history: list[tuple[Decimal | None, ...]] = []
     with localcontext(_MATH_CONTEXT):
         ema: Decimal | None = None
         atr: Decimal | None = None
@@ -183,6 +189,20 @@ def evaluate_observed_bybit_research(
                 )
             )
             ranges.append(true_range)
+            # D503: SMA-seeded, causal EMA history, no future candles or float.
+            for index, period in enumerate(cross_periods):
+                if i == period - 1:
+                    cross_state[index] = (
+                        sum((x.close for x in cs[:period]), Decimal(0))
+                        / Decimal(period)
+                    )
+                elif i >= period:
+                    alpha_cross = Decimal(2) / Decimal(period + 1)
+                    cross_state[index] = (
+                        cross_state[index] + alpha_cross
+                        * (c.close - cross_state[index])
+                    )
+            cross_history.append(tuple(cross_state))
             ep = config.features.ema_period
             ap = config.features.atr_period
             if i == ep - 1:
@@ -225,24 +245,55 @@ def evaluate_observed_bybit_research(
             if (last_emitted_index is not None
                     and i - last_emitted_index <= config.cooldown_bars):
                 continue
-            if (row.ema_close is None or row.preceding_high is None
-                    or row.preceding_low is None
-                    or row.quote_volume_to_prior_mean is None
+            if (row.quote_volume_to_prior_mean is None
                     or row.quote_volume_to_prior_mean < config.min_quote_volume_ratio):
                 continue
             prior_means = _prior_atr_means(feature_view, i, config)
+            # ATR compression is mandatory only for legacy breakout.
+            # In EMA-cross, unavailable ATR history is a nullable
+            # observation, never a veto or a fabricated numeric ratio.
             if prior_means is None:
-                continue
-            recent, baseline = prior_means
-            ratio = recent / baseline
-            if ratio > config.max_atr_ratio:
-                continue
-            if row.close > row.preceding_high and row.close > row.ema_close:
-                side, breakout = SyntheticSide.LONG, row.preceding_high
-            elif row.close < row.preceding_low and row.close < row.ema_close:
-                side, breakout = SyntheticSide.SHORT, row.preceding_low
+                if config.entry_mode != "ema_cross":
+                    continue
+                ratio = None
             else:
-                continue
+                recent, baseline = prior_means
+                ratio = recent / baseline
+            if config.entry_mode == "ema_cross":
+                # A latest-bar EMA fast/mid crossing requires the close on
+                # the same side of a third, independently configured EMA.
+                # Breakout and ATR-compression gates do not apply here.
+                if i < cross_periods[-1] + 1:
+                    continue
+                previous = cross_history[i - 1]
+                current_cross_emas = cross_history[i]
+                if any(v is None for v in previous + current_cross_emas):
+                    continue
+                fast, middle, trend = current_cross_emas
+                was_fast, was_middle, _ = previous
+                if was_fast <= was_middle and fast > middle and row.close > trend:
+                    side = SyntheticSide.LONG
+                elif was_fast >= was_middle and fast < middle and row.close < trend:
+                    side = SyntheticSide.SHORT
+                else:
+                    continue
+                breakout = (
+                    row.preceding_high if side is SyntheticSide.LONG
+                    else row.preceding_low
+                )
+                ema_reference = row.ema_close if row.ema_close is not None else trend
+            else:
+                if (row.ema_close is None or row.preceding_high is None
+                        or row.preceding_low is None
+                        or ratio is None or ratio > config.max_atr_ratio):
+                    continue
+                if row.close > row.preceding_high and row.close > row.ema_close:
+                    side, breakout = SyntheticSide.LONG, row.preceding_high
+                elif row.close < row.preceding_low and row.close < row.ema_close:
+                    side, breakout = SyntheticSide.SHORT, row.preceding_low
+                else:
+                    continue
+                ema_reference = row.ema_close
             last_emitted_index = i
             if i == len(rows) - 1:
                 current.append(ObservedBybitHypothesis(
@@ -251,10 +302,11 @@ def evaluate_observed_bybit_research(
                     earliest_research_at_ms=row.close_time_ms + close_safety_ms,
                     close=row.close,
                     prior_breakout_level=breakout,
-                    ema_close=row.ema_close,
+                    ema_close=ema_reference,
                     atr_compression_ratio=ratio,
                     quote_volume_to_prior_mean=row.quote_volume_to_prior_mean,
                     journal_digest_sha256=series.journal_digest_sha256,
+                    entry_rule=config.entry_mode,
                 ))
     return ObservedBybitResearch(
         status=("observed_hypothesis_not_authorized"

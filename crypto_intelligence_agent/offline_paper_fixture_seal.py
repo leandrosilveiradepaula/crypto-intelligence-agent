@@ -117,6 +117,12 @@ def seal_offline_paper_prefix(
             or type(close_safety_ms) is not int
             or not 0 <= close_safety_ms <= 86_400_000):
         raise DataValidationError("typed bounded offline fixture seal required")
+    # J6 synthetic prefix v1 is a *breakout-only* historical contract.
+    # Keep its canonical hashes byte-identical for legacy recovery. Do not
+    # serialize new public-research EMA fields or silently seal EMA mode as
+    # the old synthetic strategy.
+    if strategy.entry_mode != "breakout" or strategy.ema_cross_periods is not None:
+        raise DataValidationError("offline PAPER prefix v1 requires breakout strategy")
     _fixture_units(requested_units)
     now = _utc_ms(decision_at_ms, "decision_at_ms")
     candles = _checked_candles(
@@ -133,7 +139,7 @@ def seal_offline_paper_prefix(
         "strategy": {
             field.name: _scalar(getattr(strategy, field.name))
             for field in fields(CompressionBreakoutConfig)
-            if field.name != "features"
+            if field.name not in ("features", "entry_mode", "ema_cross_periods")
         },
         "venue_candidate": venue.value,
         "requested_units": _scalar(requested_units),

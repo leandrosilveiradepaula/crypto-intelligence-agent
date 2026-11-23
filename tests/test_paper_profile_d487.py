@@ -63,6 +63,28 @@ class OwnerPaperProfileTests(unittest.TestCase):
             save(self.file, revision=first["revision"],
                  edits={"research":{"ema_period": 15}})
 
+    def test_d503_configure_10_30_60_without_changing_existing_positions(self):
+        first = snapshot(self.file)
+        self.assertEqual(first["research"].get("entry_mode", "breakout"), "breakout")
+        after = save(self.file, revision=first["revision"], edits={
+            "research": {
+                "entry_mode": "ema_cross",
+                "ema_cross_periods": [10, 30, 60],
+            },
+        })
+        self.assertEqual(after["research"]["ema_cross_periods"], [10, 30, 60])
+        cfg = read_owner_paper_policy(self.file)
+        self.assertEqual(cfg.research.entry_mode, "ema_cross")
+        self.assertEqual(cfg.research.ema_cross_periods, (10, 30, 60))
+        self.assertEqual(cfg.leverage.for_new_positions, 50)
+        before = self.file.read_bytes()
+        for values in ([10, 10, 60], [30, 10, 60], [10, 30, 121], ["10", 30, 60]):
+            with self.subTest(values=values), self.assertRaises(DataValidationError):
+                save(self.file, revision=after["revision"], edits={
+                    "research": {"ema_cross_periods": values},
+                })
+            self.assertEqual(before, self.file.read_bytes())
+
     def test_invalid_research_leverage_and_tranches_keep_existing_bytes(self):
         old=snapshot(self.file)
         original=self.file.read_bytes()

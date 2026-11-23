@@ -387,8 +387,14 @@ def run_dynamic_public_paper_lease_once(
         if (snapshot.ticker_received_ms % 3_600_000
                 > 3_600_000 - 180_000):
             raise DataGapError("D462 too late to prepare safe REST warmup before WS close")
+        history_hours = (
+            max(24, config.research.ema_cross_periods[-1] + 2,
+                config.research.features.quote_volume_period + 1)
+            if config.research.entry_mode == "ema_cross" else 24
+        )
         rest_history = capture_rest_n50_24h(
             snapshot=snapshot, private_j2_directory=private_j2_directory,
+            history_hours=history_hours,
             allow_public_network=True,
             confirm_personal_readonly_research=True,
             confirm_region_eligible=True,
@@ -451,7 +457,8 @@ def run_dynamic_public_paper_lease_once(
         "public_feed_confirmed_24h_continuous": False,
         "preclosed_rest_history_warmup_enabled": rest_history is not None,
         "historical_rest_validated_closed_candles": (
-            24 * len(rest_history.series) if rest_history else 0
+            rest_history.history_hours * len(rest_history.series)
+            if rest_history else 0
         ),
         "historical_rest_digest_sha256": (
             rest_history.digest_sha256 if rest_history else None

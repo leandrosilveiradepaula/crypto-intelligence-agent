@@ -1,5 +1,19 @@
 # STATUS — Crypto Intelligence Agent
 
+## D502 — arquivo imutável de rotas CLOSED e histórico J5 paginado (código em validação, 23/11/2026)
+
+O manifesto D425 continua limitado a **50 rotas simultâneas**, mas deixa de usar o teto como limite para a quantidade total de operações históricas. Quando uma abertura PAPER nova encontra o manifesto cheio, D448 arquiva **somente rotas totalmente encerradas**, com journal AUTO4 reconciliado, como sidecars owner-only `paper-closed-route-<SHA256>.json` imutáveis. Arquivo é gravado e sincronizado ANTES da substituição atômica do manifesto. Reinício ou erro entre os passos não perde a rota original nem duplica o arquivo; entradas de posições ativas, parciais ou reservas pendentes não são removidas. O SQLite financeiro nunca é truncado, migrado ou destruído.
+
+J5 8766 passa a ler as últimas 50 posições do SQLite e disponibiliza `/api/paper-history?offset=N&limit=25` (limite 1..50) exclusivamente no loopback já autorizado, recuperando planos de rotas antigas pelo arquivo com digest validado, sem expor IDs financeiros. As contagens do painel incluem posições históricas além de 50 e intents recentes sem bloquear consulta. **Ainda não foi implantado na VPS**; PR #735 draft até CI e revisão. O uso de 50 como teto de **rotas ativas** é uma proteção de recursos, não meta de posições nem limite de histórico.
+
+
+## D503 — EMAs configuráveis com histórico ampliado (código em validação, 23/11/2026)
+
+Adicionado `entry_mode=ema_cross` opt-in no perfil owner, com períodos editáveis ordenados `ema_cross_periods=[10,30,60]` (faixa 2–120). A EMA rápida cruza a intermediária no último candle **confirmado** e o preço precisa ficar do mesmo lado da EMA de tendência. Volume mínimo continua configurável; o cruzamento não exige rompimento nem o veto de compressão ATR. Os cálculos usam Decimal, SMA de inicialização, somente candles fechados. Perfis legados sem novos campos permanecem no modo `breakout`.
+
+D461 amplia, somente quando necessário, o warmup REST imutável de 24 para no máximo 122 horas por ativo, mantendo 50 GETs para a coorte N50 e timestamps de observação originais; D462 continua exigindo 1 close WS final validado, sem promover o histórico REST a sinal confirmado. A UI configura apenas **novas sessões PAPER** e não altera posições existentes. Testes e CI ainda precisam ser conferidos; **não implantado na VPS**, não há ordem real, rentabilidade nem confirmação live de cruzamento. Histórico de posições e arquivo de rotas seguem como frente distinta D502, não declarar resolvidos.
+
+
 ## D501 — reutilização segura de símbolos e histórico preservado (23/11/2026)
 
 Jornada de produto PAPER continuada após ARBUSDT SHORT **automaticamente fechado por STOP** em 18:23:50 UTC com saldo 0/437,1, sem ordem real e resultado condicional antes de funding de **-0,3349488558 USDT** (não é perda real).

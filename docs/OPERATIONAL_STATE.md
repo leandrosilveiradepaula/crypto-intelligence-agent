@@ -1,5 +1,19 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D502 — evolução do monitor e histórico PAPER (23/11/2026)
+
+Branch `codex/paper-strategy-history-d502-d503`, PR #735. Em novo registro PAPER quando o manifesto D425 atinge 50 entradas, D448 libera espaço exclusivamente por arquivamento individual de rotas **CLOSED** persistidas, após revalidar saldos e reservas no mesmo journal AUTO4 já existente. Sidecar SHA256/0600/owner e publicação imutável com fsync e hardlink; arquivo existente deve corresponder byte a byte à rota original. Parada/crash antes do replace mantém o manifesto antigo válido. Não altera engine stop/target, order sender, J1 ou SQL. Leitura J5 de arquivo histórico paginada usando IDs explicitamente selecionados do mesmo SQLite e DTO sanitizado, sem fazer rede externa. Testes de rollover sob capacidade reduzida, idempotência, capacidade só ativa e arquivo corrompido adicionados.
+
+**Separação:** isto é código aguardando CI, **não** prova de rollover em 51 operações reais na VPS. Operador D498, perfil owner atual e posições históricas originais não foram alterados. Nenhuma conta, proteção nativa de corretora ou automação de ordens reais foi criada.
+
+
+## D503 — estado operacional na branch de produto (23/11/2026 UTC)
+
+Base verificada: `main` em `93142ca08f0c17cecd1ccc0944b5f23527a63679` após integração da PR #734. Branch de desenvolvimento `codex/paper-strategy-history-d502-d503`. Adicionado código de cruzamento configurável EMA [10,30,60] (períodos 2..120), warmup REST histórico adaptativo até 122 candles por ativo, validador D462 causal e interface de perfil PAPER. Os defaults existentes não mudam as operações ativas; a gravação de perfil continua exclusiva do owner e vale somente para sessões futuras. Regressões e CI pendentes neste ponto; nenhum checkout VPS, serviço, timer ou diário privado foi alterado.
+
+Última leitura administrativa antes das mudanças: `cia-paper-research-d498.service`, `cia-paper-config-d498.service`, `cia-j1-n50-ws.timer` ativos; 0 posições PAPER abertas, 1 ARBUSDT encerrada por STOP, `orders_sent=false`. A prioridade de implementação seguinte continua **arquivamento de rotas encerradas** e consulta de histórico sem permitir destruição de registros e sem usar múltiplos escritores financeiros. Não confundir código em branch, merge e release.
+
+
 ## D501 — reutilização segura de símbolos e histórico preservado (23/11/2026)
 
 Jornada de produto PAPER continuada após ARBUSDT SHORT **automaticamente fechado por STOP** em 18:23:50 UTC com saldo 0/437,1, sem ordem real e resultado condicional antes de funding de **-0,3349488558 USDT** (não é perda real).
