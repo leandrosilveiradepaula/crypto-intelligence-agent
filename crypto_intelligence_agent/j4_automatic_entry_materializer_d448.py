@@ -548,9 +548,11 @@ def materialize_observed_paper_entry(
                     _EXPIRE_PREFIX + sha256(intent_id.encode("ascii")).hexdigest()[:24],
                     PaperOrderEventKind.CANCELLED, expired_at,
                 )
+                # CANCELLED is never a fill: omit the health flag reserved
+                # for guarded hypothetical OPEN FILLs. AUTO2 still enforces
+                # monotonic timestamp, idempotency and status transitions.
                 orders.append_events(
                     intent_id, (event,), as_of_ms=expired_at,
-                    opening_paper_health_path=position_path,
                 )
                 return _report("paper_open_expired_cancelled")
             if quote is None:
