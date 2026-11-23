@@ -81,8 +81,14 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <section class="card">
 <h2>3. Intenções e posições PAPER com mercado real</h2>
 <p>Somente operações hipotéticas registradas no diário do motor, com ticker da Bybit. Uma intenção PENDING ainda NÃO é posição preenchida. Atualização local a cada 15 segundos.</p>
+<div id="paper-operator-status" class="notice">Monitor: ainda não confirmado. Stops são simulações locais, nunca ordens nativas.</div>
 <div id="paper-session-details" class="muted">Aguardando diário PAPER autorizado…</div>
 <div id="paper-session-rows" class="results" aria-live="polite"></div>
+<h2 style="margin-top:18px">Posições PAPER geradas por sinais</h2>
+<div id="paper-position-rows" class="results" aria-live="polite"></div>
+<h2 style="margin-top:18px">Operação demonstrativa separada</h2>
+<p>Entrada manual fictícia, com cotação pública de referência. Não é um sinal da estratégia horária.</p>
+<div id="paper-demo-rows" class="results" aria-live="polite"></div>
 </section>
 <section class="card">
 <h2>4. O que os candles reais mostram com este perfil?</h2>

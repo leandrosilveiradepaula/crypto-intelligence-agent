@@ -15,6 +15,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_profile_d487 import save, snapshot
@@ -35,6 +36,9 @@ from crypto_intelligence_agent.j5_owner_paper_positions_d446 import (
 )
 from crypto_intelligence_agent.paper_position_reservations import (
     _TABLES as POSITION_TABLES, _VERSION as POSITION_VERSION,
+)
+from crypto_intelligence_agent.j5_resident_paper_status_d456 import (
+    read_resident_paper_status, ResidentPaperStatusUnavailable,
 )
 
 HOST, PORT = "127.0.0.1", 8766
@@ -115,6 +119,25 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
 
 
 
+def _project_positions(*, directory: Path) -> list[dict]:
+    """Project the existing validated J5 owner snapshot, not an alternate ledger."""
+    original = read_owner_paper_positions(directory=directory)
+    if original.get("orders_sent") is not False:
+        raise DataValidationError("PAPER-only snapshot required")
+    projected = []
+    for position in original["positions"]:
+        projected.append({
+            "symbol": position["symbol_fixture"],
+            "side": position["side"],
+            "initial_units": position["initial_confirmed_units"],
+            "remaining_units": position["confirmed_remaining_units"],
+            "filled_exit_units": position["filled_exit_units"],
+            "native_stop_verified": False,
+            "real_orders_sent": False,
+        })
+    return projected
+
+
 def _paper_session_read(*, directory: Path) -> dict:
     """Integrity-checked readback of observed OPEN intent and durable positions."""
     _private_directory(directory)
@@ -122,7 +145,7 @@ def _paper_session_read(*, directory: Path) -> dict:
     positions = directory / "paper-positions.sqlite"
     if not orders.is_file() or not positions.is_file():
         return {"status":"paper_session_not_started",
-                "intents":[], "position_count":0,"orders_sent":False}
+                "intents":[], "position_count":0, "positions":[], "orders_sent":False}
     with _read_database(
         orders, ORDER_TABLES, "paper_order_meta", ORDER_VERSION
     ) as db:
@@ -153,17 +176,18 @@ def _paper_session_read(*, directory: Path) -> dict:
             "SELECT COUNT(*) FROM paper_positions",
         ).fetchone()[0]
     if materialized_count:
-        reader = read_owner_paper_positions(directory=directory)
-        position_count = len(reader["positions"])
+        displayed = _project_positions(directory=directory)
+        position_count = len(displayed)
         if position_count != materialized_count:
             raise DataValidationError("PAPER position readback mismatch")
     else:
-        position_count = 0
+        position_count, displayed = 0, []
     return {
         "schema_version":"d487-local-paper-session-readback-v1",
         "status":"paper_journal_readback",
         "intents":intents,
         "position_count":position_count,
+        "positions":displayed,
         "orders_sent":False,
         "source":"owner_only_local_paper_sqlite",
         "live_trading_authorized":False,
@@ -174,6 +198,7 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
     paper_file: Path | None = None
     history_directory: Path | None = None
     paper_session_directory: Path | None = None
+    demo_position_directory: Path | None = None
 
     def log_message(self, fmt, *args):
         # Never log arbitrary client path, private profile or JSON body.
@@ -218,6 +243,34 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
             except (DataValidationError, OSError, ValueError,
                     TypeError, OwnerPaperPositionsUnavailable):
                 return self._respond(503, {"status":"paper_session_not_ready"})
+        if self.path == "/api/paper-operator":
+            path = type(self).paper_session_directory
+            if path is None:
+                return self._respond(503, {"status":"paper_operator_reader_disabled"})
+            try:
+                x = read_resident_paper_status(
+                    directory=path, now_ms=time.time_ns() // 1_000_000,
+                )
+                return self._respond(200, x)
+            except (ResidentPaperStatusUnavailable, OSError, ValueError):
+                return self._respond(503, {
+                    "status":"no_fresh_operator_heartbeat",
+                    "paper_protection_verified":False,
+                })
+        if self.path == "/api/paper-demo":
+            path = type(self).demo_position_directory
+            if path is None:
+                return self._respond(503, {"status":"paper_demo_reader_disabled"})
+            try:
+                return self._respond(200, {
+                    "status":"separate_manual_paper_demo",
+                    "positions":_project_positions(directory=path),
+                    "orders_sent":False,
+                    "market_entry_signal":False,
+                })
+            except (DataValidationError, OSError, ValueError,
+                    OwnerPaperPositionsUnavailable, TypeError):
+                return self._respond(503, {"status":"paper_demo_not_available"})
         if self.path == "/api/profile":
             try:
                 return self._respond(200, snapshot(type(self).paper_file))
@@ -292,6 +345,7 @@ def main(argv=None) -> int:
     parser.add_argument("--policy-file", type=Path)
     parser.add_argument("--historical-directory", type=Path)
     parser.add_argument("--paper-session-directory", type=Path)
+    parser.add_argument("--demo-position-directory", type=Path)
     args=parser.parse_args(argv)
     if (args.enable_owner_paper_profile is not True
             or args.policy_file is None or args.historical_directory is None
@@ -305,6 +359,8 @@ def main(argv=None) -> int:
         _private_directory(args.historical_directory)
         if args.paper_session_directory is not None:
             _private_directory(args.paper_session_directory)
+        if args.demo_position_directory is not None:
+            _private_directory(args.demo_position_directory)
     except (DataValidationError,OSError,ValueError,TypeError):
         print(json.dumps({"status":"safe_profile_directory_unavailable",
                           "orders_sent":False}))
@@ -312,6 +368,7 @@ def main(argv=None) -> int:
     OwnerPaperProfileHandler.paper_file = args.policy_file
     OwnerPaperProfileHandler.history_directory = args.historical_directory
     OwnerPaperProfileHandler.paper_session_directory = args.paper_session_directory
+    OwnerPaperProfileHandler.demo_position_directory = args.demo_position_directory
     try:
         with HTTPServer((HOST,PORT),OwnerPaperProfileHandler) as srv:
             print(json.dumps({"status":"owner_paper_profile_loopback_ready",

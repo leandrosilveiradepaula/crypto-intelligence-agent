@@ -163,9 +163,48 @@ async function loadPaperSession() {
       row.append(a,b);
       container.append(row);
     }
+    showPositions("paper-position-rows",d.positions || [],"Nenhuma posição automática preenchida.");
   } catch(e) {
     $("paper-session-details").textContent =
       "Diário da sessão ainda indisponível. Não presumir posições ou fills.";
+    $("paper-position-rows").textContent="Estado não disponível.";
+  }
+  try {
+    const op=await getJson("/api/paper-operator");
+    $("paper-operator-status").textContent =
+      "Operador local: "+op.status+" · sessões: "+op.cycle_attempts+
+      ". Status recente, mas cobertura de stop e execução na corretora NÃO são garantidas.";
+  } catch(e) {
+    $("paper-operator-status").textContent =
+      "Operador sem confirmação recente. Não presumir stops ativos.";
+  }
+  try {
+    const d=await getJson("/api/paper-demo");
+    showPositions("paper-demo-rows",d.positions,
+      "Nenhuma posição demonstrativa registrada.");
+  } catch(e) {
+    $("paper-demo-rows").textContent="Diário demonstrativo indisponível.";
+  }
+}
+
+function showPositions(id,positions,emptyText) {
+  const root=$(id);
+  root.replaceChildren();
+  if (!positions || !positions.length) {
+    root.textContent=emptyText;
+    return;
+  }
+  for (const p of positions) {
+    const card=document.createElement("div");
+    card.className="row";
+    const symbol=document.createElement("strong");
+    symbol.textContent=p.symbol+" · "+p.side+" (PAPER)";
+    const detail=document.createElement("span");
+    detail.className="muted";
+    detail.textContent="Saldo: "+p.remaining_units+
+      " / "+p.initial_units+" · saídas preenchidas: "+p.filled_exit_units;
+    card.append(symbol,detail);
+    root.append(card);
   }
 }
 
