@@ -1,5 +1,12 @@
 # Decisões do produto
 
+## D503 — modo EMA CROSS opcional e compatibilidade com perfil existente (23/11/2026)
+
+Para atender a configuração manual de indicadores determinada pelo Product Owner, o motor J2 PAPER passa a reconhecer `entry_mode=breakout|ema_cross`, mantendo `breakout` quando os novos campos estão ausentes. O modo `ema_cross` exige três períodos EMA estritamente crescentes, configuráveis entre 2 e 120; o cruzamento rápida/intermediária deve acontecer na última vela fechada, e o fechamento confirma a direção diante da EMA longa. ATR é calculado para contexto, mas compressão/rompimento não é critério obrigatório desse modo; volume mínimo configurável, força relativa ao BTC, frescor, J3/RiskGate e PAPER permanecem. Não usar float, candle futuro, retorno OOS imaginário ou posição inventada.
+
+Histórico REST público imutável D461 recebe horizon do maior EMA + 2, limitado a 122 velas e sem duplicar os 50 GETs; snapshots de 24h existentes conservam o nome e formato, os maiores têm nomes versionados por horizonte. D462 liga o histórico a um fechamento WS causal para eventuais hipóteses no PAPER, sem alegar feed autenticado ou autorização para ordens reais. Só alterar sessões futuras após salvar; a mudança em código precisa passar CI e não ativa nenhuma operação na VPS.
+
+
 ## D501 — reutilização segura de símbolos e histórico preservado (23/11/2026)
 
 Jornada de produto PAPER continuada após ARBUSDT SHORT **automaticamente fechado por STOP** em 18:23:50 UTC com saldo 0/437,1, sem ordem real e resultado condicional antes de funding de **-0,3349488558 USDT** (não é perda real).
