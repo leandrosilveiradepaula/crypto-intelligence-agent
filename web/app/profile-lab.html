@@ -79,7 +79,13 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <button id="preview" class="secondary" disabled>Analisar histórico real disponível</button>
 </div>
 <section class="card">
-<h2>3. O que os candles reais mostram com este perfil?</h2>
+<h2>3. Intenções e posições PAPER com mercado real</h2>
+<p>Somente operações hipotéticas registradas no diário do motor, com ticker da Bybit. Uma intenção PENDING ainda NÃO é posição preenchida. Atualização local a cada 15 segundos.</p>
+<div id="paper-session-details" class="muted">Aguardando diário PAPER autorizado…</div>
+<div id="paper-session-rows" class="results" aria-live="polite"></div>
+</section>
+<section class="card">
+<h2>4. O que os candles reais mostram com este perfil?</h2>
 <p>Pesquisa de histórico público REST, não sinal validado por WebSocket e não execução PAPER. A amostra não autoriza negociação.</p>
 <div id="preview-details" class="muted">Clique em “Analisar histórico real disponível”.</div>
 <div id="preview-rows" class="results" aria-live="polite"></div>

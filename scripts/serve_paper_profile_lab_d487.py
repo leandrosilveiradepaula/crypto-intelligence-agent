@@ -25,6 +25,14 @@ from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import (
     _private_directory,
 )
 from scripts.run_j2_j4_public_paper_resident_d453 import read_owner_paper_policy
+from crypto_intelligence_agent.paper_order_store import (
+    SQLitePaperOrderJournal, _TABLES as ORDER_TABLES,
+    _VERSION as ORDER_VERSION,
+)
+from crypto_intelligence_agent.paper_position_inspection import _read_database
+from crypto_intelligence_agent.j5_owner_paper_positions_d446 import (
+    read_owner_paper_positions, OwnerPaperPositionsUnavailable,
+)
 
 HOST, PORT = "127.0.0.1", 8766
 HTML = Path(__file__).resolve().parents[1] / "web/app/profile-lab.html"
@@ -103,9 +111,51 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
     }
 
 
+
+def _paper_session_read(*, directory: Path) -> dict:
+    """Integrity-checked readback of observed OPEN intent and durable positions."""
+    _private_directory(directory)
+    orders = directory / "paper-orders.sqlite"
+    positions = directory / "paper-positions.sqlite"
+    if not orders.is_file() or not positions.is_file():
+        return {"status":"paper_session_not_started",
+                "intents":[], "position_count":0,"orders_sent":False}
+    with _read_database(
+        orders, ORDER_TABLES, "paper_order_meta", ORDER_VERSION
+    ) as db:
+        names = [x[0] for x in db.execute(
+            "SELECT intent_id FROM paper_order_intents "
+            "WHERE effect='OPEN' ORDER BY intent_id LIMIT 51"
+        )]
+        if len(names)>50:
+            raise DataValidationError("PAPER profile intent count bound exceeded")
+        intents=[]
+        for ident in names:
+            entry=SQLitePaperOrderJournal._checked_entry(db,ident)
+            intents.append({
+                "symbol":entry.intent.symbol,
+                "side":entry.intent.position_side.value,
+                "status":entry.snapshot.status.value,
+                "requested_units":str(entry.intent.requested_units),
+                "filled_units":str(entry.snapshot.filled_total_units),
+                "created_at_ms":entry.intent.created_at_ms,
+            })
+    reader=read_owner_paper_positions(directory=directory)
+    return {
+        "schema_version":"d487-local-paper-session-readback-v1",
+        "status":"paper_journal_readback",
+        "intents":intents,
+        "position_count":len(reader["positions"]),
+        "orders_sent":False,
+        "source":"owner_only_local_paper_sqlite",
+        "live_trading_authorized":False,
+    }
+
+
 class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
     paper_file: Path | None = None
     history_directory: Path | None = None
+    paper_session_directory: Path | None = None
 
     def log_message(self, fmt, *args):
         # Never log arbitrary client path, private profile or JSON body.
@@ -141,6 +191,15 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
             return self._respond(200, HTML.read_bytes(), "text/html; charset=utf-8")
         if self.path == "/profile-lab.js":
             return self._respond(200, JS.read_bytes(), "text/javascript; charset=utf-8")
+        if self.path == "/api/paper-session":
+            path = type(self).paper_session_directory
+            if path is None:
+                return self._respond(503, {"status":"paper_session_reader_disabled"})
+            try:
+                return self._respond(200,_paper_session_read(directory=path))
+            except (DataValidationError, OSError, ValueError,
+                    TypeError, OwnerPaperPositionsUnavailable):
+                return self._respond(503, {"status":"paper_session_not_ready"})
         if self.path == "/api/profile":
             try:
                 return self._respond(200, snapshot(type(self).paper_file))
@@ -214,6 +273,7 @@ def main(argv=None) -> int:
     parser.add_argument("--enable-owner-paper-profile", action="store_true")
     parser.add_argument("--policy-file", type=Path)
     parser.add_argument("--historical-directory", type=Path)
+    parser.add_argument("--paper-session-directory", type=Path)
     args=parser.parse_args(argv)
     if (args.enable_owner_paper_profile is not True
             or args.policy_file is None or args.historical_directory is None
@@ -225,12 +285,15 @@ def main(argv=None) -> int:
     try:
         read_owner_paper_policy(args.policy_file)
         _private_directory(args.historical_directory)
+        if args.paper_session_directory is not None:
+            _private_directory(args.paper_session_directory)
     except (DataValidationError,OSError,ValueError,TypeError):
         print(json.dumps({"status":"safe_profile_directory_unavailable",
                           "orders_sent":False}))
         return 65
     OwnerPaperProfileHandler.paper_file = args.policy_file
     OwnerPaperProfileHandler.history_directory = args.historical_directory
+    OwnerPaperProfileHandler.paper_session_directory = args.paper_session_directory
     try:
         with HTTPServer((HOST,PORT),OwnerPaperProfileHandler) as srv:
             print(json.dumps({"status":"owner_paper_profile_loopback_ready",

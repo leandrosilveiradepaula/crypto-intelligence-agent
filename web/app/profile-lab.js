@@ -143,6 +143,32 @@ async function save() {
     $("save").disabled = false;
   }
 }
+async function loadPaperSession() {
+  try {
+    const d=await getJson("/api/paper-session");
+    $("paper-session-details").textContent =
+      d.position_count+" posição(ões) persistida(s), "+
+      d.intents.length+" intenção(ões) PAPER. Ordens reais: NÃO.";
+    const container=$("paper-session-rows");
+    container.replaceChildren();
+    for (const intent of d.intents) {
+      const row=document.createElement("div");
+      row.className="row";
+      const a=document.createElement("strong");
+      a.textContent=intent.symbol+" · "+intent.side;
+      const b=document.createElement("span");
+      b.className="muted";
+      b.textContent=intent.status+" · preenchido "+intent.filled_units+
+        " / "+intent.requested_units+" (PAPER)";
+      row.append(a,b);
+      container.append(row);
+    }
+  } catch(e) {
+    $("paper-session-details").textContent =
+      "Diário da sessão ainda indisponível. Não presumir posições ou fills.";
+  }
+}
+
 async function preview() {
   if (!snapshot) return;
   if (edited) {
@@ -198,5 +224,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     node.addEventListener("change",()=>{edited=true;});
   });
   load();
+  loadPaperSession();
+  setInterval(loadPaperSession,15000);
 });
 })();
