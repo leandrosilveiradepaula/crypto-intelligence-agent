@@ -38,7 +38,7 @@ class ObservedBybitHypothesis:
     close: Decimal
     prior_breakout_level: Decimal | None
     ema_close: Decimal
-    atr_compression_ratio: Decimal
+    atr_compression_ratio: Decimal | None
     quote_volume_to_prior_mean: Decimal
     journal_digest_sha256: str
     entry_rule: str = "breakout"
@@ -249,10 +249,16 @@ def evaluate_observed_bybit_research(
                     or row.quote_volume_to_prior_mean < config.min_quote_volume_ratio):
                 continue
             prior_means = _prior_atr_means(feature_view, i, config)
+            # ATR compression is mandatory only for legacy breakout.
+            # In EMA-cross, unavailable ATR history is a nullable
+            # observation, never a veto or a fabricated numeric ratio.
             if prior_means is None:
-                continue
-            recent, baseline = prior_means
-            ratio = recent / baseline
+                if config.entry_mode != "ema_cross":
+                    continue
+                ratio = None
+            else:
+                recent, baseline = prior_means
+                ratio = recent / baseline
             if config.entry_mode == "ema_cross":
                 # A latest-bar EMA fast/mid crossing requires the close on
                 # the same side of a third, independently configured EMA.
@@ -279,7 +285,7 @@ def evaluate_observed_bybit_research(
             else:
                 if (row.ema_close is None or row.preceding_high is None
                         or row.preceding_low is None
-                        or ratio > config.max_atr_ratio):
+                        or ratio is None or ratio > config.max_atr_ratio):
                     continue
                 if row.close > row.preceding_high and row.close > row.ema_close:
                     side, breakout = SyntheticSide.LONG, row.preceding_high
