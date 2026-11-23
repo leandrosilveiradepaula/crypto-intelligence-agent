@@ -14,7 +14,9 @@ from pathlib import Path
 import signal
 
 from crypto_intelligence_agent.bybit_public_ticker_supervisor_d386 import TickerLeaseBudget
-from crypto_intelligence_agent.bybit_ws_supervisor import WSRunBudget
+from crypto_intelligence_agent.bybit_ws_supervisor import (
+    MAX_FRAMES as MAX_KLINE_WS_FRAMES, WSRunBudget,
+)
 from crypto_intelligence_agent.j2_j4_dual_public_supervisor_d450 import DualPaperLeaseBudget
 from crypto_intelligence_agent.j2_j4_public_paper_cycle_d449 import PaperPublicCycleConfig
 from crypto_intelligence_agent.j2_j4_resident_paper_operator_d453 import (
@@ -210,8 +212,17 @@ def main(argv: list[str] | None = None) -> int:
         private_paper_directory=args.paper_directory,
         config=config, policy=ResidentPaperRunPolicy(
             DualPaperLeaseBudget(
-                WSRunBudget(max_sessions=args.public_ws_sessions, max_frames=50_000,
-                            max_seconds=args.lease_seconds),
+                # D478: real D476 hour-long leases exhausted the previous
+                # fixed 50k kline-frame cap before the hourly close. Scale
+                # for 50 topics, without exceeding the supervisor hard cap.
+                WSRunBudget(
+                    max_sessions=args.public_ws_sessions,
+                    max_frames=min(
+                        MAX_KLINE_WS_FRAMES,
+                        max(50_000, args.lease_seconds * 64),
+                    ),
+                    max_seconds=args.lease_seconds,
+                ),
                 # A 50-symbol ticker stream can produce >150 market
                 # frames/sec. Keeping the default 50k cap for a 25min
                 # public lease would end before the hourly candle close.

@@ -44,7 +44,7 @@ class OwnerPaperConfigTests(unittest.TestCase):
         self.assertEqual(config.entry.first_tranche_fraction, Decimal("0.3"))
         self.assertEqual(config.limits.max_pending_open_orders, 5)
 
-    def test_long_finite_lease_reserves_enough_public_ticker_frames(self):
+    def test_long_finite_lease_reserves_enough_bounded_public_frames(self):
         with patch(
             "scripts.run_j2_j4_public_paper_resident_d453."
             "run_resident_paper_observer",
@@ -63,12 +63,37 @@ class OwnerPaperConfigTests(unittest.TestCase):
             ])
         self.assertEqual(code, 0)
         budget = runner.call_args.kwargs["policy"].budget
-        self.assertEqual(budget.kline.max_frames, 50_000)
+        self.assertEqual(budget.kline.max_frames, 96_000)
         self.assertEqual(budget.kline.max_sessions, 3)
         self.assertEqual(budget.ticker.max_sessions, 3)
         self.assertEqual(budget.ticker.max_frames, 1_500_000)
         self.assertEqual(budget.ticker.max_seconds, 1500)
         self.assertTrue(runner.call_args.kwargs["auto_capture_rest_warmup"])
+        self.assertFalse((self.home / "paper").exists())
+
+    def test_hour_long_kline_budget_reaches_safe_supervisor_cap(self):
+        # D476 cycles 3 and 5 hit the old 50k kline limit before close.
+        # Preserve the upstream 200k hard cap; no network or journal writes.
+        with patch(
+            "scripts.run_j2_j4_public_paper_resident_d453."
+            "run_resident_paper_observer",
+            return_value={"status": "bounded_run_completed", "orders_sent": False},
+        ) as runner:
+            code = main([
+                "--j2-directory", str(self.home / "j2"),
+                "--paper-directory", str(self.home / "paper"),
+                "--policy-file", str(self.policy),
+                "--lease-seconds", "3580", "--max-cycles", "1",
+                "--allow-public-network", "--allow-public-websocket",
+                "--confirm-personal-readonly-research",
+                "--confirm-region-eligible", "--confirm-public-data-rights",
+                "--enable-hypothetical-paper-cycle",
+            ])
+        self.assertEqual(code, 0)
+        budget = runner.call_args.kwargs["policy"].budget
+        self.assertEqual(budget.kline.max_frames, 200_000)
+        self.assertEqual(budget.kline.max_seconds, 3580)
+        self.assertEqual(budget.ticker.max_frames, 3_580_000)
         self.assertFalse((self.home / "paper").exists())
 
     def test_unbounded_public_ws_reconnect_rejected_before_network(self):
