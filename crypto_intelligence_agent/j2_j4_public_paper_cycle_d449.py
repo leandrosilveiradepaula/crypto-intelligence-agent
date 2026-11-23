@@ -379,7 +379,16 @@ class PublicPaperCycle:
             if self._router is not None and quote.symbol in self._router.monitored_symbols:
                 lock = exclusive_paper_operator_lock(self._home)
                 try:
-                    self._router.process(quote)
+                    try:
+                        self._router.process(quote)
+                    except DataGapError:
+                        # A reconnect may replay an older exchange timestamp
+                        # after the new WS ACK. This quote is noncausal and
+                        # must NOT reserve an exit, but it must not tear down
+                        # all 50 public subscriptions either. Financial
+                        # validation/other unexpected errors still fail closed.
+                        self._count("held_quote_noncausal_abstained")
+                        return "held_quote_noncausal_abstained"
                 finally:
                     os.close(lock)
                 self._count("held_exit_quote_processed")

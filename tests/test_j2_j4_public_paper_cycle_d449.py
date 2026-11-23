@@ -248,6 +248,45 @@ class Provisional50PaperCycleTests(unittest.TestCase):
         self.assertEqual(fresh.sanitized_report()["held_paper_contract_count"], 1)
         self.assertEqual(len(ledger.load(position_id).exit_orders), 1)
 
+    def test_d499_held_noncausal_quote_abstains_without_stopping_50_symbol_research(self):
+        self.all_closes()
+        self.assertEqual(self.cycle.on_public_quote(ticker()),
+                         "paper_open_pending_armed")
+        self.assertEqual(
+            self.cycle.on_public_quote(ticker(at=RECEIPT + 500, seq=11)),
+            "paper_position_routed_for_continuous_held_monitor")
+        with patch(
+            "crypto_intelligence_agent.j2_j4_public_paper_cycle_d449."
+            "PaperIntrahourQuoteRouter.process",
+            side_effect=DataGapError("private stale public quote"),
+        ):
+            self.assertEqual(
+                self.cycle.on_public_quote(
+                    ticker(at=RECEIPT + 700, seq=12)),
+                "held_quote_noncausal_abstained",
+            )
+        self.assertEqual(
+            self.cycle.sanitized_report()["event_counts"][
+                "held_quote_noncausal_abstained"], 1,
+        )
+        router = load_private_paper_routes(self.private)
+        position = SQLitePaperPositionJournal(
+            self.private / "paper-positions.sqlite"
+        ).load(router.monitored_position_ids[0])
+        self.assertEqual(position.filled_exit_units, 0)
+        self.assertEqual(len(position.exit_orders), 0)
+        # A later valid market observation resumes the same journal/position.
+        self.assertEqual(
+            self.cycle.on_public_quote(
+                ticker(at=RECEIPT + 1200, mark="107.3", seq=13)),
+            "no_new_paper_candidate",
+        )
+        self.assertEqual(
+            len(SQLitePaperPositionJournal(
+                self.private / "paper-positions.sqlite"
+            ).load(router.monitored_position_ids[0]).exit_orders), 1,
+        )
+
     def test_paper_candidate_waits_for_refreshed_contract_and_new_quote(self):
         self.all_closes()
         seen = []

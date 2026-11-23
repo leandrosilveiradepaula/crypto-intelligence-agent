@@ -175,10 +175,20 @@ def run_held_paper_without_n50(
     book = BybitPublicTickerBook(
         ranked_symbols=held, universe_at_ms=start_at,
     )
+    callbacks_accepted = [0]
+    noncausal_abstentions = [0]
     def on_quote(quote):
         fd = exclusive_paper_operator_lock(home)
         try:
-            router.process(quote)
+            try:
+                router.process(quote)
+            except DataGapError:
+                # Old exchange timestamps/replayed sequences cannot be used
+                # for a PAPER exit. Abstain on this specific quote, not the
+                # entire valid held-only public subscription.
+                noncausal_abstentions[0] += 1
+                return
+            callbacks_accepted[0] += 1
         finally:
             os.close(fd)
     report = supervise_public_tickers(
@@ -192,8 +202,11 @@ def run_held_paper_without_n50(
         "status": (
             "held_paper_lease_completed"
             if report.status == "lease_completed"
+            and callbacks_accepted[0] > 0
             else "held_paper_lease_degraded"
         ),
+        "held_financial_quote_callbacks": callbacks_accepted[0],
+        "held_noncausal_quote_abstentions": noncausal_abstentions[0],
         "data_mode": (
             "injected_offline_protocol_replay"
             if injected else "public_ws_observed_unverified"
