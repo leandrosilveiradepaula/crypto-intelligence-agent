@@ -1,5 +1,12 @@
 # Decisões do produto
 
+## D502 — preservação do histórico sem diluir limite operacional do monitor
+
+Manter máximo de 50 *rotas monitoradas simultaneamente* por supervisor para controle de recursos; não impor esse teto ao arquivo histórico acumulado. Quando o manifesto estiver cheio, somente uma rota com `remaining=0`, `reserved_unfilled=0` e `filled_exit=initial` no ledger AUTO4 pode ser migrada para sidecar owner-only individual, imutável e verificável. Não escrever no journal financeiro nem remover histórico. Gravar e fsync o arquivo **antes** de substituir atomicamente o manifesto; retries não sobrescrevem arquivo. Leitura paginada a partir do SQLite com fallback para rota arquivada, sem listar IDs publicamente. Se todo o manifesto estiver ativo, rejeitar nova entrada e manter proteção existente.
+
+Manter deploy VPS e leitura pública externa fora de escopo. A versão precisa passar CI e teste de recuperação antes de integração; histórico não pode ser interpretado como fills de mercado.
+
+
 ## D503 — modo EMA CROSS opcional e compatibilidade com perfil existente (23/11/2026)
 
 Para atender a configuração manual de indicadores determinada pelo Product Owner, o motor J2 PAPER passa a reconhecer `entry_mode=breakout|ema_cross`, mantendo `breakout` quando os novos campos estão ausentes. O modo `ema_cross` exige três períodos EMA estritamente crescentes, configuráveis entre 2 e 120; o cruzamento rápida/intermediária deve acontecer na última vela fechada, e o fechamento confirma a direção diante da EMA longa. ATR é calculado para contexto, mas compressão/rompimento não é critério obrigatório desse modo; volume mínimo configurável, força relativa ao BTC, frescor, J3/RiskGate e PAPER permanecem. Não usar float, candle futuro, retorno OOS imaginário ou posição inventada.
