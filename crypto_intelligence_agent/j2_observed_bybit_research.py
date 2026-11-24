@@ -22,6 +22,7 @@ from .synthetic_feature_engine import (
     CausalFeatureRow, MAX_CANDLES, _MATH_CONTEXT, _numeric,
 )
 from .synthetic_position_state import SyntheticSide
+from .j2_configurable_indicators_d513 import combination_directions
 
 _QUALITY = "bybit_public_ws_confirmed_unverified"
 _REST_HISTORICAL_QUALITY = "bybit_public_rest_historical_closed_unverified"
@@ -37,7 +38,7 @@ class ObservedBybitHypothesis:
     earliest_research_at_ms: int
     close: Decimal
     prior_breakout_level: Decimal | None
-    ema_close: Decimal
+    ema_close: Decimal | None
     atr_compression_ratio: Decimal | None
     quote_volume_to_prior_mean: Decimal
     journal_digest_sha256: str
@@ -166,6 +167,15 @@ def evaluate_observed_bybit_research(
         allow_rest_historical_research=allow_rest_historical_research,
         allow_causal_rest_ws_warmup=allow_causal_rest_ws_warmup,
     )
+    custom = config.entry_mode == "indicator_combo"
+    if custom and len(cs) < config.indicators.minimum_closed_bars(
+            config.features.quote_volume_period):
+        return ObservedBybitResearch(
+            status="observed_no_hypothesis",
+            evaluated_candle_count=len(cs), hypotheses=(),
+            journal_digest_sha256=series.journal_digest_sha256,
+        )
+    custom_states = combination_directions(cs, config.indicators) if custom else ()
     rows: list[CausalFeatureRow] = []
     cross_periods = (
         config.ema_cross_periods if config.entry_mode == "ema_cross" else ()
@@ -253,13 +263,22 @@ def evaluate_observed_bybit_research(
             # In EMA-cross, unavailable ATR history is a nullable
             # observation, never a veto or a fabricated numeric ratio.
             if prior_means is None:
-                if config.entry_mode != "ema_cross":
+                if config.entry_mode == "breakout":
                     continue
                 ratio = None
             else:
                 recent, baseline = prior_means
                 ratio = recent / baseline
-            if config.entry_mode == "ema_cross":
+            if custom:
+                if (i == 0 or custom_states[i] not in (1, -1)
+                        or custom_states[i - 1] is None
+                        or custom_states[i - 1] == custom_states[i]):
+                    continue
+                side = SyntheticSide.LONG if custom_states[i] == 1 else SyntheticSide.SHORT
+                breakout = None
+                ema_reference = None
+                ratio = None
+            elif config.entry_mode == "ema_cross":
                 # A latest-bar EMA fast/mid crossing requires the close on
                 # the same side of a third, independently configured EMA.
                 # Breakout and ATR-compression gates do not apply here.

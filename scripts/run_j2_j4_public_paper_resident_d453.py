@@ -30,6 +30,7 @@ from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import (
 from crypto_intelligence_agent.market_data import DataValidationError
 from crypto_intelligence_agent.paper_risk_gate import PaperRiskLimits
 from crypto_intelligence_agent.synthetic_entry_hypotheses import CompressionBreakoutConfig
+from crypto_intelligence_agent.j2_configurable_indicators_d513 import parse_indicator_selection
 from crypto_intelligence_agent.synthetic_feature_engine import FeatureConfig
 from crypto_intelligence_agent.synthetic_partial_exits import ExitBasis, SyntheticExitTranche
 from crypto_intelligence_agent.synthetic_position_state import SyntheticLeverageSettings
@@ -99,7 +100,7 @@ def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
     }
     r = root["research"]
     optional_research_keys = {
-        "experimental_paper_relaxation", "entry_mode", "ema_cross_periods",
+        "experimental_paper_relaxation", "entry_mode", "ema_cross_periods", "indicators",
     }
     if (type(r) is not dict
             or not required_research_keys.issubset(r)
@@ -124,6 +125,7 @@ def read_owner_paper_policy(path: Path) -> PaperPublicCycleConfig:
             if type(r.get("ema_cross_periods")) is list else
             r.get("ema_cross_periods")
         ),
+        indicators=parse_indicator_selection(r["indicators"]) if "indicators" in r else None,
     )
     p = _exact_keys(root["paper"], {
         "leverage", "margin_quote", "stop_distance_bps",

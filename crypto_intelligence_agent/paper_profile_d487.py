@@ -27,7 +27,7 @@ SCHEMA = "cia-owner-paper-strategy-profile-v1"
 RESEARCH_INTS = frozenset(("ema_period", "atr_period", "extrema_period",
     "quote_volume_period", "compression_bars", "baseline_bars", "cooldown_bars"))
 RESEARCH_DECIMALS = frozenset(("max_atr_ratio", "min_quote_volume_ratio"))
-RESEARCH_STRATEGY = frozenset(("entry_mode", "ema_cross_periods"))
+RESEARCH_STRATEGY = frozenset(("entry_mode", "ema_cross_periods", "indicators"))
 PAPER_DECIMALS = frozenset(("margin_quote", "stop_distance_bps",
     "runner_floor_percent"))
 PAPER_INTS = frozenset(("leverage",))
@@ -136,9 +136,12 @@ def _apply(document: dict, edits: dict) -> dict:
                         raise DataValidationError("PAPER relaxation requires boolean")
                     doc[section][key] = value
                 elif key == "entry_mode":
-                    if type(value) is not str or value not in ("breakout", "ema_cross"):
+                    if type(value) is not str or value not in ("breakout", "ema_cross", "indicator_combo"):
                         raise DataValidationError("D503 unknown strategy entry mode")
                     doc[section][key] = value
+                elif key == "indicators":
+                    from .j2_configurable_indicators_d513 import parse_indicator_selection
+                    doc[section][key] = parse_indicator_selection(value).as_json()
                 elif key == "ema_cross_periods":
                     if (type(value) is not list or len(value) != 3
                             or any(type(v) is not int or not 2 <= v <= 120 for v in value)
