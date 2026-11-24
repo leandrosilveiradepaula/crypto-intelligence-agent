@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 
 from .j2_configurable_indicators_d513 import (
-    IndicatorSelection, MovingAverageSlot, PivotSuperTrend, parse_bollinger,
+    IndicatorSelection, MovingAverageSlot, PivotSuperTrend, parse_bollinger, parse_rsi,
 )
 from .j3_archived_strategy_comparison_d512 import (
     compare_archived_strategies, read_comparison_archives,
@@ -75,7 +75,8 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
     fingerprints = set()
     for row in doc["profiles"]:
         required = {"name","label","ema","sma","pivot","relative_strength_bps"}
-        if type(row) is not dict or set(row) not in (required, required | {"bollinger"}):
+        if (type(row) is not dict or not required <= set(row)
+                or set(row) - (required | {"bollinger", "rsi"})):
             raise DataValidationError("D520 invalid profile fields")
         name = row["name"]
         label = row["label"]
@@ -93,9 +94,13 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
         bb = row.get("bollinger")
         if bb is not None and (type(bb) is not dict or set(bb) != {"period","deviations","mode"}):
             raise DataValidationError("D521 exact matrix Bollinger settings required")
+        rsi = row.get("rsi")
+        if rsi is not None and (type(rsi) is not dict or set(rsi) != {"period","long_min","long_max"}):
+            raise DataValidationError("D523 exact matrix asset RSI settings required")
         selection = IndicatorSelection(_slots(_periods(row["ema"])),
                                        _slots(_periods(row["sma"])),pivot,
-                                       parse_bollinger({"enabled":True,**bb}) if bb is not None else None)
+                                       parse_bollinger({"enabled":True,**bb}) if bb is not None else None,
+                                       parse_rsi({"enabled":True,**rsi}) if rsi is not None else None)
         threshold = _decimal(row["relative_strength_bps"])
         if not selection.active or not 0 <= threshold <= 1000:
             raise DataValidationError("D520 active indicators and RS threshold 0..1000 bps required")
@@ -147,6 +152,12 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
                 "positive":adverse["positive_count"],"negative":adverse["negative_count"],
                 "positive_pct":rate,"stop_count":adverse["stop_count"],
                 "with_targets":adverse["with_targets_count"],
+                "stop_before_tp1":adverse["stop_before_tp1_count"],
+                "stop_before_tp1_first_hour":adverse["stop_before_tp1_first_hour_count"],
+                "stop_before_tp1_then_later_tp1":adverse["stop_before_tp1_then_later_tp1_count"],
+                "positive_with_stop":adverse["positive_with_stop_count"],
+                "mean_full_path_mae_bps":adverse["mean_full_path_mae_bps"],
+                "mean_full_path_mfe_bps":adverse["mean_full_path_mfe_bps"],
                 "residual_at_horizon":adverse["residual_at_horizon_count"],
                 "loss_at_least_margin":adverse["loss_at_least_margin_count"],
                 "ambiguous_count":r["ordering_sensitive_count"],
@@ -176,7 +187,8 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
 
 
 def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
-               as_of_ms: int, horizon_hours: int, min_complete=20,
+               as_of_ms: int, horizon_hours: int, research_stop_bps: int | None = None,
+               min_complete=20,
                min_coverage_bps=7000) -> dict:
     """Read existing archives once, evaluate every hypothesis in one pass. No GET or writes."""
     ref,profiles,labels = parse_matrix(matrix_raw)
@@ -188,7 +200,10 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
     # The saved strategy choice is NOT a research candidate by default. Preserve
     # all common feature filters and economic terms; matrix is independent.
     cfg = replace(owner_policy.research,entry_mode="breakout",indicators=None)
-    exit_policy = owner_policy.exits
+    if research_stop_bps is not None and (type(research_stop_bps) is not int or not 1 <= research_stop_bps <= 1000):
+        raise DataValidationError("D523 research stop must be 1..1000 bps")
+    exit_policy = (owner_policy.exits if research_stop_bps is None else
+                   replace(owner_policy.exits, stop_distance_bps=Decimal(research_stop_bps)))
     notional = owner_policy.margin_quote*Decimal(owner_policy.leverage.for_new_positions)
     margin = SyntheticMarginBasis(owner_policy.margin_quote,
         owner_policy.leverage.for_new_positions,notional,"SYNTHETIC_USDT")
@@ -221,6 +236,9 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
         "relative_strength_gate":"strict_directional_threshold_on_indicator_transition",
         "common_research_filters":asdict(cfg),
         "common_exit_policy":asdict(exit_policy),
+        "research_stop_override_bps":research_stop_bps,
+        "stop_gross_loss_margin_pct":format(exit_policy.stop_distance_bps * Decimal(margin.leverage_at_intent) / 100, "f"),
+        "entry_quality_definition":"full_observed_path_excursions_and_later_bar_tp1_after_stop_before_tp1",
         "requested_margin_quote":format(margin.requested_margin_quote,"f"),
         "reference_notional_quote":format(notional,"f"),
         "leverage_at_intent":margin.leverage_at_intent,

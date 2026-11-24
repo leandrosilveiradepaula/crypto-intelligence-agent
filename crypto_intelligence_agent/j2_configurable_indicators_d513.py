@@ -76,12 +76,82 @@ def parse_bollinger(value):
 
 
 @dataclass(frozen=True)
+class RelativeStrengthIndex:
+    """Wilder RSI of the asset, not its performance relative to BTC.
+
+    Directional momentum zone: long_min < RSI <= long_max;
+    SHORT uses the mirrored zone. RSI 50 is neutral.
+    """
+    enabled: bool
+    period: int = 14
+    long_min: int = 50
+    long_max: int = 70
+
+    def __post_init__(self):
+        if (type(self.enabled) is not bool or type(self.period) is not int
+                or not 2 <= self.period <= 120
+                or type(self.long_min) is not int or type(self.long_max) is not int
+                or not 50 <= self.long_min < self.long_max <= 100):
+            raise DataValidationError("D523 invalid asset RSI configuration")
+
+    def as_json(self):
+        return {"enabled": self.enabled, "period": self.period,
+                "long_min": self.long_min, "long_max": self.long_max}
+
+
+def parse_rsi(value):
+    if type(value) is not dict or set(value) != {"enabled", "period", "long_min", "long_max"}:
+        raise DataValidationError("D523 exact asset RSI settings required")
+    return RelativeStrengthIndex(value["enabled"], value["period"],
+                                 value["long_min"], value["long_max"])
+
+
+def wilder_rsi(closes: tuple[Decimal, ...], config: RelativeStrengthIndex):
+    """Causal SMA seed over N changes, then Wilder smoothing; flat = 50."""
+    if type(config) is not RelativeStrengthIndex:
+        raise DataValidationError("D523 typed asset RSI configuration required")
+    n = config.period
+    result = []
+    gain = loss = Decimal(0)
+    zero = Decimal(0)
+    with localcontext(_MATH_CONTEXT):
+        for i, close in enumerate(closes):
+            if i == 0:
+                result.append(None)
+                continue
+            change = close - closes[i-1]
+            up, down = max(zero, change), max(zero, -change)
+            if i <= n:
+                gain += up
+                loss += down
+                if i < n:
+                    result.append(None)
+                    continue
+                gain /= n
+                loss /= n
+            else:
+                gain = (gain*(n-1)+up)/n
+                loss = (loss*(n-1)+down)/n
+            result.append(Decimal(50) if gain == loss == 0 else
+                          Decimal(100)*gain/(gain+loss))
+    return tuple(result)
+
+
+def rsi_directions(closes: tuple[Decimal, ...], config: RelativeStrengthIndex):
+    return tuple(None if v is None else
+                 1 if config.long_min < v <= config.long_max else
+                 -1 if 100-config.long_max <= v < 100-config.long_min else 0
+                 for v in wilder_rsi(closes, config))
+
+
+@dataclass(frozen=True)
 class IndicatorSelection:
     ema: tuple[MovingAverageSlot, ...]
     sma: tuple[MovingAverageSlot, ...]
     pivot_supertrend: PivotSuperTrend
     # None means the legacy profile has no Bollinger field. Preserve its JSON.
     bollinger: BollingerBands | None = None
+    rsi: RelativeStrengthIndex | None = None
 
     def __post_init__(self):
         for slots in (self.ema, self.sma):
@@ -95,12 +165,15 @@ class IndicatorSelection:
             raise DataValidationError("D513 explicit pivot parameters required")
         if self.bollinger is not None and type(self.bollinger) is not BollingerBands:
             raise DataValidationError("D521 typed Bollinger parameters required")
+        if self.rsi is not None and type(self.rsi) is not RelativeStrengthIndex:
+            raise DataValidationError("D523 typed asset RSI parameters required")
 
     @property
     def active(self) -> bool:
         return (any(x.enabled for x in self.ema + self.sma)
                 or self.pivot_supertrend.enabled
-                or (self.bollinger is not None and self.bollinger.enabled))
+                or (self.bollinger is not None and self.bollinger.enabled)
+                or (self.rsi is not None and self.rsi.enabled))
 
     def minimum_closed_bars(self, volume_period: int) -> int:
         if not self.active:
@@ -111,6 +184,8 @@ class IndicatorSelection:
             periods.append(max(2 * pivot.pivot_period + 3, pivot.atr_period + 2))
         if self.bollinger is not None and self.bollinger.enabled:
             periods.append(self.bollinger.period + 2)
+        if self.rsi is not None and self.rsi.enabled:
+            periods.append(self.rsi.period + 2)
         return max(24, volume_period + 1, *periods)
 
     def as_json(self) -> dict:
@@ -123,12 +198,15 @@ class IndicatorSelection:
                                      "atr_factor": format(p.atr_factor, "f")}}
         if self.bollinger is not None:
             result["bollinger"] = self.bollinger.as_json()
+        if self.rsi is not None:
+            result["rsi"] = self.rsi.as_json()
         return result
 
 
 def parse_indicator_selection(value: object) -> IndicatorSelection:
     legacy = {"ema", "sma", "pivot_supertrend"}
-    if type(value) is not dict or set(value) not in (legacy, legacy | {"bollinger"}):
+    if (type(value) is not dict or not legacy <= set(value)
+            or set(value) - (legacy | {"bollinger", "rsi"})):
         raise DataValidationError("D513 exact indicator selection required")
     def slots(name):
         rows = value[name]
@@ -153,7 +231,8 @@ def parse_indicator_selection(value: object) -> IndicatorSelection:
     return IndicatorSelection(slots("ema"), slots("sma"),
                               PivotSuperTrend(p["enabled"], p["pivot_period"],
                                               p["atr_period"], decimal),
-                              parse_bollinger(value["bollinger"]) if "bollinger" in value else None)
+                              parse_bollinger(value["bollinger"]) if "bollinger" in value else None,
+                              parse_rsi(value["rsi"]) if "rsi" in value else None)
 
 
 def moving_average(closes: tuple[Decimal, ...], period: int, *, exponential: bool
@@ -298,6 +377,8 @@ def combination_directions(candles: tuple[ClosedCandle, ...], selection: Indicat
         families.append(pivot_trend(candles, selection.pivot_supertrend))
     if selection.bollinger is not None and selection.bollinger.enabled:
         families.append(bollinger_directions(closes, selection.bollinger))
+    if selection.rsi is not None and selection.rsi.enabled:
+        families.append(rsi_directions(closes, selection.rsi))
     if not families:
         return (0,) * len(candles)
     result = []
