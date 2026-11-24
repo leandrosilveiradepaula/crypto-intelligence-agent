@@ -1,0 +1,223 @@
+"""D517: conditional stop and partial-exit scenarios on observed OHLC bars.
+
+A trade-range candle is not a mark-price tick, an order fill, or the actual
+intrabar path. Evaluate two explicit extrema orderings, never choose the
+favorable ordering, never attach fabricated timestamps or write a ledger.
+The next observed open is the entry reference, not an executable quote.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
+
+from .market_data import ClosedCandle, DataGapError, DataValidationError, interval_duration_ms
+from .j4_automatic_entry_materializer_d448 import PaperEntryExitPolicy
+from .synthetic_cost_scenarios import (
+    BPS_DENOMINATOR, SyntheticCostScenario, evaluate_synthetic_costs,
+)
+from .synthetic_intrabar_barriers import ResearchDirection
+from .synthetic_margin_envelope import SyntheticMarginBasis
+from .synthetic_partial_exits import SyntheticExitPlan, plan_synthetic_partial_exits
+
+SCHEMA = "d517-observed-ohlc-exit-scenarios-v1"
+QUALITY = "bybit_public_rest_historical_closed_unverified"
+_CTX = Context(prec=128, rounding=ROUND_HALF_EVEN)
+_ZERO = Decimal(0)
+_ONE = Decimal(1)
+
+
+@dataclass(frozen=True)
+class ExitScenario:
+    targets_reached: int
+    target_fraction: Decimal
+    stopped_fraction: Decimal
+    horizon_residual_fraction: Decimal
+    gross_reference_quote: Decimal
+    assumed_fee_slippage_quote: Decimal
+    conditional_before_funding_quote: Decimal
+    loss_at_least_requested_margin: bool
+
+
+def _validate_path(candles, decision_end_ms, now_ms):
+    if (type(candles) is not tuple or not 1 <= len(candles) <= 720
+            or type(decision_end_ms) is not int or type(now_ms) is not int
+            or not 0 < decision_end_ms < now_ms
+            or any(type(c) is not ClosedCandle for c in candles)):
+        raise DataValidationError("D517 bounded observed closed path required")
+    first = candles[0]
+    if (first.exchange != "bybit_v5_public" or first.market != "linear_perpetual"
+            or not first.symbol.endswith("USDT")
+            or first.interval not in ("1m", "5m", "15m", "1h")):
+        raise DataValidationError("D517 unsupported observed Bybit path")
+    duration = interval_duration_ms(first.interval)
+    if len(candles) * duration > 12 * 3_600_000:
+        raise DataValidationError("D517 research horizon exceeds 12 hours")
+    for i, bar in enumerate(candles):
+        if ((bar.exchange, bar.market, bar.symbol, bar.interval) !=
+                (first.exchange, first.market, first.symbol, first.interval)
+                or bar.quality != QUALITY
+                or type(bar.open_time_ms) is not int
+                or type(bar.close_time_ms) is not int
+                or bar.open_time_ms != decision_end_ms+i*duration
+                or bar.open_time_ms % duration
+                or bar.close_time_ms != bar.open_time_ms+duration-1
+                or bar.close_time_ms >= now_ms):
+            raise DataGapError("D517 path has missing, future or mixed candle")
+        values = (bar.open, bar.high, bar.low, bar.close)
+        if (any(type(v) is not Decimal or not v.is_finite() or v <= 0
+                for v in values)
+                or bar.low > min(bar.open, bar.close, bar.high)
+                or bar.high < max(bar.open, bar.close, bar.low)):
+            raise DataValidationError("D517 invalid observed OHLC")
+    return candles
+
+
+def compare_exit_scenarios(
+    candles: tuple[ClosedCandle, ...], *,
+    direction: ResearchDirection, decision_end_ms: int, now_ms: int,
+    margin: SyntheticMarginBasis, policy: PaperEntryExitPolicy,
+) -> dict[str, ExitScenario]:
+    """Two scenario references, each with conserved normalized exit quantities.
+
+    At an opening gap through the stop, use that observed open (not the better
+    stop threshold). A favorable gap uses target levels, not gap improvement.
+    Target fractions come from PRE1, including remaining-balance semantics.
+    A stop consumes ALL remaining exposure including the runner. Any exposure
+    surviving the horizon is marked at the final close with assumed exit
+    costs; that is not an instruction to close an actual runner. Fees/slippage
+    use PRE2 over initial notional and the weighted exit reference notional.
+    """
+    if (type(direction) is not ResearchDirection
+            or type(policy) is not PaperEntryExitPolicy
+            or type(margin) is not SyntheticMarginBasis):
+        raise DataValidationError("D517 explicit immutable research terms required")
+    bars = _validate_path(candles, decision_end_ms, now_ms)
+    schedule = plan_synthetic_partial_exits(
+        SyntheticExitPlan(_ONE, policy.tranches, policy.runner_floor_percent)
+    )
+    sign = _ONE if direction is ResearchDirection.LONG else -_ONE
+    with localcontext(_CTX):
+        entry = bars[0].open
+        stop = entry * (_ONE-sign*policy.stop_distance_bps/BPS_DENOMINATOR)
+        targets = tuple(entry*(_ONE+sign*d/BPS_DENOMINATOR)
+                        for d in policy.target_distances_bps)
+        notional = margin.entry_notional_quote
+
+        def run(adverse_first):
+            remaining = _ONE
+            target_fraction = stopped_fraction = exit_value = _ZERO
+            hit = 0
+
+            def stop_at(price, *, gap=False):
+                nonlocal remaining, stopped_fraction, exit_value
+                if remaining and sign*(price-stop) <= 0:
+                    exit_value += remaining*(price if gap else stop)
+                    stopped_fraction += remaining
+                    remaining = _ZERO
+
+            def targets_at(price):
+                nonlocal hit, remaining, target_fraction, exit_value
+                while (remaining and hit < len(targets)
+                       and sign*(price-targets[hit]) >= 0):
+                    quantity = schedule.allocations[hit].exit_units
+                    if quantity > remaining:
+                        raise DataValidationError("D517 exit fraction exceeds remainder")
+                    exit_value += quantity*targets[hit]
+                    remaining -= quantity
+                    target_fraction += quantity
+                    hit += 1
+
+            for bar in bars:
+                if not remaining:
+                    break
+                stop_at(bar.open, gap=True)
+                targets_at(bar.open)
+                adverse = bar.low if sign > 0 else bar.high
+                favorable = bar.high if sign > 0 else bar.low
+                if adverse_first:
+                    stop_at(adverse)
+                    targets_at(favorable)
+                else:
+                    targets_at(favorable)
+                    stop_at(adverse)
+            residual = remaining
+            exit_value += residual*bars[-1].close
+            if target_fraction+stopped_fraction+residual != _ONE:
+                raise DataValidationError("D517 normalized quantity not conserved")
+            # PRE2 accepts monetary inputs with <=18 decimal places. Round
+            # the total exit reference once, not every tranche independently.
+            exit_notional = (notional*exit_value/entry).quantize(Decimal("1e-18")).normalize()
+            gross = sign*(exit_notional-notional)
+            costs = evaluate_synthetic_costs(SyntheticCostScenario(
+                direction=direction,
+                # These are the accounting horizon boundaries, NOT timestamps
+                # assigned to hypothetical intra-bar fills. No funding events.
+                entry_at_ms=decision_end_ms, exit_at_ms=bars[-1].close_time_ms,
+                entry_hypothetical_notional_quote_units=notional,
+                exit_hypothetical_notional_quote_units=exit_notional,
+                entry_fee_bps=policy.entry_fee_bps,
+                exit_fee_bps=policy.exit_fee_bps,
+                entry_adverse_slippage_bps=policy.entry_adverse_slippage_bps,
+                exit_adverse_slippage_bps=policy.exit_adverse_slippage_bps,
+            )).fees_and_slippage_units
+            net = gross-costs
+            return ExitScenario(hit, target_fraction, stopped_fraction, residual,
+                                gross, costs, net, net <= -margin.requested_margin_quote)
+
+        return {"adverse_first": run(True), "favorable_first": run(False)}
+
+
+def empty_replay_totals() -> dict:
+    return {
+        "candidate_count": 0, "complete_path_count": 0, "missing_path_count": 0,
+        "ordering_sensitive_count": 0,
+        **{name: {"positive_count": 0, "negative_count": 0, "flat_count": 0,
+                  "stop_count": 0, "with_targets_count": 0,
+                  "residual_at_horizon_count": 0, "loss_at_least_margin_count": 0,
+                  "gross_reference_quote": _ZERO, "assumed_fee_slippage_quote": _ZERO,
+                  "conditional_before_funding_quote": _ZERO}
+           for name in ("adverse_first", "favorable_first")},
+    }
+
+
+def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
+                      now_ms, margin, policy) -> None:
+    totals["candidate_count"] += 1
+    if candles is None:
+        totals["missing_path_count"] += 1
+        return
+    outcomes = compare_exit_scenarios(
+        candles, direction=direction, decision_end_ms=decision_end_ms,
+        now_ms=now_ms, margin=margin, policy=policy)
+    totals["complete_path_count"] += 1
+    totals["ordering_sensitive_count"] += int(
+        outcomes["adverse_first"] != outcomes["favorable_first"])
+    with localcontext(_CTX):
+        for name, result in outcomes.items():
+            row = totals[name]
+            net = result.conditional_before_funding_quote
+            row["positive_count" if net > 0 else "negative_count" if net < 0 else "flat_count"] += 1
+            row["stop_count"] += int(result.stopped_fraction > 0)
+            row["with_targets_count"] += int(result.targets_reached > 0)
+            row["residual_at_horizon_count"] += int(result.horizon_residual_fraction > 0)
+            row["loss_at_least_margin_count"] += int(result.loss_at_least_requested_margin)
+            for key in ("gross_reference_quote", "assumed_fee_slippage_quote",
+                        "conditional_before_funding_quote"):
+                row[key] += getattr(result, key)
+
+
+def summarize_replay(totals: dict, *, margin: SyntheticMarginBasis) -> dict:
+    count = totals["complete_path_count"]
+    result = {k:v for k,v in totals.items() if not isinstance(v, dict)}
+    with localcontext(_CTX):
+        for name in ("adverse_first", "favorable_first"):
+            row = dict(totals[name])
+            net = row["conditional_before_funding_quote"]
+            row["average_before_funding_bps"] = (format(
+                (net/margin.entry_notional_quote*BPS_DENOMINATOR/count).quantize(
+                    Decimal("0.01")), "f") if count else None)
+            for key in ("gross_reference_quote", "assumed_fee_slippage_quote",
+                        "conditional_before_funding_quote"):
+                row[key] = format(row[key], "f") if count else None
+            result[name] = row
+    return result
