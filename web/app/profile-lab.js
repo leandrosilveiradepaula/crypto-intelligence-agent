@@ -8,6 +8,7 @@ const RESEARCH_INT = ["ema_period","atr_period","extrema_period",
 const RESEARCH_DEC = ["max_atr_ratio","min_quote_volume_ratio"];
 let snapshot = null, edited = false;
 let historyCount = null, historyOffset = 50, loadedHistory = [];
+let previewFunnel = null, previewFilter = "historical_candidate";
 const status = (msg, error=false) => {
   $("status").textContent = msg;
   $("status").dataset.error = error ? "true" : "false";
@@ -133,6 +134,7 @@ async function load() {
     $("save").disabled = false;
     $("preview").disabled = false;
     status("Perfil PAPER carregado. Você pode alterar os valores e salvar. Nenhuma posição será modificada.");
+    await preview();
   } catch (error) {
     status("Perfil indisponível. Abra pelo servidor privado da VPS e verifique as permissões: "+error.message,true);
   }
@@ -149,7 +151,9 @@ async function save() {
     });
     snapshot = result;
     fill(snapshot);
+    edited = false;
     status("Perfil salvo na VPS. Será lido pelo motor na PRÓXIMA sessão PAPER; as posições atuais permanecem iguais.");
+    await preview();
   } catch(error) {
     status("Não foi possível salvar: "+error.message+
       ". Confirme os parâmetros ou recarregue o perfil.",true);
@@ -283,6 +287,104 @@ function showPositions(id,positions,emptyText) {
   }
 }
 
+function decisionMetric(root, title, value) {
+  const box = document.createElement("div");
+  box.className = "decision-metric";
+  const strong = document.createElement("strong");
+  strong.textContent = String(value);
+  const caption = document.createElement("span");
+  caption.textContent = title;
+  box.append(strong, caption);
+  root.append(box);
+}
+
+async function loadDecisionFunnel() {
+  const details = $("decision-current");
+  const steps = $("decision-steps");
+  const reasons = $("decision-reasons");
+  try {
+    const d = await getJson("/api/paper-decision-funnel");
+    if (d.schema_version !== "d509-paper-decision-funnel-v1" ||
+        d.orders_sent !== false || d.exchange_orders_verified !== false ||
+        d.source !== "previous_completed_public_lease_only") {
+      throw new Error("Diagnóstico PAPER não validado.");
+    }
+    const messages = {
+      last_lease_stale:"Último ciclo antigo; não representa o estado atual da conexão.",
+      last_lease_abstained:"Ciclo anterior não completou a observação pública.",
+      confirmed_n50_cohort_not_proven:"Não foi comprovada a coorte completa de velas WS.",
+      confirmed_cohort_not_yet_researched:"Velas observadas, mas pesquisa causal ainda não concluída.",
+      no_eligible_hypothesis_after_btc_filters:"Nenhuma hipótese elegível depois da estratégia e BTC.",
+      paper_position_recorded_in_lease:"O último ciclo registrou uma posição PAPER.",
+      paper_open_pending_in_lease:"O último ciclo registrou uma intenção de abertura PAPER.",
+      candidates_without_paper_fill:"Houve candidatos, mas não há preenchimento PAPER comprovado neste resumo."
+    };
+    details.textContent = (messages[d.status] || "Resumo da última sessão PAPER.")+
+      " Último ciclo: "+new Date(d.last_lease_at_ms).toLocaleString("pt-BR")+
+      ". Fonte: diário de pesquisa WS público; sem proteção nativa nem ordem real.";
+    steps.replaceChildren();
+    const c = d.counters || {}, e = d.paper_event_counts || {};
+    const number = v => Number.isInteger(v) && v >= 0 ? v : "—";
+    decisionMetric(steps, "Velas fechadas por WS", number(c.accepted_confirmed_close_callbacks));
+    decisionMetric(steps, "Pesquisas de coorte", number(c.paper_cohort_researched_count));
+    decisionMetric(steps, "Candidatos relativos ao BTC", number(c.paper_relative_btc_hypotheses));
+    decisionMetric(steps, "Posições PAPER criadas", number(e.paper_position_created));
+    const names = {
+      configured_margin_does_not_fit_contract_lot:"Margem insuficiente para lote",
+      public_contract_refresh_pending:"Aguardando contrato público atualizado",
+      paper_entry_replay_or_validation_blocked:"Entrada bloqueada pela validação",
+      paper_open_expired_cancelled:"Intenção PAPER expirada",
+      paper_open_pending_armed:"Intenções PAPER armadas",
+      kline_confirmed_events_appended:"Velas WS persistidas"
+    };
+    const obstacles = Object.entries(names).map(([key,label]) => {
+      const count = key in e ? e[key] : c[key];
+      return Number.isInteger(count) && count > 0 ? label+": "+count : null;
+    }).filter(Boolean);
+    reasons.textContent = obstacles.length ? obstacles.join(" · ") :
+      "Nenhuma causa individual de bloqueio registrada neste resumo. Nem todo candidato histórico gera uma entrada.";
+  } catch (error) {
+    details.textContent = "Ainda não há diagnóstico válido de um ciclo WS concluído. O operador pode estar executando a primeira sessão; não presumir falha nem entrada.";
+    steps.replaceChildren();
+    reasons.textContent = "";
+  }
+}
+
+function showHistoricalDecisions() {
+  const root = $("preview-rows");
+  root.replaceChildren();
+  document.querySelectorAll("[data-decision-filter]").forEach(node => {
+    node.setAttribute("aria-pressed",
+      node.dataset.decisionFilter === previewFilter ? "true" : "false");
+  });
+  if (!previewFunnel) return;
+  const labels = {
+    historical_candidate:"Candidato histórico · alinhado ao BTC",
+    btc_relative_not_aligned:"Hipótese técnica · não alinhada ao BTC",
+    no_technical_hypothesis:"Sem hipótese técnica nesta vela",
+    btc_reference:"BTC · referência para comparação"
+  };
+  const selected = previewFunnel.decisions.filter(x =>
+    previewFilter === "all" || x.decision === previewFilter);
+  if (!selected.length) {
+    root.textContent = "Nenhum ativo nesta categoria.";
+    return;
+  }
+  for (const item of selected) {
+    const card = document.createElement("div");
+    card.className = "row";
+    const name = document.createElement("strong");
+    name.textContent = item.symbol+
+      (item.historical_side ? " · "+item.historical_side : "");
+    const detail = document.createElement("span");
+    detail.className = "muted";
+    detail.textContent = (labels[item.decision] || "Sem classificação")+
+      " · BTC relativo: "+item.btc_relative_percent+" p.p.";
+    card.append(name,detail);
+    root.append(card);
+  }
+}
+
 async function preview() {
   if (!snapshot) return;
   if (edited) {
@@ -292,6 +394,8 @@ async function preview() {
   $("preview").disabled = true;
   $("preview-details").textContent = "Lendo o histórico REAL já armazenado na VPS…";
   $("preview-rows").replaceChildren();
+  $("preview-funnel").replaceChildren();
+  previewFunnel = null;
   try {
     const result = await getJson("/api/research-preview");
     if (result.status==="more_closed_candles_required") {
@@ -309,19 +413,22 @@ async function preview() {
         result.raw_hypotheses+" hipóteses técnicas, "+
         result.candidate_count+" também alinhadas ao BTC. "+
         "Pesquisa histórica; NÃO são entradas PAPER nem sinais WS.";
-      for (const item of result.candidates) {
-        const card=document.createElement("div");
-        card.className="row";
-        const name=document.createElement("strong");
-        name.textContent=item.symbol+" · "+item.side;
-        const relative=document.createElement("span");
-        relative.className="mono";
-        relative.textContent="BTC relativo: "+item.btc_relative_percent+" p.p.";
-        card.append(name,relative);
-        $("preview-rows").append(card);
-      }
-      if (!result.candidates.length) {
-        $("preview-rows").textContent="Nenhum candidato para este histórico e configuração.";
+      const funnel = result.decision_funnel;
+      if (funnel && funnel.schema_version === "d509-rest-research-funnel-v1" &&
+          funnel.member_count === result.symbols &&
+          Array.isArray(funnel.decisions) &&
+          funnel.decisions.length === result.symbols) {
+        previewFunnel = funnel;
+        const counts = funnel.reason_counts;
+        const root = $("preview-funnel");
+        decisionMetric(root, "Sem hipótese técnica", counts.no_technical_hypothesis);
+        decisionMetric(root, "Excluídos pelo BTC", counts.btc_relative_not_aligned);
+        decisionMetric(root, "Candidatos históricos", counts.historical_candidate);
+        decisionMetric(root, "Ativos analisados", funnel.member_count);
+        showHistoricalDecisions();
+      } else {
+        $("preview-rows").textContent =
+          "Sem detalhamento individual para este arquivo histórico.";
       }
     }
   } catch(error) {
@@ -334,12 +441,22 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("save").addEventListener("click",save);
   $("preview").addEventListener("click",preview);
   $("history-next").addEventListener("click",loadMoreHistory);
+  $("decision-refresh").addEventListener("click",loadDecisionFunnel);
+  document.querySelectorAll("[data-decision-filter]").forEach(node => {
+    node.addEventListener("click", () => {
+      previewFilter = node.dataset.decisionFilter;
+      showHistoricalDecisions();
+    });
+  });
   document.querySelectorAll("input,select").forEach(node=>{
     node.addEventListener("input",()=>{edited=true;});
     node.addEventListener("change",()=>{edited=true;});
   });
   load();
   loadPaperSession();
+  loadDecisionFunnel();
   setInterval(loadPaperSession,15000);
+  setInterval(loadDecisionFunnel,60000);
+  setInterval(() => { if (!edited && snapshot) preview(); }, 300000);
 });
 })();
