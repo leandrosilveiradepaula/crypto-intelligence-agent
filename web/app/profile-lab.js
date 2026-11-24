@@ -505,12 +505,12 @@ async function compareHistoricalStrategies() {
       reference_long:"Referência LONG dos ativos elegíveis"};
     for (const k of ["breakout","ema_cross","reference_long"]) {
       const r=d.results[k], card=document.createElement("article");
-      card.className="row";
+      card.className="position-card";
       const title=document.createElement("strong");
       title.textContent=labels[k];
       const metrics=document.createElement("div");
       metrics.className="decision-steps";
-      const show=v=>v===null?"Sem dados":String(v);
+      const show=v=>v===null?"Sem dados":Number(v).toLocaleString("pt-BR",{maximumFractionDigits:6});
       decisionMetric(metrics,"Hipóteses",r.candidates);
       decisionMetric(metrics,"Observações futuras disponíveis",r.scored_marks);
       decisionMetric(metrics,"Positivas / negativas após custos",r.positive_marks+" / "+r.negative_marks);
