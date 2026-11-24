@@ -739,9 +739,18 @@ function showMatrix(job) {
   summary.textContent=d.rows.length+" estratégias / "+(d.scenario_count||d.rows.length)+" cenários · "+d.common_covered_symbol_hours+
     " oportunidades com trajetória comum · "+d.horizon_hours+"h / 5min · "+stopSummary+" (liquidação não avaliada) · corte "+
     new Date(d.as_of_ms).toLocaleString("pt-BR")+
+    ". Margem "+show(d.requested_margin_quote)+" USDT · "+d.leverage_at_intent+"x · nominal "+show(d.reference_notional_quote)+" USDT"+
+    (d.reference_bankroll_quote==null?"":" · banca de referência "+show(d.reference_bankroll_quote)+" USDT (sem simulação de carteira)")+
     ". Perfil lido na revisão "+job.profile_revision.slice(0,12)+
     (d.status==="no_complete_common_paths"?". Sem cobertura suficiente.":"");
   root.replaceChildren();
+  if(!grid.length&&d.stop_risk){
+    const risk=document.createElement("p");risk.className="muted";
+    risk.textContent="Perda bruta posição integral: "+show(d.stop_risk.gross_stop_loss_quote)+" USDT"+
+      (d.stop_risk.gross_stop_loss_pct_of_reference_bankroll==null?"":" · "+show(d.stop_risk.gross_stop_loss_pct_of_reference_bankroll)+"% da banca")+
+      (d.stop_risk.gross_stop_reaches_initial_margin?" · Contrafactual: alcança/excede margem inicial.":"")+" · Liquidação não modelada.";
+    root.append(risk);
+  }
   for(const r of d.rows) {
     const card=document.createElement("article"),title=document.createElement("strong");
     card.className="position-card";
@@ -777,6 +786,11 @@ function showMatrix(job) {
         if(!v||v.candidates!==r.candidates||v.complete!==r.complete) throw new Error("Cobertura inconsistente entre stops.");
         const line=document.createElement("div");line.className="decision-steps";
         decisionMetric(line,"Stop / perda bruta teórica da margem",show(variant.stop_bps)+" bps / "+show(variant.gross_loss_margin_pct)+"%");
+        if(variant.gross_stop_loss_quote!=null){
+          decisionMetric(line,"Perda bruta posição integral (USDT)",show(variant.gross_stop_loss_quote));
+          if(variant.gross_stop_loss_pct_of_reference_bankroll!=null) decisionMetric(line,"Perda bruta / banca de referência",show(variant.gross_stop_loss_pct_of_reference_bankroll)+"%");
+          if(variant.gross_stop_reaches_initial_margin) decisionMetric(line,"Risco","Contrafactual: stop alcança/excede margem inicial; liquidação não modelada.");
+        }
         decisionMetric(line,"Resultado adverso / favorável (USDT)",show(v.net_adverse)+" / "+show(v.net_favorable));
         decisionMetric(line,"Stops antes de TP1 / recuperações posteriores",v.stop_before_tp1+" / "+v.stop_before_tp1_then_later_tp1);
         decisionMetric(line,"Positivas / negativas / perda ≥ margem",v.positive+" / "+v.negative+" / "+v.loss_at_least_margin);
@@ -806,6 +820,10 @@ async function startMatrix(){
   try{
     const horizon=integer("matrix-horizon",12,1);
     const request={horizon_hours:horizon,preset:$("matrix-preset").value};
+    for(const [id,key] of [["matrix-bankroll","research_bankroll_quote"],["matrix-margin","research_margin_quote"]]){
+      const value=$(id).value.trim();if(value) request[key]=value;
+    }
+    if($("matrix-leverage").value.trim()) request.research_leverage=integer("matrix-leverage",200,1);
     if ($("matrix-grid-enabled").checked){
       const words=$("matrix-grid").value.trim().split(/\s+/);
       const stops=words.map(Number);
