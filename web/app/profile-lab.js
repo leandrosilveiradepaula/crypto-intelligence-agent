@@ -549,8 +549,9 @@ async function compareHistoricalStrategies() {
     }
     summary.textContent="Lendo os arquivos locais e comparando as mesmas decisões horárias…";
     const retro=$("compare-retro").checked;
+    const horizon=integer("compare-horizon",12,1);
     const d=await getJson("/api/strategy-comparison?fast="+periods[0]+
-      "&mid="+periods[1]+"&trend="+periods[2]+(retro?"&retro=1":""));
+      "&mid="+periods[1]+"&trend="+periods[2]+(retro?"&retro=1":"")+"&horizon="+horizon);
     if (d.status==="retrospective_warmup_not_available") {
       summary.textContent="Histórico complementar ainda não disponível. Use o histórico original ou solicite a coleta complementar.";
       return;
@@ -563,6 +564,13 @@ async function compareHistoricalStrategies() {
         d.out_of_sample_results_validated!==false || d.exchange_fills_verified!==false ||
         d.intrabar_path_verified!==false || d.funding_settlement_verified!==false) {
       throw new Error("Resposta histórica não validada.");
+    }
+    const replay=d.exit_replay;
+    if (!replay || replay.schema_version!=="d517-observed-ohlc-exit-scenarios-v1" ||
+        replay.horizon_hours!==horizon || replay.orders_sent!==false ||
+        replay.financial_backtest_approved!==false || replay.intrabar_path_verified!==false ||
+        replay.funding_settlement_verified!==false || replay.liquidation_verified!==false) {
+      throw new Error("Cenários de saídas indisponíveis ou inválidos.");
     }
     summary.textContent=d.archive_count+" arquivos horários · "+d.paired_decision_hours+
       " decisões com observação da hora seguinte · "+d.common_eligible_symbol_hours+
@@ -601,6 +609,38 @@ async function compareHistoricalStrategies() {
         "; stop e alvo na mesma vela: "+r.stop_and_target_same_bar+
         ". Não inferir execução nem sequência das parciais.";
       card.append(title,metrics,note);
+      const exits=replay.results[k];
+      const exitTitle=document.createElement("strong");
+      exitTitle.textContent="Cenários de stop e parciais · "+horizon+"h";
+      const coverage=document.createElement("p");
+      coverage.className="muted";
+      coverage.textContent=exits.complete_path_count+" trajetórias horárias completas / "+
+        exits.candidate_count+" hipóteses; "+exits.missing_path_count+" sem cobertura completa. "+
+        exits.ordering_sensitive_count+" resultados dependem da ordem dos extremos.";
+      const cards=document.createElement("div");
+      cards.className="decision-steps";
+      for(const [key,label] of [["adverse_first","Extremo adverso primeiro"],["favorable_first","Extremo favorável primeiro"]]){
+        const e=exits[key], section=document.createElement("div");
+        section.className="position-card";
+        const h=document.createElement("strong");
+        h.textContent=label;
+        const metrics=document.createElement("div");
+        metrics.className="decision-steps";
+        decisionMetric(metrics,"Soma condicional pré-funding (USDT)",show(e.conditional_before_funding_quote));
+        decisionMetric(metrics,"Média por hipótese completa (bps)",show(e.average_before_funding_bps));
+        decisionMetric(metrics,"Positivas / negativas",e.positive_count+" / "+e.negative_count);
+        decisionMetric(metrics,"Com parcial / com stop",e.with_targets_count+" / "+e.stop_count);
+        decisionMetric(metrics,"Com residual no fim",e.residual_at_horizon_count);
+        decisionMetric(metrics,"Perda ≥ margem solicitada",e.loss_at_least_margin_count);
+        section.append(h,metrics);
+        cards.append(section);
+      }
+      const caution=document.createElement("p");
+      caution.className="muted";
+      caution.textContent="Margem de referência "+replay.requested_margin_quote+" USDT · "+
+        replay.leverage_at_intent+"x. Resultados de hipóteses independentes; não são saldo, "+
+        "limites garantidos de resultado, trajetória intrabar observada ou liquidação.";
+      card.append(exitTitle,coverage,cards,caution);
       root.append(card);
     }
   } catch(e) {

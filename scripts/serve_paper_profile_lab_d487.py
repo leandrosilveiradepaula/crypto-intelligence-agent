@@ -18,6 +18,7 @@ import sys
 import time
 
 from crypto_intelligence_agent.market_data import DataValidationError, DataGapError
+from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginBasis
 from crypto_intelligence_agent.j3_paper_scorecard_d511 import paper_closed_scorecard
 from crypto_intelligence_agent.j3_retrospective_warmup_d516 import read_latest_supplement
 from crypto_intelligence_agent.j3_archived_strategy_comparison_d512 import (
@@ -63,7 +64,8 @@ _MAX_SESSION_POSITIONS = 50  # recent history; older active positions are always
 
 def _strategy_comparison(*, paper_file: Path, history_directory: Path,
                          ema_periods: tuple[int, int, int], now_ms: int,
-                         retrospective: bool = False) -> dict:
+                         retrospective: bool = False,
+                         horizon_hours: int | None = None) -> dict:
     cfg = read_owner_paper_policy(paper_file)
     archives = read_comparison_archives(history_directory, now_ms=now_ms)
     supplement = (read_latest_supplement(history_directory, now_ms=now_ms)
@@ -80,6 +82,12 @@ def _strategy_comparison(*, paper_file: Path, history_directory: Path,
         stop_distance_bps=cfg.exits.stop_distance_bps,
         target_distances_bps=cfg.exits.target_distances_bps,
         now_ms=now_ms, warmup_supplement=supplement,
+        replay_horizon_hours=horizon_hours,
+        replay_margin=(SyntheticMarginBasis(
+            cfg.margin_quote, cfg.leverage.for_new_positions,
+            cfg.margin_quote * Decimal(cfg.leverage.for_new_positions), "SYNTHETIC_USDT")
+            if horizon_hours is not None else None),
+        exit_policy=cfg.exits if horizon_hours is not None else None,
     )
 
 
@@ -566,20 +574,22 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
                 return self._respond(503, {"status":"profile_not_available"})
         if self.path.startswith("/api/strategy-comparison"):
             matched = re.fullmatch(
-                r"/api/strategy-comparison[?]fast=([0-9]{1,3})&mid=([0-9]{1,3})&trend=([0-9]{1,3})(&retro=1)?",
+                r"/api/strategy-comparison[?]fast=([0-9]{1,3})&mid=([0-9]{1,3})&trend=([0-9]{1,3})(&retro=1)?(?:&horizon=([0-9]{1,2}))?",
                 self.path,
             )
             if matched is None:
                 return self._respond(400, {"status":"invalid_comparison_periods","orders_sent":False})
             try:
                 periods = tuple(int(v) for v in matched.groups()[:3])
-                if not 2 <= periods[0] < periods[1] < periods[2] <= 120:
+                horizon = int(matched[5]) if matched[5] is not None else None
+                if (not 2 <= periods[0] < periods[1] < periods[2] <= 120
+                        or (horizon is not None and not 1 <= horizon <= 12)):
                     return self._respond(400, {"status":"invalid_comparison_periods","orders_sent":False})
                 return self._respond(200, _strategy_comparison(
                     paper_file=type(self).paper_file,
                     history_directory=type(self).history_directory,
                     ema_periods=periods, now_ms=time.time_ns() // 1_000_000,
-                    retrospective=matched[4] is not None,
+                    retrospective=matched[4] is not None, horizon_hours=horizon,
                 ))
             except (DataValidationError, DataGapError, OSError, ValueError, TypeError, ArithmeticError):
                 return self._respond(503, {
