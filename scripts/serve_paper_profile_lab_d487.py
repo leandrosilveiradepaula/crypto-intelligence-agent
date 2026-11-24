@@ -17,8 +17,11 @@ import re
 import sys
 import time
 
-from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.market_data import DataValidationError, DataGapError
 from crypto_intelligence_agent.j3_paper_scorecard_d511 import paper_closed_scorecard
+from crypto_intelligence_agent.j3_archived_strategy_comparison_d512 import (
+    compare_archived_strategies, read_comparison_archives,
+)
 from crypto_intelligence_agent.paper_closed_route_archive_d502 import (
     read_closed_route_archive,
 )
@@ -55,6 +58,23 @@ HTML = Path(__file__).resolve().parents[1] / "web/app/profile-lab.html"
 JS = Path(__file__).resolve().parents[1] / "web/app/profile-lab.js"
 _NAME = re.compile(r"rest-history-d461-[0-9a-f]{18}-([0-9]{13})(?:-w([0-9]{2,3}))?[.]json\Z")
 _MAX_SESSION_POSITIONS = 50  # recent history; older active positions are always pinned
+
+
+def _strategy_comparison(*, paper_file: Path, history_directory: Path,
+                         ema_periods: tuple[int, int, int], now_ms: int) -> dict:
+    cfg = read_owner_paper_policy(paper_file)
+    archives = read_comparison_archives(history_directory, now_ms=now_ms)
+    return compare_archived_strategies(
+        archives, config=cfg.research, ema_periods=ema_periods,
+        reference_notional=cfg.margin_quote * Decimal(cfg.leverage.for_new_positions),
+        entry_fee_bps=cfg.exits.entry_fee_bps,
+        exit_fee_bps=cfg.exits.exit_fee_bps,
+        entry_slippage_bps=cfg.exits.entry_adverse_slippage_bps,
+        exit_slippage_bps=cfg.exits.exit_adverse_slippage_bps,
+        stop_distance_bps=cfg.exits.stop_distance_bps,
+        target_distances_bps=cfg.exits.target_distances_bps,
+        now_ms=now_ms,
+    )
 
 
 def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
@@ -535,6 +555,26 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
                 return self._respond(200, snapshot(type(self).paper_file))
             except (DataValidationError, OSError, ValueError, TypeError):
                 return self._respond(503, {"status":"profile_not_available"})
+        if self.path.startswith("/api/strategy-comparison"):
+            matched = re.fullmatch(
+                r"/api/strategy-comparison[?]fast=([0-9]{1,3})&mid=([0-9]{1,3})&trend=([0-9]{1,3})",
+                self.path,
+            )
+            if matched is None:
+                return self._respond(400, {"status":"invalid_comparison_periods","orders_sent":False})
+            try:
+                periods = tuple(int(v) for v in matched.groups())
+                if not 2 <= periods[0] < periods[1] < periods[2] <= 120:
+                    return self._respond(400, {"status":"invalid_comparison_periods","orders_sent":False})
+                return self._respond(200, _strategy_comparison(
+                    paper_file=type(self).paper_file,
+                    history_directory=type(self).history_directory,
+                    ema_periods=periods, now_ms=time.time_ns() // 1_000_000,
+                ))
+            except (DataValidationError, DataGapError, OSError, ValueError, TypeError, ArithmeticError):
+                return self._respond(503, {
+                    "status":"historical_comparison_unavailable","orders_sent":False,
+                })
         if self.path == "/api/research-preview":
             try:
                 return self._respond(200, _historical_scan(

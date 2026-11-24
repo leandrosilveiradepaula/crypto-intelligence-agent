@@ -133,6 +133,7 @@ async function load() {
     fill(snapshot);
     $("save").disabled = false;
     $("preview").disabled = false;
+    $("compare-history").disabled = false;
     status("Perfil PAPER carregado. Você pode alterar os valores e salvar. Nenhuma posição será modificada.");
     await preview();
   } catch (error) {
@@ -470,9 +471,70 @@ async function preview() {
     $("preview").disabled = false;
   }
 }
+async function compareHistoricalStrategies() {
+  const button=$("compare-history"), summary=$("compare-status"), root=$("compare-results");
+  if (!snapshot) return;
+  root.replaceChildren();
+  button.disabled=true;
+  try {
+    const periods=["fast","mid","trend"].map(k=>integer("r-ma_"+k,120,2));
+    if (!(periods[0]<periods[1] && periods[1]<periods[2])) {
+      throw new Error("Os períodos das EMAs devem ser crescentes.");
+    }
+    summary.textContent="Lendo os arquivos locais e comparando as mesmas decisões horárias…";
+    const d=await getJson("/api/strategy-comparison?fast="+periods[0]+
+      "&mid="+periods[1]+"&trend="+periods[2]);
+    if (d.schema_version!=="d512-archived-rest-strategy-comparison-v1" ||
+        d.orders_sent!==false || d.financial_backtest_approved!==false ||
+        d.out_of_sample_results_validated!==false || d.exchange_fills_verified!==false ||
+        d.intrabar_path_verified!==false || d.funding_settlement_verified!==false) {
+      throw new Error("Resposta histórica não validada.");
+    }
+    summary.textContent=d.archive_count+" arquivos horários · "+d.paired_decision_hours+
+      " decisões com observação da hora seguinte · "+d.common_eligible_symbol_hours+
+      " ativos-hora elegíveis em ambas as estratégias. Aquecimento: "+
+      d.maximum_contiguous_hours_observed+" / "+d.required_warmup_hours+
+      " velas; "+d.excluded_warmup_or_conflict_symbol_hours+" ativos-hora excluídos por dados insuficientes ou conflitantes. "+
+      "Notional de referência: "+d.reference_notional_quote+" USDT; custo assumido por ciclo: "+
+      d.assumed_roundtrip_cost_quote+" USDT. Sem funding confirmado.";
+    if (!d.common_eligible_symbol_hours) {
+      root.textContent="Ainda não existem dados compatíveis suficientes para uma comparação. Nenhum resultado foi inventado.";
+      return;
+    }
+    const labels={breakout:"Rompimento com filtros",ema_cross:"Cruzamento EMA "+d.ema_periods.join("/"),
+      reference_long:"Referência LONG dos ativos elegíveis"};
+    for (const k of ["breakout","ema_cross","reference_long"]) {
+      const r=d.results[k], card=document.createElement("article");
+      card.className="position-card";
+      const title=document.createElement("strong");
+      title.textContent=labels[k];
+      const metrics=document.createElement("div");
+      metrics.className="decision-steps";
+      const show=v=>v===null?"Sem dados":Number(v).toLocaleString("pt-BR",{maximumFractionDigits:6});
+      decisionMetric(metrics,"Hipóteses",r.candidates);
+      decisionMetric(metrics,"Observações futuras disponíveis",r.scored_marks);
+      decisionMetric(metrics,"Positivas / negativas após custos",r.positive_marks+" / "+r.negative_marks);
+      decisionMetric(metrics,"Marca média antes de funding (bps)",show(r.average_mark_before_funding_bps));
+      const note=document.createElement("p");
+      note.className="muted";
+      note.textContent="Soma condicional de marcas: "+show(r.conditional_mark_before_funding_quote)+
+        " USDT (não é carteira). Sem observação futura: "+r.missing_future_marks+
+        ". Toques stop: "+r.stop_range_touches+"; alvos: "+r.target_range_touches.join(" / ")+
+        "; stop e alvo na mesma vela: "+r.stop_and_target_same_bar+
+        ". Não inferir execução nem sequência das parciais.";
+      card.append(title,metrics,note);
+      root.append(card);
+    }
+  } catch(e) {
+    summary.textContent="Comparação indisponível: "+e.message;
+  } finally {
+    button.disabled=false;
+  }
+}
 document.addEventListener("DOMContentLoaded",()=>{
   $("save").addEventListener("click",save);
   $("preview").addEventListener("click",preview);
+  $("compare-history").addEventListener("click",compareHistoricalStrategies);
   $("history-next").addEventListener("click",loadMoreHistory);
   $("decision-refresh").addEventListener("click",loadDecisionFunnel);
   document.querySelectorAll("[data-decision-filter]").forEach(node => {

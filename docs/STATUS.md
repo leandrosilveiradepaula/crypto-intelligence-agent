@@ -1,5 +1,14 @@
 # STATUS — Crypto Intelligence Agent
 
+## D512 — laboratório comparativo sobre histórico REST arquivado (24/11/2026, em desenvolvimento)
+
+**D511 integrado:** squash `3d5037f73eb688aec75716c178c34c20175d351e`, head revisado `2fe008d51c9365d749f6ddca311dd2391b2aebdf`, PR #739; runs [Python/documentação](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45406930229) e [QA mobile](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45406930130) concluídos com SUCCESS, jobs Linux/Windows e QA geral aprovados. Não atribuir ao QA geral uma inspeção visual específica do novo cartão. A evidência verificável nesta continuidade é CI do head; não há log de uma execução local isolada dos quatro testes anteriormente mencionados. D511 não foi publicado na VPS.
+
+**D512, branch `chatgpt/j3-archived-strategy-comparison-d512`:** compara rompimento e EMA cruzada com períodos explícitos do formulário, demais parâmetros do perfil salvo, coorte original de cada arquivo D461, warmup comum a partir de arquivos mais antigos sem conflitos, hora futura como observação ex post, custos hipotéticos PRE2, benchmark LONG e toques em stop/alvos. Integração no GET loopback /api/strategy-comparison e painel J5, sem alterar o perfil operacional. Limites: 72 arquivos, 24 pares horários, falta de preço futuro explícita, não OOS validado, sem preenchimentos ou funding/mark/liquidação reais. Testes adicionados; CI do head e revisão ainda pendentes. Documento docs/J3_ARCHIVED_STRATEGY_COMPARISON_D512.md.
+
+**Próxima ação:** conferir CI/revisão D512, corrigir falhas e integrar quando elegível. Preparar atualização PAPER única para D509+D511+D512 (release owner sujeito a gate e rollback), sem reiniciar J1 ou alterar posições abertas. Homologar comparação sobre arquivos reais da VPS; a execução nesta sessão não teve acesso aos arquivos privados nem comprova a amostra disponível. Posteriormente completar intrabar, funding, liquidação e holdout pré-registrado. Sem ordens reais e sem custo adicional.
+
+
 ## D511 — scorecard de posições PAPER precificadas, desenvolvimento (24/11/2026)
 
 A partir da main verificada `1ae9fb0aee56b0c9cdeae7071917acb4b0167e15` foi iniciada a branch `chatgpt/j3-paper-scorecard-d511` para avançar J3/J5 sem aguardar o release D509. Reusa D454/D487/D505: fechamento de posições PAPER com preços e custos hipotéticos persistidos, sem novo diário financeiro. Entrega scorecard no JSON do /api/paper-session e nos cartões móveis do painel (ganhos, perdas, retorno condicional antes de funding e drawdown entre fechamentos). A janela de 50 recentes + posições antigas ainda abertas NÃO é todo o histórico; o painel sinaliza cobertura incompleta e precificação ausente. Nenhuma conclusão OOS, PnL real, funding efetivo, liquidação real ou proteção nativa.
