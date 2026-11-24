@@ -17,7 +17,7 @@ import re
 import sys
 import time
 
-from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.market_data import DataValidationError, DataGapError
 from crypto_intelligence_agent.j3_paper_scorecard_d511 import paper_closed_scorecard
 from crypto_intelligence_agent.j3_archived_strategy_comparison_d512 import (
     compare_archived_strategies, read_comparison_archives,
@@ -571,7 +571,7 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
                     history_directory=type(self).history_directory,
                     ema_periods=periods, now_ms=time.time_ns() // 1_000_000,
                 ))
-            except (DataValidationError, OSError, ValueError, TypeError, ArithmeticError):
+            except (DataValidationError, DataGapError, OSError, ValueError, TypeError, ArithmeticError):
                 return self._respond(503, {
                     "status":"historical_comparison_unavailable","orders_sent":False,
                 })
