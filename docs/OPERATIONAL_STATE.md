@@ -1,5 +1,14 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D521 — Bandas de Bollinger configuráveis (24/11/2026)
+
+Pedido explícito PO: acrescentar Bollinger ao motor de entrada e à pesquisa de combinações D520. Campo opcional `bollinger` em IndicatorSelection, desativado por padrão/ausente em perfis legados, período 2..120 (exemplo 20), multiplicador de desvio-padrão populacional 0,1..10 (exemplo 2, até seis casas decimais). Média central SMA dos fechamentos, bandas superior/inferior = SMA ± multiplicador × desvio-padrão populacional; somente velas fechadas. Dois modos selecionáveis: rompimento (LONG acima da superior, SHORT abaixo da inferior; neutro dentro); retorno (LONG quando o fechamento anterior estava abaixo da inferior anterior e o atual retorna para dentro das bandas atuais, SHORT simétrico a partir de cima; evento de uma barra). Bandas de largura zero não geram sinal. Confluência D513 exige concordância com EMA/SMA/Pivot ativos; não altera volume/cooldown/força relativa BTC nem regras de saída. Warmup apenas quando ativo, período+2 e limite de 122. Valores não são parâmetros otimizados. Compatibilidade: JSON antigo aceito sem mudanças; rollback a código anterior após salvar campo novo requer revisão do perfil.
+
+Matriz exploratória D520 mantém as 15 hipóteses originais e adiciona oito: Bollinger isolado com FR (rompimento/retorno), SMA 20/50 + Bollinger, SMA 20/50 + Pivot + Bollinger (fatores 2 e 2,5), EMA 9/21 + Bollinger com/sem Pivot e SMA 20/50 + Bollinger retorno. Total 23 novas hipóteses + 2 controles, comparadas na mesma amostra 5m e mesmos custos. Nenhum parâmetro em produção alterado, sem OOS, funding/liquidação validados ou ordem real.
+
+**Estado:** D521 incluído na branch `chatgpt/j3-combination-research-d520` / PR #747 (D520 anterior `653e6e0bdc6c4876848d3687ebf993eb9433e600` permanece imutável e só executa as 15 hipóteses). Alterações motor, parser owner, interface, matriz e testes; CI do novo head e execução real pendentes. Não alegar resultado da bateria. Próximo: validar head D520+D521 e executar as 25 estratégias no cutoff já fixado 1795547640289, sem nova coleta nem alteração de serviços. D519 instalado? Não: apenas integrado o instalador; D515 continua em operação até gate. MCP sem acesso UID owner para os arquivos privados. Sem Codex executor disponível, implementação direta via GitHub. Nenhum custo adicional.
+
+
 ## D520 — bateria de pesquisa de indicadores combinados (24/11/2026)
 
 **D519 roteiro integrado** em `09c6de2af790671c2af5860c52e34167e7f291e6`, head `cbc9e193ba4ee394bbbb14f2b7cf0999de2d3c34`, CI Linux/Windows/docs 45468931413 e QA mobile geral 45468931399 SUCCESS. Não executado cutover; D515 permanece instalado. Roteiro anterior fixa D518; para evitar instalação dupla, priorizar executar a bateria D520 isolada e posterior publicação agrupada se houver nova superfície de produto.

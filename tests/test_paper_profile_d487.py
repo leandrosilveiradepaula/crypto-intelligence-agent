@@ -111,6 +111,26 @@ class OwnerPaperProfileTests(unittest.TestCase):
                 "research": {"indicators": selection}})
         self.assertEqual(self.file.read_bytes(), before)
 
+    def test_d521_bollinger_profile_roundtrip_and_rejection(self):
+        from crypto_intelligence_agent.j2_configurable_indicators_d513 import (
+            BollingerBands, IndicatorSelection, MovingAverageSlot, PivotSuperTrend,
+        )
+        off = tuple(MovingAverageSlot(False,n) for n in (10,30,60))
+        selection = IndicatorSelection(off,off,PivotSuperTrend(False,2,10,Decimal(3)),
+                                       BollingerBands(True,21,Decimal("2.5"),"reentry"))
+        result = save(self.file,revision=snapshot(self.file)["revision"],edits={
+            "research":{"entry_mode":"indicator_combo","indicators":selection.as_json()}})
+        cfg = read_owner_paper_policy(self.file)
+        self.assertEqual(cfg.research.indicators,selection)
+        self.assertEqual(result["research"]["indicators"],selection.as_json())
+        self.assertEqual(result["applies_to"],"future_paper_sessions_only")
+        before = self.file.read_bytes()
+        bad = selection.as_json()
+        bad["bollinger"]["period"] = 121
+        with self.assertRaises(DataValidationError):
+            save(self.file,revision=result["revision"],edits={"research":{"indicators":bad}})
+        self.assertEqual(self.file.read_bytes(),before)
+
     def test_invalid_research_leverage_and_tranches_keep_existing_bytes(self):
         old=snapshot(self.file)
         original=self.file.read_bytes()
