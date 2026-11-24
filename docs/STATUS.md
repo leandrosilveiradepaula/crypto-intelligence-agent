@@ -1,5 +1,14 @@
 # STATUS — Crypto Intelligence Agent
 
+## D509 — painel de decisões PAPER e funil N50 pesquisável (24/11/2026)
+
+**Evolução funcional J2→J5, sem novo motor ou trading:** Console privado PAPER 8766 passa a expor um painel de "Por que não abriu uma posição?" a partir do **recibo verdadeiro da última lease pública D459**, com etapas e contagens da confirmação de velas WS, preparo da coorte, candidatos relativos ao BTC, intenções e posições PAPER registradas. Categorias de bloqueio seguro (contrato público pendente, lote/margem, validação de entrada e expiração) são registradas como contadores agregados permitidos, sem identificadores privados nem log de exceções. Esses dados não alegam proteção de stop nem conexão ativa: observação de atividade atual segue o heartbeat D456.
+
+**N50 histórico real:** a mesma pesquisa REST imutável existente classifica TODOS os 50 membros como referência BTC, sem hipótese técnica, hipótese rejeitada pela força relativa BTC ou candidato histórico. A interface PT-BR filtra essas categorias, mostra o total em cada estágio e atualiza o preview automaticamente, preservando o botão de nova análise. Histórico REST **não** é apresentado como entrada PAPER, nem é usado para abrir uma posição. Perfil editável continua afetando só novas sessões, e a interface corrige a trava do preview após salvar uma edição.
+
+**Limites:** não altera o risco J3, a estratégia escolhida, alavancagem, stops, metas, permissão de mercado, WS, diários AUTO2/AUTO4 ou J1. API nova `GET /api/paper-decision-funnel` é apenas loopback, somente leitura, com verificação de owner 0700/0600, tamanho, conteúdo, timestamps e eventos permitidos. Testes focados no funil e segurança acompanham o produto. Código integrado e deploy são fases distintas; não declarar a nova tela instalada antes de gate da VPS.
+
+
 ## D508 — D507 PAPER instalado e verificado na VPS (24/11/2026, 13:23 UTC)
 
 **Release PAPER confirmado, diferente de mero merge:** operador executou `deploy/vps/paper_research/owner_paper_cutover_d507_once.sh` pinado no merge `171a549dfcce21c80dd6c13cf1a74ad9ef9b0c48` com blob Git `14a38300a19e3f4a1c13f7bccd889468106def35`. Após preflight read-only `private_owner_paper_readback_consistent`, 0 posições OPEN e confirmação explícita `AUTORIZO CUTOVER PAPER`, o script registrou `D507_RELEASE=PASS`, `D507_CODE_SHA=056845fdc46b8c2d1b08acd86be75e59dd368bac`, `D507_HISTORY_ENDPOINT=HTTP200`, `D507_J1_UNTOUCHED=YES`, `D507_LIVE_ORDERS=NO`.

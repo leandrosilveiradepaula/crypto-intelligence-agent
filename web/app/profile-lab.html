@@ -34,7 +34,14 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 .muted{color:var(--muted);font-size:.8rem}
 .check{display:flex;gap:9px;align-items:center;padding:13px;background:#1c3343;border-radius:10px;margin:8px 0}
 .check input{width:19px;height:19px;accent-color:#81e7cd}footer{padding:24px 0;color:var(--muted);font-size:.77rem}
-@media(max-width:720px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:15px}}
+.decision-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:13px 0}
+.decision-metric{padding:13px;background:#102033;border-radius:10px;border:1px solid #365069;min-width:0}
+.decision-metric strong{display:block;font-size:1.35rem;color:var(--green);font-variant-numeric:tabular-nums}
+.decision-metric span{display:block;color:var(--muted);font-size:.77rem}
+.decision-filter{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.decision-filter button{min-height:38px;padding:8px 12px;background:#293f57;color:var(--text);border-color:#537c7b;font-size:.8rem}
+.decision-filter button[aria-pressed="true"]{background:#81e7cd;color:#112b2e}
+@media(max-width:720px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:15px}.decision-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:450px){.grid{grid-template-columns:1fr}.actions{flex-direction:column}.actions button{min-width:0;width:100%}}
 </style>
 </head>
@@ -44,6 +51,14 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <h1>Configure. Teste. Acompanhe.</h1>
 <p>Escolha seus indicadores e suas saídas. Salvar altera apenas o perfil do <strong>próximo ciclo PAPER</strong>, não posições abertas. A pesquisa acontece depois da vela de 1 hora; stops e alvos podem ser acompanhados intra-hora pelo monitor separado.</p>
 <div id="status" role="status" aria-live="polite">Carregando perfil do servidor local…</div>
+<section class="card" aria-label="Diagnóstico de decisões PAPER">
+<h2>Visão do robô: por que não abriu uma posição?</h2>
+<p>Mostra o <strong>último ciclo público concluído</strong> de pesquisa e avaliação PAPER. Não confunda hipóteses históricas REST com confirmações de vela por WebSocket. A ausência de entradas não é, por si só, um erro.</p>
+<div id="decision-current" class="notice" role="status" aria-live="polite">Carregando último diagnóstico de decisões…</div>
+<div class="decision-steps" id="decision-steps"></div>
+<div id="decision-reasons" class="muted"></div>
+<button id="decision-refresh" class="secondary">Atualizar decisões</button>
+</section>
 <section class="card">
 <h2>1. Indicadores da entrada horária</h2>
 <p>Escolha entre rompimento e cruzamento de EMAs. As alterações serão consideradas apenas nas próximas sessões PAPER; novas médias precisam de histórico causal suficiente.</p>
@@ -101,9 +116,16 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <div id="paper-demo-rows" class="results" aria-live="polite"></div>
 </section>
 <section class="card">
-<h2>4. O que os candles reais mostram com este perfil?</h2>
-<p>Pesquisa de histórico público REST, não sinal validado por WebSocket e não execução PAPER. A amostra não autoriza negociação.</p>
-<div id="preview-details" class="muted">Clique em “Analisar histórico real disponível”.</div>
+<h2>4. Os 50 ativos: onde cada um foi filtrado?</h2>
+<p>Resultado histórico público REST, sem sinal WebSocket nem autorização de entrada. Mostra também os ativos sem hipótese e aqueles que não passaram pela comparação com BTC. O motor PAPER só decide após a vela confirmada.</p>
+<div id="preview-details" class="muted">Aguardando leitura do histórico já armazenado.</div>
+<div id="preview-funnel" class="decision-steps"></div>
+<div class="decision-filter" role="group" aria-label="Filtrar decisões históricas">
+<button type="button" data-decision-filter="historical_candidate" aria-pressed="true">Candidatos históricos</button>
+<button type="button" data-decision-filter="btc_relative_not_aligned" aria-pressed="false">Filtro BTC</button>
+<button type="button" data-decision-filter="no_technical_hypothesis" aria-pressed="false">Sem hipótese</button>
+<button type="button" data-decision-filter="all" aria-pressed="false">Todos os 50</button>
+</div>
 <div id="preview-rows" class="results" aria-live="polite"></div>
 </section>
 <footer>Ferramenta local e privada · R$ 0,00 adicional · Dados Bybit somente públicos · Ordens reais desativadas. O monitor de saídas e o coletor J1 não são alterados por esta página.</footer>

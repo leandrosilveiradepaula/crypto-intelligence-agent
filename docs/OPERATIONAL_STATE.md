@@ -1,5 +1,12 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D509 — jornada grande: oportunidades pesquisadas + causas de não entrada visíveis (24/11/2026)
+
+Produto na VPS antes desta jornada: D507 PAPER atualizado (motor e painel) em `056845fdc46b8c2d1b08acd86be75e59dd368bac`, estado ativo; J1 N50 ativo. A última leitura `/api/paper-session` retorna 0 OPEN e 1 CLOSED ARBUSDT SHORT/STOP com `orders_sent=false`; pesquisa REST mostra 10 hipóteses e 5 comparáveis ao BTC. Isso é **pesquisa histórica**, não comprovação de cinco sinais WS ou ordens. O painel atual mostra as candidatas, mas não explica o descarte dos outros contratos nem a etapa do ciclo WS que impediu entrada. `main` estava em `8af51bc7daff2648b286258966cd1015ab040253` antes desta branch.
+
+Implementação D509 na branch `codex/j2-j5-decision-center-d509`: consulta REST do histórico classifica os 50 contratos e expõe funil por causa; a lease PAPER D453 registra contadores de estado e rejeições sem escrever novos diários financeiros. Leitor owner seguro D509 apresenta o último ciclo concluído, nunca afirma que o WebSocket está saudável no instante da leitura. Painel mobile PT-BR tem resumo, etapas, motivo e filtros, com atualização periódica de dados existentes. Variações no perfil ficam nas mãos do PO; não reduzir gates para fabricar operações. **Não instalado na VPS ainda**. Aceite da entrega: tela de decisões utilizável no loopback, consistência 50/50 dos motivos, diagnóstico último ciclo seguro e CI dos módulos afetados. Tarefa seguinte de produto: observar entradas PAPER pós-deploy e evolução em TP1/TP2; J3 retorno líquido deve usar fills realmente registrados, sem inflar percentuais sobre margem.
+
+
 ## D508 — estado operacional pós-cutover, comprovado por terminal + MCP (24/11/2026 UTC)
 
 **Jornada atual:** J2/J3/J4/J5 PAPER em homologação prospectiva; J1 N50 preservada. Repositório `main` em `171a549dfcce21c80dd6c13cf1a74ad9ef9b0c48` antes deste registro documental. Script D507 aprovado head `5a80413f2fdded8f8ca4e9225bc68754f765cc52`; CI Linux 3.596 PASS, Windows 3.596 PASS (670 casos POSIX skip), mobile QA green (runs 45399313879, 45399314041). PR #737 MERGED, nenhuma PR aberta na checagem. O código de produto instalado, SHA `056845fdc46b8c2d1b08acd86be75e59dd368bac`, é anterior ao commit de automação de release por design.
