@@ -36,6 +36,7 @@ from .j4_private_paper_ws_operator_d425 import (
 from .market_data import DataGapError, DataValidationError
 from .bybit_ws_supervisor import _SAFE_REJECTION_CLASSES
 from .j4_automatic_entry_materializer_d448 import _atomic_private_write
+from .j5_paper_decision_funnel_d509 import SAFE_PAPER_EVENT_COUNTS
 
 
 _STATUS_FILE = "paper-operator-state-d453.json"
@@ -477,6 +478,13 @@ def run_resident_paper_observer(
             "paper_contract_rule_changes_denied": contract_counter(
                 "stale_or_changed_contracts_rejected"
             ),
+            # D509: retain ONLY known aggregate decision outcomes.
+            # Counts absent in the cycle report are zero, never invented
+            # market orders or individual trading signals.
+            "paper_event_counts": {
+                name: bounded(events.get(name)) or 0
+                for name in sorted(SAFE_PAPER_EVENT_COUNTS)
+            },
             "real_orders_sent": False,
             "protected_positions_at_venue": False,
         }
