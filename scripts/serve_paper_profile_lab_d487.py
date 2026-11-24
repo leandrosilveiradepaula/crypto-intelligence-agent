@@ -20,6 +20,7 @@ import time
 from crypto_intelligence_agent.market_data import DataValidationError, DataGapError
 from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginBasis
 from crypto_intelligence_agent.j3_intrahour_replay_d518 import read_latest_intrahour
+from crypto_intelligence_agent.j3_local_research_job_d522 import ResearchJob, ResearchBusy
 from crypto_intelligence_agent.j3_paper_scorecard_d511 import paper_closed_scorecard
 from crypto_intelligence_agent.j3_retrospective_warmup_d516 import read_latest_supplement
 from crypto_intelligence_agent.j3_archived_strategy_comparison_d512 import (
@@ -469,6 +470,7 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
     history_directory: Path | None = None
     paper_session_directory: Path | None = None
     demo_position_directory: Path | None = None
+    research_job: ResearchJob | None = None
 
     def log_message(self, fmt, *args):
         # Never log arbitrary client path, private profile or JSON body.
@@ -581,6 +583,11 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
                 return self._respond(200, snapshot(type(self).paper_file))
             except (DataValidationError, OSError, ValueError, TypeError):
                 return self._respond(503, {"status":"profile_not_available"})
+        if self.path == "/api/combination-research":
+            job=type(self).research_job
+            if job is None:
+                return self._respond(503, {"status":"research_job_disabled","orders_sent":False})
+            return self._respond(200,job.status())
         if self.path.startswith("/api/strategy-comparison"):
             matched = re.fullmatch(
                 r"/api/strategy-comparison[?]fast=([0-9]{1,3})&mid=([0-9]{1,3})&trend=([0-9]{1,3})(&retro=1)?(?:&horizon=([0-9]{1,2})(?:&resolution=(1h|5m))?)?",
@@ -618,13 +625,29 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._allowed():
             return self._respond(403, {"status":"loopback_only"})
-        if self.path != "/api/profile":
-            return self._respond(405, {"status":"profile_only"})
+        if self.path not in ("/api/profile","/api/combination-research"):
+            return self._respond(405, {"status":"profile_or_research_only"})
         host = self.headers.get("Host")
         if (self.headers.get("Origin") != f"http://{host}"
                 or self.headers.get("X-CIA-Paper-Profile") != "1"
                 or self.headers.get("Content-Type") != "application/json"):
             return self._respond(403, {"status":"same_origin_json_required"})
+        if self.path == "/api/combination-research":
+            job=type(self).research_job
+            if job is None:
+                return self._respond(503, {"status":"research_job_disabled","orders_sent":False})
+            try:
+                length=int(self.headers.get("Content-Length","0"))
+                if not 2<=length<=70_000:
+                    raise DataValidationError("D522 bounded request required")
+                data=json.loads(self.rfile.read(length).decode("ascii"),
+                    object_pairs_hook=_no_duplicates,parse_constant=_reject_number,
+                    parse_float=_reject_number)
+                return self._respond(202,job.start(data))
+            except ResearchBusy:
+                return self._respond(409,{"status":"research_busy","orders_sent":False})
+            except (DataValidationError,OSError,ValueError,TypeError,ArithmeticError):
+                return self._respond(400,{"status":"research_request_rejected","orders_sent":False})
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if not 2 <= length <= 4096:
@@ -698,6 +721,8 @@ def main(argv=None) -> int:
     OwnerPaperProfileHandler.history_directory = args.historical_directory
     OwnerPaperProfileHandler.paper_session_directory = args.paper_session_directory
     OwnerPaperProfileHandler.demo_position_directory = args.demo_position_directory
+    OwnerPaperProfileHandler.research_job = ResearchJob(policy_file=args.policy_file,
+        history_directory=args.historical_directory)
     try:
         with HTTPServer((HOST,PORT),OwnerPaperProfileHandler) as srv:
             print(json.dumps({"status":"owner_paper_profile_loopback_ready",
