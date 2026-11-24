@@ -404,8 +404,8 @@ def compare_archived_strategies(
                                         (relative*Decimal(10000)).quantize(Decimal("0.01")), "f"),
                                     "signal_close": format(bars[-1].close, "f"),
                                     "next_open_reference_ex_post": format(path[0].open, "f"),
-                                    "volume_ratio": (format(hypothesis[0].quote_volume_ratio, "f")
-                                        if getattr(hypothesis[0], "quote_volume_ratio", None)
+                                    "volume_ratio": (format(hypothesis[0].quote_volume_to_prior_mean, "f")
+                                        if getattr(hypothesis[0], "quote_volume_to_prior_mean", None)
                                         is not None else None),
                                 })
                     _accumulate(totals[name], side, bars[-1].close, future,
