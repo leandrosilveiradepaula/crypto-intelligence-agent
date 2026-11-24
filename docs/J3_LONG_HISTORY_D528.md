@@ -1,5 +1,10 @@
 # D528 — histórico longo, retomável e separado do residente
 
+## Correção de inicialização D528 (24/11/2026)
+
+Primeira tentativa owner de coleta real 90d/1h no SHA 7ae59574b1b21e6a132e083fe729df0def874f52 falhou antes de salvar plano, em freeze_cohort: AttributeError ticker_received_at_ms; o contrato real D451 expõe ticker_received_ms. Corrigido junto à entrega D529 #755, sem mudar formato do plano ou apagar dados. Regressão com snapshot D451 real produzido pelo seletor, mais fluxo CLI init/retomada em diretório owner temporário, transportes injetados, lock e armazenamento reais. A CI anterior D529 (45512585927/45512586259) foi verde, mas não cobria a fronteira de inicialização. Novo head exige CI/revisão. Retomar no MESMO diretório histórico, --init somente se plano ausente; preservar arquivos de diagnóstico e checkpoints. Não repetir J1 nem D526. Nenhuma cobertura longa ou PnL novo comprovado.
+
+
 Prioridade PO 24/11/2026: aumentar a amostra substancialmente. Base de 90 dias primeiro, 365 e até 730 dias, independente do horizonte de cada operação. 50x e RSI exclusivamente confirmação; dimensionamento D527 adiado. D526 real: 140 cenários, 83 positivos, 43 negativos, 14 sem dados, mesma janela curta de 24h/4h; não repetir. Ver issue #4 e recibo #752. D525 integrado sem publicação (main 64863220c7b7c2182a03fa3e7b95f0a6c6fc3044); não alterar J1.
 
 ## Primeira entrega útil

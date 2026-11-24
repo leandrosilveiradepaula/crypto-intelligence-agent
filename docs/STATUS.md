@@ -1,5 +1,10 @@
 # STATUS — Crypto Intelligence Agent
 
+## Correção de inicialização D528 (24/11/2026)
+
+Primeira tentativa owner de coleta real 90d/1h no SHA 7ae59574b1b21e6a132e083fe729df0def874f52 falhou antes de salvar plano, em freeze_cohort: AttributeError ticker_received_at_ms; o contrato real D451 expõe ticker_received_ms. Corrigido junto à entrega D529 #755, sem mudar formato do plano ou apagar dados. Regressão com snapshot D451 real produzido pelo seletor, mais fluxo CLI init/retomada em diretório owner temporário, transportes injetados, lock e armazenamento reais. A CI anterior D529 (45512585927/45512586259) foi verde, mas não cobria a fronteira de inicialização. Novo head exige CI/revisão. Retomar no MESMO diretório histórico, --init somente se plano ausente; preservar arquivos de diagnóstico e checkpoints. Não repetir J1 nem D526. Nenhuma cobertura longa ou PnL novo comprovado.
+
+
 ## D529 — pesquisa retrospectiva longa (24/11/2026)
 
 D528 integrado em 7ae59574b1b21e6a132e083fe729df0def874f52, CI 45510118117/45510118137 SUCCESS; 38,6 GB livres na VPS via host_status; coleta real ainda pendente, MCP sem acesso owner. D529 reusa hipóteses D526 e saídas D517 em modo REST retrospectivo separado: indicadores contínuos por sequência, reset nas lacunas, RSI somente veto, 1h/5m, 24/48/72h, matriz padrão 420 cenários por partição. Partições 60/20/20 sem cruzamento de trajetórias; holdout exige parâmetros congelados e não deve ser usado para ajuste. Métricas por mês e regime, hashes e cobertura; coorte sobrevivente, não N50 histórico. Não equivaler ao reseed D526, carteira ou liquidação. Ver docs/J3_LONG_REPLAY_D529.md. Código e testes candidatos; CI e execução real pendentes. Próximo: coleta owner 90d e expansão 365d, replay desenvolvimento após aceite, 5m e universo mais amplo. Sem alteração J1, perfil, serviço, ordens ou custo.

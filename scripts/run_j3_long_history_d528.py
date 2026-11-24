@@ -75,8 +75,9 @@ def main(argv=None):
                 client=client,wall_ms=lambda:time.time_ns()//1_000_000,max_gets=a.max_gets)
         print(json.dumps(result,sort_keys=True,separators=(",",":")))
         return 0
-    except (MarketDataError,J1BybitCaptureError,OSError,ValueError,TypeError,ArithmeticError):
-        print(json.dumps({"status":"d528_batch_stopped","completed_pages_preserved":True,
+    except (MarketDataError,J1BybitCaptureError,OSError,ValueError,TypeError,ArithmeticError) as exc:
+        print(json.dumps({"status":"d528_batch_stopped","error_type":type(exc).__name__,
+                          "completed_pages_preserved":True,
                           "automatic_retry":False,"orders_sent":False,"j1_touched":False}))
         return 1
 

@@ -1,5 +1,10 @@
 # D529 — replay de base longa
 
+## Correção de inicialização D528 (24/11/2026)
+
+Primeira tentativa owner de coleta real 90d/1h no SHA 7ae59574b1b21e6a132e083fe729df0def874f52 falhou antes de salvar plano, em freeze_cohort: AttributeError ticker_received_at_ms; o contrato real D451 expõe ticker_received_ms. Corrigido junto à entrega D529 #755, sem mudar formato do plano ou apagar dados. Regressão com snapshot D451 real produzido pelo seletor, mais fluxo CLI init/retomada em diretório owner temporário, transportes injetados, lock e armazenamento reais. A CI anterior D529 (45512585927/45512586259) foi verde, mas não cobria a fronteira de inicialização. Novo head exige CI/revisão. Retomar no MESMO diretório histórico, --init somente se plano ausente; preservar arquivos de diagnóstico e checkpoints. Não repetir J1 nem D526. Nenhuma cobertura longa ou PnL novo comprovado.
+
+
 D528 integrado em 7ae59574b1b21e6a132e083fe729df0def874f52; CI 45510118117/45510118137 SUCCESS. Coleta real pendente, host_status confirmou 38,6 GB livres no volume global. D526 real 140 cenários em recorte curto, não repetir.
 
 D529 reutiliza D513/D526 para hipóteses, D517 para saídas/custos, D518 para corroborar OHLC 5m vs 1h e D528 para dados privados. Modo exclusivamente REST retrospectivo calcula todos os eventos causais em cada sequência contígua numa passagem por configuração distinta. Estado contínuo de EMA/ATR/Pivot/RSI, não idêntico ao reseed de prefixo móvel D526. Lacunas interrompem sequência e exigem novo warmup. Não fabricar D461/WS ou mudar default J2/J4. Cap explícito 730 dias de candles 1h e 72h de trajetórias 1h/5m; D517 default 12h. Reusa saídas por direção/horizonte/stop, RSI somente veto; FR BTC 24h. Coorte sobrevivente atual, não Top50 histórico.

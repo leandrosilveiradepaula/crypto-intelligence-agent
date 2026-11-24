@@ -115,7 +115,7 @@ def decode_plan(raw: bytes) -> HistoryPlan:
 def freeze_cohort(snapshot: DynamicPublicN50) -> HistoryPlan:
     if type(snapshot) is not DynamicPublicN50:
         raise DataValidationError("D528 typed D451 cohort required")
-    observed = snapshot.ticker_received_at_ms
+    observed = snapshot.ticker_received_ms
     cutoff = ((observed - 2000)//DAY)*DAY
     return decode_plan(HistoryPlan(cutoff, observed, snapshot.fingerprint_sha256,
         tuple(sorted((m.symbol, m.launch_time_ms) for m in snapshot.ranked)),
