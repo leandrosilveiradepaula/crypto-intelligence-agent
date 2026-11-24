@@ -213,11 +213,26 @@ def research_five_minute_url(symbol: str, start: int, end: int) -> str:
     ))
 
 
+def research_history_kline_url(symbol: str, interval: str, start: int, end: int) -> str:
+    """D528: explicitly opted-in historical research, at most 1000 closed bars."""
+    duration = {"1h": HOUR_MS, "5m": 300_000}.get(interval) if type(interval) is str else None
+    if (duration is None or type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None
+            or type(start) is not int or type(end) is not int
+            or not 0 < start < end or start % duration or end % duration
+            or not 1 <= (end-start)//duration <= 1000):
+        raise J1BybitCaptureError("invalid_long_research_kline_window")
+    return BASE_URL + "/v5/market/kline?" + urlencode((
+        ("category", "linear"), ("symbol", symbol), ("interval", "60" if interval == "1h" else "5"),
+        ("start", str(start)), ("end", str(end-1)), ("limit", str((end-start)//duration)),
+    ))
+
+
 class BoundedBybitPublicClient:
     def __init__(
         self, transport: Callable[[str, int], bytes] | None = None,
         *, min_interval_seconds: float = MIN_PUBLIC_GET_INTERVAL_SECONDS,
         allow_five_minute_research: bool = False,
+        allow_long_history_research: bool = False,
     ):
         # D311: bounded, optional conservative pacing for the N50 hourly
         # worker. This does not modify the 372-request capture path, allow
@@ -228,6 +243,9 @@ class BoundedBybitPublicClient:
             raise ValueError("invalid_public_get_pacing")
         if type(allow_five_minute_research) is not bool:
             raise ValueError("explicit_five_minute_research_flag_required")
+        if type(allow_long_history_research) is not bool:
+            raise ValueError("explicit_long_history_research_flag_required")
+        self.allow_long_history_research = allow_long_history_research
         self.allow_five_minute_research = allow_five_minute_research
         self.min_interval_seconds = float(min_interval_seconds)
         self.transport = transport
@@ -273,6 +291,15 @@ class BoundedBybitPublicClient:
         elif parsed.path == "/v5/market/tickers":
             # Only one public aggregate endpoint, no optional filter params.
             allowed = url == tickers_url()
+        elif parsed.path == "/v5/market/kline" and self.allow_long_history_research:
+            allowed = False
+            if set(queries) == {"category", "symbol", "interval", "start", "end", "limit"}:
+                try:
+                    interval = {"60": "1h", "5": "5m"}[queries["interval"][0]]
+                    allowed = url == research_history_kline_url(queries["symbol"][0], interval,
+                        int(queries["start"][0]), int(queries["end"][0])+1)
+                except (KeyError, ValueError, IndexError, TypeError, J1BybitCaptureError):
+                    allowed = False
         elif (parsed.path == "/v5/market/kline"
               and queries.get("interval") == ["5"]
               and self.allow_five_minute_research):
@@ -329,6 +356,7 @@ class BoundedBybitPublicClient:
                 (parsed.path == "/v5/market/instruments-info"
                  and queries.get("limit") == ["1000"])
                 or parsed.path == "/v5/market/tickers"
+                or (parsed.path == "/v5/market/kline" and self.allow_long_history_research)
             ) else 131_072
         )
         wire = (self.transport(url, limit) if self.transport is not None
