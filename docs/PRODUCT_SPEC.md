@@ -1,5 +1,10 @@
 # Especificação do produto
 
+## D513 — indicadores independentes por escolha do Product Owner (24/11/2026)
+
+EMA, SMA e Pivot Point SuperTrend devem ser opções independentes e parametrizáveis na interface PAPER. O usuário pode ligar/desligar cada uma das três médias EMA e cada uma das três médias SMA, configurar os períodos (2..120 velas de 1h) e ativar/desativar Pivot SuperTrend, com período do pivô (1..50), período ATR (1..120) e fator ATR (0,1..100). Valores iniciais 10/30/60 e Pivot 2/10/3 são exemplos editáveis, não uma otimização nem uma recomendação. O modo personalizável `indicator_combo` é opt-in; perfis antigos `breakout` e `ema_cross` não são reinterpretados. Desligar todas as opções no modo personalizável suspende novas entradas, sem desativar a gestão de posições existentes. Salvar só vale para próximas sessões PAPER, não altera posição aberta, margem, alavancagem, stop ou ordem. J1 permanece intocada, sem trading real ou custo adicional.
+
+
 ## D487 — configuração PAPER pelo usuário, sem estratégia hardcoded (23/11/2026)
 
 Decisão do Product Owner: períodos de indicadores, entradas e metas de saída são **parâmetros editáveis**, não decisões definitivas do ChatGPT. Preferir ciclos de produto completos (sinal → intenção PAPER → posição → parciais → encerramento), não mais ajustes de limiar sem resultado operacional. Modo de entrada continua **exclusivamente por vela de 1h confirmada**, com monitor de saída intra-hora. Na versão D487, **editor local e privado**, na porta loopback 8766, alterável por interface responsiva em português: EMA/ATR/extremos/volume/compressão/cooldown e perfil experimental explícito; margem/alavancagem para novas posições; stop, alvos e duas tranches, expressos na interface em retorno bruto sobre margem e convertidos em distância de preço de acordo com a alavancagem. Permite somar 100% em parciais e runner=0, ou reter parcela residual sem vencimento.

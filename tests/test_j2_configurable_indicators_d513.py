@@ -69,6 +69,18 @@ class ConfigurableIndicatorsD513Tests(unittest.TestCase):
         selection = IndicatorSelection(OFF, OFF, policy)
         self.assertEqual(combination_directions(cs, selection), result)
 
+    def test_pivot_only_reaches_the_existing_observed_evaluator(self):
+        source, now = case("100", bars=24)
+        tail = tuple(replace(c, open=D(p), close=D(p), high=D(p)+1, low=D(p)-1)
+                     for c, p in zip(source.candles[-6:], (100, 105, 101, 99, 108, 90)))
+        series = replace(source, candles=source.candles[:-6]+tail)
+        selection = IndicatorSelection(OFF, OFF, PivotSuperTrend(True, 1, 1, D("0.1")))
+        cfg = replace(CONFIG, entry_mode="indicator_combo", indicators=selection)
+        out = evaluate_observed_bybit_research(series, config=cfg, decision_at_ms=now)
+        self.assertEqual(len(out.hypotheses), 1)
+        self.assertEqual(out.hypotheses[0].side, SyntheticSide.SHORT)
+        self.assertIsNone(out.hypotheses[0].ema_close)
+
     def test_conflicting_families_do_not_emit_direction(self):
         source, _ = case("100", bars=24)
         cs = tuple(replace(c, open=D(p), close=D(p), high=D(p)+1, low=D(p)-1)
