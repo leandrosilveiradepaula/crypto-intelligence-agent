@@ -151,6 +151,8 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <h2>5. Laboratório histórico: compare suas estratégias</h2>
 <p>Compare rompimento, EMA e a combinação personalizável salva nas mesmas horas arquivadas da Bybit. Os períodos da EMA de referência podem ser editados acima sem salvar; a combinação usa a seleção do último perfil salvo.</p>
 <div class="notice">Comparação retrospectiva por fechamento de 1h, com custos hipotéticos. Toques de stop e alvos não são execuções: não conhecemos sua ordem intrabar nem a liquidação. Não é backtest financeiro validado.</div>
+<label class="check"><input type="checkbox" id="compare-retro"> Usar histórico complementar recuperado depois das decisões</label>
+<p class="muted">Opcional: amplia o aquecimento até 122 velas usando uma coleta de pesquisa separada, quando disponível. Mantém os ativos e observações das horas originais. Não significa que os dados extras estavam disponíveis naquele momento.</p>
 <button id="compare-history" class="secondary" disabled>Comparar estratégias no histórico</button>
 <div id="compare-status" class="muted" role="status" aria-live="polite">Execute a comparação quando desejar.</div>
 <div id="compare-results" class="results" aria-live="polite"></div>

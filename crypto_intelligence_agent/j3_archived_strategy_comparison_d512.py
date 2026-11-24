@@ -20,6 +20,7 @@ from .j2_rest_n50_history_d461 import (
     RestN50History, reopen_frozen_rest_n50_for_research,
 )
 from .j4_private_paper_ws_operator_d425 import _private_directory
+from .j3_retrospective_warmup_d516 import WarmupSupplement, seed_by_anchor
 from .market_data import DataGapError, DataValidationError
 from .synthetic_cost_scenarios import SyntheticCostScenario, evaluate_synthetic_costs
 from .synthetic_entry_hypotheses import CompressionBreakoutConfig
@@ -126,7 +127,7 @@ def compare_archived_strategies(
     entry_fee_bps: Decimal, exit_fee_bps: Decimal,
     entry_slippage_bps: Decimal, exit_slippage_bps: Decimal,
     stop_distance_bps: Decimal, target_distances_bps: tuple[Decimal, ...],
-    now_ms: int,
+    now_ms: int, warmup_supplement: WarmupSupplement | None = None,
 ) -> dict:
     """Compare fixed caller-supplied profiles on the same causal archive slots.
 
@@ -195,6 +196,12 @@ def compare_archived_strategies(
     max_contiguous = 0
     cache = {}
     conflicts = set()
+    retrospective_keys = set()
+    retrospective_slots = 0
+    seeds, rejected_supplements = (
+        seed_by_anchor(histories, warmup_supplement, now_ms=now_ms)
+        if warmup_supplement is not None else ({}, 0)
+    )
     windows = []
     with localcontext() as ctx:
         ctx.prec = 50
@@ -207,6 +214,14 @@ def compare_archived_strategies(
                         conflicts.add(key)
                     else:
                         cache[key] = bar
+            for bar in seeds.get(end, ()):
+                key = (bar.symbol, bar.open_time_ms)
+                if key in cache:
+                    if cache[key] != bar:
+                        conflicts.add(key)
+                else:
+                    cache[key] = bar
+                    retrospective_keys.add(key)
             if end not in selected:
                 continue
             future_archive = by_end[end + HOUR_MS]
@@ -235,6 +250,8 @@ def compare_archived_strategies(
                 eligible += 1
                 window["eligible_symbols"] += 1
                 prefix = tuple(reversed(previous))
+                if any((symbol, c.open_time_ms) in retrospective_keys for c in prefix):
+                    retrospective_slots += 1
                 # Digest identifies the research inputs; it does not claim
                 # external authenticity or transform REST into WS confirms.
                 digest = sha256((h.digest_sha256 + "|" + symbol + "|" +
@@ -271,7 +288,14 @@ def compare_archived_strategies(
         "schema_version": SCHEMA,
         "status": ("historical_conditional_marks_only" if eligible
                    else "insufficient_paired_archives_or_warmup"),
-        "source": "owner_frozen_public_rest_archives",
+        "source": ("owner_frozen_public_rest_archives_with_retrospective_warmup"
+                   if warmup_supplement is not None else "owner_frozen_public_rest_archives"),
+        "retrospective_warmup_requested": warmup_supplement is not None,
+        "retrospective_warmup_retrieved_at_ms": (
+            warmup_supplement.created_at_ms if warmup_supplement is not None else None),
+        "retrospective_warmup_symbol_hours": retrospective_slots,
+        "retrospective_warmup_rejected_series": rejected_supplements,
+        "contemporaneous_capture_for_all_features_verified": False,
         "archive_count": len(histories), "paired_decision_hours": len(selected),
         "required_warmup_hours": warmup, "maximum_contiguous_hours_observed": max_contiguous,
         "common_eligible_symbol_hours": eligible,
