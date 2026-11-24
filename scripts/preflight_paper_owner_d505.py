@@ -56,8 +56,9 @@ def preflight_paper_owner(*, paper_directory: Path, policy_file: Path) -> dict:
         raise DataValidationError("D505 PAPER history page does not match ledger")
     mode = policy.research.entry_mode
     periods = policy.research.ema_cross_periods
-    if (mode not in ("breakout", "ema_cross")
-            or (mode == "ema_cross" and periods is None)):
+    if (mode not in ("breakout", "ema_cross", "indicator_combo")
+            or (mode == "ema_cross" and periods is None)
+            or (mode == "indicator_combo" and policy.research.indicators is None)):
         raise DataValidationError("D505 invalid future PAPER profile")
     return {
         "schema_version": _SCHEMA,
@@ -68,6 +69,8 @@ def preflight_paper_owner(*, paper_directory: Path, policy_file: Path) -> dict:
         "owner_history_page_checked": len(page["positions"]),
         "next_session_entry_mode": mode,
         "next_session_ema_cross_periods": list(periods) if periods else None,
+        "next_session_indicators": (policy.research.indicators.as_json()
+                                    if policy.research.indicators is not None else None),
         "broker_execution_verified": False,
         "native_stop_verified": False,
         "orders_sent": False,

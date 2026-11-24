@@ -207,6 +207,8 @@ def research_synthetic_compression_breakouts(
     """
     if type(config) is not CompressionBreakoutConfig:
         raise DataValidationError("explicit CompressionBreakoutConfig required")
+    if config.entry_mode == "indicator_combo":
+        raise DataValidationError("D513 custom indicators require the observed research evaluator")
     features = compute_synthetic_features(
         candles, config=config.features,
         decision_at_ms=decision_at_ms, close_safety_ms=close_safety_ms,

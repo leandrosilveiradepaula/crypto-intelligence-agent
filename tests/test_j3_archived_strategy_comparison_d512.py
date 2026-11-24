@@ -49,9 +49,9 @@ def archive(step, *, drop=False, next_shift=0, revised=False):
                           "public_rest_observed_unverified", tuple(rows))
 
 
-def compare(histories, periods=(2, 3, 4)):
+def compare(histories, periods=(2, 3, 4), config=CFG):
     return compare_archived_strategies(
-        tuple(histories), config=CFG, ema_periods=periods,
+        tuple(histories), config=config, ema_periods=periods,
         reference_notional=Decimal(50),
         entry_fee_bps=Decimal(6), exit_fee_bps=Decimal(6),
         entry_slippage_bps=Decimal(3), exit_slippage_bps=Decimal(3),
@@ -72,6 +72,22 @@ def known_hypothesis(series, *, config, decision_at_ms, **kwargs):
 
 
 class ArchivedComparisonD512Tests(unittest.TestCase):
+    @patch("crypto_intelligence_agent.j3_archived_strategy_comparison_d512.evaluate_observed_bybit_research",
+           side_effect=known_hypothesis)
+    def test_d513_custom_profile_uses_same_causal_cohort(self, evaluator):
+        from crypto_intelligence_agent.j2_configurable_indicators_d513 import (
+            MovingAverageSlot, IndicatorSelection, PivotSuperTrend,
+        )
+        off = tuple(MovingAverageSlot(False, n) for n in (10, 30, 120))
+        selection = IndicatorSelection(off, (MovingAverageSlot(True, 4), *off[1:]),
+                                       PivotSuperTrend(False, 2, 10, Decimal(3)))
+        cfg = replace(CFG, entry_mode="indicator_combo", indicators=selection)
+        result = compare([archive(0), archive(1)], config=cfg)
+        self.assertEqual(evaluator.call_count, 49 * 3)
+        self.assertEqual(result["results"]["indicator_combo"]["candidates"], 1)
+        self.assertEqual(result["custom_indicators"], selection.as_json())
+        self.assertEqual(result["common_eligible_symbol_hours"], 49)
+
     @patch("crypto_intelligence_agent.j3_archived_strategy_comparison_d512.evaluate_observed_bybit_research",
            side_effect=known_hypothesis)
     def test_same_slots_costs_and_missing_future_membership(self, evaluator):

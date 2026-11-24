@@ -85,6 +85,32 @@ class OwnerPaperProfileTests(unittest.TestCase):
                 })
             self.assertEqual(before, self.file.read_bytes())
 
+    def test_d513_save_independent_sma_and_pivot_without_ema(self):
+        first = snapshot(self.file)
+        selection = {
+            "ema": [{"enabled": False, "period": n} for n in (10, 30, 60)],
+            "sma": [{"enabled": n != 30, "period": n} for n in (5, 30, 21)],
+            "pivot_supertrend": {
+                "enabled": True, "pivot_period": 3, "atr_period": 12,
+                "atr_factor": "2.5",
+            },
+        }
+        result = save(self.file, revision=first["revision"], edits={
+            "research": {"entry_mode": "indicator_combo", "indicators": selection}
+        })
+        cfg = read_owner_paper_policy(self.file)
+        self.assertEqual(cfg.research.entry_mode, "indicator_combo")
+        self.assertEqual(cfg.research.indicators.as_json(), selection)
+        self.assertEqual(result["research"]["indicators"], selection)
+        self.assertEqual(cfg.leverage.for_new_positions, 50)
+        self.assertEqual(result["applies_to"], "future_paper_sessions_only")
+        before = self.file.read_bytes()
+        selection["sma"][0]["period"] = 80
+        with self.assertRaises(DataValidationError):
+            save(self.file, revision=result["revision"], edits={
+                "research": {"indicators": selection}})
+        self.assertEqual(self.file.read_bytes(), before)
+
     def test_invalid_research_leverage_and_tranches_keep_existing_bytes(self):
         old=snapshot(self.file)
         original=self.file.read_bytes()
