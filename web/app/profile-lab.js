@@ -550,10 +550,16 @@ async function compareHistoricalStrategies() {
     summary.textContent="Lendo os arquivos locais e comparando as mesmas decisões horárias…";
     const retro=$("compare-retro").checked;
     const horizon=integer("compare-horizon",12,1);
+    const resolution=$("compare-resolution").value;
+    if (!["1h","5m"].includes(resolution)) throw new Error("Resolução inválida.");
     const d=await getJson("/api/strategy-comparison?fast="+periods[0]+
-      "&mid="+periods[1]+"&trend="+periods[2]+(retro?"&retro=1":"")+"&horizon="+horizon);
+      "&mid="+periods[1]+"&trend="+periods[2]+(retro?"&retro=1":"")+"&horizon="+horizon+"&resolution="+resolution);
     if (d.status==="retrospective_warmup_not_available") {
       summary.textContent="Histórico complementar ainda não disponível. Use o histórico original ou solicite a coleta complementar.";
+      return;
+    }
+    if (d.status==="intrahour_supplement_not_available") {
+      summary.textContent="Histórico de 5 minutos ainda não coletado. Escolha 1 hora ou solicite a coleta complementar.";
       return;
     }
     if (retro!==d.retrospective_warmup_requested) {
@@ -567,7 +573,7 @@ async function compareHistoricalStrategies() {
     }
     const replay=d.exit_replay;
     if (!replay || replay.schema_version!=="d517-observed-ohlc-exit-scenarios-v1" ||
-        replay.horizon_hours!==horizon || replay.orders_sent!==false ||
+        replay.horizon_hours!==horizon || replay.interval!==resolution || replay.orders_sent!==false ||
         replay.financial_backtest_approved!==false || replay.intrabar_path_verified!==false ||
         replay.funding_settlement_verified!==false || replay.liquidation_verified!==false) {
       throw new Error("Cenários de saídas indisponíveis ou inválidos.");
@@ -611,10 +617,10 @@ async function compareHistoricalStrategies() {
       card.append(title,metrics,note);
       const exits=replay.results[k];
       const exitTitle=document.createElement("strong");
-      exitTitle.textContent="Cenários de stop e parciais · "+horizon+"h";
+      exitTitle.textContent="Cenários de stop e parciais · "+horizon+"h · "+resolution;
       const coverage=document.createElement("p");
       coverage.className="muted";
-      coverage.textContent=exits.complete_path_count+" trajetórias horárias completas / "+
+      coverage.textContent=exits.complete_path_count+" trajetórias completas / "+
         exits.candidate_count+" hipóteses; "+exits.missing_path_count+" sem cobertura completa. "+
         exits.ordering_sensitive_count+" resultados dependem da ordem dos extremos.";
       const cards=document.createElement("div");
@@ -641,6 +647,20 @@ async function compareHistoricalStrategies() {
         replay.leverage_at_intent+"x. Resultados de hipóteses independentes; não são saldo, "+
         "limites garantidos de resultado, trajetória intrabar observada ou liquidação.";
       card.append(exitTitle,coverage,cards,caution);
+      if (resolution==="5m") {
+        const matched=replay.matched_hourly_reference?.[k];
+        if (!matched || matched.complete_path_count!==exits.complete_path_count) {
+          throw new Error("Comparação horária sem amostra equivalente.");
+        }
+        const reference=document.createElement("p");
+        reference.className="muted";
+        reference.textContent="Mesma amostra em 1h: "+matched.ordering_sensitive_count+
+          " hipóteses sensíveis à ordem dos extremos, contra "+exits.ordering_sensitive_count+
+          " em 5m. Soma pré-funding (adverso / favorável): "+
+          show(matched.adverse_first.conditional_before_funding_quote)+" / "+
+          show(matched.favorable_first.conditional_before_funding_quote)+" USDT.";
+        card.append(reference);
+      }
       root.append(card);
     }
   } catch(e) {

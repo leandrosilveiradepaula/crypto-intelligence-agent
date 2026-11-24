@@ -154,6 +154,8 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <label class="check"><input type="checkbox" id="compare-retro"> Usar histórico complementar recuperado depois das decisões</label>
 <p class="muted">Opcional: amplia o aquecimento até 122 velas usando uma coleta de pesquisa separada, quando disponível. Mantém os ativos e observações das horas originais. Não significa que os dados extras estavam disponíveis naquele momento.</p>
 <label>Horizonte das saídas simuladas (horas)<input type="number" id="compare-horizon" min="1" max="12" value="1"></label>
+<label>Resolução das saídas<select id="compare-resolution"><option value="1h">Velas de 1 hora</option><option value="5m">Velas de 5 minutos (histórico complementar)</option></select></label>
+<p class="muted">A resolução de 5 minutos mantém as mesmas entradas de 1h e só inclui trajetórias cujas 12 velas reproduzem os preços OHLC de cada hora original. Exibe também a comparação horária sobre a mesma amostra. A ordem dentro de cada vela menor permanece desconhecida.</p>
 <p class="muted">Usa a abertura observada da próxima vela como referência hipotética, o stop, as parciais e o residual do perfil salvo. Compara duas ordens possíveis dos extremos de cada vela. O resultado não inclui funding confirmado, liquidação ou execução real; o residual ao fim do horizonte recebe uma marca com custo estimado de saída, não uma ordem.</p>
 <button id="compare-history" class="secondary" disabled>Comparar estratégias no histórico</button>
 <div id="compare-status" class="muted" role="status" aria-live="polite">Execute a comparação quando desejar.</div>
