@@ -51,7 +51,7 @@ class CombinationResearchTests(unittest.TestCase):
     def test_versioned_matrix_contains_requested_confluence(self):
         ref,profiles,labels=parse_matrix(MATRIX.read_bytes())
         self.assertEqual(ref,(10,30,60))
-        self.assertEqual(len(profiles),15)
+        self.assertEqual(len(profiles),23)
         by_name={n:(s,t) for n,s,t in profiles}
         s,t=by_name["sma_20_50_pivot"]
         self.assertEqual([x.period for x in s.sma if x.enabled],[20,50])
@@ -59,7 +59,12 @@ class CombinationResearchTests(unittest.TestCase):
         self.assertTrue(s.pivot_supertrend.enabled)
         self.assertEqual(t,0)
         self.assertEqual(by_name["sma_20_50_pivot_fr50"][1],50)
-        self.assertEqual(len(labels),17)
+        self.assertEqual(len(labels),25)
+        bb,_=by_name["sma_20_50_pivot_bb"]
+        self.assertTrue(bb.bollinger.enabled)
+        self.assertEqual(bb.bollinger.period,20)
+        self.assertEqual(bb.bollinger.deviations,D(2))
+        self.assertTrue(bb.pivot_supertrend.enabled)
 
     def test_matrix_validation(self):
         cases=([row(),row("duplicate_same")],

@@ -42,10 +42,46 @@ class PivotSuperTrend:
 
 
 @dataclass(frozen=True)
+class BollingerBands:
+    """D521 population standard deviation of N closed prices; optional gate."""
+    enabled: bool
+    period: int = 20
+    deviations: Decimal = Decimal(2)
+    mode: str = "breakout"
+
+    def __post_init__(self):
+        if (type(self.enabled) is not bool
+                or type(self.period) is not int or not 2 <= self.period <= 120
+                or type(self.deviations) is not Decimal
+                or not self.deviations.is_finite()
+                or not Decimal("0.1") <= self.deviations <= Decimal(10)
+                or self.deviations.as_tuple().exponent < -6
+                or type(self.mode) is not str or self.mode not in ("breakout", "reentry")):
+            raise DataValidationError("D521 invalid Bollinger configuration")
+
+    def as_json(self):
+        return {"enabled": self.enabled, "period": self.period,
+                "deviations": format(self.deviations, "f"), "mode": self.mode}
+
+
+def parse_bollinger(value):
+    if (type(value) is not dict or set(value) != {"enabled", "period", "deviations", "mode"}
+            or type(value["deviations"]) is not str or not 1 <= len(value["deviations"]) <= 24):
+        raise DataValidationError("D521 exact Bollinger settings required")
+    try:
+        deviations = Decimal(value["deviations"])
+    except InvalidOperation as exc:
+        raise DataValidationError("D521 invalid Bollinger deviations") from exc
+    return BollingerBands(value["enabled"], value["period"], deviations, value["mode"])
+
+
+@dataclass(frozen=True)
 class IndicatorSelection:
     ema: tuple[MovingAverageSlot, ...]
     sma: tuple[MovingAverageSlot, ...]
     pivot_supertrend: PivotSuperTrend
+    # None means the legacy profile has no Bollinger field. Preserve its JSON.
+    bollinger: BollingerBands | None = None
 
     def __post_init__(self):
         for slots in (self.ema, self.sma):
@@ -57,11 +93,14 @@ class IndicatorSelection:
                 raise DataValidationError("D513 enabled periods must increase within each MA family")
         if type(self.pivot_supertrend) is not PivotSuperTrend:
             raise DataValidationError("D513 explicit pivot parameters required")
+        if self.bollinger is not None and type(self.bollinger) is not BollingerBands:
+            raise DataValidationError("D521 typed Bollinger parameters required")
 
     @property
     def active(self) -> bool:
         return (any(x.enabled for x in self.ema + self.sma)
-                or self.pivot_supertrend.enabled)
+                or self.pivot_supertrend.enabled
+                or (self.bollinger is not None and self.bollinger.enabled))
 
     def minimum_closed_bars(self, volume_period: int) -> int:
         if not self.active:
@@ -70,20 +109,26 @@ class IndicatorSelection:
         pivot = self.pivot_supertrend
         if pivot.enabled:
             periods.append(max(2 * pivot.pivot_period + 3, pivot.atr_period + 2))
+        if self.bollinger is not None and self.bollinger.enabled:
+            periods.append(self.bollinger.period + 2)
         return max(24, volume_period + 1, *periods)
 
     def as_json(self) -> dict:
         def slots(values):
             return [{"enabled": x.enabled, "period": x.period} for x in values]
         p = self.pivot_supertrend
-        return {"ema": slots(self.ema), "sma": slots(self.sma),
+        result = {"ema": slots(self.ema), "sma": slots(self.sma),
                 "pivot_supertrend": {"enabled": p.enabled, "pivot_period": p.pivot_period,
                                      "atr_period": p.atr_period,
                                      "atr_factor": format(p.atr_factor, "f")}}
+        if self.bollinger is not None:
+            result["bollinger"] = self.bollinger.as_json()
+        return result
 
 
 def parse_indicator_selection(value: object) -> IndicatorSelection:
-    if type(value) is not dict or set(value) != {"ema", "sma", "pivot_supertrend"}:
+    legacy = {"ema", "sma", "pivot_supertrend"}
+    if type(value) is not dict or set(value) not in (legacy, legacy | {"bollinger"}):
         raise DataValidationError("D513 exact indicator selection required")
     def slots(name):
         rows = value[name]
@@ -107,7 +152,8 @@ def parse_indicator_selection(value: object) -> IndicatorSelection:
         raise DataValidationError("D513 invalid pivot factor") from exc
     return IndicatorSelection(slots("ema"), slots("sma"),
                               PivotSuperTrend(p["enabled"], p["pivot_period"],
-                                              p["atr_period"], decimal))
+                                              p["atr_period"], decimal),
+                              parse_bollinger(value["bollinger"]) if "bollinger" in value else None)
 
 
 def moving_average(closes: tuple[Decimal, ...], period: int, *, exponential: bool
@@ -177,6 +223,48 @@ def pivot_trend(candles: tuple[ClosedCandle, ...], config: PivotSuperTrend
     return tuple(result)
 
 
+def bollinger_bands(closes: tuple[Decimal, ...], config: BollingerBands):
+    """SMA and population sigma; each band uses only its own closed prefix."""
+    if type(config) is not BollingerBands:
+        raise DataValidationError("D521 typed Bollinger configuration required")
+    result = []
+    with localcontext(_MATH_CONTEXT):
+        n = Decimal(config.period)
+        for i in range(len(closes)):
+            if i + 1 < config.period:
+                result.append(None)
+                continue
+            window = closes[i+1-config.period:i+1]
+            mean = sum(window, Decimal(0)) / n
+            sigma = (sum(((x-mean)**2 for x in window), Decimal(0))/n).sqrt()
+            width = config.deviations*sigma
+            result.append((mean-width, mean, mean+width))
+    return tuple(result)
+
+
+def bollinger_directions(closes: tuple[Decimal, ...], config: BollingerBands):
+    """Breakout is a directional state; reentry is a one-bar causal event."""
+    bands = bollinger_bands(closes, config)
+    result = []
+    for i, band in enumerate(bands):
+        if band is None or (config.mode == "reentry" and (i == 0 or bands[i-1] is None)):
+            result.append(None)
+            continue
+        lower, mid, upper = band
+        close = closes[i]
+        if lower == upper:
+            result.append(0)
+        elif config.mode == "breakout":
+            result.append(1 if close > upper else -1 if close < lower else 0)
+        else:
+            prev_lower, _, prev_upper = bands[i-1]
+            prev = closes[i-1]
+            inside = lower <= close <= upper
+            result.append(1 if inside and prev < prev_lower else
+                          -1 if inside and prev > prev_upper else 0)
+    return tuple(result)
+
+
 def combination_directions(candles: tuple[ClosedCandle, ...], selection: IndicatorSelection
                            ) -> tuple[int | None, ...]:
     """All active families agree; insufficient warmup is None; disagreement is 0.
@@ -208,6 +296,8 @@ def combination_directions(candles: tuple[ClosedCandle, ...], selection: Indicat
         families.append(tuple(states))
     if selection.pivot_supertrend.enabled:
         families.append(pivot_trend(candles, selection.pivot_supertrend))
+    if selection.bollinger is not None and selection.bollinger.enabled:
+        families.append(bollinger_directions(closes, selection.bollinger))
     if not families:
         return (0,) * len(candles)
     result = []

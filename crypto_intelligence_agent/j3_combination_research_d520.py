@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 
 from .j2_configurable_indicators_d513 import (
-    IndicatorSelection, MovingAverageSlot, PivotSuperTrend,
+    IndicatorSelection, MovingAverageSlot, PivotSuperTrend, parse_bollinger,
 )
 from .j3_archived_strategy_comparison_d512 import (
     compare_archived_strategies, read_comparison_archives,
@@ -74,8 +74,8 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
     seen = set(RESERVED)
     fingerprints = set()
     for row in doc["profiles"]:
-        if (type(row) is not dict or set(row) != {
-                "name","label","ema","sma","pivot","relative_strength_bps"}):
+        required = {"name","label","ema","sma","pivot","relative_strength_bps"}
+        if type(row) is not dict or set(row) not in (required, required | {"bollinger"}):
             raise DataValidationError("D520 invalid profile fields")
         name = row["name"]
         label = row["label"]
@@ -90,8 +90,12 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
             if type(p) is not dict or set(p) != {"pivot_period","atr_period","atr_factor"}:
                 raise DataValidationError("D520 exact pivot settings required")
             pivot = PivotSuperTrend(True,p["pivot_period"],p["atr_period"],_decimal(p["atr_factor"]))
+        bb = row.get("bollinger")
+        if bb is not None and (type(bb) is not dict or set(bb) != {"period","deviations","mode"}):
+            raise DataValidationError("D521 exact matrix Bollinger settings required")
         selection = IndicatorSelection(_slots(_periods(row["ema"])),
-                                       _slots(_periods(row["sma"])),pivot)
+                                       _slots(_periods(row["sma"])),pivot,
+                                       parse_bollinger({"enabled":True,**bb}) if bb is not None else None)
         threshold = _decimal(row["relative_strength_bps"])
         if not selection.active or not 0 <= threshold <= 1000:
             raise DataValidationError("D520 active indicators and RS threshold 0..1000 bps required")

@@ -214,6 +214,140 @@
         "atr_factor": "3"
       },
       "relative_strength_bps": "0"
+    },
+    {
+      "name": "bb_20_2_breakout",
+      "label": "Bollinger 20/2 rompimento + FR",
+      "ema": [],
+      "sma": [],
+      "pivot": null,
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "bb_20_2_reentry",
+      "label": "Bollinger 20/2 retorno à banda + FR",
+      "ema": [],
+      "sma": [],
+      "pivot": null,
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "reentry"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_20_50_bb",
+      "label": "SMA 20/50 + Bollinger + FR",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": null,
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_20_50_pivot_bb",
+      "label": "SMA 20/50 + Pivot + Bollinger + FR",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": {
+        "pivot_period": 2,
+        "atr_period": 10,
+        "atr_factor": "3"
+      },
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "ema_9_21_bb",
+      "label": "EMA 9/21 + Bollinger + FR",
+      "ema": [
+        9,
+        21
+      ],
+      "sma": [],
+      "pivot": null,
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "ema_9_21_pivot_bb",
+      "label": "EMA 9/21 + Pivot + Bollinger + FR",
+      "ema": [
+        9,
+        21
+      ],
+      "sma": [],
+      "pivot": {
+        "pivot_period": 2,
+        "atr_period": 10,
+        "atr_factor": "3"
+      },
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_20_50_pivot_bb25",
+      "label": "SMA 20/50 + Pivot + Bollinger 20/2,5 + FR",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": {
+        "pivot_period": 2,
+        "atr_period": 10,
+        "atr_factor": "3"
+      },
+      "bollinger": {
+        "period": 20,
+        "deviations": "2.5",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_20_50_bb_reentry",
+      "label": "SMA 20/50 + Bollinger retorno + FR",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": null,
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "reentry"
+      },
+      "relative_strength_bps": "0"
     }
   ]
 }
