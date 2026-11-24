@@ -1,5 +1,12 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D527 — parâmetros de banca e stops ampliados (24/11/2026)
+
+PO confirmou banca de referência 200 USDT, margem de 1–2 USDT por posição, RSI como confirmação após o sinal, stops de pesquisa incluindo 2% e 2,5%. Valores editáveis, nenhuma alteração do perfil ativo. D526 integrado em `b25175f88e562642830a5c1413ff6690523abca2` com CI 45486116138/45486115445 SUCCESS. D527: grade 50/75/100/125/150/200/250 bps, 20 estratégias = 140 cenários por configuração de sizing; CLI/API/painel com overrides de margem/alavancagem exclusivamente de pesquisa e risco bruto normalizado à banca de referência. A 50x, 200/250 bps são contrafactuais que atingem/excedem a margem inicial; sem modelo de liquidação ou carteira. Ver `docs/J3_RESEARCH_SIZING_D527.md`. Banca não é saldo efetivo nem retorno composto; sem ordens reais ou J1.
+
+D527 código e testes na branch `chatgpt/j3-research-sizing-d527`; CI/revisão/execução real pendentes. D525 instalador validado para D524 antigo, não publicar esse pin; atualizar para o produto consolidado aprovado com gate de publicação único. Acesso owner MCP indisponível antes do novo painel. Próximo: validar sizing, preparar release agrupado e rodar as baterias 50x e alavancagem menor com os sete stops via laboratório, evitando nova execução manual por cenário. D524 resultados reais já registrados na revisão #750.
+
+
 ## D524 — bateria conjunta de stops (24/11/2026)
 
 **D523 integrado:** squash `d4f9514a955f43541dbb019e4860659e99ea389d`, árvore idêntica ao head `7efbc72bdb24d6e4a3cbb929f7d2a9264f89d25e`; CI Linux/Windows/docs 45482153258 e QA móvel geral 45482153675 SUCCESS. Revisão técnica registrada na PR #749. Nenhuma publicação posterior confirmada.
