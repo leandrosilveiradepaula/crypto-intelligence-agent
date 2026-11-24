@@ -49,14 +49,14 @@ def archive(step, *, drop=False, next_shift=0, revised=False):
                           "public_rest_observed_unverified", tuple(rows))
 
 
-def compare(histories, periods=(2, 3, 4), config=CFG):
+def compare(histories, periods=(2, 3, 4), config=CFG, **kwargs):
     return compare_archived_strategies(
         tuple(histories), config=config, ema_periods=periods,
         reference_notional=Decimal(50),
         entry_fee_bps=Decimal(6), exit_fee_bps=Decimal(6),
         entry_slippage_bps=Decimal(3), exit_slippage_bps=Decimal(3),
         stop_distance_bps=Decimal(50), target_distances_bps=(Decimal(100), Decimal(200)),
-        now_ms=END + 10 * HOUR,
+        now_ms=END + 10 * HOUR, **kwargs,
     )
 
 
