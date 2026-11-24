@@ -80,7 +80,10 @@ def _strategy_comparison(*, paper_file: Path, history_directory: Path,
 def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
     _private_directory(history_directory)
     cfg = read_owner_paper_policy(paper_file)
-    if cfg.research.entry_mode == "ema_cross":
+    if cfg.research.entry_mode == "indicator_combo":
+        min_required = cfg.research.indicators.minimum_closed_bars(
+            cfg.research.features.quote_volume_period)
+    elif cfg.research.entry_mode == "ema_cross":
         min_required = max(
             24, cfg.research.ema_cross_periods[-1] + 2,
             cfg.research.features.quote_volume_period + 1,

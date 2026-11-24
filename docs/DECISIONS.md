@@ -1,5 +1,10 @@
 # Decisões do produto
 
+## D513 — indicadores independentes por escolha do Product Owner (24/11/2026)
+
+EMA, SMA e Pivot Point SuperTrend devem ser opções independentes e parametrizáveis na interface PAPER. O usuário pode ligar/desligar cada uma das três médias EMA e cada uma das três médias SMA, configurar os períodos (2..120 velas de 1h) e ativar/desativar Pivot SuperTrend, com período do pivô (1..50), período ATR (1..120) e fator ATR (0,1..100). Valores iniciais 10/30/60 e Pivot 2/10/3 são exemplos editáveis, não uma otimização nem uma recomendação. O modo personalizável `indicator_combo` é opt-in; perfis antigos `breakout` e `ema_cross` não são reinterpretados. Desligar todas as opções no modo personalizável suspende novas entradas, sem desativar a gestão de posições existentes. Salvar só vale para próximas sessões PAPER, não altera posição aberta, margem, alavancagem, stop ou ordem. J1 permanece intocada, sem trading real ou custo adicional.
+
+
 ## D509 — visibilidade de oportunidades antes de alterar filtros (24/11/2026)
 
 Diante de poucas operações PAPER prospectivas, a prioridade é tornar os filtros atuais **explicáveis e configuráveis** em produto, não reduzir bloqueios cegamente nem fabricar trades. Uma pesquisa REST pode encontrar candidatos, mas entrada exige confirmação causal WS do fechamento da vela, cotação pública pós-fechamento, riscos/contratos e journal idempotente. Expor ambos funis separados: REST histórico de todos os 50 ativos e último ciclo WS PAPER, com causas e contagens derivadas exclusivamente de recibos reais. Se dado não existe, mostrar "não comprovado", nunca zero inferido. Preservar estratégia do proprietário e ordens reais desativadas. Um único bloco de entrega J2/J5 deve priorizar utilidade da tela; testes ficam restritos às fronteiras alteradas, sem PRs triviais.

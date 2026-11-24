@@ -94,6 +94,25 @@ class PaperOwnerPreflightD505Tests(unittest.TestCase):
         self.assertEqual(result["current_session_open_positions"], 1)
         self.assertFalse(result["orders_sent"])
 
+    def test_custom_sma_selection_preserves_open_position(self):
+        data = json.loads(self.policy.read_text())
+        data["research"]["entry_mode"] = "indicator_combo"
+        selection = {
+            "ema": [{"enabled": False, "period": x} for x in (10, 30, 60)],
+            "sma": [{"enabled": x == 10, "period": x} for x in (10, 30, 60)],
+            "pivot_supertrend": {"enabled": False, "pivot_period": 2,
+                                 "atr_period": 10, "atr_factor": "3"},
+        }
+        data["research"]["indicators"] = selection
+        self.policy.write_text(json.dumps(data), encoding="ascii")
+        before = (self.paper / "paper-positions.sqlite").read_bytes()
+        result = preflight_paper_owner(paper_directory=self.paper, policy_file=self.policy)
+        self.assertEqual(result["next_session_entry_mode"], "indicator_combo")
+        self.assertEqual(result["next_session_indicators"], selection)
+        self.assertEqual(result["current_session_open_positions"], 1)
+        self.assertEqual((self.paper / "paper-positions.sqlite").read_bytes(), before)
+        self.assertFalse(result["orders_sent"])
+
     def test_owner_directory_and_policy_errors_fail_without_private_output(self):
         output = io.StringIO()
         self.paper.chmod(0o755)

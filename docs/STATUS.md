@@ -1,5 +1,19 @@
 # STATUS — Crypto Intelligence Agent
 
+## D514 — compatibilidade do selo J6 no candidato D513 (24/11/2026)
+
+O head `1a111137646926cef044e14c03f627018a884082` da PR #741 teve QA móvel geral SUCCESS (45412740016); CI Python/docs/Windows (45412740525) terminou FAILURE. Logs Linux: 3.618 testes, 84 erros e 1 falha, todos com a mesma causa-raiz: o campo opcional `indicators` (None em perfis legados) entrou indevidamente no serializador escalar do selo v1 offline. Os sete testes específicos D513, comparação histórica personalizada e roundtrip owner D487 passaram. A correção nesta branch exclui apenas esse campo do digest histórico e rejeita explicitamente novas seleções no selo legado breakout-only, sem modificar o formato do diário nem os hashes existentes. Regressão adicionada para preservar o hash canônico anterior. Nova CI do head será necessária; sem release ou alterações VPS nesta fase.
+
+
+## D513 — composição de indicadores parametrizável J2/J3/J5 (24/11/2026, código em validação)
+
+**D512 integrado:** PR #740 squash `ad3e2ce212dfdff1b7421ed8431b7ff05b172431`; head `45527477de751c1a23b72ba82a2a67f24bfcfbaa`, CI [Python/docs/Windows](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45409956630) e [QA móvel geral](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45409956516) SUCCESS. Nenhum deploy; não comprova acesso aos arquivos históricos privados.
+
+**D513:** solicitação explícita PO: ligar/desligar EMA, SMA e Pivot Point SuperTrend individualmente e editar valores. Branch `chatgpt/j2-configurable-indicators-d513`. Novo modo `indicator_combo` no avaliador observado existente D435, 3 slots EMA/3 SMA independentes, pivot configurável, confluência causal sem cruzamentos simultâneos. Todos off = novas entradas suspensas. D453 lê a seleção tipada, D487 salva atomicamente, D450 dimensiona warmup apenas de ativos, preflight D505 aceita o modo e D512 compara combinação salva com as regras anteriores. Compatibilidade com perfis existentes e preservação de posição/saída/risco, J1 e ordens reais. Testes de math SMA/EMA, pivôs causais, conflitos, perfil salvo, histórico e ausência de sinais adicionados; CI ainda não comprovada nesta nota. Não houve acesso a Codex executor direto, checkout local não pôde acessar DNS GitHub; implementação via GitHub, sem alegar testes locais.
+
+**Próxima ação:** validar CI no head exato, inclusive integração owner e regressões, corrigir e integrar sem publicação. QA geral móvel não substitui inspeção específica da nova tela. Preparar release conjunto D509+D511+D512+D513 somente após gate D507, preflight com UID owner e preservação de dados. Se usuário salvar novo modo após release, rollback ao código anterior exige restaurar cópia owner do perfil anterior, sem alterar os diários. Nenhuma ativação de estratégia na VPS feita aqui, não há prova de paridade exata com TradingView nem OOS. A configuração é do usuário; não aplicar parâmetros arbitrários ao perfil em operação.
+
+
 ## D512 — laboratório comparativo sobre histórico REST arquivado (24/11/2026, em desenvolvimento)
 
 **D511 integrado:** squash `3d5037f73eb688aec75716c178c34c20175d351e`, head revisado `2fe008d51c9365d749f6ddca311dd2391b2aebdf`, PR #739; runs [Python/documentação](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45406930229) e [QA mobile](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45406930130) concluídos com SUCCESS, jobs Linux/Windows e QA geral aprovados. Não atribuir ao QA geral uma inspeção visual específica do novo cartão. A evidência verificável nesta continuidade é CI do head; não há log de uma execução local isolada dos quatro testes anteriormente mencionados. D511 não foi publicado na VPS.

@@ -1,5 +1,14 @@
 # Estratégias e gestão de vencedores
 
+## D513 — composição causal de EMA, SMA e Pivot SuperTrend (24/11/2026)
+
+No modo `indicator_combo`, períodos das médias ativas devem ser crescentes dentro de cada família; períodos desligados são preservados, mas ignorados nos cálculos e no aquecimento. Com uma média ativa usa-se preço versus média; duas usam curta versus longa; três exigem ainda preço do mesmo lado da terceira. SMA usa a média dos N fechamentos; EMA usa seed SMA e atualização recursiva. Todos os indicadores/famílias ativos devem concordar na direção; uma transição do estado anterior conhecido (neutro ou oposto) para confluência LONG/SHORT gera hipótese na vela fechada, sujeita a volume, cooldown, força relativa BTC e todos os filtros de execução PAPER existentes. Não exigir cruzamentos simultâneos, nem gerar entrada por aquecimento inicial indefinido. Sem indicador ativo, nenhuma hipótese.
+
+Pivot Point SuperTrend é implementação Python original baseada na ideia matemática pública do indicador de LonesomeTheBlue (https://www.tradingview.com/script/L0AIiLvH-Pivot-Point-Supertrend/): confirma extremos estritos com P velas à esquerda e P à direita; só atualiza o centro na vela de confirmação, com peso 2 para o centro anterior e 1 para o novo pivô; ATR de Wilder e fator configurável definem as bandas e seu trailing. Empates de extrema não contam; se ambos extremos confirmarem na mesma vela, prioriza máximo. Inicializa direção neutra até romper banda anterior. Não afirmar paridade exata com Pine/TradingView, nem usar o pivô como stop de posição automaticamente.
+
+O D450 captura histórico REST de acordo com o máximo dos períodos ATIVOS, no limite D461 de 122 barras; mínimo 24. D435 usa o mesmo avaliador em pesquisa REST e em REST+WS causal; sem histórico suficiente abstém. D512 inclui a combinação salva lado a lado com breakout e EMA no mesmo conjunto causal, mantendo custos de referência e limites ex post. Não é backtest financeiro OOS, não prova execução, funding ou liquidação. Configuração compartilhada com o perfil futuro, sem novo ledger.
+
+
 ## D503 — cruzamento de médias configurável sem hardcode de períodos
 
 A estratégia pode ser selecionada pelo usuário no perfil PAPER, sem modificar a implementação: `breakout` (compatível com o atual) ou `ema_cross`. O segundo modo recebe três períodos EMA crescentes, e.g. 10/30/60, com cruzamento somente na vela fechada mais recente e confirmação de tendência pela média longa. Volume relativo mínimo segue editável. O critério de compressão ATR/rompimento não é obrigatório no modo cruzamento; nenhum filtro financeiro de ordens/risco foi desabilitado.

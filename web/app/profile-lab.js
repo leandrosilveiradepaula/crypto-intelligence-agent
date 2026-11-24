@@ -40,12 +40,75 @@ function priceBpsFromMarginRoi(roi, leverage) {
 function marginRoiFromPriceBps(bps, leverage) {
   return formatted(Number(bps) * leverage / 100);
 }
+function customDefaults(cross) {
+  return {ema:cross.map(period=>({enabled:true,period})),
+    sma:cross.map(period=>({enabled:false,period})),
+    pivot_supertrend:{enabled:false,pivot_period:2,atr_period:10,atr_factor:"3"}};
+}
+function refreshCustom() {
+  $("custom-indicators").hidden = $("r-entry_mode").value!=="indicator_combo";
+  const active = [];
+  for (const family of ["ema","sma"]) {
+    for (let i=0;i<3;i++) {
+      const on=$("ci-"+family+"-"+i+"-enabled").checked;
+      const field=$("ci-"+family+"-"+i+"-period");
+      field.disabled=!on;
+      if (on) active.push(family.toUpperCase()+" "+field.value);
+    }
+  }
+  const p=$("ci-pivot-enabled").checked;
+  for (const id of ["ci-pivot-period","ci-pivot-atr","ci-pivot-factor"]) $(id).disabled=!p;
+  if (p) active.push("Pivot SuperTrend");
+  $("custom-summary").textContent=active.length ?
+    "Ativos: "+active.join(" + ")+". Mudanças valem após salvar e iniciar nova sessão PAPER." :
+    "Todos desligados: não haverá novas entradas por este modo. Posições existentes continuam acompanhadas.";
+}
+function fillCustom(profile) {
+  for (const family of ["ema","sma"]) {
+    profile[family].forEach((row,i)=>{
+      $("ci-"+family+"-"+i+"-enabled").checked=row.enabled===true;
+      $("ci-"+family+"-"+i+"-period").value=row.period;
+    });
+  }
+  const p=profile.pivot_supertrend;
+  $("ci-pivot-enabled").checked=p.enabled===true;
+  $("ci-pivot-period").value=p.pivot_period;
+  $("ci-pivot-atr").value=p.atr_period;
+  $("ci-pivot-factor").value=p.atr_factor;
+  refreshCustom();
+}
+function collectCustom() {
+  const result={};
+  for (const family of ["ema","sma"]) {
+    const rows=[0,1,2].map(i=>({
+      enabled:$("ci-"+family+"-"+i+"-enabled").checked,
+      period:integer("ci-"+family+"-"+i+"-period",120,2),
+    }));
+    const active=rows.filter(r=>r.enabled).map(r=>r.period);
+    if (active.some((v,i)=>i>0 && active[i-1]>=v)) {
+      throw new Error("Os períodos "+family.toUpperCase()+" ativos devem ser crescentes.");
+    }
+    result[family]=rows;
+  }
+  const factor=numeric("ci-pivot-factor",100);
+  if (Number(factor)<0.1 || (factor.split(".")[1]||"").length>6) {
+    throw new Error("Fator ATR deve estar entre 0,1 e 100, com até 6 casas decimais.");
+  }
+  result.pivot_supertrend={
+    enabled:$("ci-pivot-enabled").checked,
+    pivot_period:integer("ci-pivot-period",50,1),
+    atr_period:integer("ci-pivot-atr",120,1),
+    atr_factor:factor,
+  };
+  return result;
+}
 function fill(model) {
   RESEARCH_INT.forEach(k => $("r-"+k).value = model.research[k]);
   RESEARCH_DEC.forEach(k => $("r-"+k).value = model.research[k]);
   $("r-entry_mode").value = model.research.entry_mode || "breakout";
   const cross = model.research.ema_cross_periods || [10,30,60];
   ["fast","mid","trend"].forEach((k,i) => $("r-ma_"+k).value = cross[i]);
+  fillCustom(model.research.indicators || customDefaults(cross));
   $("r-experimental_paper_relaxation").checked =
     model.research.experimental_paper_relaxation === true;
   $("p-margin_quote").value = model.paper.margin_quote;
@@ -70,7 +133,7 @@ function collect() {
   research.experimental_paper_relaxation =
     $("r-experimental_paper_relaxation").checked;
   research.entry_mode = $("r-entry_mode").value;
-  if (!["breakout","ema_cross"].includes(research.entry_mode)) {
+  if (!["breakout","ema_cross","indicator_combo"].includes(research.entry_mode)) {
     throw new Error("Selecione uma regra de entrada válida.");
   }
   research.ema_cross_periods = ["fast","mid","trend"].map(
@@ -78,6 +141,9 @@ function collect() {
   const [fast,mid,trend] = research.ema_cross_periods;
   if (!(fast < mid && mid < trend)) {
     throw new Error("As EMAs devem ter períodos crescentes.");
+  }
+  if (research.entry_mode==="indicator_combo") {
+    research.indicators=collectCustom();
   }
   const leverage=integer("p-leverage",100,1);
   const t1=numeric("p-target1_roi",5000);
@@ -492,7 +558,7 @@ async function compareHistoricalStrategies() {
     }
     summary.textContent=d.archive_count+" arquivos horários · "+d.paired_decision_hours+
       " decisões com observação da hora seguinte · "+d.common_eligible_symbol_hours+
-      " ativos-hora elegíveis em ambas as estratégias. Aquecimento: "+
+      " ativos-hora elegíveis em todas as estratégias comparadas. Aquecimento: "+
       d.maximum_contiguous_hours_observed+" / "+d.required_warmup_hours+
       " velas; "+d.excluded_warmup_or_conflict_symbol_hours+" ativos-hora excluídos por dados insuficientes ou conflitantes. "+
       "Notional de referência: "+d.reference_notional_quote+" USDT; custo assumido por ciclo: "+
@@ -502,8 +568,9 @@ async function compareHistoricalStrategies() {
       return;
     }
     const labels={breakout:"Rompimento com filtros",ema_cross:"Cruzamento EMA "+d.ema_periods.join("/"),
-      reference_long:"Referência LONG dos ativos elegíveis"};
-    for (const k of ["breakout","ema_cross","reference_long"]) {
+      indicator_combo:"Combinação de indicadores salva",reference_long:"Referência LONG dos ativos elegíveis"};
+    const modes=["breakout","ema_cross",...(d.results.indicator_combo?["indicator_combo"]:[]),"reference_long"];
+    for (const k of modes) {
       const r=d.results[k], card=document.createElement("article");
       card.className="position-card";
       const title=document.createElement("strong");
@@ -543,6 +610,9 @@ document.addEventListener("DOMContentLoaded",()=>{
       showHistoricalDecisions();
     });
   });
+  $("r-entry_mode").addEventListener("change",refreshCustom);
+  $("custom-indicators").addEventListener("input",refreshCustom);
+  $("custom-indicators").addEventListener("change",refreshCustom);
   document.querySelectorAll("input,select").forEach(node=>{
     node.addEventListener("input",()=>{edited=true;});
     node.addEventListener("change",()=>{edited=true;});

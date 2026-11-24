@@ -149,6 +149,12 @@ def compare_archived_strategies(
     cross = replace(config, entry_mode="ema_cross", ema_cross_periods=ema_periods)
     breakout = replace(config, entry_mode="breakout")
     warmup = _warmup(config, cross.ema_cross_periods)
+    policies = [("breakout", breakout), ("ema_cross", cross)]
+    if config.indicators is not None:
+        custom = replace(config, entry_mode="indicator_combo")
+        policies.append(("indicator_combo", custom))
+        warmup = max(warmup, custom.indicators.minimum_closed_bars(
+            custom.features.quote_volume_period))
     # Same fixed reference notional on both sides, as in D288. Funding
     # events are deliberately not fabricated or settled by this report.
     costs = evaluate_synthetic_costs(SyntheticCostScenario(
@@ -184,7 +190,7 @@ def compare_archived_strategies(
     }
     selected = set(sorted(paired_ends)[-MAX_PAIRS:])
     totals = {k: _empty(len(target_distances_bps))
-              for k in ("breakout", "ema_cross", "reference_long")}
+              for k in [name for name, _ in policies] + ["reference_long"]}
     eligible = rejected = 0
     max_contiguous = 0
     cache = {}
@@ -211,6 +217,8 @@ def compare_archived_strategies(
             window = {"decision_closed_end_ms": end, "archive_captured_at_ms": h.captured_at_ms,
                       "eligible_symbols": 0, "breakout_candidates": 0,
                       "ema_cross_candidates": 0}
+            if config.indicators is not None:
+                window["indicator_combo_candidates"] = 0
             for symbol, bars in h.series:
                 if symbol == "BTCUSDT":
                     continue
@@ -241,7 +249,7 @@ def compare_archived_strategies(
                 # original historical reference were corroborated.
                 future = (next_bars[-1] if next_bars is not None
                           and next_bars[-2] == bars[-1] else None)
-                for name, policy in (("breakout", breakout), ("ema_cross", cross)):
+                for name, policy in policies:
                     hypothesis = evaluate_observed_bybit_research(
                         series, config=policy, decision_at_ms=end, close_safety_ms=1,
                         allow_rest_historical_research=True,
@@ -269,6 +277,7 @@ def compare_archived_strategies(
         "common_eligible_symbol_hours": eligible,
         "excluded_warmup_or_conflict_symbol_hours": rejected,
         "ema_periods": list(ema_periods),
+        "custom_indicators": config.indicators.as_json() if config.indicators is not None else None,
         "reference_notional_quote": format(reference_notional, "f"),
         "assumed_roundtrip_cost_quote": format(costs, "f"),
         "stop_distance_bps": format(stop_distance_bps, "f"),

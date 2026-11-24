@@ -15,6 +15,7 @@ from .synthetic_feature_engine import (
     compute_synthetic_features,
 )
 from .synthetic_position_state import SyntheticSide
+from .j2_configurable_indicators_d513 import IndicatorSelection
 
 
 MAX_LOOKBACK = 500
@@ -36,6 +37,7 @@ class CompressionBreakoutConfig:
     # D503: legacy profiles keep breakout. Cross strategy is explicit opt-in.
     entry_mode: str = "breakout"
     ema_cross_periods: tuple[int, int, int] | None = None
+    indicators: IndicatorSelection | None = None
 
     def __post_init__(self) -> None:
         if type(self.features) is not FeatureConfig:
@@ -48,7 +50,7 @@ class CompressionBreakoutConfig:
             raise DataValidationError("cooldown_bars must be integer 0..500")
         if type(self.experimental_paper_relaxation) is not bool:
             raise DataValidationError("explicit experimental PAPER bool required")
-        if type(self.entry_mode) is not str or self.entry_mode not in ("breakout", "ema_cross"):
+        if type(self.entry_mode) is not str or self.entry_mode not in ("breakout", "ema_cross", "indicator_combo"):
             raise DataValidationError("D503 unknown J2 entry method")
         periods = self.ema_cross_periods
         if periods is not None:
@@ -63,6 +65,13 @@ class CompressionBreakoutConfig:
                 raise DataValidationError(
                     "D503 EMA cross requires volume history within 122 closed bars"
                 )
+        if self.indicators is not None and type(self.indicators) is not IndicatorSelection:
+            raise DataValidationError("D513 typed indicator selection required")
+        if self.entry_mode == "indicator_combo":
+            if self.indicators is None:
+                raise DataValidationError("D513 custom mode requires explicit indicators")
+            if self.indicators.minimum_closed_bars(self.features.quote_volume_period) > 122:
+                raise DataValidationError("D513 indicator history exceeds 122 closed bars")
         _numeric(self.max_atr_ratio, "max_atr_ratio", strictly_positive=True)
         max_atr = (
             Decimal("2") if self.experimental_paper_relaxation else Decimal("1")
@@ -198,6 +207,8 @@ def research_synthetic_compression_breakouts(
     """
     if type(config) is not CompressionBreakoutConfig:
         raise DataValidationError("explicit CompressionBreakoutConfig required")
+    if config.entry_mode == "indicator_combo":
+        raise DataValidationError("D513 custom indicators require the observed research evaluator")
     features = compute_synthetic_features(
         candles, config=config.features,
         decision_at_ms=decision_at_ms, close_safety_ms=close_safety_ms,
