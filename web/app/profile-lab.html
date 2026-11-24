@@ -41,6 +41,11 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 .decision-filter{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .decision-filter button{min-height:38px;padding:8px 12px;background:#293f57;color:var(--text);border-color:#537c7b;font-size:.8rem}
 .decision-filter button[aria-pressed="true"]{background:#81e7cd;color:#112b2e}
+.indicator-family{min-width:0;border:1px solid #365069;border-radius:11px;padding:12px;margin:14px 0}
+.indicator-family legend{font-weight:700;padding:0 6px;color:var(--text)}
+.indicator-slot{min-width:0;padding:8px;background:#102033;border-radius:9px}
+.indicator-slot .check{margin:0 0 8px}
+.indicator-family input:disabled{opacity:.55}
 @media(max-width:720px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.card{padding:15px}.decision-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:450px){.grid{grid-template-columns:1fr}.actions{flex-direction:column}.actions button{min-width:0;width:100%}}
 </style>
@@ -61,9 +66,9 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 </section>
 <section class="card">
 <h2>1. Indicadores da entrada horária</h2>
-<p>Escolha entre rompimento e cruzamento de EMAs. As alterações serão consideradas apenas nas próximas sessões PAPER; novas médias precisam de histórico causal suficiente.</p>
+<p>Escolha uma regra pronta ou configure seus próprios indicadores. Você decide quais usar e os seus períodos; salvar altera somente as próximas sessões PAPER.</p>
 <div class="grid">
-<label>Regra de entrada<select id="r-entry_mode"><option value="breakout">Rompimento com filtros</option><option value="ema_cross">Cruzamento EMA + tendência</option></select></label>
+<label>Regra de entrada<select id="r-entry_mode"><option value="breakout">Rompimento com filtros</option><option value="ema_cross">Cruzamento EMA + tendência (legado)</option><option value="indicator_combo">Indicadores personalizáveis (EMA / SMA / Pivot)</option></select></label>
 <label>EMA rápida (velas de 1h)<input id="r-ma_fast" type="number" min="2" max="120" value="10"></label>
 <label>EMA intermediária (velas de 1h)<input id="r-ma_mid" type="number" min="2" max="120" value="30"></label>
 <label>EMA de tendência (velas de 1h)<input id="r-ma_trend" type="number" min="2" max="120" value="60"></label>
@@ -78,7 +83,19 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <label>Intervalo sem repetir sinal (velas)<input id="r-cooldown_bars" type="number" min="0" max="500" value="0"></label>
 </div>
 <label class="check"><input type="checkbox" id="r-experimental_paper_relaxation" checked> Permitir filtros experimentais mais permissivos (somente PAPER)</label>
-<p class="notice">O cruzamento usa EMA rápida acima/abaixo da intermediária na última vela fechada, com preço do mesmo lado da EMA de tendência. Ao selecionar períodos maiores, a pesquisa REST amplia o aquecimento histórico sem fabricar candles nem mudar os stops de posições abertas. Se não houver dados suficientes, não ocorre entrada.</p>
+<div id="custom-indicators" hidden>
+<h2 style="margin-top:20px">Indicadores ativos</h2>
+<p>Ative cada média individualmente. Uma média compara o preço com ela, duas comparam entre si e três incluem a tendência da terceira. Quando combinar famílias, todas devem apontar na mesma direção. Não é necessário cruzarem na mesma vela.</p>
+<fieldset class="indicator-family"><legend>EMA — média móvel exponencial</legend><div class="grid"><div class="indicator-slot"><label class="check"><input type="checkbox" id="ci-ema-0-enabled" checked> EMA 1</label><label>Período (velas de 1h)<input id="ci-ema-0-period" type="number" min="2" max="120" value="10"></label></div><div class="indicator-slot"><label class="check"><input type="checkbox" id="ci-ema-1-enabled" checked> EMA 2</label><label>Período (velas de 1h)<input id="ci-ema-1-period" type="number" min="2" max="120" value="30"></label></div><div class="indicator-slot"><label class="check"><input type="checkbox" id="ci-ema-2-enabled" checked> EMA 3</label><label>Período (velas de 1h)<input id="ci-ema-2-period" type="number" min="2" max="120" value="60"></label></div></div></fieldset>
+<fieldset class="indicator-family"><legend>SMA — média móvel simples</legend><div class="grid"><div class="indicator-slot"><label class="check"><input type="checkbox" id="ci-sma-0-enabled"> SMA 1</label><label>Período (velas de 1h)<input id="ci-sma-0-period" type="number" min="2" max="120" value="10" disabled></label></div><div class="indicator-slot"><label class="check"><input type="checkbox" id="ci-sma-1-enabled"> SMA 2</label><label>Período (velas de 1h)<input id="ci-sma-1-period" type="number" min="2" max="120" value="30" disabled></label></div><div class="indicator-slot"><label class="check"><input type="checkbox" id="ci-sma-2-enabled"> SMA 3</label><label>Período (velas de 1h)<input id="ci-sma-2-period" type="number" min="2" max="120" value="60" disabled></label></div></div></fieldset>
+<fieldset class="indicator-family"><legend>Pivot Point SuperTrend</legend>
+<label class="check"><input type="checkbox" id="ci-pivot-enabled"> Ativar Pivot Point SuperTrend</label>
+<div class="grid"><label>Período do pivô<input id="ci-pivot-period" type="number" min="1" max="50" value="2" disabled></label><label>Período ATR<input id="ci-pivot-atr" type="number" min="1" max="120" value="10" disabled></label><label>Multiplicador ATR<input id="ci-pivot-factor" type="text" inputmode="decimal" value="3" disabled></label></div>
+<p class="muted">O pivô só entra no cálculo depois de confirmado; o fator ATR controla a distância das bandas. Este indicador é de entrada, não modifica stops das posições existentes.</p>
+</fieldset>
+<p id="custom-summary" class="notice" role="status" aria-live="polite"></p>
+</div>
+<p class="notice">Os parâmetros de EMA do modo legado e de rompimento são usados apenas nesses modos e na comparação histórica. Os indicadores desligados no modo personalizável não entram na decisão nem no aquecimento. Se não houver histórico suficiente, não ocorre entrada.</p>
 </section>
 <section class="card">
 <h2>2. Margem, alvos e saídas parciais</h2>
@@ -131,8 +148,8 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <div id="preview-rows" class="results" aria-live="polite"></div>
 </section>
 <section class="card" aria-label="Comparação histórica de estratégias">
-<h2>5. Laboratório histórico: rompimento × cruzamento EMA</h2>
-<p>Compare as duas regras nas mesmas horas arquivadas da Bybit. Usa os períodos de EMA acima e os demais parâmetros do último perfil salvo, sem trocar a estratégia do robô. Não precisa salvar a escolha de períodos para comparar.</p>
+<h2>5. Laboratório histórico: compare suas estratégias</h2>
+<p>Compare rompimento, EMA e a combinação personalizável salva nas mesmas horas arquivadas da Bybit. Os períodos da EMA de referência podem ser editados acima sem salvar; a combinação usa a seleção do último perfil salvo.</p>
 <div class="notice">Comparação retrospectiva por fechamento de 1h, com custos hipotéticos. Toques de stop e alvos não são execuções: não conhecemos sua ordem intrabar nem a liquidação. Não é backtest financeiro validado.</div>
 <button id="compare-history" class="secondary" disabled>Comparar estratégias no histórico</button>
 <div id="compare-status" class="muted" role="status" aria-live="polite">Execute a comparação quando desejar.</div>
