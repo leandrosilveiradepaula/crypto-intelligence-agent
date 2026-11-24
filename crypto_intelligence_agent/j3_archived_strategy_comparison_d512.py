@@ -25,6 +25,11 @@ from .market_data import DataGapError, DataValidationError
 from .synthetic_cost_scenarios import SyntheticCostScenario, evaluate_synthetic_costs
 from .synthetic_entry_hypotheses import CompressionBreakoutConfig
 from .synthetic_intrabar_barriers import ResearchDirection
+from .synthetic_margin_envelope import SyntheticMarginBasis
+from .j4_automatic_entry_materializer_d448 import PaperEntryExitPolicy
+from .j3_observed_exit_scenarios_d517 import (
+    SCHEMA as EXIT_SCHEMA, accumulate_replay, empty_replay_totals, summarize_replay,
+)
 
 SCHEMA = "d512-archived-rest-strategy-comparison-v1"
 _NAME = re.compile(r"rest-history-d461-([0-9a-f]{18})-([0-9]{13})(?:-w([0-9]{2,3}))?[.]json\Z")
@@ -121,6 +126,19 @@ def _accumulate(row, side, reference, future, notional, cost, stop, targets):
     row["stop_and_target_same_bar"] += int(touched_stop and any_target)
 
 
+def _forward_replay_path(series_by_end, end, symbol, original, horizon_hours):
+    """Only consecutive original archived observations; no supplementary prices."""
+    path = []
+    previous = original
+    for i in range(1, horizon_hours+1):
+        following = series_by_end.get(end+i*HOUR_MS, {}).get(symbol)
+        if following is None or following[-2] != previous:
+            return None
+        previous = following[-1]
+        path.append(previous)
+    return tuple(path)
+
+
 def compare_archived_strategies(
     histories: tuple[RestN50History, ...], *, config: CompressionBreakoutConfig,
     ema_periods: tuple[int, int, int], reference_notional: Decimal,
@@ -128,6 +146,9 @@ def compare_archived_strategies(
     entry_slippage_bps: Decimal, exit_slippage_bps: Decimal,
     stop_distance_bps: Decimal, target_distances_bps: tuple[Decimal, ...],
     now_ms: int, warmup_supplement: WarmupSupplement | None = None,
+    replay_horizon_hours: int | None = None,
+    replay_margin: SyntheticMarginBasis | None = None,
+    exit_policy: PaperEntryExitPolicy | None = None,
 ) -> dict:
     """Compare fixed caller-supplied profiles on the same causal archive slots.
 
@@ -147,6 +168,21 @@ def compare_archived_strategies(
                    for d in target_distances_bps)
             or any(a >= b for a, b in zip(target_distances_bps, target_distances_bps[1:]))):
         raise DataValidationError("D512 bounded comparison policy required")
+    replay_enabled = replay_horizon_hours is not None
+    if replay_enabled:
+        if (type(replay_horizon_hours) is not int or not 1 <= replay_horizon_hours <= 12
+                or type(replay_margin) is not SyntheticMarginBasis
+                or type(exit_policy) is not PaperEntryExitPolicy
+                or replay_margin.entry_notional_quote != reference_notional
+                or exit_policy.stop_distance_bps != stop_distance_bps
+                or exit_policy.target_distances_bps != target_distances_bps
+                or exit_policy.entry_fee_bps != entry_fee_bps
+                or exit_policy.exit_fee_bps != exit_fee_bps
+                or exit_policy.entry_adverse_slippage_bps != entry_slippage_bps
+                or exit_policy.exit_adverse_slippage_bps != exit_slippage_bps):
+            raise DataValidationError("D517 explicit consistent exit replay terms required")
+    elif replay_margin is not None or exit_policy is not None:
+        raise DataValidationError("D517 replay requires explicit horizon")
     cross = replace(config, entry_mode="ema_cross", ema_cross_periods=ema_periods)
     breakout = replace(config, entry_mode="breakout")
     warmup = _warmup(config, cross.ema_cross_periods)
@@ -192,6 +228,8 @@ def compare_archived_strategies(
     selected = set(sorted(paired_ends)[-MAX_PAIRS:])
     totals = {k: _empty(len(target_distances_bps))
               for k in [name for name, _ in policies] + ["reference_long"]}
+    replay_totals = {name: empty_replay_totals() for name in totals} if replay_enabled else {}
+    series_by_end = {h.window_end_ms: dict(h.series) for h in ordered} if replay_enabled else {}
     eligible = rejected = 0
     max_contiguous = 0
     cache = {}
@@ -266,6 +304,9 @@ def compare_archived_strategies(
                 # original historical reference were corroborated.
                 future = (next_bars[-1] if next_bars is not None
                           and next_bars[-2] == bars[-1] else None)
+                path = (_forward_replay_path(
+                    series_by_end, end, symbol, bars[-1], replay_horizon_hours)
+                    if replay_enabled else None)
                 for name, policy in policies:
                     hypothesis = evaluate_observed_bybit_research(
                         series, config=policy, decision_at_ms=end, close_safety_ms=1,
@@ -280,8 +321,17 @@ def compare_archived_strategies(
                     window[name + "_candidates"] += 1
                     _accumulate(totals[name], side, bars[-1].close, future,
                                 reference_notional, costs, stop_distance_bps, target_distances_bps)
+                    if replay_enabled:
+                        accumulate_replay(
+                            replay_totals[name], path, direction=ResearchDirection(side),
+                            decision_end_ms=end, now_ms=now_ms, margin=replay_margin,
+                            policy=exit_policy)
                 _accumulate(totals["reference_long"], "LONG", bars[-1].close, future,
                             reference_notional, costs, stop_distance_bps, target_distances_bps)
+                if replay_enabled:
+                    accumulate_replay(
+                        replay_totals["reference_long"], path, direction=ResearchDirection.LONG,
+                        decision_end_ms=end, now_ms=now_ms, margin=replay_margin, policy=exit_policy)
             windows.append(window)
         results = {k: _summary(v, reference_notional) for k, v in totals.items()}
     return {
@@ -307,6 +357,21 @@ def compare_archived_strategies(
         "stop_distance_bps": format(stop_distance_bps, "f"),
         "target_distances_bps": [format(d, "f") for d in target_distances_bps],
         "results": results, "windows": windows,
+        "exit_replay": ({
+            "schema_version": EXIT_SCHEMA, "horizon_hours": replay_horizon_hours,
+            "interval": "1h", "entry_reference": "next_observed_open_ex_post",
+            "requested_margin_quote": format(replay_margin.requested_margin_quote, "f"),
+            "leverage_at_intent": replay_margin.leverage_at_intent,
+            "target_tranches": [{"basis": t.basis.value, "percent": format(t.percent, "f")}
+                                for t in exit_policy.tranches],
+            "runner_floor_percent": format(exit_policy.runner_floor_percent, "f"),
+            "results": {k: summarize_replay(v, margin=replay_margin)
+                        for k, v in replay_totals.items()},
+            "complete_paths_only": True, "funding_settlement_verified": False,
+            "liquidation_verified": False, "intrabar_path_verified": False,
+            "execution_verified": False, "financial_backtest_approved": False,
+            "orders_sent": False,
+        } if replay_enabled else None),
         "same_decision_slots_for_both_strategies": True,
         "future_mark_interval_hours": 1,
         "funding_settlement_verified": False, "intrabar_path_verified": False,

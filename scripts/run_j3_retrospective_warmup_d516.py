@@ -22,6 +22,7 @@ def main(argv=None):
     p.add_argument("--policy-file", type=Path, required=True)
     p.add_argument("--history-hours", type=int, required=True)
     p.add_argument("--ema-periods", type=int, nargs=3, required=True)
+    p.add_argument("--horizon-hours", type=int, choices=range(1,13))
     p.add_argument("--reuse", action="store_true", help="Only read the existing supplement")
     for flag in ("allow-public-network", "confirm-personal-readonly-research",
                  "confirm-region-eligible", "confirm-public-data-rights"):
@@ -52,7 +53,7 @@ def main(argv=None):
         report = _strategy_comparison(
             paper_file=a.policy_file, history_directory=a.historical_directory,
             ema_periods=tuple(a.ema_periods), now_ms=time.time_ns()//1_000_000,
-            retrospective=True,
+            retrospective=True, horizon_hours=a.horizon_hours,
         )
         report.pop("windows", None)
         print(json.dumps({"capture": info, "comparison": report,
