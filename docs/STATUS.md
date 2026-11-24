@@ -1,5 +1,14 @@
 # STATUS — Crypto Intelligence Agent
 
+## D507 — cutover PAPER opt-in preparado para executor root owner (24/11/2026)
+
+Novo procedimento `deploy/vps/paper_research/owner_paper_cutover_d507_once.sh` para executar UMA vez na VPS `srv1319424` sob root humano autenticado. O código de produto que será instalado é fixado em `056845fdc46b8c2d1b08acd86be75e59dd368bac` (já aprovado CI, J2 EMA cross configurável, J4 arquivo de rotas CLOSED, J5 histórico paginado/OPEN pin e preflight D505). Script primeiro verifica host/UID/propriedade de serviços, serviços PAPER/J1 ativos, clona em diretório privado 0700 de `cia-probe` sem tocar nos checkouts atuais, confere SHA exato e executa pré-teste owner read-only D505 sobre os diários existentes. Exige 0 posições abertas e `orders_sent=false`.
+
+**Gate explícito:** nenhum serviço é alterado até o usuário digitar exatamente `AUTORIZO CUTOVER PAPER` no terminal. Com aprovação, o script para somente o motor PAPER, relê 0 posições abertas, instala drop-ins systemd que alteram **somente WorkingDirectory** dos dois serviços PAPER para o checkout novo, preserva ExecStart/ReadWritePaths/credenciais/perfil/SQLite/stop/timers J1 e verifica endpoint privado de histórico 200, serviços e pré-teste D505. Falha ativa tentativa de rollback removendo drop-ins e retomando os serviços anteriores; não faz migrations nem trading. Código versionado com testes de sintaxe bash e contrato de gate.
+
+**Sem evidência de deploy ainda**. Próxima etapa após CI e merge do script: 1 execução humana autorizada na VPS, copiar ao chat apenas o resultado sanitizado. Após êxito, verificar estado pelos endpoints MCP e registrar o release; não confundir UNIT active com estratégia rentável ou stop nativo.
+
+
 ## D506 — integração D505 e bloqueio de cutover PAPER (23/11/2026 UTC)
 
 **Código finalizado e integrado**: PR #736, head validado `62203404cebf10b65ba8e9833909b0e3cd64b001`, squash na main `e36037a72c2d58f58036a8be1f06756a11efade6`. CI HEAD Linux/documentação **3.594 testes OK** e Windows **3.594 testes OK (669 skips POSIX)** no run 45281771023, navegador mobile **SUCCESS** no run 45281771044. O fechamento foi sem produção e sem ordens. Não equiparar CI verde com lucro nem implantação.
