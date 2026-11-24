@@ -1,5 +1,10 @@
 # Decisões do produto
 
+## D507 — instalação PAPER com duplo gate e rollback (24/11/2026)
+
+A migração de versão operacional do motor e do painel PAPER na VPS exige somente leitura e confirmação do diário atual com o mesmo UID owner, ausência de posições abertas e consentimento textual específico no terminal antes de parar qualquer serviço. Serviço J1 e coleta N50 não podem ser interrompidos. A instalação é uma troca reversível de diretórios de código systemd via drop-ins com SHA fixado; preserve arquivos, diários, políticas, serviço ExecStart, credenciais e isolamento do sistema. Rollback a qualquer erro remove apenas drop-ins criados pelo procedimento e reinicia as unidades anteriores. A atualização de código pode ser autorizada, mas isso NÃO ativa trading real, stop nativo, migração SQL ou publicação web externa. Qualquer alteração fora desse escopo precisa de outro gate.
+
+
 ## D506 — histórico sem ocultar operações abertas e pré-teste obrigatório (23/11/2026)
 
 Posições OPEN/PARTIAL devem ser exibidas no topo do J5 mesmo quando antigas e fora das 50 mais recentes por timestamp de checkpoint. A paginação continua exibindo as últimas 50 e permite consultar CLOSED do mesmo ledger, sem misturar ativo e arquivado. O pré-cutover de novas versões PAPER deve ler, como mesmo UID owner, a estratégia D453 e o diário AUTO4 existente via D505 read-only; CI offline e testes unitários não substituem essa prova. Não migrar ou substituir diários para uma atualização apenas de código.
