@@ -2,7 +2,7 @@
 
 One immutable, SHA-256-checksummed owner-only snapshot of 50 complete REST
 windows. Public REST historical candles are NEVER rewritten as WS confirm=true
-or appended to the WS-only D451 journal. One bounded GET per symbol; no
+or appended to the WS-only D451 journal. One bounded GET per symbol up to 72 hours, two for longer warmup; no
 private account endpoints, trading, unbounded retries, or funding claims.
 
 All 50 rows must validate before ANY snapshot is committed. A frozen
@@ -175,6 +175,51 @@ def _decode(envelope: dict, *, snapshot: DynamicPublicN50 | None,
     )
 
 
+def fetch_closed_rest_rows(
+    *, client: BoundedBybitPublicClient, symbol: str,
+    start_ms: int, end_ms: int, contract_observed_at_ms: int,
+    wall_ms, max_contract_age_ms: int, not_before_ms: int,
+    not_after_ms: int,
+) -> list[list[str]]:
+    """Fetch a bounded exact closed-hour range, newest first.
+
+    Reuse the existing 72-hour public transport unchanged. D503/D513
+    support up to 122 warmup bars, so only ranges over 72 need a second GET.
+    No retry, no ranking request, no persistence. Caller supplies its
+    already-authorized public research client and honest retrieval clock.
+    """
+    if (type(client) is not BoundedBybitPublicClient
+            or type(start_ms) is not int or type(end_ms) is not int
+            or start_ms <= 0 or start_ms % HOUR_MS or end_ms % HOUR_MS
+            or not 1 <= (end_ms - start_ms) // HOUR_MS <= _MAX_WARMUP_HOURS
+            or type(not_before_ms) is not int or type(not_after_ms) is not int
+            or not callable(wall_ms) or not_before_ms >= not_after_ms):
+        raise DataValidationError("D516 invalid bounded closed REST range")
+    ascending = []
+    for first in range(start_ms, end_ms, 72 * HOUR_MS):
+        until = min(end_ms, first + 72 * HOUR_MS)
+        _, payload = client.get(kline_url(symbol, first, until))
+        received = wall_ms()
+        if (type(received) is not int
+                or not not_before_ms <= received < not_after_ms):
+            raise DataGapError("D461 REST retrieval outside permitted clock window")
+        page = stage_bybit_linear_kline(
+            payload, symbol=symbol, quote_currency="USDT",
+            contract_type="LinearPerpetual", contract_status="Trading",
+            contract_observed_at_ms=contract_observed_at_ms,
+            observed_at_ms=received, max_contract_age_ms=max_contract_age_ms,
+            interval="1h", start_open_ms=first, end_open_ms=until,
+            max_candles=(until - first) // HOUR_MS,
+        )
+        ascending.extend([
+            str(c.open_time_ms), format(c.open, "f"), format(c.high, "f"),
+            format(c.low, "f"), format(c.close, "f"),
+            format(c.documented_base_volume, "f"),
+            format(c.documented_quote_turnover, "f"),
+        ] for c in page.candles)
+    return list(reversed(ascending))
+
+
 def capture_rest_n50_24h(
     *, snapshot: DynamicPublicN50, private_j2_directory: Path,
     allow_public_network: bool = False,
@@ -241,25 +286,13 @@ def capture_rest_n50_24h(
         return frozen
     rows = {}
     for symbol in sorted(snapshot.symbols):
-        _, payload = client.get(kline_url(symbol, end_ms-history_hours*HOUR_MS, end_ms))
-        received = wall_ms()
-        if (type(received) is not int or received < started
-                or received >= end_ms + HOUR_MS):
-            raise DataGapError("D461 UTC window changed during REST capture")
-        validated = stage_bybit_linear_kline(
-            payload, symbol=symbol, quote_currency="USDT",
-            contract_type="LinearPerpetual", contract_status="Trading",
+        rows[symbol] = fetch_closed_rest_rows(
+            client=client, symbol=symbol,
+            start_ms=end_ms-history_hours*HOUR_MS, end_ms=end_ms,
             contract_observed_at_ms=snapshot.scope.observed_at_ms,
-            observed_at_ms=received, max_contract_age_ms=86_400_000,
-            interval="1h", start_open_ms=end_ms-history_hours*HOUR_MS,
-            end_open_ms=end_ms, max_candles=history_hours,
+            wall_ms=wall_ms, max_contract_age_ms=86_400_000,
+            not_before_ms=started, not_after_ms=end_ms+HOUR_MS,
         )
-        rows[symbol] = [[
-            str(c.open_time_ms), format(c.open, "f"),
-            format(c.high, "f"), format(c.low, "f"),
-            format(c.close, "f"), format(c.documented_base_volume, "f"),
-            format(c.documented_quote_turnover, "f"),
-        ] for c in reversed(validated.candles)]
     last = wall_ms()
     if type(last) is not int or last >= end_ms + HOUR_MS:
         raise DataGapError("D461 cohort REST capture crossed UTC window")
