@@ -1,5 +1,12 @@
 # STATUS — Crypto Intelligence Agent
 
+## D525 — publicação agrupada e aceite real D524 (24/11/2026)
+
+**D524 aceito e integrado:** main `a602e9e706bfea8b19abd99d825dc3e4ec45e9e5` árvore idêntica a `3c2753433b1cb1df5877869ed19273622c9c8010`, CI 45483302056/45483302050 SUCCESS, revisão PR #750. Recibo owner D524 RESEARCH PASS: 90 cenários, 80 avaliáveis, 18 positivos, 62 negativos; 26 arquivos, 1176 elegíveis, 856 cobertos, 4h/5m, 50x. Breakout 119 caminhos completos: stop 0,5% para 1,5%, PnL adverso -6,322895 para +2,052921 USDT; 50 de 75 stops antes de TP1 tocaram TP1 depois. Todas as 40 variantes RSI avaliáveis negativas. RSI D523 é parte do gatilho, não filtro puro; pesquisar veto pareado e retomada de tendência. Sem vencedor, sem validação funding/liquidação/OOS. Não repetir D524. Evidência e limites em `docs/PAPER_RELEASE_D525.md`.
+
+MCP confirmou serviços ativos ainda na versão D515 com drop-ins 90/91 e sessão PAPER 1 encerrada, 0 abertas, sem ordens reais. D525 prepara um único cutover do produto D524 aprovado, reutilizando o contrato D519, sem repetir pesquisa, com rollback, lock compartilhado, zero abertas revalidado e gate humano interativo. Validação do instalador ainda pendente, nenhuma publicação realizada. Branch `chatgpt/paper-release-d525`, código `c55703c007ca2e31243f7fc08be48027ffea062d`. Próxima ação: validar instalador, autorização explícita de cutover e verificar POST/GET de pesquisa pelo MCP após publicação. Em paralelo pesquisar RSI apenas como veto, pullback e histórico de vários dias. Não alterar perfil, J1 ou custo.
+
+
 ## D524 — bateria conjunta de stops (24/11/2026)
 
 **D523 integrado:** squash `d4f9514a955f43541dbb019e4860659e99ea389d`, árvore idêntica ao head `7efbc72bdb24d6e4a3cbb929f7d2a9264f89d25e`; CI Linux/Windows/docs 45482153258 e QA móvel geral 45482153675 SUCCESS. Revisão técnica registrada na PR #749. Nenhuma publicação posterior confirmada.

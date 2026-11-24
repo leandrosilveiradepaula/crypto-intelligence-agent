@@ -1,5 +1,12 @@
 # Decisões do produto
 
+## D525 — publicação agrupada e aceite real D524 (24/11/2026)
+
+**D524 aceito e integrado:** main `a602e9e706bfea8b19abd99d825dc3e4ec45e9e5` árvore idêntica a `3c2753433b1cb1df5877869ed19273622c9c8010`, CI 45483302056/45483302050 SUCCESS, revisão PR #750. Recibo owner D524 RESEARCH PASS: 90 cenários, 80 avaliáveis, 18 positivos, 62 negativos; 26 arquivos, 1176 elegíveis, 856 cobertos, 4h/5m, 50x. Breakout 119 caminhos completos: stop 0,5% para 1,5%, PnL adverso -6,322895 para +2,052921 USDT; 50 de 75 stops antes de TP1 tocaram TP1 depois. Todas as 40 variantes RSI avaliáveis negativas. RSI D523 é parte do gatilho, não filtro puro; pesquisar veto pareado e retomada de tendência. Sem vencedor, sem validação funding/liquidação/OOS. Não repetir D524. Evidência e limites em `docs/PAPER_RELEASE_D525.md`.
+
+MCP confirmou serviços ativos ainda na versão D515 com drop-ins 90/91 e sessão PAPER 1 encerrada, 0 abertas, sem ordens reais. D525 prepara um único cutover do produto D524 aprovado, reutilizando o contrato D519, sem repetir pesquisa, com rollback, lock compartilhado, zero abertas revalidado e gate humano interativo. Validação do instalador ainda pendente, nenhuma publicação realizada. Branch `chatgpt/paper-release-d525`, código `c55703c007ca2e31243f7fc08be48027ffea062d`. Próxima ação: validar instalador, autorização explícita de cutover e verificar POST/GET de pesquisa pelo MCP após publicação. Em paralelo pesquisar RSI apenas como veto, pullback e histórico de vários dias. Não alterar perfil, J1 ou custo.
+
+
 ## D524 — comparação simultânea de stops (24/11/2026)
 
 A bateria swing D523 pode executar múltiplos stops em uma passagem de sinais e caminhos 5m, sem recalcular o motor para cada stop. Grid de 2..8 valores inteiros crescentes, editáveis; exemplos 50/75/100/125/150 bps. 18 estratégias × 5 stops = 90 cenários. CLI e painel/API privados reutilizam os dados e o perfil lido, sem gravá-lo, com a mesma cobertura e indicadores de qualidade D523. Não escolher vencedor nem alterar operação. Limites financeiros e temporais de D523 mantidos. `docs/J3_STOP_GRID_D524.md`.
