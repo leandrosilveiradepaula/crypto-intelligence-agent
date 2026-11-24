@@ -1,5 +1,12 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D523 — RSI do ativo e pesquisa swing (24/11/2026)
+
+Pedido PO: RSI 14 independente da FR BTC, pesquisar melhor qualidade de entrada e stops mais largos para swing. RSI Wilder configurável (faixas LONG e espelho SHORT), opcional no motor D513, sem alterar perfis salvos. Matriz independente 18 estratégias (controles e pares RSI); stop de pesquisa independente do perfil, API/painel D522 e CLI; métricas stop antes TP1, primeira hora, toque posterior, positivos com stop e MAE/MFE de caminho integral. Detalhes e experimento em `docs/J3_SWING_RSI_D523.md`. Valores são hipóteses, não recomendação; 50x exige avaliação de liquidação e não permite pressupor que stop largo seja alcançável. Horizonte de vários dias e dados funding/mark/PIT/OOS continuam pendentes; não alterar J1, perfil ativo, serviço ou ordens reais.
+
+**D522 integrado** squash `23e3255f9ef8f35791791b096ae66fc27ec33a47`, árvore idêntica ao head `01a00370d224cb7ea18b41b86e5e4b58796ec9fc`, CI 45473289196 e 45473289340 SUCCESS, revisão técnica registrada na PR #748. D521 recibo real PASS registrado nessa revisão (25 estratégias, 24h sinais, 4h replay, 119/167 caminhos completos no breakout, -6,322895 USDT). Nenhuma publicação posterior confirmada. D523 código/testes em branch `chatgpt/j2-j3-swing-rsi-d523`, commit `c069d1b643491e47f6eaf7e8387e027153b60ef3`; CI, revisão e execução real pendentes. Próximo: validar, integrar, preparar release único sujeito ao gate de publicação PAPER; executar a matriz de stops RSI nos dados privados, sem repetir D521. O acesso MCP UID owner continua bloqueado, não contornar. Não existe executor Codex direto nesta sessão.
+
+
 ## D522 — pesquisa local acionável pelo painel (24/11/2026)
 
 **D520/D521 integrados:** main `a43d052f18ea0badedc6aa03a2aec9fe8a2e625f`, árvore idêntica à revisão aprovada `7c411d8850cc747207fb87a2e28ad4d9b2734f50`; CI Python/docs/Windows [45471908252](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45471908252) e QA geral móvel [45471909532](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45471909532) SUCCESS. Matriz 23 hipóteses + 2 controles, Bollinger opcional, nenhuma modificação do perfil ativo. Executar primeira bateria real com este main fixado, cutoff 1795547640289 e horizonte 4h, reutilizando suplementos D518. Resultados reais ainda não recebidos. D519 roteiro integrado, mas D515 permanece a versão publicada.

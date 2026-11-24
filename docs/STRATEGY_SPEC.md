@@ -1,5 +1,10 @@
 # Estratégias e gestão de vencedores
 
+## D523 — RSI do ativo e pesquisa swing (24/11/2026)
+
+Pedido PO: RSI 14 independente da FR BTC, pesquisar melhor qualidade de entrada e stops mais largos para swing. RSI Wilder configurável (faixas LONG e espelho SHORT), opcional no motor D513, sem alterar perfis salvos. Matriz independente 18 estratégias (controles e pares RSI); stop de pesquisa independente do perfil, API/painel D522 e CLI; métricas stop antes TP1, primeira hora, toque posterior, positivos com stop e MAE/MFE de caminho integral. Detalhes e experimento em `docs/J3_SWING_RSI_D523.md`. Valores são hipóteses, não recomendação; 50x exige avaliação de liquidação e não permite pressupor que stop largo seja alcançável. Horizonte de vários dias e dados funding/mark/PIT/OOS continuam pendentes; não alterar J1, perfil ativo, serviço ou ordens reais.
+
+
 ## D521 — Bandas de Bollinger configuráveis (24/11/2026)
 
 Pedido explícito PO: acrescentar Bollinger ao motor de entrada e à pesquisa de combinações D520. Campo opcional `bollinger` em IndicatorSelection, desativado por padrão/ausente em perfis legados, período 2..120 (exemplo 20), multiplicador de desvio-padrão populacional 0,1..10 (exemplo 2, até seis casas decimais). Média central SMA dos fechamentos, bandas superior/inferior = SMA ± multiplicador × desvio-padrão populacional; somente velas fechadas. Dois modos selecionáveis: rompimento (LONG acima da superior, SHORT abaixo da inferior; neutro dentro); retorno (LONG quando o fechamento anterior estava abaixo da inferior anterior e o atual retorna para dentro das bandas atuais, SHORT simétrico a partir de cima; evento de uma barra). Bandas de largura zero não geram sinal. Confluência D513 exige concordância com EMA/SMA/Pivot ativos; não altera volume/cooldown/força relativa BTC nem regras de saída. Warmup apenas quando ativo, período+2 e limite de 122. Valores não são parâmetros otimizados. Compatibilidade: JSON antigo aceito sem mudanças; rollback a código anterior após salvar campo novo requer revisão do perfil.
