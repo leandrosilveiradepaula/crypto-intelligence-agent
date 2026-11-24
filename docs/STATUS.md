@@ -1,5 +1,12 @@
 # STATUS — Crypto Intelligence Agent
 
+## D520 — bateria de pesquisa de indicadores combinados (24/11/2026)
+
+**D519 roteiro integrado** em `09c6de2af790671c2af5860c52e34167e7f291e6`, head `cbc9e193ba4ee394bbbb14f2b7cf0999de2d3c34`, CI Linux/Windows/docs 45468931413 e QA mobile geral 45468931399 SUCCESS. Não executado cutover; D515 permanece instalado. Roteiro anterior fixa D518; para evitar instalação dupla, priorizar executar a bateria D520 isolada e posterior publicação agrupada se houver nova superfície de produto.
+
+**D520:** solicitação explícita de pesquisa por confluência. Matriz editável em docs/examples/d520_indicator_research_matrix.json, 15 combinações (SMA, EMA, Pivot SuperTrend e thresholds direcionais de FR versus BTC), mais controles breakout e EMA legado. Mesmo prefixo causal e amostra original D512; mesmas regras de saída D517/5m D518 e custos do perfil sem gravação; reuse de suplementos sem rede. CLI scripts.run_j3_combination_research_d520 congela cutoff, lista métricas comparáveis, exemplos cronológicos e hashes de dados. Ordem descritiva por média adversa após custos, limiares de amostra 20/70% explicitamente ajustáveis; sem vencedor automático ou OOS. Branch `chatgpt/j3-combination-research-d520`, implementação e testes de contrato adicionados, CI/revisão pendentes; resultados reais das combinações NÃO obtidos nesta nota. O acesso MCP existente não consegue assumir UID cia-probe e não há API batch na versão instalada; não contornar. Próxima ação: concluir validação e executar uma única bateria em checkout isolado owner usando os suplementos já salvos no recibo D518, cutoff 1795547640289, horizonte 4h, sem downloads da Bybit ou mudanças de serviços. Analisar todas as combinações, sem rejeitar amostras pequenas como se fossem provas. Posteriormente criar superfície de pesquisa local segura para repetir experimentos sem intervenção rotineira, sujeita aos gates de publicação; funding, mark/liquidação e acesso móvel continuam pendentes. Sem gasto adicional.
+
+
 ## D519 — resultados reais da pesquisa e publicação agrupada (24/11/2026)
 
 **D518 integrado:** squash `549742a5f101359b26c18eee4a522f125e7b511e`, árvore idêntica ao head `198057fa9a49b10894a3e321d6e0df32918cd374`; CI [Python/docs/Windows](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45463718726) e [QA geral mobile](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45463718338) SUCCESS.
