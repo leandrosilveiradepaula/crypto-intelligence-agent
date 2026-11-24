@@ -1,5 +1,10 @@
 # Decisões do produto
 
+## D523 — RSI do ativo e pesquisa swing (24/11/2026)
+
+Pedido PO: RSI 14 independente da FR BTC, pesquisar melhor qualidade de entrada e stops mais largos para swing. RSI Wilder configurável (faixas LONG e espelho SHORT), opcional no motor D513, sem alterar perfis salvos. Matriz independente 18 estratégias (controles e pares RSI); stop de pesquisa independente do perfil, API/painel D522 e CLI; métricas stop antes TP1, primeira hora, toque posterior, positivos com stop e MAE/MFE de caminho integral. Detalhes e experimento em `docs/J3_SWING_RSI_D523.md`. Valores são hipóteses, não recomendação; 50x exige avaliação de liquidação e não permite pressupor que stop largo seja alcançável. Horizonte de vários dias e dados funding/mark/PIT/OOS continuam pendentes; não alterar J1, perfil ativo, serviço ou ordens reais.
+
+
 ## D522 — pesquisa por confluência acionável pelo painel
 
 Permitir ao operador e ao agente executar a matriz exploratória de combinações sem alterar a estratégia em operação. Interface privada loopback existente, botão explícito para uma bateria com horizonte editável e relatório por combinação; padrão 25 estratégias. Reutilizar histórico complementar salvo, sem GET à Bybit. Uma execução por vez em processo separado, prioridade reduzida e timeout; manter o monitor de posições disponível. API com matriz validada opcional e cutoff explícito; sem comandos arbitrários ou ampliação de acesso. Resultado em memória, perde-se ao reiniciar ou iniciar nova bateria. Não confundir ordenação exploratória com vencedor financeiro; nenhuma ativação automática.

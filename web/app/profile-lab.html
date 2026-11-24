@@ -68,7 +68,7 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <h2>1. Indicadores da entrada horária</h2>
 <p>Escolha uma regra pronta ou configure seus próprios indicadores. Você decide quais usar e os seus períodos; salvar altera somente as próximas sessões PAPER.</p>
 <div class="grid">
-<label>Regra de entrada<select id="r-entry_mode"><option value="breakout">Rompimento com filtros</option><option value="ema_cross">Cruzamento EMA + tendência (legado)</option><option value="indicator_combo">Indicadores personalizáveis (EMA / SMA / Pivot / Bollinger)</option></select></label>
+<label>Regra de entrada<select id="r-entry_mode"><option value="breakout">Rompimento com filtros</option><option value="ema_cross">Cruzamento EMA + tendência (legado)</option><option value="indicator_combo">Indicadores personalizáveis (EMA / SMA / Pivot / Bollinger / RSI)</option></select></label>
 <label>EMA rápida (velas de 1h)<input id="r-ma_fast" type="number" min="2" max="120" value="10"></label>
 <label>EMA intermediária (velas de 1h)<input id="r-ma_mid" type="number" min="2" max="120" value="30"></label>
 <label>EMA de tendência (velas de 1h)<input id="r-ma_trend" type="number" min="2" max="120" value="60"></label>
@@ -99,6 +99,13 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <label>Multiplicador de desvio-padrão<input id="ci-bb-deviations" type="text" inputmode="decimal" value="2" disabled></label>
 <label>Regra de entrada<select id="ci-bb-mode" disabled><option value="breakout">Rompimento das bandas</option><option value="reentry">Retorno para dentro das bandas</option></select></label></div>
 <p class="muted">Média simples ± multiplicador × desvio-padrão dos fechamentos. No rompimento, LONG acima da superior e SHORT abaixo da inferior. No retorno, LONG ao voltar de baixo da banda inferior e SHORT ao voltar de cima da superior. Com outros indicadores ativos, exige concordância na direção.</p>
+</fieldset>
+<fieldset class="indicator-family"><legend>RSI — força do próprio ativo</legend>
+<label class="check"><input type="checkbox" id="ci-rsi-enabled"> Ativar RSI (IFR)</label>
+<div class="grid"><label>Período (velas de 1h)<input id="ci-rsi-period" type="number" min="2" max="120" value="14" disabled></label>
+<label>Limite LONG inferior (exclusivo)<input id="ci-rsi-min" type="number" min="50" max="99" value="50" disabled></label>
+<label>Limite LONG superior (inclusivo)<input id="ci-rsi-max" type="number" min="51" max="100" value="70" disabled></label></div>
+<p class="muted">RSI de Wilder, apenas do ativo. SHORT usa os limites espelhados (100 menos os limites LONG); 50 é neutro. Independente da força relativa ao BTC.</p>
 </fieldset>
 <p id="custom-summary" class="notice" role="status" aria-live="polite"></p>
 </div>
@@ -170,7 +177,10 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 </section>
 <section class="card" aria-label="Pesquisa de combinações de indicadores">
 <h2>6. Pesquisa de combinações</h2>
-<p>Compare a bateria de 25 estratégias, incluindo EMA, SMA, Pivot SuperTrend e Bollinger, com força relativa ao BTC e os mesmos custos e saídas do perfil salvo. A pesquisa usa o último histórico complementar salvo, sem baixar velas nem alterar a estratégia.</p>
+<p>Compare o conjunto original ou as combinações swing com RSI do ativo, mantendo a força relativa ao BTC. O stop de pesquisa é independente do perfil salvo. Sem baixar velas nem alterar a estratégia.</p>
+<div class="grid"><label>Matriz de pesquisa<select id="matrix-preset"><option value="original">Original (25 estratégias)</option><option value="swing">Swing / RSI (18 estratégias)</option></select></label>
+<label>Stop de pesquisa (bps; 100 = 1%)<input id="matrix-stop" type="number" min="1" max="1000" step="1" placeholder="Usar perfil salvo"></label></div>
+<p class="muted">Compare, por exemplo, 50, 75, 100, 125 e 150 bps. A alavancagem do perfil permanece fixa. Um stop maior não garante sobrevivência à liquidação; o replay não a valida. A amostra atual permite no máximo 12h por trajetória, ainda não um swing de vários dias.</p>
 <label>Horizonte de simulação (horas)<input id="matrix-horizon" type="number" min="1" max="12" value="4"></label>
 <div class="actions"><button id="matrix-start" class="secondary">Executar bateria</button><button id="matrix-refresh" class="secondary">Consultar resultado</button></div>
 <p id="matrix-status" class="muted" role="status" aria-live="polite">Nenhuma pesquisa consultada.</p>

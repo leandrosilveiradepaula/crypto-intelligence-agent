@@ -7,7 +7,7 @@ The next observed open is the entry reference, not an executable quote.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
 
 from .market_data import ClosedCandle, DataGapError, DataValidationError, interval_duration_ms
@@ -36,6 +36,7 @@ class ExitScenario:
     assumed_fee_slippage_quote: Decimal
     conditional_before_funding_quote: Decimal
     loss_at_least_requested_margin: bool
+    stop_bar_index: int | None = field(default=None, compare=False)
 
 
 def _validate_path(candles, decision_end_ms, now_ms):
@@ -107,12 +108,14 @@ def compare_exit_scenarios(
             remaining = _ONE
             target_fraction = stopped_fraction = exit_value = _ZERO
             hit = 0
+            stop_bar_index = None
 
             def stop_at(price, *, gap=False):
-                nonlocal remaining, stopped_fraction, exit_value
+                nonlocal remaining, stopped_fraction, exit_value, stop_bar_index
                 if remaining and sign*(price-stop) <= 0:
                     exit_value += remaining*(price if gap else stop)
                     stopped_fraction += remaining
+                    stop_bar_index = bar_index
                     remaining = _ZERO
 
             def targets_at(price):
@@ -127,7 +130,7 @@ def compare_exit_scenarios(
                     target_fraction += quantity
                     hit += 1
 
-            for bar in bars:
+            for bar_index, bar in enumerate(bars):
                 if not remaining:
                     break
                 stop_at(bar.open, gap=True)
@@ -162,7 +165,8 @@ def compare_exit_scenarios(
             )).fees_and_slippage_units
             net = gross-costs
             return ExitScenario(hit, target_fraction, stopped_fraction, residual,
-                                gross, costs, net, net <= -margin.requested_margin_quote)
+                                gross, costs, net, net <= -margin.requested_margin_quote,
+                                stop_bar_index)
 
         return {"adverse_first": run(True), "favorable_first": run(False)}
 
@@ -174,6 +178,9 @@ def empty_replay_totals() -> dict:
         **{name: {"positive_count": 0, "negative_count": 0, "flat_count": 0,
                   "stop_count": 0, "with_targets_count": 0,
                   "residual_at_horizon_count": 0, "loss_at_least_margin_count": 0,
+                  "stop_before_tp1_count": 0, "stop_before_tp1_first_hour_count": 0,
+                  "stop_before_tp1_then_later_tp1_count": 0, "positive_with_stop_count": 0,
+                  "full_path_mae_bps_sum": _ZERO, "full_path_mfe_bps_sum": _ZERO,
                   "gross_reference_quote": _ZERO, "assumed_fee_slippage_quote": _ZERO,
                   "conditional_before_funding_quote": _ZERO}
            for name in ("adverse_first", "favorable_first")},
@@ -193,12 +200,32 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
     totals["ordering_sensitive_count"] += int(
         outcomes["adverse_first"] != outcomes["favorable_first"])
     with localcontext(_CTX):
+        entry = candles[0].open
+        long = direction is ResearchDirection.LONG
+        sign = _ONE if long else -_ONE
+        favorable = max(b.high for b in candles) if long else min(b.low for b in candles)
+        adverse = min(b.low for b in candles) if long else max(b.high for b in candles)
+        mae = max(_ZERO, -sign*(adverse/entry-1)*BPS_DENOMINATOR)
+        mfe = max(_ZERO, sign*(favorable/entry-1)*BPS_DENOMINATOR)
+        tp1 = entry*(_ONE+sign*policy.target_distances_bps[0]/BPS_DENOMINATOR)
+        duration = interval_duration_ms(candles[0].interval)
         for name, result in outcomes.items():
             row = totals[name]
             net = result.conditional_before_funding_quote
             row["positive_count" if net > 0 else "negative_count" if net < 0 else "flat_count"] += 1
             row["stop_count"] += int(result.stopped_fraction > 0)
             row["with_targets_count"] += int(result.targets_reached > 0)
+            row["positive_with_stop_count"] += int(result.stopped_fraction > 0 and net > 0)
+            row["full_path_mae_bps_sum"] += mae
+            row["full_path_mfe_bps_sum"] += mfe
+            index = result.stop_bar_index
+            if index is not None and result.targets_reached == 0:
+                row["stop_before_tp1_count"] += 1
+                row["stop_before_tp1_first_hour_count"] += int(index*duration < 3_600_000)
+                # Only a strictly later bar touching TP1 counts as recovery.
+                row["stop_before_tp1_then_later_tp1_count"] += int(any(
+                    sign*((b.high if long else b.low)-tp1) >= 0
+                    for b in candles[index+1:]))
             row["residual_at_horizon_count"] += int(result.horizon_residual_fraction > 0)
             row["loss_at_least_margin_count"] += int(result.loss_at_least_requested_margin)
             for key in ("gross_reference_quote", "assumed_fee_slippage_quote",
@@ -213,6 +240,9 @@ def summarize_replay(totals: dict, *, margin: SyntheticMarginBasis) -> dict:
         for name in ("adverse_first", "favorable_first"):
             row = dict(totals[name])
             net = row["conditional_before_funding_quote"]
+            for metric in ("mae", "mfe"):
+                total = row.pop("full_path_"+metric+"_bps_sum")
+                row["mean_full_path_"+metric+"_bps"] = (format((total/count).quantize(Decimal("0.01")), "f") if count else None)
             row["average_before_funding_bps"] = (format(
                 (net/margin.entry_notional_quote*BPS_DENOMINATOR/count).quantize(
                     Decimal("0.01")), "f") if count else None)

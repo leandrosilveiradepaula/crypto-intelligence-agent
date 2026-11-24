@@ -16,6 +16,7 @@ from .paper_profile_d487 import snapshot
 
 ROOT=Path(__file__).resolve().parents[1]
 DEFAULT_MATRIX=ROOT/"docs/examples/d520_indicator_research_matrix.json"
+SWING_MATRIX=ROOT/"docs/examples/d523_swing_rsi_research_matrix.json"
 JOB_SCHEMA="d522-owner-local-research-job-v1"
 MAX_REPORT_BYTES=512_000
 TIMEOUT_SECONDS=300
@@ -48,10 +49,16 @@ class ResearchJob:
 
     def start(self, data):
         if (type(data) is not dict or not {"horizon_hours"}<=set(data)
-                or set(data)-{"horizon_hours","as_of_ms","matrix"}):
+                or set(data)-{"horizon_hours","as_of_ms","matrix","preset","stop_bps"}):
             raise DataValidationError("D522 invalid job request")
         horizon=data["horizon_hours"]
         cutoff=data.get("as_of_ms")
+        preset=data.get("preset","original")
+        stop=data.get("stop_bps")
+        if (type(preset) is not str or preset not in ("original","swing")
+                or ("preset" in data and data.get("matrix") is not None)
+                or (stop is not None and (type(stop) is not int or not 1 <= stop <= 1000))):
+            raise DataValidationError("D523 invalid research preset or stop")
         if (type(horizon) is not int or not 1<=horizon<=12
                 or (cutoff is not None and (type(cutoff) is not int
                      or not 0<cutoff<=time.time_ns()//1_000_000))):
@@ -60,7 +67,7 @@ class ResearchJob:
             if self._state["status"]=="running":
                 raise ResearchBusy("D522 one research job at a time")
             if data.get("matrix") is None:
-                with DEFAULT_MATRIX.open("rb") as fp:
+                with (SWING_MATRIX if preset == "swing" else DEFAULT_MATRIX).open("rb") as fp:
                     raw=fp.read(MAX_MATRIX_BYTES+1)
             else:
                 raw=json.dumps(data["matrix"],ensure_ascii=True,
@@ -70,13 +77,15 @@ class ResearchJob:
             job_id=uuid4().hex
             fields={"job_id":job_id,"horizon_hours":horizon,"requested_as_of_ms":cutoff,
                     "profile_revision":revision,"matrix_sha256":sha256(raw).hexdigest(),
-                    "strategy_count":len(profiles)+2}
+                    "strategy_count":len(profiles)+2,"requested_stop_bps":stop}
             self._state=self._status("running",**fields)
             # No shell, arbitrary path, credentials, network flag or user code.
             cmd=[sys.executable,"-m","scripts.run_j3_combination_research_d520",
                  "--historical-directory",str(self._history),"--policy-file",str(self._policy),
                  "--matrix-stdin","--horizon-hours",str(horizon),
                  "--expected-policy-revision",revision,"--low-priority"]
+            if stop is not None:
+                cmd.extend(["--research-stop-bps",str(stop)])
             if cutoff is None:
                 cmd.append("--latest-saved")
             else:
@@ -103,6 +112,9 @@ class ResearchJob:
                     or report.get("status")!=expected or report.get("public_gets")!=0
                     or report.get("profile_revision")!=fields["profile_revision"]
                     or report.get("horizon_hours")!=fields["horizon_hours"]
+                    or report.get("research_stop_override_bps")!=fields.get("requested_stop_bps")
+                    or (fields.get("requested_stop_bps") is not None and
+                        report.get("common_exit_policy",{}).get("stop_distance_bps")!=str(fields["requested_stop_bps"]))
                     or (fields["requested_as_of_ms"] is not None
                         and report.get("as_of_ms")!=fields["requested_as_of_ms"])
                     or report.get("manifest",{}).get("matrix_sha256")!=fields["matrix_sha256"]

@@ -44,7 +44,8 @@ function customDefaults(cross) {
   return {ema:cross.map(period=>({enabled:true,period})),
     sma:cross.map(period=>({enabled:false,period})),
     pivot_supertrend:{enabled:false,pivot_period:2,atr_period:10,atr_factor:"3"},
-    bollinger:{enabled:false,period:20,deviations:"2",mode:"breakout"}};
+    bollinger:{enabled:false,period:20,deviations:"2",mode:"breakout"},
+    rsi:{enabled:false,period:14,long_min:50,long_max:70}};
 }
 function refreshCustom() {
   $("custom-indicators").hidden = $("r-entry_mode").value!=="indicator_combo";
@@ -63,6 +64,9 @@ function refreshCustom() {
   const bb=$("ci-bb-enabled").checked;
   for (const id of ["ci-bb-period","ci-bb-deviations","ci-bb-mode"]) $(id).disabled=!bb;
   if (bb) active.push("Bollinger "+$("ci-bb-period").value+"/"+$("ci-bb-deviations").value);
+  const rsi=$("ci-rsi-enabled").checked;
+  for (const id of ["ci-rsi-period","ci-rsi-min","ci-rsi-max"]) $(id).disabled=!rsi;
+  if (rsi) active.push("RSI "+$("ci-rsi-period").value);
   $("custom-summary").textContent=active.length ?
     "Ativos: "+active.join(" + ")+". Mudanças valem após salvar e iniciar nova sessão PAPER." :
     "Todos desligados: não haverá novas entradas por este modo. Posições existentes continuam acompanhadas.";
@@ -84,6 +88,11 @@ function fillCustom(profile) {
   $("ci-bb-period").value=bb.period;
   $("ci-bb-deviations").value=bb.deviations;
   $("ci-bb-mode").value=bb.mode;
+  const rsi=profile.rsi || {enabled:false,period:14,long_min:50,long_max:70};
+  $("ci-rsi-enabled").checked=rsi.enabled===true;
+  $("ci-rsi-period").value=rsi.period;
+  $("ci-rsi-min").value=rsi.long_min;
+  $("ci-rsi-max").value=rsi.long_max;
   refreshCustom();
 }
 function collectCustom() {
@@ -115,6 +124,9 @@ function collectCustom() {
     throw new Error("Bollinger: multiplicador entre 0,1 e 10, até 6 casas decimais, e regra válida.");
   }
   result.bollinger={enabled:$("ci-bb-enabled").checked,period:integer("ci-bb-period",120,2),deviations:dev,mode};
+  const lower=integer("ci-rsi-min",99,50), upper=integer("ci-rsi-max",100,51);
+  if (lower>=upper) throw new Error("RSI: limite inferior deve ser menor que o superior.");
+  result.rsi={enabled:$("ci-rsi-enabled").checked,period:integer("ci-rsi-period",120,2),long_min:lower,long_max:upper};
   return result;
 }
 function fill(model) {
@@ -722,7 +734,7 @@ function showMatrix(job) {
   matrixJobId=job.job_id;
   const show=v=>v===null?"Sem dados":Number(v).toLocaleString("pt-BR",{maximumFractionDigits:6});
   summary.textContent=d.rows.length+" estratégias · "+d.common_covered_symbol_hours+
-    " oportunidades com trajetória comum · "+d.horizon_hours+"h / 5min · corte "+
+    " oportunidades com trajetória comum · "+d.horizon_hours+"h / 5min · stop "+show(d.common_exit_policy.stop_distance_bps)+" bps · perda bruta no stop "+show(d.stop_gross_loss_margin_pct)+"% da margem (liquidação não avaliada) · corte "+
     new Date(d.as_of_ms).toLocaleString("pt-BR")+
     ". Perfil lido na revisão "+job.profile_revision.slice(0,12)+
     (d.status==="no_complete_common_paths"?". Sem cobertura suficiente.":"");
@@ -741,6 +753,10 @@ function showMatrix(job) {
     decisionMetric(metrics,"Média adversa após custos (bps)",show(r.mean_adverse_bps));
     decisionMetric(metrics,"Custos estimados (USDT)",show(r.cost_adverse));
     decisionMetric(metrics,"Com alvo / stop",r.with_targets+" / "+r.stop_count);
+    decisionMetric(metrics,"Stop antes de TP1 / na primeira hora",r.stop_before_tp1+" / "+r.stop_before_tp1_first_hour);
+    decisionMetric(metrics,"Stop antes de TP1, alvo tocado depois",r.stop_before_tp1_then_later_tp1);
+    decisionMetric(metrics,"Positivas com stop",r.positive_with_stop);
+    decisionMetric(metrics,"Excursão adversa / favorável média, caminho inteiro (bps)",show(r.mean_full_path_mae_bps)+" / "+show(r.mean_full_path_mfe_bps));
     const note=document.createElement("p");
     note.className="muted";
     note.textContent=(r.descriptive_sample_screen_met?"Amostra atende filtro descritivo.":"Amostra abaixo do filtro descritivo.")+
@@ -769,9 +785,11 @@ async function startMatrix(){
   $("matrix-start").disabled=true;
   try{
     const horizon=integer("matrix-horizon",12,1);
+    const request={horizon_hours:horizon,preset:$("matrix-preset").value};
+    if ($("matrix-stop").value.trim()) request.stop_bps=integer("matrix-stop",1000,1);
     const response=await fetch("/api/combination-research",{
       method:"POST",headers:{"Content-Type":"application/json","X-CIA-Paper-Profile":"1"},
-      body:JSON.stringify({horizon_hours:horizon})
+      body:JSON.stringify(request)
     });
     if(response.status===409){await refreshMatrix();return;}
     if(response.status!==202)throw new Error("Solicitação não aceita.");
