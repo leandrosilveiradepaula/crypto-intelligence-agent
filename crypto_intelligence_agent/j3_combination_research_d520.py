@@ -216,63 +216,14 @@ def parse_stop_grid(value):
     return tuple(value)
 
 
-def parse_research_sizing(*, leverage=None, margin_quote=None, bankroll_quote=None):
-    """Research-only overrides. No account balance or venue margin is read."""
-    if leverage is not None and (type(leverage) is not int or not 1 <= leverage <= 200):
-        raise DataValidationError("D527 research leverage must be an integer 1..200")
-    def amount(value):
-        if value is None:
-            return None
-        if type(value) is not str or re.fullmatch(r"[0-9]{1,7}(?:[.][0-9]{1,6})?", value) is None:
-            raise DataValidationError("D527 positive decimal string required")
-        result = Decimal(value)
-        if not Decimal("0.000001") <= result <= 1_000_000:
-            raise DataValidationError("D527 research amount out of bounds")
-        return result
-    margin, bankroll = amount(margin_quote), amount(bankroll_quote)
-    if margin is not None and bankroll is not None and margin > bankroll:
-        raise DataValidationError("D527 requested margin exceeds reference bankroll")
-    return leverage, margin, bankroll
-
-
-def full_position_stop_risk(distance, margin, bankroll):
-    """Linear price move on full initial notional, before costs, not liquidation.
-
-    Do not use the hypothetical stop loss as an account-level maximum loss.
-    Partial exits, gaps, margin mode and venue maintenance change actual risk.
-    """
-    with localcontext() as ctx:
-        ctx.prec = 50
-        loss = margin.entry_notional_quote * Decimal(distance) / 10000
-        margin_pct = Decimal(distance) * margin.leverage_at_intent / 100
-        return {
-            "gross_stop_loss_quote": format(loss, "f"),
-            "gross_loss_margin_pct": format(margin_pct, "f"),
-            "gross_stop_reaches_initial_margin": margin_pct >= 100,
-            "gross_stop_loss_pct_of_reference_bankroll": (
-                format((loss*100/bankroll).quantize(Decimal("0.000001")), "f")
-                if bankroll is not None else None),
-        }
-
-
 def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
                as_of_ms: int, horizon_hours: int, research_stop_bps: int | None = None,
                research_stop_grid_bps: tuple[int, ...] | None = None,
-               research_leverage: int | None = None,
-               research_margin_quote: str | None = None,
-               research_bankroll_quote: str | None = None,
                min_complete=20,
                min_coverage_bps=7000) -> dict:
     """Read existing archives once, evaluate every hypothesis in one pass. No GET or writes."""
     ref,profiles,labels = parse_matrix(matrix_raw)
     grid = parse_stop_grid(research_stop_grid_bps)
-    lev_override, margin_override, bankroll = parse_research_sizing(
-        leverage=research_leverage, margin_quote=research_margin_quote,
-        bankroll_quote=research_bankroll_quote)
-    lev = owner_policy.leverage.for_new_positions if lev_override is None else lev_override
-    margin_quote = owner_policy.margin_quote if margin_override is None else margin_override
-    if bankroll is not None and margin_quote > bankroll:
-        raise DataValidationError("D527 effective margin exceeds reference bankroll")
     if grid and research_stop_bps is not None:
         raise DataValidationError("D524 select a stop or a grid, not both")
     archives = read_comparison_archives(directory,now_ms=as_of_ms)
@@ -288,8 +239,9 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
     base_stop = grid[0] if grid else research_stop_bps
     exit_policy = (owner_policy.exits if base_stop is None else
                    replace(owner_policy.exits, stop_distance_bps=Decimal(base_stop)))
-    notional = margin_quote * Decimal(lev)
-    margin = SyntheticMarginBasis(margin_quote, lev, notional, "SYNTHETIC_USDT")
+    notional = owner_policy.margin_quote*Decimal(owner_policy.leverage.for_new_positions)
+    margin = SyntheticMarginBasis(owner_policy.margin_quote,
+        owner_policy.leverage.for_new_positions,notional,"SYNTHETIC_USDT")
     report = compare_archived_strategies(
         archives,config=cfg,ema_periods=ref,reference_notional=notional,
         entry_fee_bps=exit_policy.entry_fee_bps,exit_fee_bps=exit_policy.exit_fee_bps,
@@ -317,7 +269,7 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
                     or {r["name"]:(r["candidates"],r["complete"]) for r in variant["rows"]} != baseline):
                 raise DataValidationError("D524 research stops must share identical signal counts and coverage")
             grid_results.append({"stop_bps":distance,
-                **full_position_stop_risk(distance, margin, bankroll),
+                "gross_loss_margin_pct":format(Decimal(distance)*Decimal(margin.leverage_at_intent)/100,"f"),
                 "rows":variant["rows"]})
     manifest = {
         "archive_digests":[[h.window_end_ms,h.digest_sha256] for h in archives],
@@ -341,14 +293,6 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
         "stop_grid":grid_results,
         "scenario_count":len(labels)*max(1,len(grid)),
         "stop_gross_loss_margin_pct":format(exit_policy.stop_distance_bps * Decimal(margin.leverage_at_intent) / 100, "f"),
-        "stop_risk":full_position_stop_risk(exit_policy.stop_distance_bps, margin, bankroll),
-        "research_sizing_overrides":{"leverage":research_leverage,
-            "margin_quote":research_margin_quote,"bankroll_quote":research_bankroll_quote},
-        "reference_bankroll_quote":format(bankroll,"f") if bankroll is not None else None,
-        "margin_pct_of_reference_bankroll":(
-            format((margin.requested_margin_quote*100/bankroll).quantize(Decimal("0.000001")),"f")
-            if bankroll is not None else None),
-        "portfolio_simulated":False,
         "entry_quality_definition":"full_observed_path_excursions_and_later_bar_tp1_after_stop_before_tp1",
         "requested_margin_quote":format(margin.requested_margin_quote,"f"),
         "reference_notional_quote":format(notional,"f"),

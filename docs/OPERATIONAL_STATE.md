@@ -1,15 +1,8 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
-## D525 atualizado — publicação agrupada D527
+## Prioridade vigente — pesquisa estratégica em 50x (24/11/2026)
 
-O instalador anterior, aprovado para D524 mas não publicado, foi atualizado para o candidato D527 `b8a395ad4076f3eefb9731d78116ec791c508a1c`, mantendo gate humano, zero posições abertas, rollback e escopo de somente dois serviços PAPER. Não executar até aceite exato de produto e instalador. Não repetir D524. Depois da publicação, executar pesquisas 140 cenários pelo endpoint (50x/1 e 20x/1, banca 200); conferir acesso real, sem ampliar privilégios. O histórico D524 e os resultados agregados permanecem em `docs/PAPER_RELEASE_D525.md`. Nenhuma publicação ou backtest D526/D527 real nesta etapa.
-
-
-## D527 — parâmetros de banca e stops ampliados (24/11/2026)
-
-PO confirmou banca de referência 200 USDT, margem de 1–2 USDT por posição, RSI como confirmação após o sinal, stops de pesquisa incluindo 2% e 2,5%. Valores editáveis, nenhuma alteração do perfil ativo. D526 integrado em `b25175f88e562642830a5c1413ff6690523abca2` com CI 45486116138/45486115445 SUCCESS. D527: grade 50/75/100/125/150/200/250 bps, 20 estratégias = 140 cenários por configuração de sizing; CLI/API/painel com overrides de margem/alavancagem exclusivamente de pesquisa e risco bruto normalizado à banca de referência. A 50x, 200/250 bps são contrafactuais que atingem/excedem a margem inicial; sem modelo de liquidação ou carteira. Ver `docs/J3_RESEARCH_SIZING_D527.md`. Banca não é saldo efetivo nem retorno composto; sem ordens reais ou J1.
-
-D527 código e testes na branch `chatgpt/j3-research-sizing-d527`; CI/revisão/execução real pendentes. D525 instalador validado para D524 antigo, não publicar esse pin; atualizar para o produto consolidado aprovado com gate de publicação único. Acesso owner MCP indisponível antes do novo painel. Próximo: validar sizing, preparar release agrupado e rodar as baterias 50x e alavancagem menor com os sete stops via laboratório, evitando nova execução manual por cenário. D524 resultados reais já registrados na revisão #750.
+Decisão expressa do PO: manter 50x nesta etapa; adiar integralmente a frente de banca, margem e dimensionamento. D527 permanece no rascunho #753 (head b8a395ad4076f3eefb9731d78116ec791c508a1c) sem integrar nem publicar. D526 integrado em `b25175f88e562642830a5c1413ff6690523abca2`, CI 45486116138/45486115445 SUCCESS, RSI apenas como confirmação/veto do sinal original. A grade existente suporta 20 estratégias × 7 stops (50, 75, 100, 125, 150, 200, 250 bps) = 140 cenários, com referência 50x. Não criar outro motor ou repetir D524. Comparar controles e vetos, qualidade das entradas, stops antes TP1, recuperação posterior, MAE/MFE e resultado líquido pré-funding. Depois estudar pullback/retomada, compressão e amostras/horizontes 24/48/72h. Stops 200/250 bps são contrafactuais sem liquidação modelada, não aprovação financeira. Não alterar perfil ativo, J1, serviços ou ordens reais. D525 repinado exclusivamente ao D526, não D527; exige CI, revisão e gate explícito de publicação. Endpoint privado retorna 404 e execução owner via MCP indisponível; pesquisa real D526 ainda não executada. A próxima ação concreta é executar a bateria isolada D526 no histórico existente com os sete stops e devolver resultados, sem esperar release. Ver docs/J3_RSI_VETO_D526.md e docs/PAPER_RELEASE_D525.md.
 
 
 ## D524 — bateria conjunta de stops (24/11/2026)

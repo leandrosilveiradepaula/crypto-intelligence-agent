@@ -11,7 +11,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "deploy/vps/paper_research/owner_
 class PaperReleaseD525Tests(unittest.TestCase):
     def test_fixed_product_scope_gate_and_rollback(self):
         s = SCRIPT.read_text(encoding="utf-8")
-        self.assertIn('PRODUCT_SHA="b8a395ad4076f3eefb9731d78116ec791c508a1c"', s)
+        self.assertIn('PRODUCT_SHA="b25175f88e562642830a5c1413ff6690523abca2"', s)
         self.assertIn("exact_reviewed_product_sha_required", s)
         self.assertIn("unapproved_product_revision", s)
         self.assertIn("92-cia-d525-pinned.conf", s)
@@ -27,8 +27,8 @@ class PaperReleaseD525Tests(unittest.TestCase):
         self.assertIn("D525_PANEL_ENDPOINTS=PASS", s)
         self.assertIn("D525_RESEARCH_ENDPOINT_GUARDS=PASS", s)
         self.assertIn('b"matrix-grid-enabled" in html', s)
-        for marker in ("rsi_filter", "matrix-bankroll", "matrix-margin", "matrix-leverage"):
-            self.assertIn(marker, s)
+        self.assertIn('b"rsi_filter" in html', s)
+        self.assertNotIn("matrix-bankroll", s)
         self.assertIn("same_origin_json_required", s)
         self.assertIn("research_request_rejected", s)
         self.assertIn('data=b\'{"horizon_hours":0}\'', s)

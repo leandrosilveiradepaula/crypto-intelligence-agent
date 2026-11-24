@@ -178,16 +178,11 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <section class="card" aria-label="Pesquisa de combinações de indicadores">
 <h2>6. Pesquisa de combinações</h2>
 <p>Compare o conjunto original ou as combinações swing com RSI do ativo, mantendo a força relativa ao BTC. O stop de pesquisa é independente do perfil salvo. Sem baixar velas nem alterar a estratégia.</p>
-<div class="grid"><label>Matriz de pesquisa<select id="matrix-preset"><option value="original">Original (25 estratégias)</option><option value="swing">Swing / RSI no gatilho (18 estratégias)</option><option value="rsi_filter" selected>RSI somente filtro (20 estratégias)</option></select></label>
+<div class="grid"><label>Matriz de pesquisa<select id="matrix-preset"><option value="original">Original (25 estratégias)</option><option value="swing">Swing / RSI no gatilho (18 estratégias)</option><option value="rsi_filter">RSI somente filtro (20 estratégias)</option></select></label>
 <label>Stop de pesquisa (bps; 100 = 1%)<input id="matrix-stop" type="number" min="1" max="1000" step="1" placeholder="Usar perfil salvo"></label></div>
-<label class="check"><input type="checkbox" id="matrix-grid-enabled" checked> Comparar vários stops na mesma bateria</label>
-<label>Stops em bps (2 a 8 valores crescentes separados por espaço)<input id="matrix-grid" type="text" inputmode="text" value="50 75 100 125 150 200 250"></label>
-<div class="grid">
-<label>Banca de referência (USDT)<input id="matrix-bankroll" type="number" inputmode="decimal" min="0.000001" max="1000000" step="any" value="200"></label>
-<label>Margem por posição (USDT)<input id="matrix-margin" type="number" inputmode="decimal" min="0.000001" max="1000000" step="any" value="1"></label>
-<label>Alavancagem de pesquisa<input id="matrix-leverage" type="number" min="1" max="200" step="1" value="50"></label>
-</div>
-<p class="muted">Somente pesquisa: a banca de referência não é saldo real nem simulação de carteira. Margem e alavancagem vazias usam o perfil salvo. Compare 50, 75, 100, 125, 150, 200 e 250 bps. A 50x, 2% consome 100% da margem bruta e 2,5% excede a margem; esses cenários são contrafactuais sem liquidação modelada. A amostra atual permite no máximo 12h por trajetória.</p>
+<label class="check"><input type="checkbox" id="matrix-grid-enabled"> Comparar vários stops na mesma bateria</label>
+<label>Stops em bps (2 a 8 valores crescentes separados por espaço)<input id="matrix-grid" type="text" inputmode="text" value="50 75 100 125 150" disabled></label>
+<p class="muted">Compare, por exemplo, 50, 75, 100, 125 e 150 bps. A alavancagem do perfil permanece fixa. Um stop maior não garante sobrevivência à liquidação; o replay não a valida. A amostra atual permite no máximo 12h por trajetória, ainda não um swing de vários dias.</p>
 <label>Horizonte de simulação (horas)<input id="matrix-horizon" type="number" min="1" max="12" value="4"></label>
 <div class="actions"><button id="matrix-start" class="secondary">Executar bateria</button><button id="matrix-refresh" class="secondary">Consultar resultado</button></div>
 <p id="matrix-status" class="muted" role="status" aria-live="polite">Nenhuma pesquisa consultada.</p>
