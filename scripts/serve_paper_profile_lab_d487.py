@@ -18,6 +18,7 @@ import sys
 import time
 
 from crypto_intelligence_agent.market_data import DataValidationError
+from crypto_intelligence_agent.j3_paper_scorecard_d511 import paper_closed_scorecard
 from crypto_intelligence_agent.paper_closed_route_archive_d502 import (
     read_closed_route_archive,
 )
@@ -364,8 +365,13 @@ def _paper_session_read(*, directory: Path) -> dict:
     else:
         displayed, active_count = [], 0
     position_count = materialized_count
+    scorecard = paper_closed_scorecard(
+        displayed, total_positions=position_count,
+        total_closed_positions=position_count - active_count,
+    )
     return {
         "schema_version":"d487-local-paper-session-readback-v1",
+        "paper_scorecard": scorecard,
         "status":"paper_journal_readback",
         "intents":intents,
         "position_count":position_count,

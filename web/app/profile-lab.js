@@ -169,6 +169,7 @@ async function loadPaperSession() {
       " encerrada(s) · "+(d.intent_count ?? d.intents.length)+
       " intenção(ões) PAPER (mais recentes: "+d.intents.length+
       "). Ordens reais: NÃO.";
+    showPaperScorecard(d.paper_scorecard);
     const container=$("paper-session-rows");
     container.replaceChildren();
     for (const intent of d.intents) {
@@ -195,6 +196,8 @@ async function loadPaperSession() {
     $("paper-session-details").textContent =
       "Diário da sessão ainda indisponível. Não presumir posições ou fills.";
     $("paper-position-rows").textContent="Estado não disponível.";
+    $("paper-scorecard-metrics").replaceChildren();
+    $("paper-scorecard-note").textContent="Desempenho indisponível: diário PAPER não confirmado.";
   }
   try {
     const op=await getJson("/api/paper-operator");
@@ -236,6 +239,36 @@ async function loadMoreHistory() {
     $("history-rows").textContent="Histórico indisponível: "+error.message;
     button.disabled = false;
   }
+}
+
+function showPaperScorecard(d) {
+  const root=$("paper-scorecard-metrics");
+  const note=$("paper-scorecard-note");
+  root.replaceChildren();
+  if (!d || d.schema_version!=="d511-observed-paper-closed-scorecard-v1" ||
+      d.orders_sent!==false || d.real_account_pnl_available!==false ||
+      d.exchange_execution_verified!==false || d.funding_settlement_verified!==false) {
+    note.textContent="Resumo de desempenho indisponível ou não validado.";
+    return;
+  }
+  const value=v=>v===null || v===undefined ? "Sem dados" : String(v);
+  decisionMetric(root,"Encerradas precificadas",d.sample_closed_priced+
+    " / "+d.total_closed_positions_in_journal);
+  decisionMetric(root,"Vitórias / derrotas",d.sample_winning_closed+
+    " / "+d.sample_losing_closed);
+  decisionMetric(root,"Resultado condicional (USDT)",value(
+    d.conditional_closed_net_before_funding_quote));
+  decisionMetric(root,"Recuo entre fechamentos (USDT)",value(
+    d.max_drawdown_closed_trade_sequence_quote));
+  const incomplete = !d.window_covers_every_closed_position ||
+    !d.priced_covers_every_closed_position;
+  note.textContent="Amostra: "+d.sample_closed_positions+
+    " encerradas visíveis; "+d.sample_closed_unpriced+
+    " sem preço verificável. Taxa de acerto da amostra: "+
+    value(d.priced_closed_win_rate_percent)+"%. "+
+    (incomplete?"Histórico incompleto ou sem preços; métricas PARCIAIS. ":"")+
+    "Valores hipotéticos antes de funding; sem execução na corretora, "+
+    "sem drawdown intrabar e sem validação fora da amostra.";
 }
 
 function showPositions(id,positions,emptyText) {

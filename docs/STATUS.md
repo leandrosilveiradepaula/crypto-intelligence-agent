@@ -1,5 +1,12 @@
 # STATUS — Crypto Intelligence Agent
 
+## D511 — scorecard de posições PAPER precificadas, desenvolvimento (24/11/2026)
+
+A partir da main verificada `1ae9fb0aee56b0c9cdeae7071917acb4b0167e15` foi iniciada a branch `chatgpt/j3-paper-scorecard-d511` para avançar J3/J5 sem aguardar o release D509. Reusa D454/D487/D505: fechamento de posições PAPER com preços e custos hipotéticos persistidos, sem novo diário financeiro. Entrega scorecard no JSON do /api/paper-session e nos cartões móveis do painel (ganhos, perdas, retorno condicional antes de funding e drawdown entre fechamentos). A janela de 50 recentes + posições antigas ainda abertas NÃO é todo o histórico; o painel sinaliza cobertura incompleta e precificação ausente. Nenhuma conclusão OOS, PnL real, funding efetivo, liquidação real ou proteção nativa.
+
+Situação: implementação na branch, testes focados incluídos, CI de HEAD pendente; **NÃO implantado na VPS** e não altera o release D507 anterior nem a J1. A PR D509 #738 está integrada em main porém endpoint novo retornou HTTP404 na VPS; implantação D509/D511 depende de gate de release e rollback. Próximo trabalho autorizado: CI, revisão da branch D511 e merge sem produção quando verde; depois ampliar J3 com amostra histórica causal e OOS real, mantendo PAPER.
+
+
 ## D510 — Centro de Decisões integrado ao produto, publicação VPS ainda pendente (24/11/2026)
 
 **Entrega integrada e funcional em código:** PR #738 merged no SHA `30dd6a596cccbe95c2dded7c6e7e39ecb4cb52d1` após head verificado `bd3bb59fb2a5af6f36ed8843ae3ab284eff231e3`, CI Linux **3.600 PASS**, Windows **3.600 PASS (674 skips POSIX)**, QA mobile/Chrome sucesso (runs 45404676604 e 45404676501). Em vez de criar mais um motor de sinais, a mesma pesquisa REST existente agora classifica **todos os 50 contratos** por hipótese técnica e alinhamento BTC, com motivos por ativo; o mesmo diário da lease PAPER registra contadores agregados de etapas/abstenções e os expõe em `GET /api/paper-decision-funnel`, apenas loopback privado. Console mostra etapas WS confirmadas, pesquisa, candidatos e posições, lista completa de decisões históricas com filtros e atualização automática, sem modificar política ou enviar ordens reais.
