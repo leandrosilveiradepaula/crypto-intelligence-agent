@@ -111,7 +111,7 @@ test -z "$(runuser -u "$OWNER" -- git -C "$OLD_CODE" status --porcelain --untrac
 check_zero_open() {
   curl --noproxy '*' --fail --silent --show-error --max-time 8 \
     "http://127.0.0.1:8766/api/paper-session" |
-    "$ROOT_PY" -c '
+    "$ROOT_PY" -I -c '
 import json, sys
 s = json.load(sys.stdin)
 if not (s.get("status") == "paper_journal_readback"
@@ -164,7 +164,7 @@ owner_research_preflight() {
       --historical-directory "$HISTORY" --policy-file "$POLICY" \
       --history-hours 122 --ema-periods 10 30 60 \
       --horizon-hours 4 --resolution 5m --reuse |
-    "$ROOT_PY" -c '
+    "$ROOT_PY" -I -c '
 import json, sys
 d = json.load(sys.stdin)
 r = d.get("comparison", {})
@@ -247,7 +247,7 @@ systemctl start "$PANEL"
 # A legitimately absent completed lease is not a broken route.
 READY=0
 for attempt in $(seq 1 15); do
-  if "$ROOT_PY" - <<'PY'
+  if "$ROOT_PY" -I - <<'PY'
 import json
 from urllib.request import build_opener, ProxyHandler
 from urllib.error import HTTPError
@@ -304,7 +304,7 @@ test "$READY" = "1" || die "new_panel_contract_not_ready"
 
 # One live local GET of the actual new feature. The route is local-only and
 # reads saved supplements; no new provider requests and no profile changes.
-"$ROOT_PY" - <<'PY'
+"$ROOT_PY" -I - <<'PY'
 import json
 from urllib.request import build_opener, ProxyHandler
 o = build_opener(ProxyHandler({}))
