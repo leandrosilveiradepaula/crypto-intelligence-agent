@@ -168,6 +168,15 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <div id="compare-status" class="muted" role="status" aria-live="polite">Execute a comparação quando desejar.</div>
 <div id="compare-results" class="results" aria-live="polite"></div>
 </section>
+<section class="card" aria-label="Pesquisa de combinações de indicadores">
+<h2>6. Pesquisa de combinações</h2>
+<p>Compare a bateria de 25 estratégias, incluindo EMA, SMA, Pivot SuperTrend e Bollinger, com força relativa ao BTC e os mesmos custos e saídas do perfil salvo. A pesquisa usa o último histórico complementar salvo, sem baixar velas nem alterar a estratégia.</p>
+<label>Horizonte de simulação (horas)<input id="matrix-horizon" type="number" min="1" max="12" value="4"></label>
+<div class="actions"><button id="matrix-start" class="secondary">Executar bateria</button><button id="matrix-refresh" class="secondary">Consultar resultado</button></div>
+<p id="matrix-status" class="muted" role="status" aria-live="polite">Nenhuma pesquisa consultada.</p>
+<div id="matrix-results" class="results" aria-live="polite"></div>
+<p class="muted">Ordenação exploratória por amostra e média líquida estimada no cenário adverso. Não seleciona nem ativa estratégia. Sem funding, liquidação ou validação fora da amostra. O último resultado é mantido em memória até nova execução ou reinício.</p>
+</section>
 <footer>Ferramenta local e privada · R$ 0,00 adicional · Dados Bybit somente públicos · Ordens reais desativadas. O monitor de saídas e o coletor J1 não são alterados por esta página.</footer>
 </main>
 </body>

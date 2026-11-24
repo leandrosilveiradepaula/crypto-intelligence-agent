@@ -113,7 +113,7 @@ class ResearchJob:
             next_state=self._status("completed",**fields,report=report)
         except subprocess.TimeoutExpired:
             next_state=self._status("failed",**fields,error="research_timeout")
-        except (OSError,ValueError,TypeError,DataValidationError,ArithmeticError):
+        except (OSError,ValueError,TypeError,AttributeError,KeyError,DataValidationError,ArithmeticError):
             next_state=self._status("failed",**fields,error="research_unavailable")
         with self._lock:
             self._state=next_state
