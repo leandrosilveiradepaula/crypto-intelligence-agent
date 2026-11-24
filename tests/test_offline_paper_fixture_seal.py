@@ -60,6 +60,40 @@ class OfflineFixtureSealTests(unittest.TestCase):
         ):
             self.assertFalse(getattr(a, flag))
 
+    def test_public_indicators_are_never_encoded_as_legacy_breakout(self):
+        from crypto_intelligence_agent.j2_configurable_indicators_d513 import (
+            IndicatorSelection, MovingAverageSlot, PivotSuperTrend,
+        )
+        off = tuple(MovingAverageSlot(False, n) for n in (10, 30, 60))
+        selection = IndicatorSelection(off, off, PivotSuperTrend(False, 2, 10, D(3)))
+        for mode in ("breakout", "indicator_combo"):
+            with self.subTest(mode=mode), self.assertRaisesRegex(
+                    DataValidationError, "prefix v1 requires breakout"):
+                self.seal(self.rows[:5], strategy=replace(
+                    self.strategy, entry_mode=mode, indicators=selection))
+        # The v1 digest remains the exact legacy projection, without new fields.
+        from dataclasses import fields
+        from crypto_intelligence_agent.offline_paper_fixture_seal import (
+            _record, _scalar, _canonical_digest,
+        )
+        context = {
+            "version": SEAL_VERSION, "strategy_id": "synthetic_compression_breakout_v1",
+            "features": _record(self.strategy.features, type(self.strategy.features)),
+            "strategy": {field.name: _scalar(getattr(self.strategy, field.name))
+                         for field in fields(type(self.strategy))
+                         if field.name in ("compression_bars", "baseline_bars",
+                                           "max_atr_ratio", "min_quote_volume_ratio",
+                                           "cooldown_bars", "experimental_paper_relaxation")},
+            "venue_candidate": PaperVenue.BINANCE_USDM.value,
+            "requested_units": _scalar(D("2.00")),
+            "risk_limits": _record(self.limits, type(self.limits)),
+            "close_safety_ms": 1000, "max_candles": 20,
+        }
+        from crypto_intelligence_agent.synthetic_entry_hypotheses import STRATEGY_ID
+        context["strategy_id"] = STRATEGY_ID
+        self.assertEqual(self.seal(self.rows[:5]).context_sha256,
+                         _canonical_digest(context))
+
     def test_prefix_integrity_includes_decimal_scale_not_just_value(self):
         a = self.seal(self.rows[:5])
         edited = list(self.rows[:5])

@@ -1,5 +1,10 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D514 — compatibilidade do selo J6 no candidato D513 (24/11/2026)
+
+O head `1a111137646926cef044e14c03f627018a884082` da PR #741 teve QA móvel geral SUCCESS (45412740016); CI Python/docs/Windows (45412740525) terminou FAILURE. Logs Linux: 3.618 testes, 84 erros e 1 falha, todos com a mesma causa-raiz: o campo opcional `indicators` (None em perfis legados) entrou indevidamente no serializador escalar do selo v1 offline. Os sete testes específicos D513, comparação histórica personalizada e roundtrip owner D487 passaram. A correção nesta branch exclui apenas esse campo do digest histórico e rejeita explicitamente novas seleções no selo legado breakout-only, sem modificar o formato do diário nem os hashes existentes. Regressão adicionada para preservar o hash canônico anterior. Nova CI do head será necessária; sem release ou alterações VPS nesta fase.
+
+
 ## D513 — composição de indicadores parametrizável J2/J3/J5 (24/11/2026, código em validação)
 
 **D512 integrado:** PR #740 squash `ad3e2ce212dfdff1b7421ed8431b7ff05b172431`; head `45527477de751c1a23b72ba82a2a67f24bfcfbaa`, CI [Python/docs/Windows](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45409956630) e [QA móvel geral](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45409956516) SUCCESS. Nenhum deploy; não comprova acesso aos arquivos históricos privados.

@@ -121,7 +121,9 @@ def seal_offline_paper_prefix(
     # Keep its canonical hashes byte-identical for legacy recovery. Do not
     # serialize new public-research EMA fields or silently seal EMA mode as
     # the old synthetic strategy.
-    if strategy.entry_mode != "breakout" or strategy.ema_cross_periods is not None:
+    if (strategy.entry_mode != "breakout"
+            or strategy.ema_cross_periods is not None
+            or strategy.indicators is not None):
         raise DataValidationError("offline PAPER prefix v1 requires breakout strategy")
     _fixture_units(requested_units)
     now = _utc_ms(decision_at_ms, "decision_at_ms")
@@ -139,7 +141,7 @@ def seal_offline_paper_prefix(
         "strategy": {
             field.name: _scalar(getattr(strategy, field.name))
             for field in fields(CompressionBreakoutConfig)
-            if field.name not in ("features", "entry_mode", "ema_cross_periods")
+            if field.name not in ("features", "entry_mode", "ema_cross_periods", "indicators")
         },
         "venue_candidate": venue.value,
         "requested_units": _scalar(requested_units),
