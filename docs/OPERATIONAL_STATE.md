@@ -1,5 +1,14 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D510 — J2/J5 Centro de Decisões integrado, operador D507 mantido (24/11/2026 UTC)
+
+**Jornada:** melhorar produto PAPER desde a escolha de perfil até sinal, entrada e resultado, reduzindo trabalho de diagnóstico invisível. PR #738 `codex/j2-j5-decision-center-d509` MERGED em `30dd6a596cccbe95c2dded7c6e7e39ecb4cb52d1`; head de revisão `bd3bb59fb2a5af6f36ed8843ae3ab284eff231e3`. Gate CI [45404676604](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45404676604) Linux 3.600 PASS e Windows 3.600 PASS/674 POSIX skips; QA mobile [45404676501](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45404676501) SUCCESS. Sem ordens, contrato de risco ou J1 alterados.
+
+**Entrega em código:** D509 novo leitor read-only da última lease D459 sob UID owner, com contadores de etapa, indicadores explícitos de abstenção e idade da observação; D453 começa a registrar apenas eventos seguros agregados após a lease; D487 adiciona `/api/paper-decision-funnel`, mais classificação N50 histórico REST para os 50 ativos; UI J5 PT-BR mostra motivo e etapa de ausência de entrada, filtros de candidatos/descarte e preview automático, preservando distinção REST vs WS. Nenhuma estratégia alterada.
+
+**VPS real** (checagem após merge): duas unidades PAPER `active/running` em WorkingDirectory D507 antigo, J1 WS timer `active/waiting`; PAPER 0 abertas/1 encerrada e nenhuma ordem real. Novo endpoint respondeu HTTP404, comprovando **não implantação** do D509. Não executar cutover sem gate de release e conferência de rollback dos drop-ins D507. Próxima ação elegível: preparar/validar um único corte reversível para o novo SHA, aguardando autorização operacional específica; em paralelo, desenvolver J3 experimento histórico com custos e saídas parciais a partir de dados reais suficientes, sem tomar as 24 velas disponíveis como OOS. Documento da frente J3 atualizado na issue #4.
+
+
 ## D509 — jornada grande: oportunidades pesquisadas + causas de não entrada visíveis (24/11/2026)
 
 Produto na VPS antes desta jornada: D507 PAPER atualizado (motor e painel) em `056845fdc46b8c2d1b08acd86be75e59dd368bac`, estado ativo; J1 N50 ativo. A última leitura `/api/paper-session` retorna 0 OPEN e 1 CLOSED ARBUSDT SHORT/STOP com `orders_sent=false`; pesquisa REST mostra 10 hipóteses e 5 comparáveis ao BTC. Isso é **pesquisa histórica**, não comprovação de cinco sinais WS ou ordens. O painel atual mostra as candidatas, mas não explica o descarte dos outros contratos nem a etapa do ciclo WS que impediu entrada. `main` estava em `8af51bc7daff2648b286258966cd1015ab040253` antes desta branch.
