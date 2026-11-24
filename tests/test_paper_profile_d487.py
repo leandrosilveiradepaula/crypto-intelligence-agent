@@ -1,6 +1,7 @@
 """Owner-only profile editor, without network/real orders."""
 from __future__ import annotations
 
+from decimal import Decimal
 import json
 import os
 from pathlib import Path
