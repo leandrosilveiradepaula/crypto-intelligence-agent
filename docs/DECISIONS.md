@@ -1,5 +1,10 @@
 # Decisões do produto
 
+## D509 — visibilidade de oportunidades antes de alterar filtros (24/11/2026)
+
+Diante de poucas operações PAPER prospectivas, a prioridade é tornar os filtros atuais **explicáveis e configuráveis** em produto, não reduzir bloqueios cegamente nem fabricar trades. Uma pesquisa REST pode encontrar candidatos, mas entrada exige confirmação causal WS do fechamento da vela, cotação pública pós-fechamento, riscos/contratos e journal idempotente. Expor ambos funis separados: REST histórico de todos os 50 ativos e último ciclo WS PAPER, com causas e contagens derivadas exclusivamente de recibos reais. Se dado não existe, mostrar "não comprovado", nunca zero inferido. Preservar estratégia do proprietário e ordens reais desativadas. Um único bloco de entrega J2/J5 deve priorizar utilidade da tela; testes ficam restritos às fronteiras alteradas, sem PRs triviais.
+
+
 ## D507 — instalação PAPER com duplo gate e rollback (24/11/2026)
 
 A migração de versão operacional do motor e do painel PAPER na VPS exige somente leitura e confirmação do diário atual com o mesmo UID owner, ausência de posições abertas e consentimento textual específico no terminal antes de parar qualquer serviço. Serviço J1 e coleta N50 não podem ser interrompidos. A instalação é uma troca reversível de diretórios de código systemd via drop-ins com SHA fixado; preserve arquivos, diários, políticas, serviço ExecStart, credenciais e isolamento do sistema. Rollback a qualquer erro remove apenas drop-ins criados pelo procedimento e reinicia as unidades anteriores. A atualização de código pode ser autorizada, mas isso NÃO ativa trading real, stop nativo, migração SQL ou publicação web externa. Qualquer alteração fora desse escopo precisa de outro gate.
