@@ -288,8 +288,14 @@ def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_B
             "profile_modified":False,"j1_touched":False}
 
 
-def read_window(home, plan, symbol, interval, start, end):
-    """Read exactly one contiguous window across shards; never create a DB."""
+def read_window(home, plan, symbol, interval, start, end, *, allow_gaps=False):
+    """Read across shards without creating a DB. Default requires exact coverage.
+
+    D529 explicitly allows gaps; absent rows stay absent and consumers must
+    split contiguous runs before evaluating signals.
+    """
+    if type(allow_gaps) is not bool:
+        raise DataValidationError("D529 explicit gap handling required")
     if (interval not in ("1h","5m") or symbol not in dict(plan.members)
             or type(start) is not int or type(end) is not int
             or not plan.cutoff_ms-MAX_DAYS*DAY <= start < end <= plan.cutoff_ms):
@@ -304,17 +310,32 @@ def read_window(home, plan, symbol, interval, start, end):
         shard_end = plan.cutoff_ms-index*SHARD
         shard_start = max(shard_end-SHARD,plan.cutoff_ms-MAX_DAYS*DAY)
         path = shard_path(home,plan,shard_start,interval)
-        if not path.is_file() or path.is_symlink():
+        until = min(end,shard_end)
+        if path.is_symlink():
+            raise DataValidationError("D528 unsafe history shard")
+        if not path.exists():
+            if allow_gaps:
+                cursor = until
+                continue
             raise DataGapError("D528 history shard missing")
+        if not path.is_file():
+            raise DataValidationError("D528 invalid history shard")
         if os.name == "posix":
             os.close(_owner_file(home,path.name))
-        until = min(end,shard_end)
         with closing(sqlite3.connect(path.resolve().as_uri()+"?mode=ro",uri=True)) as db:
             db.row_factory = sqlite3.Row
             rows = db.execute("SELECT * FROM candles WHERE exchange=? AND market=? AND symbol=? AND interval=? AND open_time_ms>=? AND open_time_ms<? ORDER BY open_time_ms",
                 (EXCHANGE,MARKET,symbol,interval,cursor,until)).fetchall()
         bars = tuple(_candle_from_row(row) for row in rows)
-        _validate_exact_page(bars,EXCHANGE,MARKET,symbol,interval,cursor,until,duration)
+        if not allow_gaps:
+            _validate_exact_page(bars,EXCHANGE,MARKET,symbol,interval,cursor,until,duration)
+        else:
+            for c in bars:
+                if (not cursor <= c.open_time_ms < until or c.open_time_ms % duration
+                        or c.close_time_ms != c.open_time_ms + duration - 1):
+                    raise DataValidationError("D529 invalid stored candle grid")
+            if any(a.open_time_ms >= b.open_time_ms for a,b in zip(bars,bars[1:])):
+                raise DataValidationError("D529 invalid stored candle order")
         if any(c.quality != QUALITY for c in bars):
             raise DataValidationError("D528 historical provenance mismatch")
         result.extend(bars)

@@ -29,6 +29,8 @@ _REST_HISTORICAL_QUALITY = "bybit_public_rest_historical_closed_unverified"
 _MIXED_STATUS = "research_only_mixed_rest24_ws1_closed_series"
 _STATUS = "research_only_public_closed_series"
 _HOUR_MS = 3_600_000
+_RETROSPECTIVE_STATUS = "research_only_retrospective_rest_sequence"
+_MAX_RETROSPECTIVE_CANDLES = 730 * 24
 
 
 @dataclass(frozen=True)
@@ -74,9 +76,14 @@ def _validated_observed_candles(
     decision_at_ms: int, close_safety_ms: int,
     allow_rest_historical_research: bool = False,
     allow_causal_rest_ws_warmup: bool = False,
+    all_retrospective_hypotheses: bool = False,
 ) -> tuple[ClosedCandle, ...]:
     if (type(series) is not BybitClosedResearchSeries
+            or type(all_retrospective_hypotheses) is not bool
+            or (all_retrospective_hypotheses and (not allow_rest_historical_research
+                or allow_causal_rest_ws_warmup))
             or series.status not in (
+                (_RETROSPECTIVE_STATUS,) if all_retrospective_hypotheses else
                 (_STATUS, _MIXED_STATUS) if allow_causal_rest_ws_warmup
                 else (_STATUS,)
             )
@@ -95,7 +102,8 @@ def _validated_observed_candles(
             or any(ch not in "0123456789abcdef" for ch in series.scope_registry_sha256)):
         raise DataValidationError("observed research requires journal and PIT digests")
     candles = series.candles
-    if type(candles) is not tuple or not 24 <= len(candles) <= MAX_CANDLES:
+    limit = _MAX_RETROSPECTIVE_CANDLES if all_retrospective_hypotheses else MAX_CANDLES
+    if type(candles) is not tuple or not 24 <= len(candles) <= limit:
         raise DataGapError("observed J2 research requires bounded 24h+ history")
     first = candles[0]
     if type(first) is not ClosedCandle:
@@ -109,7 +117,7 @@ def _validated_observed_candles(
                 or candles[-1].quality != _QUALITY):
             raise DataValidationError("D462 requires 24 REST historical and final WS confirmed")
     allowed_quality = (
-        (_REST_HISTORICAL_QUALITY,) if mixed else
+        (_REST_HISTORICAL_QUALITY,) if mixed or all_retrospective_hypotheses else
         (_QUALITY, _REST_HISTORICAL_QUALITY)
         if allow_rest_historical_research else (_QUALITY,)
     )
@@ -152,6 +160,7 @@ def evaluate_observed_bybit_research(
     close_safety_ms: int = 1,
     allow_rest_historical_research: bool = False,
     allow_causal_rest_ws_warmup: bool = False,
+    all_retrospective_hypotheses: bool = False,
 ) -> ObservedBybitResearch:
     """Research the latest completed candle without granting an AUTO2 signal.
 
@@ -159,6 +168,8 @@ def evaluate_observed_bybit_research(
     Wilder ATR, preceding (exclusive) extrema and quote-volume mean. Compression
     windows use only ATR values BEFORE the candidate. Cooldown accounts for
     earlier historical hypotheses but these are never returned as current.
+    D529 explicit REST-only retrospective mode returns all causal events;
+    the default latest-only WS/PAPER behavior is unchanged.
     """
     if type(config) is not CompressionBreakoutConfig:
         raise DataValidationError("explicit J2 compression config required")
@@ -166,6 +177,7 @@ def evaluate_observed_bybit_research(
         series, decision_at_ms=decision_at_ms, close_safety_ms=close_safety_ms,
         allow_rest_historical_research=allow_rest_historical_research,
         allow_causal_rest_ws_warmup=allow_causal_rest_ws_warmup,
+        all_retrospective_hypotheses=all_retrospective_hypotheses,
     )
     custom = config.entry_mode == "indicator_combo"
     if custom and len(cs) < config.indicators.minimum_closed_bars(
@@ -314,7 +326,7 @@ def evaluate_observed_bybit_research(
                     continue
                 ema_reference = row.ema_close
             last_emitted_index = i
-            if i == len(rows) - 1:
+            if all_retrospective_hypotheses or i == len(rows) - 1:
                 current.append(ObservedBybitHypothesis(
                     side=side,
                     closed_at_ms=row.close_time_ms,
@@ -328,8 +340,8 @@ def evaluate_observed_bybit_research(
                     entry_rule=config.entry_mode,
                 ))
     return ObservedBybitResearch(
-        status=("observed_hypothesis_not_authorized"
-                if current else "observed_no_hypothesis"),
+        status=("retrospective_hypotheses_not_authorized" if all_retrospective_hypotheses else
+                "observed_hypothesis_not_authorized" if current else "observed_no_hypothesis"),
         evaluated_candle_count=len(rows),
         hypotheses=tuple(current),
         journal_digest_sha256=series.journal_digest_sha256,

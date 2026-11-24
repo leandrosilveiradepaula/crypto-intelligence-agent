@@ -1,5 +1,10 @@
 # Especificação do produto
 
+## D529 — pesquisa retrospectiva longa (24/11/2026)
+
+D528 integrado em 7ae59574b1b21e6a132e083fe729df0def874f52, CI 45510118117/45510118137 SUCCESS; 38,6 GB livres na VPS via host_status; coleta real ainda pendente, MCP sem acesso owner. D529 reusa hipóteses D526 e saídas D517 em modo REST retrospectivo separado: indicadores contínuos por sequência, reset nas lacunas, RSI somente veto, 1h/5m, 24/48/72h, matriz padrão 420 cenários por partição. Partições 60/20/20 sem cruzamento de trajetórias; holdout exige parâmetros congelados e não deve ser usado para ajuste. Métricas por mês e regime, hashes e cobertura; coorte sobrevivente, não N50 histórico. Não equivaler ao reseed D526, carteira ou liquidação. Ver docs/J3_LONG_REPLAY_D529.md. Código e testes candidatos; CI e execução real pendentes. Próximo: coleta owner 90d e expansão 365d, replay desenvolvimento após aceite, 5m e universo mais amplo. Sem alteração J1, perfil, serviço, ordens ou custo.
+
+
 ## D528 — prioridade: base histórica de 90/365/730 dias (24/11/2026)
 
 PO autorizou ampliação substancial da base, mantendo 50x e RSI como confirmação, sizing D527 adiado. Base de pesquisa independente do horizonte de cada trade. Primeira entrega: armazenamento privado separado da J1, coorte D451 atual congelada de 50 ativos (sobrevivência explícita, NÃO Top50 histórico), páginas opt-in 1h/5m até 1000 velas, shards de 30 dias, clipping após launch, backfill/SQLite/checkpoints existentes, leitura exata entre shards, ranking causal dentro da coorte e relatório de cobertura. 90 dias primeiro, estender para 365 (390 planejados) e 730 sem baixar novamente janelas completas. Sem alegar mercado completo/deslistados. Limites de rede/disco, sem retry automático nem publicação. Ver docs/J3_LONG_HISTORY_D528.md e issue #4. Próxima etapa: coleta owner real, adaptador D526 de replay retrospectivo de várias janelas, horizontes 24/48/72h, métricas por regime/mês e validação cronológica fora da amostra. Não falsificar D461/WS, não voltar à J1.
