@@ -1,5 +1,10 @@
 # Especificação do produto
 
+## D522 — pesquisa por confluência acionável pelo painel
+
+Permitir ao operador e ao agente executar a matriz exploratória de combinações sem alterar a estratégia em operação. Interface privada loopback existente, botão explícito para uma bateria com horizonte editável e relatório por combinação; padrão 25 estratégias. Reutilizar histórico complementar salvo, sem GET à Bybit. Uma execução por vez em processo separado, prioridade reduzida e timeout; manter o monitor de posições disponível. API com matriz validada opcional e cutoff explícito; sem comandos arbitrários ou ampliação de acesso. Resultado em memória, perde-se ao reiniciar ou iniciar nova bateria. Não confundir ordenação exploratória com vencedor financeiro; nenhuma ativação automática.
+
+
 ## D521 — Bandas de Bollinger configuráveis (24/11/2026)
 
 Pedido explícito PO: acrescentar Bollinger ao motor de entrada e à pesquisa de combinações D520. Campo opcional `bollinger` em IndicatorSelection, desativado por padrão/ausente em perfis legados, período 2..120 (exemplo 20), multiplicador de desvio-padrão populacional 0,1..10 (exemplo 2, até seis casas decimais). Média central SMA dos fechamentos, bandas superior/inferior = SMA ± multiplicador × desvio-padrão populacional; somente velas fechadas. Dois modos selecionáveis: rompimento (LONG acima da superior, SHORT abaixo da inferior; neutro dentro); retorno (LONG quando o fechamento anterior estava abaixo da inferior anterior e o atual retorna para dentro das bandas atuais, SHORT simétrico a partir de cima; evento de uma barra). Bandas de largura zero não geram sinal. Confluência D513 exige concordância com EMA/SMA/Pivot ativos; não altera volume/cooldown/força relativa BTC nem regras de saída. Warmup apenas quando ativo, período+2 e limite de 122. Valores não são parâmetros otimizados. Compatibilidade: JSON antigo aceito sem mudanças; rollback a código anterior após salvar campo novo requer revisão do perfil.

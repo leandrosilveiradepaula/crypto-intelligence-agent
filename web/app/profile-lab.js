@@ -684,10 +684,110 @@ async function compareHistoricalStrategies() {
     button.disabled=false;
   }
 }
+let matrixPoll=null, matrixJobId=null;
+function showMatrix(job) {
+  const summary=$("matrix-status"),root=$("matrix-results"),button=$("matrix-start");
+  if (job.schema_version!=="d522-owner-local-research-job-v1" ||
+      job.orders_sent!==false || job.profile_modified!==false) {
+    throw new Error("Resposta da pesquisa inválida.");
+  }
+  button.disabled=job.status==="running";
+  if (job.status==="running") {
+    summary.textContent="Pesquisa em execução: "+job.strategy_count+" estratégias. O monitor continua disponível.";
+    if (matrixJobId!==job.job_id) root.replaceChildren();
+    matrixJobId=job.job_id;
+    if (matrixPoll===null) matrixPoll=setInterval(refreshMatrix,3000);
+    return;
+  }
+  if (matrixPoll!==null) {clearInterval(matrixPoll);matrixPoll=null;}
+  if (job.status==="idle") {
+    root.replaceChildren();
+    summary.textContent="Nenhuma bateria executada neste processo.";
+    return;
+  }
+  if (job.status==="failed") {
+    root.replaceChildren();
+    summary.textContent="Pesquisa indisponível. "+(job.error==="research_timeout"?
+      "Tempo limite atingido.":"Confira os suplementos e o perfil salvo.");
+    return;
+  }
+  const d=job.report;
+  if (job.status!=="completed" || !d || d.schema_version!=="d520-exploratory-combination-research-v1" ||
+      d.orders_sent!==false || d.profile_modified!==false || d.winner_selected!==false ||
+      d.out_of_sample_results_validated!==false || d.financial_backtest_approved!==false ||
+      d.funding_settlement_verified!==false || d.liquidation_verified!==false ||
+      !Array.isArray(d.rows) || d.rows.length!==job.strategy_count) {
+    throw new Error("Relatório exploratório inválido.");
+  }
+  matrixJobId=job.job_id;
+  const show=v=>v===null?"Sem dados":Number(v).toLocaleString("pt-BR",{maximumFractionDigits:6});
+  summary.textContent=d.rows.length+" estratégias · "+d.common_covered_symbol_hours+
+    " oportunidades com trajetória comum · "+d.horizon_hours+"h / 5min · corte "+
+    new Date(d.as_of_ms).toLocaleString("pt-BR")+
+    ". Perfil lido na revisão "+job.profile_revision.slice(0,12)+
+    (d.status==="no_complete_common_paths"?". Sem cobertura suficiente.":"");
+  root.replaceChildren();
+  for(const r of d.rows) {
+    const card=document.createElement("article"),title=document.createElement("strong");
+    card.className="position-card";
+    title.textContent=r.label;
+    const metrics=document.createElement("div");
+    metrics.className="decision-steps";
+    decisionMetric(metrics,"Sinais / completos",r.candidates+" / "+r.complete);
+    decisionMetric(metrics,"LONG / SHORT",r.long+" / "+r.short);
+    decisionMetric(metrics,"Cobertura",r.coverage_pct===null?"Sem sinais":show(r.coverage_pct)+"%");
+    decisionMetric(metrics,"Positivos / negativos",r.positive+" / "+r.negative);
+    decisionMetric(metrics,"Soma adversa / favorável (USDT)",show(r.net_adverse)+" / "+show(r.net_favorable));
+    decisionMetric(metrics,"Média adversa após custos (bps)",show(r.mean_adverse_bps));
+    decisionMetric(metrics,"Custos estimados (USDT)",show(r.cost_adverse));
+    decisionMetric(metrics,"Com alvo / stop",r.with_targets+" / "+r.stop_count);
+    const note=document.createElement("p");
+    note.className="muted";
+    note.textContent=(r.descriptive_sample_screen_met?"Amostra atende filtro descritivo.":"Amostra abaixo do filtro descritivo.")+
+      " Não é aprovação estatística. Casos sensíveis à ordem: "+r.ambiguous_count+
+      ". Perdas pelo menos iguais à margem: "+r.loss_at_least_margin+".";
+    card.append(title,metrics,note);
+    for (const x of r.entry_examples || []) {
+      const item=document.createElement("p");
+      item.className="muted";
+      item.textContent=x.symbol+" · "+x.side+" · "+new Date(x.decision_end_ms).toLocaleString("pt-BR")+
+        " · FR "+show(x.relative_strength_bps)+" bps · abertura seguinte "+x.next_open_reference_ex_post;
+      card.append(item);
+    }
+    root.append(card);
+  }
+}
+async function refreshMatrix(){
+  try {showMatrix(await getJson("/api/combination-research"));}
+  catch(e){
+    $("matrix-status").textContent="Pesquisa indisponível: "+e.message;
+    $("matrix-start").disabled=false;
+    if(matrixPoll!==null){clearInterval(matrixPoll);matrixPoll=null;}
+  }
+}
+async function startMatrix(){
+  $("matrix-start").disabled=true;
+  try{
+    const horizon=integer("matrix-horizon",12,1);
+    const response=await fetch("/api/combination-research",{
+      method:"POST",headers:{"Content-Type":"application/json","X-CIA-Paper-Profile":"1"},
+      body:JSON.stringify({horizon_hours:horizon})
+    });
+    if(response.status===409){await refreshMatrix();return;}
+    if(response.status!==202)throw new Error("Solicitação não aceita.");
+    showMatrix(await response.json());
+  }catch(e){
+    $("matrix-status").textContent="Pesquisa indisponível: "+e.message;
+    $("matrix-start").disabled=false;
+  }
+}
 document.addEventListener("DOMContentLoaded",()=>{
   $("save").addEventListener("click",save);
   $("preview").addEventListener("click",preview);
   $("compare-history").addEventListener("click",compareHistoricalStrategies);
+  $("matrix-start").addEventListener("click",startMatrix);
+  $("matrix-refresh").addEventListener("click",refreshMatrix);
+  refreshMatrix();
   $("history-next").addEventListener("click",loadMoreHistory);
   $("decision-refresh").addEventListener("click",loadDecisionFunnel);
   document.querySelectorAll("[data-decision-filter]").forEach(node => {
