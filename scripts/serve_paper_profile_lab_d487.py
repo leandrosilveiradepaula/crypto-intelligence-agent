@@ -45,6 +45,9 @@ from crypto_intelligence_agent.paper_position_reservations import (
 from crypto_intelligence_agent.j5_resident_paper_status_d456 import (
     read_resident_paper_status, ResidentPaperStatusUnavailable,
 )
+from crypto_intelligence_agent.j5_paper_decision_funnel_d509 import (
+    read_paper_decision_funnel, PaperDecisionUnavailable,
+)
 
 HOST, PORT = "127.0.0.1", 8766
 HTML = Path(__file__).resolve().parents[1] / "web/app/profile-lab.html"
@@ -103,17 +106,41 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
         raise DataValidationError("BTC missing from historical cohort")
     btc_ret = Decimal(btc["historical_24h_return_percent"])
     candidates = []
+    decisions = []
+    counts = {
+        "btc_reference": 0, "no_technical_hypothesis": 0,
+        "btc_relative_not_aligned": 0, "historical_candidate": 0,
+    }
     for item in rows:
         symbol, side = item["symbol"], item["historical_hypothesis_side"]
-        if symbol == "BTCUSDT" or not side:
-            continue
         relative = Decimal(item["historical_24h_return_percent"]) - btc_ret
-        if (side == "LONG" and relative > 0) or (side == "SHORT" and relative < 0):
+        if symbol == "BTCUSDT":
+            decision = "btc_reference"
+        elif not side:
+            decision = "no_technical_hypothesis"
+        elif (side == "LONG" and relative > 0) or (side == "SHORT" and relative < 0):
+            decision = "historical_candidate"
             candidates.append({
                 "symbol": symbol, "side": side,
                 "btc_relative_percent": format(relative.quantize(Decimal("0.01")), "f"),
                 "provenance": "public_rest_history_research_only",
             })
+        else:
+            decision = "btc_relative_not_aligned"
+        counts[decision] += 1
+        decisions.append({
+            "symbol": symbol,
+            "historical_side": side,
+            "btc_relative_percent": format(
+                relative.quantize(Decimal("0.01")), "f"
+            ),
+            "decision": decision,
+        })
+    decisions.sort(key=lambda row: (
+        {"historical_candidate": 0, "btc_relative_not_aligned": 1,
+         "no_technical_hypothesis": 2, "btc_reference": 3}[row["decision"]],
+        -abs(Decimal(row["btc_relative_percent"])), row["symbol"],
+    ))
     candidates.sort(
         key=lambda x: (-abs(Decimal(x["btc_relative_percent"])), x["symbol"])
     )
@@ -127,6 +154,14 @@ def _historical_scan(*, paper_file: Path, history_directory: Path) -> dict:
         "raw_hypotheses": result["potential_hypothesis_count"],
         "candidate_count": len(candidates),
         "candidates": candidates[:50],
+        "decision_funnel": {
+            "schema_version": "d509-rest-research-funnel-v1",
+            "member_count": len(rows),
+            "reason_counts": counts,
+            "decisions": decisions,
+            "source": "public_rest_history_not_websocket",
+            "paper_orders_sent": False,
+        },
         "source_mode": history.source_mode,
         "websocket_confirmation": False,
         "broker_fills": False,
@@ -444,6 +479,23 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
             except (DataValidationError, OSError, ValueError, TypeError,
                     OwnerPaperPositionsUnavailable):
                 return self._respond(503, {"status":"paper_history_not_ready"})
+        if self.path == "/api/paper-decision-funnel":
+            path = type(self).paper_session_directory
+            if path is None:
+                return self._respond(503, {
+                    "status":"paper_funnel_reader_disabled",
+                    "orders_sent":False,
+                })
+            try:
+                report = read_paper_decision_funnel(
+                    directory=path, now_ms=time.time_ns() // 1_000_000,
+                )
+                return self._respond(200, report)
+            except (PaperDecisionUnavailable, OSError, ValueError, TypeError):
+                return self._respond(503, {
+                    "status":"no_valid_completed_public_lease",
+                    "orders_sent":False,
+                })
         if self.path == "/api/paper-operator":
             path = type(self).paper_session_directory
             if path is None:
