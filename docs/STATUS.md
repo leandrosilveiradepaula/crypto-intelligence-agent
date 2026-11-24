@@ -1,5 +1,14 @@
 # STATUS — Crypto Intelligence Agent
 
+## D508 — D507 PAPER instalado e verificado na VPS (24/11/2026, 13:23 UTC)
+
+**Release PAPER confirmado, diferente de mero merge:** operador executou `deploy/vps/paper_research/owner_paper_cutover_d507_once.sh` pinado no merge `171a549dfcce21c80dd6c13cf1a74ad9ef9b0c48` com blob Git `14a38300a19e3f4a1c13f7bccd889468106def35`. Após preflight read-only `private_owner_paper_readback_consistent`, 0 posições OPEN e confirmação explícita `AUTORIZO CUTOVER PAPER`, o script registrou `D507_RELEASE=PASS`, `D507_CODE_SHA=056845fdc46b8c2d1b08acd86be75e59dd368bac`, `D507_HISTORY_ENDPOINT=HTTP200`, `D507_J1_UNTOUCHED=YES`, `D507_LIVE_ORDERS=NO`.
+
+**Verificação independente MCP após release:** ambos `cia-paper-research-d498.service` e `cia-paper-config-d498.service` `ActiveState=active/SubState=running/Result=success`, start 2026-11-24 13:23:11 UTC, com **mesmo novo WorkingDirectory privado D507**, drop-ins `90-cia-d507-pinned.conf`. J1 `cia-j1-n50-ws.timer` `active/waiting`, último disparo 12:59:30 UTC, próximo 13:59:30 UTC. API nova `/api/paper-history?offset=0&limit=25` responde 200 schema `d502-owner-paper-history-page-v1`, 1 registro CLOSED; `/api/paper-session` retorna 0 abertas/1 CLOSED ARBUSDT SHORT STOP, `orders_sent=false`, PnL PAPER condicional antes de funding não verificado de -0.3349488558 USDT. Perfil owner permanece `breakout`, EMA2, margem 1 USDT, leverage 50x, 2 saídas 50/50. EMA-cross 10/30/60 é **configurável mas não foi ativado**. Pesquisa REST histórica atual 50 símbolos/24 candles e 10 hipóteses (5 candidatos BTC); são hipóteses, não ordens/sinais prospectivos.
+
+**Ocorrência no corte:** na parada do processo antigo, systemd registrou timeout e `SIGKILL` (status 9), antes de iniciar o processo novo. Como a preflight exigiu 0 OPEN e o diário/serviço posterior estão consistentes, não há evidência de perda de posição neste corte; ainda assim, **melhorar encerramento cooperativo de leases longas/timeout antes de futuros releases**. Não alegar supervisão 24×7 certificada, proteção nativa Bybit, alvos parciais prospectivos ou rentabilidade. Sem ordens reais, despesas extras ou alteração da J1.
+
+
 ## D507 — cutover PAPER opt-in preparado para executor root owner (24/11/2026)
 
 Novo procedimento `deploy/vps/paper_research/owner_paper_cutover_d507_once.sh` para executar UMA vez na VPS `VPS previamente identificada no terminal do operador` sob root humano autenticado. O código de produto que será instalado é fixado em `056845fdc46b8c2d1b08acd86be75e59dd368bac` (já aprovado CI, J2 EMA cross configurável, J4 arquivo de rotas CLOSED, J5 histórico paginado/OPEN pin e preflight D505). Script primeiro verifica host/UID/propriedade de serviços, serviços PAPER/J1 ativos, clona em diretório privado 0700 de `cia-probe` sem tocar nos checkouts atuais, confere SHA exato e executa pré-teste owner read-only D505 sobre os diários existentes. Exige 0 posições abertas e `orders_sent=false`.
