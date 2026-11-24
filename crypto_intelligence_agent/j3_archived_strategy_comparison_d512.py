@@ -156,6 +156,7 @@ def compare_archived_strategies(
     exit_policy: PaperEntryExitPolicy | None = None,
     intrahour_supplement: IntrahourSupplement | None = None,
     additional_profiles: tuple[tuple[str, IndicatorSelection, Decimal], ...] = (),
+    additional_stop_bps: tuple[int, ...] = (),
 ) -> dict:
     """Compare fixed caller-supplied profiles on the same causal archive slots.
 
@@ -193,6 +194,17 @@ def compare_archived_strategies(
             raise DataValidationError("D517 explicit consistent exit replay terms required")
     elif replay_margin is not None or exit_policy is not None:
         raise DataValidationError("D517 replay requires explicit horizon")
+    # D524: optional alternative exit policies on the exact same decision
+    # slots and price paths. The ordinary report remains the first stop.
+    if (type(additional_stop_bps) is not tuple or len(additional_stop_bps) > 7
+            or any(type(x) is not int or not 1 <= x <= 1000
+                   for x in additional_stop_bps)
+            or tuple(sorted(set(additional_stop_bps))) != additional_stop_bps
+            or any(Decimal(x) <= stop_distance_bps for x in additional_stop_bps)
+            or (additional_stop_bps and (not refined or not additional_profiles))):
+        raise DataValidationError("D524 bounded ascending research stop grid requires 5m batch replay")
+    alternative_exits = {str(x): replace(exit_policy, stop_distance_bps=Decimal(x))
+                         for x in additional_stop_bps}
     cross = replace(config, entry_mode="ema_cross", ema_cross_periods=ema_periods)
     breakout = replace(config, entry_mode="breakout")
     warmup = _warmup(config, cross.ema_cross_periods)
@@ -264,6 +276,8 @@ def compare_archived_strategies(
     totals = {k: _empty(len(target_distances_bps))
               for k in [name for name, _ in policies] + ["reference_long"]}
     replay_totals = {name: empty_replay_totals() for name in totals} if replay_enabled else {}
+    stop_replays = {stop: {name: empty_replay_totals() for name in totals}
+                    for stop in alternative_exits}
     entry_counts = ({name: {"LONG": 0, "SHORT": 0, "covered_LONG": 0, "covered_SHORT": 0}
                      for name, _ in policies} if additional_profiles else {})
     entry_examples = {name: [] for name in entry_counts}
@@ -278,6 +292,10 @@ def compare_archived_strategies(
             replay_totals[name], path, direction=side,
             decision_end_ms=end, now_ms=now_ms, margin=replay_margin,
             policy=exit_policy)
+        for stop, alternative in alternative_exits.items():
+            accumulate_replay(stop_replays[stop][name], path, direction=side,
+                decision_end_ms=end, now_ms=now_ms, margin=replay_margin,
+                policy=alternative)
         if refined:
             accumulate_replay(
                 matched_hourly_totals[name], hourly_path if path is not None else None,
@@ -462,6 +480,9 @@ def compare_archived_strategies(
             "runner_floor_percent": format(exit_policy.runner_floor_percent, "f"),
             "results": {k: summarize_replay(v, margin=replay_margin)
                         for k, v in replay_totals.items()},
+            **({"alternative_stop_results": {stop: {
+                k: summarize_replay(v, margin=replay_margin) for k, v in totals_for_stop.items()}
+                for stop, totals_for_stop in stop_replays.items()}} if stop_replays else {}),
             "complete_paths_only": True, "funding_settlement_verified": False,
             "liquidation_verified": False, "intrabar_path_verified": False,
             "execution_verified": False, "financial_backtest_approved": False,

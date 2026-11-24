@@ -27,7 +27,9 @@ def main(argv=None):
     p.add_argument("--expected-policy-revision")
     p.add_argument("--low-priority",action="store_true")
     p.add_argument("--horizon-hours",type=int,choices=range(1,13),default=4)
-    p.add_argument("--research-stop-bps",type=int,help="Research-only price stop; 100 bps = 1 percent")
+    stops=p.add_mutually_exclusive_group()
+    stops.add_argument("--research-stop-bps",type=int,help="Research-only price stop; 100 bps = 1 percent")
+    stops.add_argument("--research-stop-grid-bps",type=int,nargs="+",help="2..8 ascending research price stops in one pass")
     p.add_argument("--min-complete",type=int,default=20)
     p.add_argument("--min-coverage-bps",type=int,default=7000)
     p.add_argument("--full-json",action="store_true")
@@ -59,6 +61,7 @@ def main(argv=None):
             raise DataValidationError("D522 profile changed while reading")
         report=run_matrix(directory=a.historical_directory,owner_policy=policy,matrix_raw=raw,
             as_of_ms=as_of,horizon_hours=a.horizon_hours,research_stop_bps=a.research_stop_bps,
+            research_stop_grid_bps=a.research_stop_grid_bps,
             min_complete=a.min_complete,min_coverage_bps=a.min_coverage_bps)
         if snapshot(a.policy_file)["revision"]!=revision:
             raise DataValidationError("D522 profile changed during research")

@@ -1,5 +1,10 @@
 # Estratégias e gestão de vencedores
 
+## D524 — comparação simultânea de stops (24/11/2026)
+
+A bateria swing D523 pode executar múltiplos stops em uma passagem de sinais e caminhos 5m, sem recalcular o motor para cada stop. Grid de 2..8 valores inteiros crescentes, editáveis; exemplos 50/75/100/125/150 bps. 18 estratégias × 5 stops = 90 cenários. CLI e painel/API privados reutilizam os dados e o perfil lido, sem gravá-lo, com a mesma cobertura e indicadores de qualidade D523. Não escolher vencedor nem alterar operação. Limites financeiros e temporais de D523 mantidos. `docs/J3_STOP_GRID_D524.md`.
+
+
 ## D523 — RSI do ativo e pesquisa swing (24/11/2026)
 
 Pedido PO: RSI 14 independente da FR BTC, pesquisar melhor qualidade de entrada e stops mais largos para swing. RSI Wilder configurável (faixas LONG e espelho SHORT), opcional no motor D513, sem alterar perfis salvos. Matriz independente 18 estratégias (controles e pares RSI); stop de pesquisa independente do perfil, API/painel D522 e CLI; métricas stop antes TP1, primeira hora, toque posterior, positivos com stop e MAE/MFE de caminho integral. Detalhes e experimento em `docs/J3_SWING_RSI_D523.md`. Valores são hipóteses, não recomendação; 50x exige avaliação de liquidação e não permite pressupor que stop largo seja alcançável. Horizonte de vários dias e dados funding/mark/PIT/OOS continuam pendentes; não alterar J1, perfil ativo, serviço ou ordens reais.

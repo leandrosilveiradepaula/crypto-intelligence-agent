@@ -1,5 +1,12 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D524 — bateria conjunta de stops (24/11/2026)
+
+**D523 integrado:** squash `d4f9514a955f43541dbb019e4860659e99ea389d`, árvore idêntica ao head `7efbc72bdb24d6e4a3cbb929f7d2a9264f89d25e`; CI Linux/Windows/docs 45482153258 e QA móvel geral 45482153675 SUCCESS. Revisão técnica registrada na PR #749. Nenhuma publicação posterior confirmada.
+
+D524 executa 18 estratégias swing/RSI × 5 stops iniciais (50,75,100,125,150 bps) em uma única passagem causal, reutilizando sinais e trajetórias 5m, sem mudar perfil, custos, alvos, margem ou alavancagem. Grid editável 2..8 stops crescentes, mutuamente exclusivo com stop avulso; CLI/API/painel D522. Cada estratégia apresenta todos os resultados e métricas D523, mesma cobertura, sem escolher vencedor. Limites de uma tarefa e timeout do worker mantidos. Ver `docs/J3_STOP_GRID_D524.md`. Branch `chatgpt/j3-stop-grid-d524`, commit `0466025ded34ab038fa03add1e73c4b411c7a2b6`: código/testes escritos, CI e revisão pendentes. Não há resultados novos de mercado. Próximo: CI/revisão/merge, execução real 90 cenários no cutoff D521, e release PAPER agrupado com gate e rollback. MCP não pode assumir UID owner; não contornar. Sem custo, J1 ou ordens reais. Horizonte atual até 12h; aumentar cobertura PIT e trajetórias de 24/48/72h é próxima frente de pesquisa, funding/mark/liquidação/OOS pendentes.
+
+
 ## D523 — RSI do ativo e pesquisa swing (24/11/2026)
 
 Pedido PO: RSI 14 independente da FR BTC, pesquisar melhor qualidade de entrada e stops mais largos para swing. RSI Wilder configurável (faixas LONG e espelho SHORT), opcional no motor D513, sem alterar perfis salvos. Matriz independente 18 estratégias (controles e pares RSI); stop de pesquisa independente do perfil, API/painel D522 e CLI; métricas stop antes TP1, primeira hora, toque posterior, positivos com stop e MAE/MFE de caminho integral. Detalhes e experimento em `docs/J3_SWING_RSI_D523.md`. Valores são hipóteses, não recomendação; 50x exige avaliação de liquidação e não permite pressupor que stop largo seja alcançável. Horizonte de vários dias e dados funding/mark/PIT/OOS continuam pendentes; não alterar J1, perfil ativo, serviço ou ordens reais.

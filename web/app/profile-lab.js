@@ -705,7 +705,7 @@ function showMatrix(job) {
   }
   button.disabled=job.status==="running";
   if (job.status==="running") {
-    summary.textContent="Pesquisa em execução: "+job.strategy_count+" estratégias. O monitor continua disponível.";
+    summary.textContent="Pesquisa em execução: "+job.strategy_count+" estratégias / "+(job.scenario_count||job.strategy_count)+" cenários. O monitor continua disponível.";
     if (matrixJobId!==job.job_id) root.replaceChildren();
     matrixJobId=job.job_id;
     if (matrixPoll===null) matrixPoll=setInterval(refreshMatrix,3000);
@@ -733,8 +733,11 @@ function showMatrix(job) {
   }
   matrixJobId=job.job_id;
   const show=v=>v===null?"Sem dados":Number(v).toLocaleString("pt-BR",{maximumFractionDigits:6});
-  summary.textContent=d.rows.length+" estratégias · "+d.common_covered_symbol_hours+
-    " oportunidades com trajetória comum · "+d.horizon_hours+"h / 5min · stop "+show(d.common_exit_policy.stop_distance_bps)+" bps · perda bruta no stop "+show(d.stop_gross_loss_margin_pct)+"% da margem (liquidação não avaliada) · corte "+
+  const grid=Array.isArray(d.stop_grid)?d.stop_grid:[];
+  const stopSummary=grid.length?"stops "+grid.map(v=>show(v.stop_bps)).join(" / ")+" bps · detalhes do primeiro stop":
+    "stop "+show(d.common_exit_policy.stop_distance_bps)+" bps · perda bruta no stop "+show(d.stop_gross_loss_margin_pct)+"% da margem";
+  summary.textContent=d.rows.length+" estratégias / "+(d.scenario_count||d.rows.length)+" cenários · "+d.common_covered_symbol_hours+
+    " oportunidades com trajetória comum · "+d.horizon_hours+"h / 5min · "+stopSummary+" (liquidação não avaliada) · corte "+
     new Date(d.as_of_ms).toLocaleString("pt-BR")+
     ". Perfil lido na revisão "+job.profile_revision.slice(0,12)+
     (d.status==="no_complete_common_paths"?". Sem cobertura suficiente.":"");
@@ -763,6 +766,19 @@ function showMatrix(job) {
       " Não é aprovação estatística. Casos sensíveis à ordem: "+r.ambiguous_count+
       ". Perdas pelo menos iguais à margem: "+r.loss_at_least_margin+".";
     card.append(title,metrics,note);
+    if(grid.length){
+      const heading=document.createElement("h3");heading.textContent="Comparação de stops (mesmos sinais e trajetórias)";card.append(heading);
+      for(const variant of grid){
+        const v=variant.rows.find(x=>x.name===r.name);
+        if(!v||v.candidates!==r.candidates||v.complete!==r.complete) throw new Error("Cobertura inconsistente entre stops.");
+        const line=document.createElement("div");line.className="decision-steps";
+        decisionMetric(line,"Stop / perda bruta teórica da margem",show(variant.stop_bps)+" bps / "+show(variant.gross_loss_margin_pct)+"%");
+        decisionMetric(line,"Resultado adverso / favorável (USDT)",show(v.net_adverse)+" / "+show(v.net_favorable));
+        decisionMetric(line,"Stops antes de TP1 / recuperações posteriores",v.stop_before_tp1+" / "+v.stop_before_tp1_then_later_tp1);
+        decisionMetric(line,"Positivas / negativas / perda ≥ margem",v.positive+" / "+v.negative+" / "+v.loss_at_least_margin);
+        card.append(line);
+      }
+    }
     for (const x of r.entry_examples || []) {
       const item=document.createElement("p");
       item.className="muted";
@@ -786,7 +802,13 @@ async function startMatrix(){
   try{
     const horizon=integer("matrix-horizon",12,1);
     const request={horizon_hours:horizon,preset:$("matrix-preset").value};
-    if ($("matrix-stop").value.trim()) request.stop_bps=integer("matrix-stop",1000,1);
+    if ($("matrix-grid-enabled").checked){
+      const words=$("matrix-grid").value.trim().split(/\s+/);
+      const stops=words.map(Number);
+      if(words.length<2||words.length>8||words.some((w,i)=>!/^\d{1,4}$/.test(w)||stops[i]<1||stops[i]>1000||(i>0&&stops[i]<=stops[i-1])))
+        throw new Error("Informe 2 a 8 stops inteiros de 1 a 1000 bps em ordem crescente.");
+      request.stop_grid_bps=stops;
+    } else if ($("matrix-stop").value.trim()) request.stop_bps=integer("matrix-stop",1000,1);
     const response=await fetch("/api/combination-research",{
       method:"POST",headers:{"Content-Type":"application/json","X-CIA-Paper-Profile":"1"},
       body:JSON.stringify(request)
@@ -803,6 +825,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("save").addEventListener("click",save);
   $("preview").addEventListener("click",preview);
   $("compare-history").addEventListener("click",compareHistoricalStrategies);
+  const updateGrid=()=>{const on=$("matrix-grid-enabled").checked;$("matrix-grid").disabled=!on;$("matrix-stop").disabled=on;};
+  $("matrix-grid-enabled").addEventListener("change",updateGrid);updateGrid();
   $("matrix-start").addEventListener("click",startMatrix);
   $("matrix-refresh").addEventListener("click",refreshMatrix);
   refreshMatrix();
