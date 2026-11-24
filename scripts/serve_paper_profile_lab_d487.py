@@ -19,6 +19,7 @@ import time
 
 from crypto_intelligence_agent.market_data import DataValidationError, DataGapError
 from crypto_intelligence_agent.synthetic_margin_envelope import SyntheticMarginBasis
+from crypto_intelligence_agent.j3_intrahour_replay_d518 import read_latest_intrahour
 from crypto_intelligence_agent.j3_paper_scorecard_d511 import paper_closed_scorecard
 from crypto_intelligence_agent.j3_retrospective_warmup_d516 import read_latest_supplement
 from crypto_intelligence_agent.j3_archived_strategy_comparison_d512 import (
@@ -65,13 +66,20 @@ _MAX_SESSION_POSITIONS = 50  # recent history; older active positions are always
 def _strategy_comparison(*, paper_file: Path, history_directory: Path,
                          ema_periods: tuple[int, int, int], now_ms: int,
                          retrospective: bool = False,
-                         horizon_hours: int | None = None) -> dict:
+                         horizon_hours: int | None = None,
+                         resolution: str = "1h") -> dict:
     cfg = read_owner_paper_policy(paper_file)
     archives = read_comparison_archives(history_directory, now_ms=now_ms)
     supplement = (read_latest_supplement(history_directory, now_ms=now_ms)
                   if retrospective else None)
     if retrospective and supplement is None:
         return {"status": "retrospective_warmup_not_available", "orders_sent": False}
+    if resolution not in ("1h", "5m") or (resolution == "5m" and horizon_hours is None):
+        raise DataValidationError("D518 invalid replay resolution")
+    intrahour = (read_latest_intrahour(history_directory, now_ms=now_ms)
+                 if resolution == "5m" else None)
+    if resolution == "5m" and intrahour is None:
+        return {"status": "intrahour_supplement_not_available", "orders_sent": False}
     return compare_archived_strategies(
         archives, config=cfg.research, ema_periods=ema_periods,
         reference_notional=cfg.margin_quote * Decimal(cfg.leverage.for_new_positions),
@@ -88,6 +96,7 @@ def _strategy_comparison(*, paper_file: Path, history_directory: Path,
             cfg.margin_quote * Decimal(cfg.leverage.for_new_positions), "SYNTHETIC_USDT")
             if horizon_hours is not None else None),
         exit_policy=cfg.exits if horizon_hours is not None else None,
+        intrahour_supplement=intrahour,
     )
 
 
@@ -574,7 +583,7 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
                 return self._respond(503, {"status":"profile_not_available"})
         if self.path.startswith("/api/strategy-comparison"):
             matched = re.fullmatch(
-                r"/api/strategy-comparison[?]fast=([0-9]{1,3})&mid=([0-9]{1,3})&trend=([0-9]{1,3})(&retro=1)?(?:&horizon=([0-9]{1,2}))?",
+                r"/api/strategy-comparison[?]fast=([0-9]{1,3})&mid=([0-9]{1,3})&trend=([0-9]{1,3})(&retro=1)?(?:&horizon=([0-9]{1,2})(?:&resolution=(1h|5m))?)?",
                 self.path,
             )
             if matched is None:
@@ -590,6 +599,7 @@ class OwnerPaperProfileHandler(BaseHTTPRequestHandler):
                     history_directory=type(self).history_directory,
                     ema_periods=periods, now_ms=time.time_ns() // 1_000_000,
                     retrospective=matched[4] is not None, horizon_hours=horizon,
+                    resolution=matched[6] or "1h",
                 ))
             except (DataValidationError, DataGapError, OSError, ValueError, TypeError, ArithmeticError):
                 return self._respond(503, {

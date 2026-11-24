@@ -31,6 +31,10 @@ from .j3_observed_exit_scenarios_d517 import (
     SCHEMA as EXIT_SCHEMA, accumulate_replay, empty_replay_totals, summarize_replay,
 )
 
+from .j3_intrahour_replay_d518 import (
+    IntrahourSupplement, index_intrahour, refine_hourly_path,
+)
+
 SCHEMA = "d512-archived-rest-strategy-comparison-v1"
 _NAME = re.compile(r"rest-history-d461-([0-9a-f]{18})-([0-9]{13})(?:-w([0-9]{2,3}))?[.]json\Z")
 MAX_ARCHIVES = 72
@@ -149,6 +153,7 @@ def compare_archived_strategies(
     replay_horizon_hours: int | None = None,
     replay_margin: SyntheticMarginBasis | None = None,
     exit_policy: PaperEntryExitPolicy | None = None,
+    intrahour_supplement: IntrahourSupplement | None = None,
 ) -> dict:
     """Compare fixed caller-supplied profiles on the same causal archive slots.
 
@@ -169,6 +174,9 @@ def compare_archived_strategies(
             or any(a >= b for a, b in zip(target_distances_bps, target_distances_bps[1:]))):
         raise DataValidationError("D512 bounded comparison policy required")
     replay_enabled = replay_horizon_hours is not None
+    refined = intrahour_supplement is not None
+    if refined and not replay_enabled:
+        raise DataValidationError("D518 resolution requires an exit replay horizon")
     if replay_enabled:
         if (type(replay_horizon_hours) is not int or not 1 <= replay_horizon_hours <= 12
                 or type(replay_margin) is not SyntheticMarginBasis
@@ -229,6 +237,22 @@ def compare_archived_strategies(
     totals = {k: _empty(len(target_distances_bps))
               for k in [name for name, _ in policies] + ["reference_long"]}
     replay_totals = {name: empty_replay_totals() for name in totals} if replay_enabled else {}
+    matched_hourly_totals = {name: empty_replay_totals() for name in totals} if refined else {}
+    refined_index, rejected_intrahour = (
+        index_intrahour(histories, intrahour_supplement, now_ms=now_ms)
+        if refined else ({}, 0)
+    )
+
+    def replay_candidate(name, path, hourly_path, side, end):
+        accumulate_replay(
+            replay_totals[name], path, direction=side,
+            decision_end_ms=end, now_ms=now_ms, margin=replay_margin,
+            policy=exit_policy)
+        if refined:
+            accumulate_replay(
+                matched_hourly_totals[name], hourly_path if path is not None else None,
+                direction=side, decision_end_ms=end, now_ms=now_ms,
+                margin=replay_margin, policy=exit_policy)
     series_by_end = {h.window_end_ms: dict(h.series) for h in ordered} if replay_enabled else {}
     eligible = rejected = 0
     max_contiguous = 0
@@ -304,9 +328,11 @@ def compare_archived_strategies(
                 # original historical reference were corroborated.
                 future = (next_bars[-1] if next_bars is not None
                           and next_bars[-2] == bars[-1] else None)
-                path = (_forward_replay_path(
+                hourly_path = (_forward_replay_path(
                     series_by_end, end, symbol, bars[-1], replay_horizon_hours)
                     if replay_enabled else None)
+                path = (refine_hourly_path(hourly_path, refined_index)
+                        if refined else hourly_path)
                 for name, policy in policies:
                     hypothesis = evaluate_observed_bybit_research(
                         series, config=policy, decision_at_ms=end, close_safety_ms=1,
@@ -322,16 +348,11 @@ def compare_archived_strategies(
                     _accumulate(totals[name], side, bars[-1].close, future,
                                 reference_notional, costs, stop_distance_bps, target_distances_bps)
                     if replay_enabled:
-                        accumulate_replay(
-                            replay_totals[name], path, direction=ResearchDirection(side),
-                            decision_end_ms=end, now_ms=now_ms, margin=replay_margin,
-                            policy=exit_policy)
+                        replay_candidate(name, path, hourly_path, ResearchDirection(side), end)
                 _accumulate(totals["reference_long"], "LONG", bars[-1].close, future,
                             reference_notional, costs, stop_distance_bps, target_distances_bps)
                 if replay_enabled:
-                    accumulate_replay(
-                        replay_totals["reference_long"], path, direction=ResearchDirection.LONG,
-                        decision_end_ms=end, now_ms=now_ms, margin=replay_margin, policy=exit_policy)
+                    replay_candidate("reference_long", path, hourly_path, ResearchDirection.LONG, end)
             windows.append(window)
         results = {k: _summary(v, reference_notional) for k, v in totals.items()}
     return {
@@ -359,7 +380,15 @@ def compare_archived_strategies(
         "results": results, "windows": windows,
         "exit_replay": ({
             "schema_version": EXIT_SCHEMA, "horizon_hours": replay_horizon_hours,
-            "interval": "1h", "entry_reference": "next_observed_open_ex_post",
+            "interval": "5m" if refined else "1h",
+            "entry_reference": "next_observed_open_ex_post",
+            "intrahour_retrieved_at_ms": (
+                intrahour_supplement.created_at_ms if refined else None),
+            "intrahour_rejected_series": rejected_intrahour,
+            "matched_hourly_reference": ({
+                k: summarize_replay(v, margin=replay_margin)
+                for k, v in matched_hourly_totals.items()
+            } if refined else None),
             "requested_margin_quote": format(replay_margin.requested_margin_quote, "f"),
             "leverage_at_intent": replay_margin.leverage_at_intent,
             "target_tranches": [{"basis": t.basis.value, "percent": format(t.percent, "f")}

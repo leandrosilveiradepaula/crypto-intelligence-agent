@@ -199,10 +199,25 @@ def kline_url(symbol: str, start: int, end: int) -> str:
     return BASE_URL + "/v5/market/kline?" + urlencode(parameters)
 
 
+def research_five_minute_url(symbol: str, start: int, end: int) -> str:
+    """Explicit research-only 5m window, at most 36 closed hours."""
+    if (type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None
+            or type(start) is not int or type(end) is not int
+            or not 0 < start < end or start % HOUR_MS or end % HOUR_MS
+            or end-start > 36*HOUR_MS):
+        raise J1BybitCaptureError("invalid_research_five_minute_window")
+    return BASE_URL + "/v5/market/kline?" + urlencode((
+        ("category", "linear"), ("symbol", symbol), ("interval", "5"),
+        ("start", str(start)), ("end", str(end-1)),
+        ("limit", str((end-start)//300_000)),
+    ))
+
+
 class BoundedBybitPublicClient:
     def __init__(
         self, transport: Callable[[str, int], bytes] | None = None,
         *, min_interval_seconds: float = MIN_PUBLIC_GET_INTERVAL_SECONDS,
+        allow_five_minute_research: bool = False,
     ):
         # D311: bounded, optional conservative pacing for the N50 hourly
         # worker. This does not modify the 372-request capture path, allow
@@ -211,6 +226,9 @@ class BoundedBybitPublicClient:
                 or not MIN_PUBLIC_GET_INTERVAL_SECONDS
                    <= min_interval_seconds <= 12.0):
             raise ValueError("invalid_public_get_pacing")
+        if type(allow_five_minute_research) is not bool:
+            raise ValueError("explicit_five_minute_research_flag_required")
+        self.allow_five_minute_research = allow_five_minute_research
         self.min_interval_seconds = float(min_interval_seconds)
         self.transport = transport
         self.requests_attempted = 0
@@ -255,6 +273,17 @@ class BoundedBybitPublicClient:
         elif parsed.path == "/v5/market/tickers":
             # Only one public aggregate endpoint, no optional filter params.
             allowed = url == tickers_url()
+        elif (parsed.path == "/v5/market/kline"
+              and queries.get("interval") == ["5"]
+              and self.allow_five_minute_research):
+            allowed = False
+            if set(queries) == {"category", "symbol", "interval", "start", "end", "limit"}:
+                try:
+                    allowed = url == research_five_minute_url(
+                        queries["symbol"][0], int(queries["start"][0]),
+                        int(queries["end"][0])+1)
+                except (ValueError, IndexError, TypeError, J1BybitCaptureError):
+                    allowed = False
         elif parsed.path == "/v5/market/kline":
             allowed = (set(queries) == {
                 "category", "symbol", "interval", "start", "end", "limit"
@@ -278,6 +307,7 @@ class BoundedBybitPublicClient:
             and "symbol" in queries else
             "instrument_universe" if parsed.path.endswith("instruments-info")
             else "ticker_review_proxy" if parsed.path.endswith("tickers")
+            else "research_closed_kline_5m" if queries.get("interval") == ["5"]
             else "closed_kline_" + queries["limit"][0] + "h"
         )
         self.last_provider_retcode = None

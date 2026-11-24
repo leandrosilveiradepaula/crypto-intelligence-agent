@@ -1,5 +1,14 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D518 — resolução de cinco minutos para saídas (24/11/2026)
+
+**D517 integrado:** squash `4d29deb2f3ee551d27d7877a7d857152b2b1fa4c`; head `0bea42b3f46ba9410c16460c4cf75439baa1af6c`, CI Linux/Windows/docs [45461430184](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45461430184) e QA mobile geral [45461430589](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45461430589) SUCCESS. D516 e D517 ainda não publicados/coletados na VPS; D515 continua instalado.
+
+**D518 em desenvolvimento:** mesma API Bybit pública kline, intervalo 5, com opt-in explícito e janela de até 36h/432 barras por símbolo; padrão do transporte J1 permanece inalterado, sem novo timer ou coleta contínua. Seleciona apenas membros históricos com observações consecutivas e sobreposição de preço corroborada; até 80 símbolos, uma GET por símbolo, sem retry ou credenciais. Suplemento owner-only separado, timestamp real de recuperação e digest. D517 refina exclusivamente caminhos horários completos cujos 12 candles de 5m por hora reproduzem OHLC original; não modifica hipótese de entrada ou membership. Mostra cenário adverso/favorável, cobertura, ambiguidade e comparação 1h sobre exatamente a amostra 5m. Seleção de resolução no painel e CLI D516 ampliado; nenhum GET do painel chama Bybit. Ainda não é trajetória tick a tick, execução, mark price, liquidação, funding, OOS ou carteira. Branch `chatgpt/j3-intrahour-replay-d518`, CI/revisão e captura real pendentes.
+
+**Próxima ação:** validar e integrar D518, fazer uma coleta owner isolada de D516+D518 e replay D517/D518, sem parar PAPER nem J1. MCP não pode assumir UID owner; se necessário, operador executa procedimento único fixado à revisão aprovada. Agrupar futura publicação das três entregas após gate. Funding histórico/mark, risco de liquidação e acesso móvel privado são as frentes seguintes. Sem ordens reais ou gasto adicional.
+
+
 ## D517 — replay histórico condicional de stop e parciais (24/11/2026)
 
 **D516 integrado:** squash `249b0bbf9ac7f97d87765e0c1499713557f65914`, head `6a6c5c1068ae699c8fa9bec8c57e0d0b5e282890`, CI [Python Linux/Windows](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45459529839) e [QA geral mobile](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45459529663) SUCCESS. A árvore do merge é idêntica à do head aprovado. Ainda sem coleta complementar real ou publicação; D515 continua instalado e MCP não consegue assumir UID owner (limite de grupos). Não refazer J1 nem D515.
