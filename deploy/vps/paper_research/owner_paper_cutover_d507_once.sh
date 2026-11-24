@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# D507: explicit, reversible PAPER-only code cutover on srv1319424.
+# D507: explicit, reversible PAPER-only code cutover on the pinned VPS.
 # No J1 service, trading credentials, order API, policy or SQLite writes.
 # The cutover REQUIRES a fresh interactive human approval in this script.
 set -Eeuo pipefail
 umask 077
 
 APPROVED_SHA="056845fdc46b8c2d1b08acd86be75e59dd368bac"
-EXPECTED_HOST="srv1319424"
+EXPECTED_HOST="${CIA_D507_EXPECT_HOST:-}"
 OWNER="cia-probe"
 BASE="/home/cia-probe/agent"
 PY="$BASE/ws-venv/bin/python"
@@ -42,6 +42,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 test "$(id -u)" = "0" || die "root_shell_required"
+test -n "$EXPECTED_HOST" || die "explicit_host_pin_required"
 test "$(hostname)" = "$EXPECTED_HOST" || die "wrong_host"
 test -d "$BASE" && test ! -L "$BASE" || die "owner_home_missing_or_symlink"
 test -x "$PY" || die "python_venv_unavailable"
