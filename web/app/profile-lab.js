@@ -548,8 +548,16 @@ async function compareHistoricalStrategies() {
       throw new Error("Os períodos das EMAs devem ser crescentes.");
     }
     summary.textContent="Lendo os arquivos locais e comparando as mesmas decisões horárias…";
+    const retro=$("compare-retro").checked;
     const d=await getJson("/api/strategy-comparison?fast="+periods[0]+
-      "&mid="+periods[1]+"&trend="+periods[2]);
+      "&mid="+periods[1]+"&trend="+periods[2]+(retro?"&retro=1":""));
+    if (d.status==="retrospective_warmup_not_available") {
+      summary.textContent="Histórico complementar ainda não disponível. Use o histórico original ou solicite a coleta complementar.";
+      return;
+    }
+    if (retro!==d.retrospective_warmup_requested) {
+      throw new Error("A origem do histórico não corresponde à seleção.");
+    }
     if (d.schema_version!=="d512-archived-rest-strategy-comparison-v1" ||
         d.orders_sent!==false || d.financial_backtest_approved!==false ||
         d.out_of_sample_results_validated!==false || d.exchange_fills_verified!==false ||
@@ -562,7 +570,10 @@ async function compareHistoricalStrategies() {
       d.maximum_contiguous_hours_observed+" / "+d.required_warmup_hours+
       " velas; "+d.excluded_warmup_or_conflict_symbol_hours+" ativos-hora excluídos por dados insuficientes ou conflitantes. "+
       "Notional de referência: "+d.reference_notional_quote+" USDT; custo assumido por ciclo: "+
-      d.assumed_roundtrip_cost_quote+" USDT. Sem funding confirmado.";
+      d.assumed_roundtrip_cost_quote+" USDT. Sem funding confirmado."+
+      (retro?" Aquecimento RETROSPECTIVO (recuperado depois): "+
+        d.retrospective_warmup_symbol_hours+" ativos-hora usaram velas extras; "+
+        d.retrospective_warmup_rejected_series+" séries rejeitadas. Não é prova prospectiva.":"");
     if (!d.common_eligible_symbol_hours) {
       root.textContent="Ainda não existem dados compatíveis suficientes para uma comparação. Nenhum resultado foi inventado.";
       return;

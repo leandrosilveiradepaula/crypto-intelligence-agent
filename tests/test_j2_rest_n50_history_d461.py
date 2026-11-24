@@ -162,6 +162,25 @@ class ImmutableRestN50Tests(unittest.TestCase):
                     history_hours=invalid, **self.flags,
                 )
 
+    def test_d516_full_122_hour_history_pages_without_changing_j1_transport(self):
+        result = capture_rest_n50_24h(
+            snapshot=self.snapshot, private_j2_directory=self.home,
+            client=self.client, wall_ms=lambda: NOW + 1500,
+            history_hours=122, **self.flags,
+        )
+        self.assertEqual(result.history_hours, 122)
+        self.assertEqual(len(self.calls), 100)
+        self.assertEqual(result.sanitized_report()["validated_closed_candles"], 6100)
+        limits = [int(parse_qs(urlsplit(u).query)["limit"][0]) for u in self.calls]
+        self.assertEqual(limits, [72, 50] * 50)
+        for _, bars in result.series:
+            self.assertEqual(bars[0].open_time_ms, END-122*HOUR)
+            self.assertEqual(bars[-1].close_time_ms, END-1)
+            self.assertTrue(all(b.open_time_ms-a.open_time_ms == HOUR
+                                for a,b in zip(bars,bars[1:])))
+        self.assertEqual(reopen_frozen_rest_n50_for_research(
+            private_j2_directory=self.home, filename=result.snapshot_file.name), result)
+
     def test_hourly_worker_reuses_same_frozen_1200_candles_after_new_n50_clock(self):
         initial = self.capture()
         first_calls = len(self.calls)

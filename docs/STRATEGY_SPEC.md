@@ -1,5 +1,10 @@
 # Estratégias e gestão de vencedores
 
+## D516 — complemento de aquecimento retrospectivo explicitamente rotulado
+
+O máximo 122 velas continua configurável segundo D503/D513; janelas de 73 a 122 são divididas em duas páginas de até 72 no cliente público existente, sem ampliar o contrato do transporte J1. Para comparação histórica de médias longas, recuperar preços anteriores por REST em uma coleta de pesquisa separada, ancorada nas composições N50 congeladas (até 24 pares horários). Somente barras anteriores ao primeiro arquivo de decisão do símbolo são adicionadas, desde que o trecho inteiro já congelado coincida. Dados recuperados posteriormente são rotulados retrospectivos e têm timestamp próprio; jamais gerar snapshot D461 retrodatado ou usá-los como evento WS, decisão prospectiva ou preço futuro de saída. Símbolos sem sobreposição, com gaps ou âncora ausente ficam excluídos explicitamente. A comparação mantém o modo original como padrão; não modifica o perfil, posições ou resultado operacional. Não equivale a backtest financeiro completo.
+
+
 ## D513 — composição causal de EMA, SMA e Pivot SuperTrend (24/11/2026)
 
 No modo `indicator_combo`, períodos das médias ativas devem ser crescentes dentro de cada família; períodos desligados são preservados, mas ignorados nos cálculos e no aquecimento. Com uma média ativa usa-se preço versus média; duas usam curta versus longa; três exigem ainda preço do mesmo lado da terceira. SMA usa a média dos N fechamentos; EMA usa seed SMA e atualização recursiva. Todos os indicadores/famílias ativos devem concordar na direção; uma transição do estado anterior conhecido (neutro ou oposto) para confluência LONG/SHORT gera hipótese na vela fechada, sujeita a volume, cooldown, força relativa BTC e todos os filtros de execução PAPER existentes. Não exigir cruzamentos simultâneos, nem gerar entrada por aquecimento inicial indefinido. Sem indicador ativo, nenhuma hipótese.
