@@ -1,5 +1,12 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D511 — scorecard de posições PAPER precificadas, desenvolvimento (24/11/2026)
+
+A partir da main verificada `1ae9fb0aee56b0c9cdeae7071917acb4b0167e15` foi iniciada a branch `chatgpt/j3-paper-scorecard-d511` para avançar J3/J5 sem aguardar o release D509. Reusa D454/D487/D505: fechamento de posições PAPER com preços e custos hipotéticos persistidos, sem novo diário financeiro. Entrega scorecard no JSON do /api/paper-session e nos cartões móveis do painel (ganhos, perdas, retorno condicional antes de funding e drawdown entre fechamentos). A janela de 50 recentes + posições antigas ainda abertas NÃO é todo o histórico; o painel sinaliza cobertura incompleta e precificação ausente. Nenhuma conclusão OOS, PnL real, funding efetivo, liquidação real ou proteção nativa.
+
+Situação: implementação na branch, testes focados incluídos, CI de HEAD pendente; **NÃO implantado na VPS** e não altera o release D507 anterior nem a J1. A PR D509 #738 está integrada em main porém endpoint novo retornou HTTP404 na VPS; implantação D509/D511 depende de gate de release e rollback. Próximo trabalho autorizado: CI, revisão da branch D511 e merge sem produção quando verde; depois ampliar J3 com amostra histórica causal e OOS real, mantendo PAPER.
+
+
 ## D510 — J2/J5 Centro de Decisões integrado, operador D507 mantido (24/11/2026 UTC)
 
 **Jornada:** melhorar produto PAPER desde a escolha de perfil até sinal, entrada e resultado, reduzindo trabalho de diagnóstico invisível. PR #738 `codex/j2-j5-decision-center-d509` MERGED em `30dd6a596cccbe95c2dded7c6e7e39ecb4cb52d1`; head de revisão `bd3bb59fb2a5af6f36ed8843ae3ab284eff231e3`. Gate CI [45404676604](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45404676604) Linux 3.600 PASS e Windows 3.600 PASS/674 POSIX skips; QA mobile [45404676501](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45404676501) SUCCESS. Sem ordens, contrato de risco ou J1 alterados.
