@@ -1,5 +1,10 @@
 # Decisões do produto
 
+## D516 — complemento de aquecimento retrospectivo explicitamente rotulado
+
+O máximo 122 velas continua configurável segundo D503/D513; janelas de 73 a 122 são divididas em duas páginas de até 72 no cliente público existente, sem ampliar o contrato do transporte J1. Para comparação histórica de médias longas, recuperar preços anteriores por REST em uma coleta de pesquisa separada, ancorada nas composições N50 congeladas (até 24 pares horários). Somente barras anteriores ao primeiro arquivo de decisão do símbolo são adicionadas, desde que o trecho inteiro já congelado coincida. Dados recuperados posteriormente são rotulados retrospectivos e têm timestamp próprio; jamais gerar snapshot D461 retrodatado ou usá-los como evento WS, decisão prospectiva ou preço futuro de saída. Símbolos sem sobreposição, com gaps ou âncora ausente ficam excluídos explicitamente. A comparação mantém o modo original como padrão; não modifica o perfil, posições ou resultado operacional. Não equivale a backtest financeiro completo.
+
+
 ## D513 — indicadores independentes por escolha do Product Owner (24/11/2026)
 
 EMA, SMA e Pivot Point SuperTrend devem ser opções independentes e parametrizáveis na interface PAPER. O usuário pode ligar/desligar cada uma das três médias EMA e cada uma das três médias SMA, configurar os períodos (2..120 velas de 1h) e ativar/desativar Pivot SuperTrend, com período do pivô (1..50), período ATR (1..120) e fator ATR (0,1..100). Valores iniciais 10/30/60 e Pivot 2/10/3 são exemplos editáveis, não uma otimização nem uma recomendação. O modo personalizável `indicator_combo` é opt-in; perfis antigos `breakout` e `ema_cross` não são reinterpretados. Desligar todas as opções no modo personalizável suspende novas entradas, sem desativar a gestão de posições existentes. Salvar só vale para próximas sessões PAPER, não altera posição aberta, margem, alavancagem, stop ou ordem. J1 permanece intocada, sem trading real ou custo adicional.

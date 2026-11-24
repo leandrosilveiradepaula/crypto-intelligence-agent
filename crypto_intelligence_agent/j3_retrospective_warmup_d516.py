@@ -217,6 +217,8 @@ def capture_retrospective_warmup(
     rows = {}
     omitted = 0
     for symbol, (anchor, original) in sorted(plan.items()):
+        if clock() >= started+30*60_000:
+            raise DataValidationError("D516 bounded capture deadline reached")
         if not 0 <= started-anchor.captured_at_ms <= MAX_AGE_MS:
             omitted += 1
             continue
