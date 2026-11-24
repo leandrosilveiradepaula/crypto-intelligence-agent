@@ -31,7 +31,7 @@ class SwingRSITests(unittest.TestCase):
         r = wilder_rsi(c,cfg)
         self.assertEqual(r[:3],(None,None,None))
         self.assertEqual(r[3],D(75))
-        self.assertAlmostEqual(r[4],D(600)/11,places=24)
+        self.assertAlmostEqual(r[4],D(600)/11,places=11)
         for i in range(1,len(c)+1):
             self.assertEqual(wilder_rsi(c[:i],cfg),r[:i])
         self.assertEqual(wilder_rsi((D(10),)*5,cfg)[-1],50)
@@ -39,6 +39,8 @@ class SwingRSITests(unittest.TestCase):
         self.assertEqual(wilder_rsi(tuple(map(D,range(15,10,-1))),cfg)[-1],0)
         self.assertEqual(rsi_directions(c,cfg)[4],1)
         self.assertEqual(rsi_directions(c,replace(cfg,long_max=100))[3],1)
+        self.assertEqual(rsi_directions(c,replace(cfg,long_max=75))[3],1)
+        self.assertEqual(rsi_directions(c,replace(cfg,long_min=75,long_max=90))[3],0)
         self.assertEqual(rsi_directions(tuple(D(30)-x for x in c),cfg)[4],-1)
         self.assertEqual(rsi_directions((D(10),)*5,cfg)[-1],0)
 

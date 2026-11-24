@@ -132,8 +132,10 @@ def wilder_rsi(closes: tuple[Decimal, ...], config: RelativeStrengthIndex):
             else:
                 gain = (gain*(n-1)+up)/n
                 loss = (loss*(n-1)+down)/n
-            result.append(Decimal(50) if gain == loss == 0 else
-                          Decimal(100)*gain/(gain+loss))
+            value = Decimal(50) if gain == loss == 0 else Decimal(100)*gain/(gain+loss)
+            # Stable inclusive/exclusive zone boundaries despite repeating
+            # decimal Wilder averages. Resolution is explicit, not a tick size.
+            result.append(value.quantize(Decimal("0.000000000001")))
     return tuple(result)
 
 
