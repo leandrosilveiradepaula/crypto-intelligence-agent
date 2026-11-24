@@ -1,0 +1,289 @@
+{
+  "schema": "d520-indicator-research-matrix-v1",
+  "ema_reference_periods": [
+    10,
+    30,
+    60
+  ],
+  "profiles": [
+    {
+      "name": "sma_10_30",
+      "label": "SMA 10/30 + FR",
+      "ema": [],
+      "sma": [
+        10,
+        30
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_20_50",
+      "label": "SMA 20/50 + FR",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_30_60",
+      "label": "SMA 30/60 + FR",
+      "ema": [],
+      "sma": [
+        30,
+        60
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_20_50_pivot",
+      "label": "SMA 20/50 + Pivot + FR",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": {
+        "pivot_period": 2,
+        "atr_period": 10,
+        "atr_factor": "3"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_20_50_pivot_bb",
+      "label": "SMA 20/50 + Pivot + Bollinger + FR",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": {
+        "pivot_period": 2,
+        "atr_period": 10,
+        "atr_factor": "3"
+      },
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "ema_9_21",
+      "label": "EMA 9/21 + FR",
+      "ema": [
+        9,
+        21
+      ],
+      "sma": [],
+      "pivot": null,
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "bb_20_2_reentry",
+      "label": "Bollinger 20/2 retorno à banda + FR",
+      "ema": [],
+      "sma": [],
+      "pivot": null,
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "reentry"
+      },
+      "relative_strength_bps": "0"
+    },
+    {
+      "name": "sma_10_30_veto",
+      "label": "SMA 10/30 + FR + filtro RSI 14 (50–70)",
+      "ema": [],
+      "sma": [
+        10,
+        30
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "sma_20_50_veto",
+      "label": "SMA 20/50 + FR + filtro RSI 14 (50–70)",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "sma_30_60_veto",
+      "label": "SMA 30/60 + FR + filtro RSI 14 (50–70)",
+      "ema": [],
+      "sma": [
+        30,
+        60
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "sma_20_50_pivot_veto",
+      "label": "SMA 20/50 + Pivot + FR + filtro RSI 14 (50–70)",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": {
+        "pivot_period": 2,
+        "atr_period": 10,
+        "atr_factor": "3"
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "sma_20_50_pivot_bb_veto",
+      "label": "SMA 20/50 + Pivot + Bollinger + FR + filtro RSI 14 (50–70)",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": {
+        "pivot_period": 2,
+        "atr_period": 10,
+        "atr_factor": "3"
+      },
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "breakout"
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "ema_9_21_veto",
+      "label": "EMA 9/21 + FR + filtro RSI 14 (50–70)",
+      "ema": [
+        9,
+        21
+      ],
+      "sma": [],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "bb_20_2_reentry_veto",
+      "label": "Bollinger 20/2 retorno à banda + FR + filtro RSI 14 (50–70)",
+      "ema": [],
+      "sma": [],
+      "pivot": null,
+      "bollinger": {
+        "period": 20,
+        "deviations": "2",
+        "mode": "reentry"
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "sma_20_50_veto_strong",
+      "label": "SMA 20/50 + FR + filtro RSI 14 (55–75)",
+      "ema": [],
+      "sma": [
+        20,
+        50
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 55,
+        "long_max": 75
+      }
+    },
+    {
+      "name": "sma_30_60_veto_strong",
+      "label": "SMA 30/60 + FR + filtro RSI 14 (55–75)",
+      "ema": [],
+      "sma": [
+        30,
+        60
+      ],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 55,
+        "long_max": 75
+      }
+    },
+    {
+      "name": "breakout_veto",
+      "label": "Rompimento + FR + filtro RSI 14 (50–70)",
+      "ema": [],
+      "sma": [],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "trigger": "breakout",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "breakout_veto_strong",
+      "label": "Rompimento + FR + filtro RSI 14 (55–75)",
+      "ema": [],
+      "sma": [],
+      "pivot": null,
+      "relative_strength_bps": "0",
+      "trigger": "breakout",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 55,
+        "long_max": 75
+      }
+    }
+  ]
+}

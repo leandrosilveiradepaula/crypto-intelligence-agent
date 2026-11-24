@@ -749,6 +749,10 @@ function showMatrix(job) {
     const metrics=document.createElement("div");
     metrics.className="decision-steps";
     decisionMetric(metrics,"Sinais / completos",r.candidates+" / "+r.complete);
+    if(r.rsi_veto){
+      decisionMetric(metrics,"Sinais originais / vetados pelo RSI",r.rsi_veto.checked+" / "+r.rsi_veto.rejected);
+      decisionMetric(metrics,"Trajetórias originais / vetadas pelo RSI",r.rsi_veto.covered_checked+" / "+r.rsi_veto.covered_rejected);
+    }
     decisionMetric(metrics,"LONG / SHORT",r.long+" / "+r.short);
     decisionMetric(metrics,"Cobertura",r.coverage_pct===null?"Sem sinais":show(r.coverage_pct)+"%");
     decisionMetric(metrics,"Positivos / negativos",r.positive+" / "+r.negative);

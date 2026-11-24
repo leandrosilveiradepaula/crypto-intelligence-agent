@@ -17,6 +17,7 @@ from .paper_profile_d487 import snapshot
 ROOT=Path(__file__).resolve().parents[1]
 DEFAULT_MATRIX=ROOT/"docs/examples/d520_indicator_research_matrix.json"
 SWING_MATRIX=ROOT/"docs/examples/d523_swing_rsi_research_matrix.json"
+RSI_FILTER_MATRIX=ROOT/"docs/examples/d526_rsi_filter_research_matrix.json"
 JOB_SCHEMA="d522-owner-local-research-job-v1"
 MAX_REPORT_BYTES=512_000
 TIMEOUT_SECONDS=300
@@ -58,7 +59,7 @@ class ResearchJob:
         grid=parse_stop_grid(data.get("stop_grid_bps"))
         if grid and stop is not None:
             raise DataValidationError("D524 select a single stop or a grid")
-        if (type(preset) is not str or preset not in ("original","swing")
+        if (type(preset) is not str or preset not in ("original","swing","rsi_filter")
                 or ("preset" in data and data.get("matrix") is not None)
                 or (stop is not None and (type(stop) is not int or not 1 <= stop <= 1000))):
             raise DataValidationError("D523 invalid research preset or stop")
@@ -70,7 +71,9 @@ class ResearchJob:
             if self._state["status"]=="running":
                 raise ResearchBusy("D522 one research job at a time")
             if data.get("matrix") is None:
-                with (SWING_MATRIX if preset == "swing" else DEFAULT_MATRIX).open("rb") as fp:
+                preset_path={"original":DEFAULT_MATRIX,"swing":SWING_MATRIX,
+                             "rsi_filter":RSI_FILTER_MATRIX}[preset]
+                with preset_path.open("rb") as fp:
                     raw=fp.read(MAX_MATRIX_BYTES+1)
             else:
                 raw=json.dumps(data["matrix"],ensure_ascii=True,
