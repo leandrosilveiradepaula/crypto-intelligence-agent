@@ -68,7 +68,7 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <h2>1. Indicadores da entrada horária</h2>
 <p>Escolha uma regra pronta ou configure seus próprios indicadores. Você decide quais usar e os seus períodos; salvar altera somente as próximas sessões PAPER.</p>
 <div class="grid">
-<label>Regra de entrada<select id="r-entry_mode"><option value="breakout">Rompimento com filtros</option><option value="ema_cross">Cruzamento EMA + tendência (legado)</option><option value="indicator_combo">Indicadores personalizáveis (EMA / SMA / Pivot)</option></select></label>
+<label>Regra de entrada<select id="r-entry_mode"><option value="breakout">Rompimento com filtros</option><option value="ema_cross">Cruzamento EMA + tendência (legado)</option><option value="indicator_combo">Indicadores personalizáveis (EMA / SMA / Pivot / Bollinger)</option></select></label>
 <label>EMA rápida (velas de 1h)<input id="r-ma_fast" type="number" min="2" max="120" value="10"></label>
 <label>EMA intermediária (velas de 1h)<input id="r-ma_mid" type="number" min="2" max="120" value="30"></label>
 <label>EMA de tendência (velas de 1h)<input id="r-ma_trend" type="number" min="2" max="120" value="60"></label>
@@ -92,6 +92,13 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <label class="check"><input type="checkbox" id="ci-pivot-enabled"> Ativar Pivot Point SuperTrend</label>
 <div class="grid"><label>Período do pivô<input id="ci-pivot-period" type="number" min="1" max="50" value="2" disabled></label><label>Período ATR<input id="ci-pivot-atr" type="number" min="1" max="120" value="10" disabled></label><label>Multiplicador ATR<input id="ci-pivot-factor" type="text" inputmode="decimal" value="3" disabled></label></div>
 <p class="muted">O pivô só entra no cálculo depois de confirmado; o fator ATR controla a distância das bandas. Este indicador é de entrada, não modifica stops das posições existentes.</p>
+</fieldset>
+<fieldset class="indicator-family"><legend>Bandas de Bollinger</legend>
+<label class="check"><input type="checkbox" id="ci-bb-enabled"> Ativar Bandas de Bollinger</label>
+<div class="grid"><label>Período (velas de 1h)<input id="ci-bb-period" type="number" min="2" max="120" value="20" disabled></label>
+<label>Multiplicador de desvio-padrão<input id="ci-bb-deviations" type="text" inputmode="decimal" value="2" disabled></label>
+<label>Regra de entrada<select id="ci-bb-mode" disabled><option value="breakout">Rompimento das bandas</option><option value="reentry">Retorno para dentro das bandas</option></select></label></div>
+<p class="muted">Média simples ± multiplicador × desvio-padrão dos fechamentos. No rompimento, LONG acima da superior e SHORT abaixo da inferior. No retorno, LONG ao voltar de baixo da banda inferior e SHORT ao voltar de cima da superior. Com outros indicadores ativos, exige concordância na direção.</p>
 </fieldset>
 <p id="custom-summary" class="notice" role="status" aria-live="polite"></p>
 </div>

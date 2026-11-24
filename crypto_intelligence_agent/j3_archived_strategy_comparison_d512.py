@@ -16,6 +16,7 @@ import re
 from .bybit_public_j1_transport import HOUR_MS
 from .j2_bybit_closed_research_bridge import BybitClosedResearchSeries
 from .j2_observed_bybit_research import evaluate_observed_bybit_research
+from .j2_configurable_indicators_d513 import IndicatorSelection
 from .j2_rest_n50_history_d461 import (
     RestN50History, reopen_frozen_rest_n50_for_research,
 )
@@ -154,6 +155,7 @@ def compare_archived_strategies(
     replay_margin: SyntheticMarginBasis | None = None,
     exit_policy: PaperEntryExitPolicy | None = None,
     intrahour_supplement: IntrahourSupplement | None = None,
+    additional_profiles: tuple[tuple[str, IndicatorSelection, Decimal], ...] = (),
 ) -> dict:
     """Compare fixed caller-supplied profiles on the same causal archive slots.
 
@@ -200,6 +202,31 @@ def compare_archived_strategies(
         policies.append(("indicator_combo", custom))
         warmup = max(warmup, custom.indicators.minimum_closed_bars(
             custom.features.quote_volume_period))
+    # D520 batch profiles are research-only. All use the same causal prefix,
+    # volume/cooldown, exits, costs, and original BTC-relative return window.
+    if type(additional_profiles) is not tuple or len(additional_profiles) > 24:
+        raise DataValidationError("D520 bounded profile matrix required")
+    relative_thresholds = {name: Decimal(0) for name, _ in policies}
+    matrix = {}
+    for item in additional_profiles:
+        if type(item) is not tuple or len(item) != 3:
+            raise DataValidationError("D520 invalid profile entry")
+        name, selection, threshold = item
+        if (type(name) is not str or re.fullmatch(r"[a-z][a-z0-9_]{1,39}", name) is None
+                or name in relative_thresholds or name == "reference_long"
+                or type(selection) is not IndicatorSelection or not selection.active
+                or type(threshold) is not Decimal or not threshold.is_finite()
+                or not 0 <= threshold <= 1000):
+            raise DataValidationError("D520 invalid profile name, indicators or RS threshold")
+        policy = replace(config, entry_mode="indicator_combo", indicators=selection)
+        warmup = max(warmup, selection.minimum_closed_bars(
+            policy.features.quote_volume_period))
+        policies.append((name, policy))
+        relative_thresholds[name] = threshold
+        matrix[name] = {"indicators": selection.as_json(),
+                        "minimum_relative_strength_bps": format(threshold, "f")}
+    if additional_profiles and warmup > MAX_WARMUP:
+        raise DataValidationError("D520 common warmup exceeds archive contract")
     # Same fixed reference notional on both sides, as in D288. Funding
     # events are deliberately not fabricated or settled by this report.
     costs = evaluate_synthetic_costs(SyntheticCostScenario(
@@ -237,6 +264,9 @@ def compare_archived_strategies(
     totals = {k: _empty(len(target_distances_bps))
               for k in [name for name, _ in policies] + ["reference_long"]}
     replay_totals = {name: empty_replay_totals() for name in totals} if replay_enabled else {}
+    entry_counts = ({name: {"LONG": 0, "SHORT": 0, "covered_LONG": 0, "covered_SHORT": 0}
+                     for name, _ in policies} if additional_profiles else {})
+    entry_examples = {name: [] for name in entry_counts}
     matched_hourly_totals = {name: empty_replay_totals() for name in totals} if refined else {}
     refined_index, rejected_intrahour = (
         index_intrahour(histories, intrahour_supplement, now_ms=now_ms)
@@ -296,6 +326,8 @@ def compare_archived_strategies(
                       "ema_cross_candidates": 0}
             if config.indicators is not None:
                 window["indicator_combo_candidates"] = 0
+            for name in matrix:
+                window[name + "_candidates"] = 0
             for symbol, bars in h.series:
                 if symbol == "BTCUSDT":
                     continue
@@ -333,18 +365,49 @@ def compare_archived_strategies(
                     if replay_enabled else None)
                 path = (refine_hourly_path(hourly_path, refined_index)
                         if refined else hourly_path)
+                evaluated = {}
                 for name, policy in policies:
-                    hypothesis = evaluate_observed_bybit_research(
-                        series, config=policy, decision_at_ms=end, close_safety_ms=1,
-                        allow_rest_historical_research=True,
-                    ).hypotheses
+                    # Duplicate indicator rules with different RS thresholds
+                    # reuse the causal signal calculation within this slot.
+                    if additional_profiles:
+                        key = (policy.entry_mode, policy.ema_cross_periods, policy.indicators)
+                        if key not in evaluated:
+                            evaluated[key] = evaluate_observed_bybit_research(
+                                series, config=policy, decision_at_ms=end, close_safety_ms=1,
+                                allow_rest_historical_research=True,
+                            ).hypotheses
+                        hypothesis = evaluated[key]
+                    else:
+                        hypothesis = evaluate_observed_bybit_research(
+                            series, config=policy, decision_at_ms=end, close_safety_ms=1,
+                            allow_rest_historical_research=True,
+                        ).hypotheses
                     if not hypothesis:
                         continue
                     side = hypothesis[0].side.value
-                    if not ((side == "LONG" and relative > 0)
-                            or (side == "SHORT" and relative < 0)):
+                    threshold = relative_thresholds[name] / Decimal(10000)
+                    if not ((side == "LONG" and relative > threshold)
+                            or (side == "SHORT" and relative < -threshold)):
                         continue
                     window[name + "_candidates"] += 1
+                    if additional_profiles:
+                        entry_counts[name][side] += 1
+                        if path is not None:
+                            entry_counts[name]["covered_" + side] += 1
+                            # First two covered signals in chronological iteration;
+                            # never choose examples by future profitability.
+                            if len(entry_examples[name]) < 2:
+                                entry_examples[name].append({
+                                    "symbol": symbol, "side": side,
+                                    "decision_end_ms": end,
+                                    "relative_strength_bps": format(
+                                        (relative*Decimal(10000)).quantize(Decimal("0.01")), "f"),
+                                    "signal_close": format(bars[-1].close, "f"),
+                                    "next_open_reference_ex_post": format(path[0].open, "f"),
+                                    "volume_ratio": (format(hypothesis[0].quote_volume_to_prior_mean, "f")
+                                        if getattr(hypothesis[0], "quote_volume_to_prior_mean", None)
+                                        is not None else None),
+                                })
                     _accumulate(totals[name], side, bars[-1].close, future,
                                 reference_notional, costs, stop_distance_bps, target_distances_bps)
                     if replay_enabled:
@@ -378,6 +441,9 @@ def compare_archived_strategies(
         "stop_distance_bps": format(stop_distance_bps, "f"),
         "target_distances_bps": [format(d, "f") for d in target_distances_bps],
         "results": results, "windows": windows,
+        "batch_profiles": matrix,
+        "batch_entry_counts": entry_counts,
+        "batch_entry_examples": entry_examples,
         "exit_replay": ({
             "schema_version": EXIT_SCHEMA, "horizon_hours": replay_horizon_hours,
             "interval": "5m" if refined else "1h",

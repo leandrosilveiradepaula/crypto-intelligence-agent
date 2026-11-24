@@ -43,7 +43,8 @@ function marginRoiFromPriceBps(bps, leverage) {
 function customDefaults(cross) {
   return {ema:cross.map(period=>({enabled:true,period})),
     sma:cross.map(period=>({enabled:false,period})),
-    pivot_supertrend:{enabled:false,pivot_period:2,atr_period:10,atr_factor:"3"}};
+    pivot_supertrend:{enabled:false,pivot_period:2,atr_period:10,atr_factor:"3"},
+    bollinger:{enabled:false,period:20,deviations:"2",mode:"breakout"}};
 }
 function refreshCustom() {
   $("custom-indicators").hidden = $("r-entry_mode").value!=="indicator_combo";
@@ -59,6 +60,9 @@ function refreshCustom() {
   const p=$("ci-pivot-enabled").checked;
   for (const id of ["ci-pivot-period","ci-pivot-atr","ci-pivot-factor"]) $(id).disabled=!p;
   if (p) active.push("Pivot SuperTrend");
+  const bb=$("ci-bb-enabled").checked;
+  for (const id of ["ci-bb-period","ci-bb-deviations","ci-bb-mode"]) $(id).disabled=!bb;
+  if (bb) active.push("Bollinger "+$("ci-bb-period").value+"/"+$("ci-bb-deviations").value);
   $("custom-summary").textContent=active.length ?
     "Ativos: "+active.join(" + ")+". Mudanças valem após salvar e iniciar nova sessão PAPER." :
     "Todos desligados: não haverá novas entradas por este modo. Posições existentes continuam acompanhadas.";
@@ -75,6 +79,11 @@ function fillCustom(profile) {
   $("ci-pivot-period").value=p.pivot_period;
   $("ci-pivot-atr").value=p.atr_period;
   $("ci-pivot-factor").value=p.atr_factor;
+  const bb=profile.bollinger || {enabled:false,period:20,deviations:"2",mode:"breakout"};
+  $("ci-bb-enabled").checked=bb.enabled===true;
+  $("ci-bb-period").value=bb.period;
+  $("ci-bb-deviations").value=bb.deviations;
+  $("ci-bb-mode").value=bb.mode;
   refreshCustom();
 }
 function collectCustom() {
@@ -100,6 +109,12 @@ function collectCustom() {
     atr_period:integer("ci-pivot-atr",120,1),
     atr_factor:factor,
   };
+  const dev=numeric("ci-bb-deviations",10);
+  const mode=$("ci-bb-mode").value;
+  if (Number(dev)<0.1 || (dev.split(".")[1]||"").length>6 || !["breakout","reentry"].includes(mode)) {
+    throw new Error("Bollinger: multiplicador entre 0,1 e 10, até 6 casas decimais, e regra válida.");
+  }
+  result.bollinger={enabled:$("ci-bb-enabled").checked,period:integer("ci-bb-period",120,2),deviations:dev,mode};
   return result;
 }
 function fill(model) {
