@@ -10,7 +10,7 @@ import threading
 import time
 from uuid import uuid4
 
-from .j3_combination_research_d520 import MAX_MATRIX_BYTES, REPORT_SCHEMA, parse_matrix
+from .j3_combination_research_d520 import MAX_MATRIX_BYTES, REPORT_SCHEMA, parse_matrix, parse_stop_grid
 from .market_data import DataValidationError
 from .paper_profile_d487 import snapshot
 
@@ -49,12 +49,15 @@ class ResearchJob:
 
     def start(self, data):
         if (type(data) is not dict or not {"horizon_hours"}<=set(data)
-                or set(data)-{"horizon_hours","as_of_ms","matrix","preset","stop_bps"}):
+                or set(data)-{"horizon_hours","as_of_ms","matrix","preset","stop_bps","stop_grid_bps"}):
             raise DataValidationError("D522 invalid job request")
         horizon=data["horizon_hours"]
         cutoff=data.get("as_of_ms")
         preset=data.get("preset","original")
         stop=data.get("stop_bps")
+        grid=parse_stop_grid(data.get("stop_grid_bps"))
+        if grid and stop is not None:
+            raise DataValidationError("D524 select a single stop or a grid")
         if (type(preset) is not str or preset not in ("original","swing")
                 or ("preset" in data and data.get("matrix") is not None)
                 or (stop is not None and (type(stop) is not int or not 1 <= stop <= 1000))):
@@ -77,7 +80,9 @@ class ResearchJob:
             job_id=uuid4().hex
             fields={"job_id":job_id,"horizon_hours":horizon,"requested_as_of_ms":cutoff,
                     "profile_revision":revision,"matrix_sha256":sha256(raw).hexdigest(),
-                    "strategy_count":len(profiles)+2,"requested_stop_bps":stop}
+                    "strategy_count":len(profiles)+2,"requested_stop_bps":stop,
+                    "requested_stop_grid_bps":list(grid),
+                    "scenario_count":(len(profiles)+2)*max(1,len(grid))}
             self._state=self._status("running",**fields)
             # No shell, arbitrary path, credentials, network flag or user code.
             cmd=[sys.executable,"-m","scripts.run_j3_combination_research_d520",
@@ -86,6 +91,8 @@ class ResearchJob:
                  "--expected-policy-revision",revision,"--low-priority"]
             if stop is not None:
                 cmd.extend(["--research-stop-bps",str(stop)])
+            if grid:
+                cmd.extend(["--research-stop-grid-bps",*map(str,grid)])
             if cutoff is None:
                 cmd.append("--latest-saved")
             else:
@@ -122,6 +129,22 @@ class ResearchJob:
                     or len(report["rows"])!=fields["strategy_count"]
                     or any(report.get(flag) is not False for flag in flags)):
                 raise DataValidationError("D522 report contract invalid")
+            expected_grid=fields.get("requested_stop_grid_bps",[])
+            if report.get("research_stop_grid_bps",[])!=expected_grid:
+                raise DataValidationError("D524 worker grid mismatch")
+            variants=report.get("stop_grid",[])
+            if (type(variants) is not list or len(variants)!=len(expected_grid)
+                    or (expected_grid and report.get("scenario_count")!=fields["scenario_count"])):
+                raise DataValidationError("D524 worker grid incomplete")
+            if expected_grid:
+                baseline={r["name"]:(r["candidates"],r["complete"]) for r in report["rows"]}
+                for distance,variant in zip(expected_grid,variants):
+                    if (type(variant) is not dict or variant.get("stop_bps")!=distance
+                            or type(variant.get("rows")) is not list
+                            or len(variant["rows"])!=fields["strategy_count"]
+                            or {r["name"]:(r["candidates"],r["complete"])
+                                for r in variant["rows"]}!=baseline):
+                        raise DataValidationError("D524 inconsistent grid rows")
             next_state=self._status("completed",**fields,report=report)
         except subprocess.TimeoutExpired:
             next_state=self._status("failed",**fields,error="research_timeout")

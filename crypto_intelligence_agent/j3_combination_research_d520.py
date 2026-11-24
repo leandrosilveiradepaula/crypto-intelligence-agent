@@ -186,12 +186,27 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
             "winner_selected":False,"rows":rows}
 
 
+def parse_stop_grid(value):
+    """Optional grid: two to eight strictly increasing integer price bps."""
+    if value is None:
+        return ()
+    if (type(value) not in (tuple, list) or not 2 <= len(value) <= 8
+            or any(type(x) is not int or not 1 <= x <= 1000 for x in value)
+            or any(a >= b for a, b in zip(value, value[1:]))):
+        raise DataValidationError("D524 use 2..8 distinct ascending research stops (1..1000 bps)")
+    return tuple(value)
+
+
 def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
                as_of_ms: int, horizon_hours: int, research_stop_bps: int | None = None,
+               research_stop_grid_bps: tuple[int, ...] | None = None,
                min_complete=20,
                min_coverage_bps=7000) -> dict:
     """Read existing archives once, evaluate every hypothesis in one pass. No GET or writes."""
     ref,profiles,labels = parse_matrix(matrix_raw)
+    grid = parse_stop_grid(research_stop_grid_bps)
+    if grid and research_stop_bps is not None:
+        raise DataValidationError("D524 select a stop or a grid, not both")
     archives = read_comparison_archives(directory,now_ms=as_of_ms)
     warmup = read_latest_supplement(directory,now_ms=as_of_ms)
     intrahour = read_latest_intrahour(directory,now_ms=as_of_ms)
@@ -202,8 +217,9 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
     cfg = replace(owner_policy.research,entry_mode="breakout",indicators=None)
     if research_stop_bps is not None and (type(research_stop_bps) is not int or not 1 <= research_stop_bps <= 1000):
         raise DataValidationError("D523 research stop must be 1..1000 bps")
-    exit_policy = (owner_policy.exits if research_stop_bps is None else
-                   replace(owner_policy.exits, stop_distance_bps=Decimal(research_stop_bps)))
+    base_stop = grid[0] if grid else research_stop_bps
+    exit_policy = (owner_policy.exits if base_stop is None else
+                   replace(owner_policy.exits, stop_distance_bps=Decimal(base_stop)))
     notional = owner_policy.margin_quote*Decimal(owner_policy.leverage.for_new_positions)
     margin = SyntheticMarginBasis(owner_policy.margin_quote,
         owner_policy.leverage.for_new_positions,notional,"SYNTHETIC_USDT")
@@ -216,9 +232,26 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
         target_distances_bps=exit_policy.target_distances_bps,now_ms=as_of_ms,
         warmup_supplement=warmup,replay_horizon_hours=horizon_hours,
         replay_margin=margin,exit_policy=exit_policy,intrahour_supplement=intrahour,
-        additional_profiles=profiles)
+        additional_profiles=profiles,additional_stop_bps=grid[1:])
     screen = summarize_matrix(report,labels,min_complete=min_complete,
                               min_coverage_bps=min_coverage_bps)
+    grid_results = []
+    if grid:
+        baseline = {r["name"]:(r["candidates"],r["complete"]) for r in screen["rows"]}
+        for distance in grid:
+            if distance == grid[0]:
+                variant = screen
+            else:
+                alternate = report["exit_replay"]["alternative_stop_results"][str(distance)]
+                variant = summarize_matrix({**report, "exit_replay":{
+                    **report["exit_replay"],"results":alternate}},labels,
+                    min_complete=min_complete,min_coverage_bps=min_coverage_bps)
+            if (variant["common_covered_symbol_hours"] != screen["common_covered_symbol_hours"]
+                    or {r["name"]:(r["candidates"],r["complete"]) for r in variant["rows"]} != baseline):
+                raise DataValidationError("D524 research stops must share identical signal counts and coverage")
+            grid_results.append({"stop_bps":distance,
+                "gross_loss_margin_pct":format(Decimal(distance)*Decimal(margin.leverage_at_intent)/100,"f"),
+                "rows":variant["rows"]})
     manifest = {
         "archive_digests":[[h.window_end_ms,h.digest_sha256] for h in archives],
         "warmup_sha256":warmup.digest_sha256,"intrahour_sha256":intrahour.digest_sha256,
@@ -237,6 +270,9 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
         "common_research_filters":asdict(cfg),
         "common_exit_policy":asdict(exit_policy),
         "research_stop_override_bps":research_stop_bps,
+        "research_stop_grid_bps":list(grid),
+        "stop_grid":grid_results,
+        "scenario_count":len(labels)*max(1,len(grid)),
         "stop_gross_loss_margin_pct":format(exit_policy.stop_distance_bps * Decimal(margin.leverage_at_intent) / 100, "f"),
         "entry_quality_definition":"full_observed_path_excursions_and_later_bar_tp1_after_stop_before_tp1",
         "requested_margin_quote":format(margin.requested_margin_quote,"f"),
