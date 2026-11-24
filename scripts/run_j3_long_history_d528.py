@@ -66,6 +66,8 @@ def main(argv=None):
                     confirm_public_data_rights=True)
                 plan=freeze_cohort(snapshot)
                 save_plan(home,plan)
+                # Separate D451 client: preserve pacing across the transition.
+                time.sleep(2)
             else:
                 plan=load_plan(home)
             client=BoundedBybitPublicClient(allow_long_history_research=True)

@@ -6,6 +6,7 @@ Each 30-day shard uses the existing transactional store/backfill/checkpoint.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from decimal import Decimal, localcontext, Context
 from hashlib import sha256
@@ -308,7 +309,7 @@ def read_window(home, plan, symbol, interval, start, end):
         if os.name == "posix":
             os.close(_owner_file(home,path.name))
         until = min(end,shard_end)
-        with sqlite3.connect(path.resolve().as_uri()+"?mode=ro",uri=True) as db:
+        with closing(sqlite3.connect(path.resolve().as_uri()+"?mode=ro",uri=True)) as db:
             db.row_factory = sqlite3.Row
             rows = db.execute("SELECT * FROM candles WHERE exchange=? AND market=? AND symbol=? AND interval=? AND open_time_ms>=? AND open_time_ms<? ORDER BY open_time_ms",
                 (EXCHANGE,MARKET,symbol,interval,cursor,until)).fetchall()
