@@ -76,7 +76,7 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
     for row in doc["profiles"]:
         required = {"name","label","ema","sma","pivot","relative_strength_bps"}
         if (type(row) is not dict or not required <= set(row)
-                or set(row) - (required | {"bollinger", "rsi"})):
+                or set(row) - (required | {"bollinger", "rsi", "rsi_filter", "trigger"})):
             raise DataValidationError("D520 invalid profile fields")
         name = row["name"]
         label = row["label"]
@@ -97,19 +97,33 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
         rsi = row.get("rsi")
         if rsi is not None and (type(rsi) is not dict or set(rsi) != {"period","long_min","long_max"}):
             raise DataValidationError("D523 exact matrix asset RSI settings required")
+        gate_raw = row.get("rsi_filter")
+        trigger = row.get("trigger","indicator_combo")
+        if (type(trigger) is not str or trigger not in ("indicator_combo","breakout")
+                or (gate_raw is not None and (type(gate_raw) is not dict
+                    or set(gate_raw) != {"period","long_min","long_max"} or rsi is not None))):
+            raise DataValidationError("D526 exact separate RSI veto and base trigger required")
+        gate = parse_rsi({"enabled":True,**gate_raw}) if gate_raw is not None else None
         selection = IndicatorSelection(_slots(_periods(row["ema"])),
                                        _slots(_periods(row["sma"])),pivot,
                                        parse_bollinger({"enabled":True,**bb}) if bb is not None else None,
                                        parse_rsi({"enabled":True,**rsi}) if rsi is not None else None)
         threshold = _decimal(row["relative_strength_bps"])
-        if not selection.active or not 0 <= threshold <= 1000:
-            raise DataValidationError("D520 active indicators and RS threshold 0..1000 bps required")
-        fingerprint = (selection,threshold)
+        if trigger == "breakout":
+            if selection.active or gate is None:
+                raise DataValidationError("D526 breakout veto must not define indicator triggers")
+            selection = None
+        elif not selection.active:
+            raise DataValidationError("D520 active indicators required")
+        if not 0 <= threshold <= 1000:
+            raise DataValidationError("D520 RS threshold 0..1000 bps required")
+        fingerprint = (selection,threshold,gate)
         if fingerprint in fingerprints:
             raise DataValidationError("D520 duplicate hypothesis")
         fingerprints.add(fingerprint)
         seen.add(name)
-        profiles.append((name,selection,threshold))
+        profiles.append((name,selection,threshold) if gate is None else
+                        (name,selection,threshold,gate))
         labels[name] = label
     return ref,tuple(profiles),labels
 
@@ -145,6 +159,10 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
             rate = (format((Decimal(adverse["positive_count"])*100/complete)
                            .quantize(Decimal("0.01")),"f") if complete else None)
             net = adverse["conditional_before_funding_quote"]
+            veto = report.get("rsi_veto_counts",{}).get(name)
+            if veto is not None and (veto["checked"]-veto["rejected"]!=n
+                    or veto["covered_checked"]-veto["covered_rejected"]!=complete):
+                raise DataValidationError("D526 pure veto count inconsistent")
             rows.append({
                 "name":name,"label":label,"candidates":n,"complete":complete,
                 "coverage_pct":coverage,"long":directions["LONG"],"short":directions["SHORT"],
@@ -171,6 +189,7 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
                     .quantize(Decimal("0.000001")),"f") if common and net is not None else None),
                 "descriptive_sample_screen_met":eligible,
                 "entry_examples":report["batch_entry_examples"][name],
+                **({"rsi_veto":veto} if veto is not None else {}),
             })
     # Mean adverse result after estimated costs, not the optimistic scenario.
     # Show ALL rows, including those with no signals or insufficient coverage.

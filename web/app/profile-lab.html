@@ -178,7 +178,7 @@ a{color:var(--green)}:focus-visible{outline:3px solid #ffdfa2;outline-offset:3px
 <section class="card" aria-label="Pesquisa de combinações de indicadores">
 <h2>6. Pesquisa de combinações</h2>
 <p>Compare o conjunto original ou as combinações swing com RSI do ativo, mantendo a força relativa ao BTC. O stop de pesquisa é independente do perfil salvo. Sem baixar velas nem alterar a estratégia.</p>
-<div class="grid"><label>Matriz de pesquisa<select id="matrix-preset"><option value="original">Original (25 estratégias)</option><option value="swing">Swing / RSI (18 estratégias)</option></select></label>
+<div class="grid"><label>Matriz de pesquisa<select id="matrix-preset"><option value="original">Original (25 estratégias)</option><option value="swing">Swing / RSI no gatilho (18 estratégias)</option><option value="rsi_filter">RSI somente filtro (20 estratégias)</option></select></label>
 <label>Stop de pesquisa (bps; 100 = 1%)<input id="matrix-stop" type="number" min="1" max="1000" step="1" placeholder="Usar perfil salvo"></label></div>
 <label class="check"><input type="checkbox" id="matrix-grid-enabled"> Comparar vários stops na mesma bateria</label>
 <label>Stops em bps (2 a 8 valores crescentes separados por espaço)<input id="matrix-grid" type="text" inputmode="text" value="50 75 100 125 150" disabled></label>
