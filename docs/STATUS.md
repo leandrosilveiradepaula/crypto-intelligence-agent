@@ -1,5 +1,23 @@
 # STATUS — Crypto Intelligence Agent
 
+## D519 — resultados reais da pesquisa e publicação agrupada (24/11/2026)
+
+**D518 integrado:** squash `549742a5f101359b26c18eee4a522f125e7b511e`, árvore idêntica ao head `198057fa9a49b10894a3e321d6e0df32918cd374`; CI [Python/docs/Windows](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45463718726) e [QA geral mobile](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45463718338) SUCCESS.
+
+**D518 executado pelo proprietário na VPS:** terminal `=== D518 RESEARCH PASS ===` compartilhado em 24/11/2026. D516 recuperou 122 barras para 56/56 símbolos (112 GETs, 0 omitidos, retrieved_at_ms=1795547531711). D518 recuperou 15.396 candles de 5m para 55/55 símbolos (55 GETs, retrieved_at_ms=1795547640289). 26 arquivos originais, 24 pares horários, 1.176 ativos-hora elegíveis, 0 exclusões warmup/conflito; 62 barras necessárias para EMA 10/30/60. Sem J1 tocada ou ordens reais. Amostra retrospectiva, não observação prospectiva.
+
+**Replay 4h, 5m**, margem 1 USDT, 50x, stop 50 bps, alvos 100/200 bps, duas parciais de 50% da posição inicial e runner 0, perfil breakout vigente não alterado. Resultados condicionais pré-funding:
+| Regra | Hipóteses | Caminhos completos | Adverso USDT | Favorável USDT | Casos sensíveis 1h → 5m |
+|---|---:|---:|---:|---:|---:|
+| Breakout | 167 | 119 | -6.3228951773 | -5.1982326773 | 18 → 3 |
+| EMA 10/30/60 | 11 | 8 | -2.7209 | -2.3462375 | 2 → 1 |
+| Referência LONG | 1176 | 856 | -191.1249097611 | -186.6289597611 | 79 → 12 |
+
+Breakout adverso: bruto +4.3750672622, custos 10.6979624395 USDT; 44 positivos/75 negativos. Referência horária da mesma amostra: -9.1991326773 / +1.9291298227 USDT. Refinamento 5m eliminou o resultado positivo do cenário favorável horário. Soma de hipóteses independentes, não carteira/execução/resultado real. EMA com 8 caminhos não permite conclusão robusta. Sem funding, liquidação, trailing ou OOS validados. Coleta e replay aceitos funcionalmente pelo recibo; sem afirmar rentabilidade.
+
+**D519 preparação:** motor/painel D515 ativos, J1 ativo, checkout D515 em uso e dois drop-ins D507/D515 preservados, conforme leitura MCP. Novo roteiro fixa revisão aprovada D518, reusa suplementos sem rede, confirma zero abertas, exige autorização terminal, valida a rota real 5m após publicar o painel e antes de iniciar motor. Mantém perfil/diário e overrides anteriores; rollback remove só D519. Não exige resultado positivo nem contagem fixa (janela histórica móvel). Sem release executado. Branch `chatgpt/paper-lab-release-d519`; validação e merge do roteiro pendentes. Próximo: aprovação do roteiro e cutover PAPER único; depois funding/mark/risco de liquidação e acesso móvel privado. Sem gasto adicional.
+
+
 ## D518 — resolução de cinco minutos para saídas (24/11/2026)
 
 **D517 integrado:** squash `4d29deb2f3ee551d27d7877a7d857152b2b1fa4c`; head `0bea42b3f46ba9410c16460c4cf75439baa1af6c`, CI Linux/Windows/docs [45461430184](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45461430184) e QA mobile geral [45461430589](https://github.com/leandrosilveiradepaula/crypto-intelligence-agent/actions/runs/45461430589) SUCCESS. D516 e D517 ainda não publicados/coletados na VPS; D515 continua instalado.
