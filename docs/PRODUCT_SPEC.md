@@ -1,5 +1,15 @@
 # Especificação do produto
 
+## D527 — parâmetros de banca e stops ampliados (24/11/2026)
+
+PO confirmou banca de referência 200 USDT, margem de 1–2 USDT por posição, RSI como confirmação após o sinal, stops de pesquisa incluindo 2% e 2,5%. Valores editáveis, nenhuma alteração do perfil ativo. D526 integrado em `b25175f88e562642830a5c1413ff6690523abca2` com CI 45486116138/45486115445 SUCCESS. D527: grade 50/75/100/125/150/200/250 bps, 20 estratégias = 140 cenários por configuração de sizing; CLI/API/painel com overrides de margem/alavancagem exclusivamente de pesquisa e risco bruto normalizado à banca de referência. A 50x, 200/250 bps são contrafactuais que atingem/excedem a margem inicial; sem modelo de liquidação ou carteira. Ver `docs/J3_RESEARCH_SIZING_D527.md`. Banca não é saldo efetivo nem retorno composto; sem ordens reais ou J1.
+
+
+## D526 — RSI como veto separado do gatilho (24/11/2026)
+
+D524 revelou que o RSI integrado na transição de confluência multiplicou sinais e todos os 40 cenários com RSI avaliáveis foram negativos. Acrescentar hipótese separada de pesquisa, sem alterar perfil PAPER: RSI de Wilder somente após gatilho original e FR BTC aprovarem, podendo apenas vetar a entrada no mesmo instante. Controles pareados, 20 estratégias com rompimento e outras combinações, faixas de RSI configuráveis, contagens de sinais originais/vetados e respectivas coberturas, mesma grade de stops. Ver `docs/J3_RSI_VETO_D526.md`. Código D526 na branch `chatgpt/j3-rsi-veto-d526` (commit `a1662c5fd6ffc5fe73a50a194dfe7b8f96c0f5ea`), revisão/CI e execução real pendentes. A regra de confluência D523 permanece como hipótese distinta. Sem ordens, mudança J1, custo ou publicação; não atrasar a validação do instalador D525 por resultados desta nova hipótese.
+
+
 ## D524 — comparação simultânea de stops (24/11/2026)
 
 A bateria swing D523 pode executar múltiplos stops em uma passagem de sinais e caminhos 5m, sem recalcular o motor para cada stop. Grid de 2..8 valores inteiros crescentes, editáveis; exemplos 50/75/100/125/150 bps. 18 estratégias × 5 stops = 90 cenários. CLI e painel/API privados reutilizam os dados e o perfil lido, sem gravá-lo, com a mesma cobertura e indicadores de qualidade D523. Não escolher vencedor nem alterar operação. Limites financeiros e temporais de D523 mantidos. `docs/J3_STOP_GRID_D524.md`.

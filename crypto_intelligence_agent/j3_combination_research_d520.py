@@ -76,7 +76,7 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
     for row in doc["profiles"]:
         required = {"name","label","ema","sma","pivot","relative_strength_bps"}
         if (type(row) is not dict or not required <= set(row)
-                or set(row) - (required | {"bollinger", "rsi"})):
+                or set(row) - (required | {"bollinger", "rsi", "rsi_filter", "trigger"})):
             raise DataValidationError("D520 invalid profile fields")
         name = row["name"]
         label = row["label"]
@@ -97,19 +97,33 @@ def parse_matrix(raw: bytes) -> tuple[tuple[int, int, int], tuple, dict]:
         rsi = row.get("rsi")
         if rsi is not None and (type(rsi) is not dict or set(rsi) != {"period","long_min","long_max"}):
             raise DataValidationError("D523 exact matrix asset RSI settings required")
+        gate_raw = row.get("rsi_filter")
+        trigger = row.get("trigger","indicator_combo")
+        if (type(trigger) is not str or trigger not in ("indicator_combo","breakout")
+                or (gate_raw is not None and (type(gate_raw) is not dict
+                    or set(gate_raw) != {"period","long_min","long_max"} or rsi is not None))):
+            raise DataValidationError("D526 exact separate RSI veto and base trigger required")
+        gate = parse_rsi({"enabled":True,**gate_raw}) if gate_raw is not None else None
         selection = IndicatorSelection(_slots(_periods(row["ema"])),
                                        _slots(_periods(row["sma"])),pivot,
                                        parse_bollinger({"enabled":True,**bb}) if bb is not None else None,
                                        parse_rsi({"enabled":True,**rsi}) if rsi is not None else None)
         threshold = _decimal(row["relative_strength_bps"])
-        if not selection.active or not 0 <= threshold <= 1000:
-            raise DataValidationError("D520 active indicators and RS threshold 0..1000 bps required")
-        fingerprint = (selection,threshold)
+        if trigger == "breakout":
+            if selection.active or gate is None:
+                raise DataValidationError("D526 breakout veto must not define indicator triggers")
+            selection = None
+        elif not selection.active:
+            raise DataValidationError("D520 active indicators required")
+        if not 0 <= threshold <= 1000:
+            raise DataValidationError("D520 RS threshold 0..1000 bps required")
+        fingerprint = (selection,threshold,gate)
         if fingerprint in fingerprints:
             raise DataValidationError("D520 duplicate hypothesis")
         fingerprints.add(fingerprint)
         seen.add(name)
-        profiles.append((name,selection,threshold))
+        profiles.append((name,selection,threshold) if gate is None else
+                        (name,selection,threshold,gate))
         labels[name] = label
     return ref,tuple(profiles),labels
 
@@ -145,6 +159,10 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
             rate = (format((Decimal(adverse["positive_count"])*100/complete)
                            .quantize(Decimal("0.01")),"f") if complete else None)
             net = adverse["conditional_before_funding_quote"]
+            veto = report.get("rsi_veto_counts",{}).get(name)
+            if veto is not None and (veto["checked"]-veto["rejected"]!=n
+                    or veto["covered_checked"]-veto["covered_rejected"]!=complete):
+                raise DataValidationError("D526 pure veto count inconsistent")
             rows.append({
                 "name":name,"label":label,"candidates":n,"complete":complete,
                 "coverage_pct":coverage,"long":directions["LONG"],"short":directions["SHORT"],
@@ -171,6 +189,7 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
                     .quantize(Decimal("0.000001")),"f") if common and net is not None else None),
                 "descriptive_sample_screen_met":eligible,
                 "entry_examples":report["batch_entry_examples"][name],
+                **({"rsi_veto":veto} if veto is not None else {}),
             })
     # Mean adverse result after estimated costs, not the optimistic scenario.
     # Show ALL rows, including those with no signals or insufficient coverage.
@@ -197,14 +216,63 @@ def parse_stop_grid(value):
     return tuple(value)
 
 
+def parse_research_sizing(*, leverage=None, margin_quote=None, bankroll_quote=None):
+    """Research-only overrides. No account balance or venue margin is read."""
+    if leverage is not None and (type(leverage) is not int or not 1 <= leverage <= 200):
+        raise DataValidationError("D527 research leverage must be an integer 1..200")
+    def amount(value):
+        if value is None:
+            return None
+        if type(value) is not str or re.fullmatch(r"[0-9]{1,7}(?:[.][0-9]{1,6})?", value) is None:
+            raise DataValidationError("D527 positive decimal string required")
+        result = Decimal(value)
+        if not Decimal("0.000001") <= result <= 1_000_000:
+            raise DataValidationError("D527 research amount out of bounds")
+        return result
+    margin, bankroll = amount(margin_quote), amount(bankroll_quote)
+    if margin is not None and bankroll is not None and margin > bankroll:
+        raise DataValidationError("D527 requested margin exceeds reference bankroll")
+    return leverage, margin, bankroll
+
+
+def full_position_stop_risk(distance, margin, bankroll):
+    """Linear price move on full initial notional, before costs, not liquidation.
+
+    Do not use the hypothetical stop loss as an account-level maximum loss.
+    Partial exits, gaps, margin mode and venue maintenance change actual risk.
+    """
+    with localcontext() as ctx:
+        ctx.prec = 50
+        loss = margin.entry_notional_quote * Decimal(distance) / 10000
+        margin_pct = Decimal(distance) * margin.leverage_at_intent / 100
+        return {
+            "gross_stop_loss_quote": format(loss, "f"),
+            "gross_loss_margin_pct": format(margin_pct, "f"),
+            "gross_stop_reaches_initial_margin": margin_pct >= 100,
+            "gross_stop_loss_pct_of_reference_bankroll": (
+                format((loss*100/bankroll).quantize(Decimal("0.000001")), "f")
+                if bankroll is not None else None),
+        }
+
+
 def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
                as_of_ms: int, horizon_hours: int, research_stop_bps: int | None = None,
                research_stop_grid_bps: tuple[int, ...] | None = None,
+               research_leverage: int | None = None,
+               research_margin_quote: str | None = None,
+               research_bankroll_quote: str | None = None,
                min_complete=20,
                min_coverage_bps=7000) -> dict:
     """Read existing archives once, evaluate every hypothesis in one pass. No GET or writes."""
     ref,profiles,labels = parse_matrix(matrix_raw)
     grid = parse_stop_grid(research_stop_grid_bps)
+    lev_override, margin_override, bankroll = parse_research_sizing(
+        leverage=research_leverage, margin_quote=research_margin_quote,
+        bankroll_quote=research_bankroll_quote)
+    lev = owner_policy.leverage.for_new_positions if lev_override is None else lev_override
+    margin_quote = owner_policy.margin_quote if margin_override is None else margin_override
+    if bankroll is not None and margin_quote > bankroll:
+        raise DataValidationError("D527 effective margin exceeds reference bankroll")
     if grid and research_stop_bps is not None:
         raise DataValidationError("D524 select a stop or a grid, not both")
     archives = read_comparison_archives(directory,now_ms=as_of_ms)
@@ -220,9 +288,8 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
     base_stop = grid[0] if grid else research_stop_bps
     exit_policy = (owner_policy.exits if base_stop is None else
                    replace(owner_policy.exits, stop_distance_bps=Decimal(base_stop)))
-    notional = owner_policy.margin_quote*Decimal(owner_policy.leverage.for_new_positions)
-    margin = SyntheticMarginBasis(owner_policy.margin_quote,
-        owner_policy.leverage.for_new_positions,notional,"SYNTHETIC_USDT")
+    notional = margin_quote * Decimal(lev)
+    margin = SyntheticMarginBasis(margin_quote, lev, notional, "SYNTHETIC_USDT")
     report = compare_archived_strategies(
         archives,config=cfg,ema_periods=ref,reference_notional=notional,
         entry_fee_bps=exit_policy.entry_fee_bps,exit_fee_bps=exit_policy.exit_fee_bps,
@@ -250,7 +317,7 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
                     or {r["name"]:(r["candidates"],r["complete"]) for r in variant["rows"]} != baseline):
                 raise DataValidationError("D524 research stops must share identical signal counts and coverage")
             grid_results.append({"stop_bps":distance,
-                "gross_loss_margin_pct":format(Decimal(distance)*Decimal(margin.leverage_at_intent)/100,"f"),
+                **full_position_stop_risk(distance, margin, bankroll),
                 "rows":variant["rows"]})
     manifest = {
         "archive_digests":[[h.window_end_ms,h.digest_sha256] for h in archives],
@@ -274,6 +341,14 @@ def run_matrix(*, directory: Path, owner_policy, matrix_raw: bytes,
         "stop_grid":grid_results,
         "scenario_count":len(labels)*max(1,len(grid)),
         "stop_gross_loss_margin_pct":format(exit_policy.stop_distance_bps * Decimal(margin.leverage_at_intent) / 100, "f"),
+        "stop_risk":full_position_stop_risk(exit_policy.stop_distance_bps, margin, bankroll),
+        "research_sizing_overrides":{"leverage":research_leverage,
+            "margin_quote":research_margin_quote,"bankroll_quote":research_bankroll_quote},
+        "reference_bankroll_quote":format(bankroll,"f") if bankroll is not None else None,
+        "margin_pct_of_reference_bankroll":(
+            format((margin.requested_margin_quote*100/bankroll).quantize(Decimal("0.000001")),"f")
+            if bankroll is not None else None),
+        "portfolio_simulated":False,
         "entry_quality_definition":"full_observed_path_excursions_and_later_bar_tp1_after_stop_before_tp1",
         "requested_margin_quote":format(margin.requested_margin_quote,"f"),
         "reference_notional_quote":format(notional,"f"),

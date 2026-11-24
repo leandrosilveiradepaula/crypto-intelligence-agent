@@ -1,10 +1,8 @@
 # Decisões do produto
 
-## D525 — publicação agrupada e aceite real D524 (24/11/2026)
+## D527 — parâmetros de banca e stops ampliados (24/11/2026)
 
-**D524 aceito e integrado:** main `a602e9e706bfea8b19abd99d825dc3e4ec45e9e5` árvore idêntica a `3c2753433b1cb1df5877869ed19273622c9c8010`, CI 45483302056/45483302050 SUCCESS, revisão PR #750. Recibo owner D524 RESEARCH PASS: 90 cenários, 80 avaliáveis, 18 positivos, 62 negativos; 26 arquivos, 1176 elegíveis, 856 cobertos, 4h/5m, 50x. Breakout 119 caminhos completos: stop 0,5% para 1,5%, PnL adverso -6,322895 para +2,052921 USDT; 50 de 75 stops antes de TP1 tocaram TP1 depois. Todas as 40 variantes RSI avaliáveis negativas. RSI D523 é parte do gatilho, não filtro puro; pesquisar veto pareado e retomada de tendência. Sem vencedor, sem validação funding/liquidação/OOS. Não repetir D524. Evidência e limites em `docs/PAPER_RELEASE_D525.md`.
-
-MCP confirmou serviços ativos ainda na versão D515 com drop-ins 90/91 e sessão PAPER 1 encerrada, 0 abertas, sem ordens reais. D525 prepara um único cutover do produto D524 aprovado, reutilizando o contrato D519, sem repetir pesquisa, com rollback, lock compartilhado, zero abertas revalidado e gate humano interativo. Validação do instalador ainda pendente, nenhuma publicação realizada. Branch `chatgpt/paper-release-d525`, código `c55703c007ca2e31243f7fc08be48027ffea062d`. Próxima ação: validar instalador, autorização explícita de cutover e verificar POST/GET de pesquisa pelo MCP após publicação. Em paralelo pesquisar RSI apenas como veto, pullback e histórico de vários dias. Não alterar perfil, J1 ou custo.
+PO confirmou banca de referência 200 USDT, margem de 1–2 USDT por posição, RSI como confirmação após o sinal, stops de pesquisa incluindo 2% e 2,5%. Valores editáveis, nenhuma alteração do perfil ativo. D526 integrado em `b25175f88e562642830a5c1413ff6690523abca2` com CI 45486116138/45486115445 SUCCESS. D527: grade 50/75/100/125/150/200/250 bps, 20 estratégias = 140 cenários por configuração de sizing; CLI/API/painel com overrides de margem/alavancagem exclusivamente de pesquisa e risco bruto normalizado à banca de referência. A 50x, 200/250 bps são contrafactuais que atingem/excedem a margem inicial; sem modelo de liquidação ou carteira. Ver `docs/J3_RESEARCH_SIZING_D527.md`. Banca não é saldo efetivo nem retorno composto; sem ordens reais ou J1.
 
 
 ## D524 — comparação simultânea de stops (24/11/2026)

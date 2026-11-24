@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# D525: one owner-approved PAPER-only upgrade from D515 to the tested D524 product.
+# D525: one owner-approved PAPER-only upgrade from D515 to the consolidated D527 product.
 # Product revision is immutable; this installer is reviewed separately from the product.
 # No J1, policy or journal replacement, private exchange credentials, or real orders.
 set -Eeuo pipefail
@@ -8,7 +8,7 @@ umask 077
 APPROVED_SHA="${1:-}"
 EXPECTED_HOST="${CIA_D525_EXPECT_HOST:-}"
 OLD_SHA="4c3b123785318249c20b343ceb721dbf1a431f73"
-PRODUCT_SHA="a602e9e706bfea8b19abd99d825dc3e4ec45e9e5"
+PRODUCT_SHA="b8a395ad4076f3eefb9731d78116ec791c508a1c"
 OWNER="cia-probe"
 BASE="/home/cia-probe/agent"
 PY="$BASE/ws-venv/bin/python"
@@ -264,7 +264,9 @@ try:
             and b"ci-pivot-enabled" in html and b"compare-history" in html
             and b"compare-retro" in html and b"compare-resolution" in html
             and b"compare-horizon" in html and b"ci-rsi-enabled" in html
-            and b"matrix-start" in html and b"matrix-grid-enabled" in html)
+            and b"matrix-start" in html and b"matrix-grid-enabled" in html
+            and b"rsi_filter" in html and b"matrix-bankroll" in html
+            and b"matrix-margin" in html and b"matrix-leverage" in html)
 except (OSError, ValueError, KeyError, TypeError, RuntimeError):
     raise SystemExit(1)
 print("D525_PANEL_ENDPOINTS=PASS")

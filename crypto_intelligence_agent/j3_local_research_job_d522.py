@@ -10,13 +10,14 @@ import threading
 import time
 from uuid import uuid4
 
-from .j3_combination_research_d520 import MAX_MATRIX_BYTES, REPORT_SCHEMA, parse_matrix, parse_stop_grid
+from .j3_combination_research_d520 import MAX_MATRIX_BYTES, REPORT_SCHEMA, parse_matrix, parse_stop_grid, parse_research_sizing
 from .market_data import DataValidationError
 from .paper_profile_d487 import snapshot
 
 ROOT=Path(__file__).resolve().parents[1]
 DEFAULT_MATRIX=ROOT/"docs/examples/d520_indicator_research_matrix.json"
 SWING_MATRIX=ROOT/"docs/examples/d523_swing_rsi_research_matrix.json"
+RSI_FILTER_MATRIX=ROOT/"docs/examples/d526_rsi_filter_research_matrix.json"
 JOB_SCHEMA="d522-owner-local-research-job-v1"
 MAX_REPORT_BYTES=512_000
 TIMEOUT_SECONDS=300
@@ -49,16 +50,19 @@ class ResearchJob:
 
     def start(self, data):
         if (type(data) is not dict or not {"horizon_hours"}<=set(data)
-                or set(data)-{"horizon_hours","as_of_ms","matrix","preset","stop_bps","stop_grid_bps"}):
+                or set(data)-{"horizon_hours","as_of_ms","matrix","preset","stop_bps","stop_grid_bps","research_leverage","research_margin_quote","research_bankroll_quote"}):
             raise DataValidationError("D522 invalid job request")
         horizon=data["horizon_hours"]
         cutoff=data.get("as_of_ms")
         preset=data.get("preset","original")
         stop=data.get("stop_bps")
         grid=parse_stop_grid(data.get("stop_grid_bps"))
+        sizing={"leverage":data.get("research_leverage"),"margin_quote":data.get("research_margin_quote"),
+                "bankroll_quote":data.get("research_bankroll_quote")}
+        parse_research_sizing(**sizing)
         if grid and stop is not None:
             raise DataValidationError("D524 select a single stop or a grid")
-        if (type(preset) is not str or preset not in ("original","swing")
+        if (type(preset) is not str or preset not in ("original","swing","rsi_filter")
                 or ("preset" in data and data.get("matrix") is not None)
                 or (stop is not None and (type(stop) is not int or not 1 <= stop <= 1000))):
             raise DataValidationError("D523 invalid research preset or stop")
@@ -70,7 +74,9 @@ class ResearchJob:
             if self._state["status"]=="running":
                 raise ResearchBusy("D522 one research job at a time")
             if data.get("matrix") is None:
-                with (SWING_MATRIX if preset == "swing" else DEFAULT_MATRIX).open("rb") as fp:
+                preset_path={"original":DEFAULT_MATRIX,"swing":SWING_MATRIX,
+                             "rsi_filter":RSI_FILTER_MATRIX}[preset]
+                with preset_path.open("rb") as fp:
                     raw=fp.read(MAX_MATRIX_BYTES+1)
             else:
                 raw=json.dumps(data["matrix"],ensure_ascii=True,
@@ -81,7 +87,7 @@ class ResearchJob:
             fields={"job_id":job_id,"horizon_hours":horizon,"requested_as_of_ms":cutoff,
                     "profile_revision":revision,"matrix_sha256":sha256(raw).hexdigest(),
                     "strategy_count":len(profiles)+2,"requested_stop_bps":stop,
-                    "requested_stop_grid_bps":list(grid),
+                    "requested_stop_grid_bps":list(grid),"requested_sizing":sizing,
                     "scenario_count":(len(profiles)+2)*max(1,len(grid))}
             self._state=self._status("running",**fields)
             # No shell, arbitrary path, credentials, network flag or user code.
@@ -93,6 +99,9 @@ class ResearchJob:
                 cmd.extend(["--research-stop-bps",str(stop)])
             if grid:
                 cmd.extend(["--research-stop-grid-bps",*map(str,grid)])
+            for key, value in sizing.items():
+                if value is not None:
+                    cmd.extend(["--research-"+key.replace("_","-"),str(value)])
             if cutoff is None:
                 cmd.append("--latest-saved")
             else:
@@ -129,6 +138,12 @@ class ResearchJob:
                     or len(report["rows"])!=fields["strategy_count"]
                     or any(report.get(flag) is not False for flag in flags)):
                 raise DataValidationError("D522 report contract invalid")
+            sizing=fields.get("requested_sizing",{})
+            if any(v is not None for v in sizing.values()):
+                if (report.get("research_sizing_overrides")!=sizing
+                        or report.get("portfolio_simulated") is not False
+                        or (sizing.get("leverage") is not None and report.get("leverage_at_intent")!=sizing["leverage"])):
+                    raise DataValidationError("D527 worker sizing mismatch")
             expected_grid=fields.get("requested_stop_grid_bps",[])
             if report.get("research_stop_grid_bps",[])!=expected_grid:
                 raise DataValidationError("D524 worker grid mismatch")
