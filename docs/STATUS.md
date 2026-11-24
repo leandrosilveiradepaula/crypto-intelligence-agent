@@ -1,5 +1,10 @@
 # STATUS — Crypto Intelligence Agent
 
+## Prioridade vigente — pesquisa estratégica em 50x (24/11/2026)
+
+Decisão expressa do PO: manter 50x nesta etapa; adiar integralmente a frente de banca, margem e dimensionamento. D527 permanece no rascunho #753 (head b8a395ad4076f3eefb9731d78116ec791c508a1c) sem integrar nem publicar. D526 integrado em `b25175f88e562642830a5c1413ff6690523abca2`, CI 45486116138/45486115445 SUCCESS, RSI apenas como confirmação/veto do sinal original. A grade existente suporta 20 estratégias × 7 stops (50, 75, 100, 125, 150, 200, 250 bps) = 140 cenários, com referência 50x. Não criar outro motor ou repetir D524. Comparar controles e vetos, qualidade das entradas, stops antes TP1, recuperação posterior, MAE/MFE e resultado líquido pré-funding. Depois estudar pullback/retomada, compressão e amostras/horizontes 24/48/72h. Stops 200/250 bps são contrafactuais sem liquidação modelada, não aprovação financeira. Não alterar perfil ativo, J1, serviços ou ordens reais. D525 repinado exclusivamente ao D526, não D527; exige CI, revisão e gate explícito de publicação. Endpoint privado retorna 404 e execução owner via MCP indisponível; pesquisa real D526 ainda não executada. A próxima ação concreta é executar a bateria isolada D526 no histórico existente com os sete stops e devolver resultados, sem esperar release. Ver docs/J3_RSI_VETO_D526.md e docs/PAPER_RELEASE_D525.md.
+
+
 ## D524 — bateria conjunta de stops (24/11/2026)
 
 **D523 integrado:** squash `d4f9514a955f43541dbb019e4860659e99ea389d`, árvore idêntica ao head `7efbc72bdb24d6e4a3cbb929f7d2a9264f89d25e`; CI Linux/Windows/docs 45482153258 e QA móvel geral 45482153675 SUCCESS. Revisão técnica registrada na PR #749. Nenhuma publicação posterior confirmada.
