@@ -1,5 +1,14 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D507 — bloqueio resolvível por gate humano de cutover PAPER (24/11/2026)
+
+**Estado live relido**: `main=056845fdc46b8c2d1b08acd86be75e59dd368bac` no início desta tarefa, sem PR aberta; D498 motor/painel ativos e J1 N50 timer ativo, PAPER 0 OPEN/1 CLOSED ARBUSDT STOP, zero ordens reais, perfil atual breakout EMA2/1 USDT/50x/50-50 alvos. `/api/paper-history` = HTTP404 no painel antigo. O MCP conectado permite leitura, mas não acesso owner às pastas de código para instalar versão. `NRestarts=28` no motor às 12:07:43 UTC de 24/11, preciso distinguir cycles normais vs falhas ao ler logs; não afirmar indisponibilidade sem evidência.
+
+**Entregável em GitHub**: branch `codex/paper-owner-cutover-d507`, script opt-in `deploy/vps/paper_research/owner_paper_cutover_d507_once.sh` e teste estático/sintático. O script pede autorização explícita para alterar os dois serviços PAPER. Código fixado no SHA de produto D506 `056845fdc46b8c2d1b08acd86be75e59dd368bac`. Preflight owner read-only D505 e recusa se posição aberta, plano de rollback, J1 imutável, zero ordens reais. EVIDÊNCIA DO RELEASE NÃO EXISTE até saída do script e leitura MCP posterior; não declarar instalado.
+
+**Próxima ação**: após CI e merge, fornecer UMA instrução de terminal root ao Product Owner, com URL e hash exatos da versão do script, para executar preflight sem mudança e, se aceitar gate prompt `AUTORIZO CUTOVER PAPER`, fazer o cutover com rollback. Depois conferir imediatamente status do operador, histórico 200, SHA, posição e unidades pelo MCP e registrar evidências em GitHub. Sem gasto, migrations ou negociação.
+
+
 ## D506 — checkpoint terminal desta sessão: código aprovado, operador VPS sem cutover (23/11/2026 UTC)
 
 **GitHub**: PR #736 MERGED, commit de produto `e36037a72c2d58f58036a8be1f06756a11efade6`, head de revisão/CI `62203404cebf10b65ba8e9833909b0e3cd64b001`. Runs CI: 45281771023 Linux/docs 3.594 PASS, Windows 3.594 PASS/669 skipped de caso POSIX; 45281771044 browser mobile SUCCESS; base SHA exata `9ca33f8c19d28d5002890551e190186cd7c4c806` conferida antes de merge. Sem PR paralela e sem release VPS. D505 preflight owner-only e pin de posição antiga aberta já constam em main.
