@@ -205,14 +205,17 @@ def summarize_matrix(report, labels, *, min_complete=20, min_coverage_bps=7000):
             "winner_selected":False,"rows":rows}
 
 
-def parse_stop_grid(value):
-    """Optional grid: two to eight strictly increasing integer price bps."""
+def parse_stop_grid(value, *, allow_single=False):
+    """Optional ordered grid; only long replay opts into a single stop."""
+    if type(allow_single) is not bool:
+        raise DataValidationError("D535 explicit single-stop option required")
     if value is None:
         return ()
-    if (type(value) not in (tuple, list) or not 2 <= len(value) <= 8
+    minimum = 1 if allow_single else 2
+    if (type(value) not in (tuple, list) or not minimum <= len(value) <= 8
             or any(type(x) is not int or not 1 <= x <= 1000 for x in value)
             or any(a >= b for a, b in zip(value, value[1:]))):
-        raise DataValidationError("D524 use 2..8 distinct ascending research stops (1..1000 bps)")
+        raise DataValidationError(f"D524 use {minimum}..8 distinct ascending research stops (1..1000 bps)")
     return tuple(value)
 
 
