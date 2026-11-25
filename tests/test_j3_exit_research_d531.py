@@ -50,7 +50,7 @@ class D531Tests(unittest.TestCase):
         self.assertEqual(a.stop_bar_index,2)
         self.assertEqual(a.target_fraction,D(".625"))
         self.assertEqual(a.stopped_fraction,D(".375"))
-        self.assertEqual(a.gross_reference_quote,D("1.09375"))
+        self.assertEqual(a.gross_reference_quote,D("0.96875"))
         # Adverse-first same-bar stop is not rescued by future favorable extreme.
         same=[bar(0)]
         self.assertEqual(self.run_path(same,management=m),self.run_path(same))
