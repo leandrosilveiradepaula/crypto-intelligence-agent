@@ -31,6 +31,7 @@ def main(argv=None):
     p.add_argument("--separate-open-mark",action="store_true")
     p.add_argument("--preserve-recent-90d",action="store_true")
     p.add_argument("--target-diagnostics",action="store_true")
+    p.add_argument("--observed-funding",action="store_true",help="Conditional on observed D536 rates only; development; no liquidation")
     p.add_argument("--days",type=int,default=90)
     p.add_argument("--partition",choices=("development","validation","holdout"),default="development")
     p.add_argument("--horizon-hours",type=int,nargs="+",default=DEFAULT_HORIZONS)
@@ -76,6 +77,7 @@ def main(argv=None):
                 target_diagnostics=a.target_diagnostics,
                 separate_open_mark=a.separate_open_mark,
                 preserve_recent_90d=a.preserve_recent_90d,
+                observed_funding=a.observed_funding,
                 progress=lambda n,total:print("D529 symbols processed: %d/%d"%(n,total),
                                              file=sys.stderr,flush=True))
         stage="profile_final_check"
