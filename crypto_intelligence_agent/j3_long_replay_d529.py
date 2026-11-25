@@ -135,7 +135,7 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             or tuple(sorted(set(horizons)))!=tuple(horizons)
             or owner_policy.leverage.for_new_positions!=50):
         raise DataValidationError("D529 explicit partition, resolution, ordered horizons and 50x required")
-    grid=parse_stop_grid(stops)
+    grid=parse_stop_grid(stops,allow_single=True)
     if not grid:
         raise DataValidationError("D529 explicit stop grid required")
     horizons=tuple(horizons)

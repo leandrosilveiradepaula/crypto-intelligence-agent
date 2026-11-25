@@ -20,6 +20,12 @@ class StopGridTests(unittest.TestCase):
     def test_strict_bounded_grid(self):
         self.assertEqual(parse_stop_grid([50,75,100,125,150]),(50,75,100,125,150))
         self.assertEqual(parse_stop_grid(None),())
+        self.assertEqual(parse_stop_grid([150],allow_single=True),(150,))
+        for value in ([],[True],[0],[1001],["150"],[1.5],[50,50],[150,100]):
+            with self.subTest(single=value),self.assertRaises(DataValidationError):
+                parse_stop_grid(value,allow_single=True)
+        with self.assertRaises(DataValidationError):
+            parse_stop_grid([150],allow_single=1)
         for value in ([],[50],[50,50],[100,50],[True,100],[0,100],[50,1001],list(range(1,10))):
             with self.subTest(value=value),self.assertRaises(DataValidationError):
                 parse_stop_grid(value)

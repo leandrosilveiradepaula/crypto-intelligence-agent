@@ -39,16 +39,20 @@ def main(argv=None):
     p.add_argument("--confirm-frozen-hypotheses",action="store_true")
     p.add_argument("--low-priority",action="store_true")
     a=p.parse_args(argv)
+    stage="setup"
     try:
         if a.low_priority and os.name=="posix":
             os.nice(10)
+        stage="history_plan"
         plan=load_plan(a.directory)
         if plan.source_mode!="public_rest_observed_unverified":
             raise ValueError("D529 real research requires real retrospective plan")
+        stage="profile_read"
         rev=snapshot(a.policy_file)["revision"]
         policy=read_owner_paper_policy(a.policy_file)
         if snapshot(a.policy_file)["revision"]!=rev:
             raise ValueError("profile changed during read")
+        stage="matrix_read"
         with a.matrix_file.open("rb") as f:
             matrix=f.read(MAX_MATRIX_BYTES+1)
         extra=None
@@ -59,7 +63,9 @@ def main(argv=None):
         if a.exit_experiments_file is not None:
             with a.exit_experiments_file.open("rb") as f:
                 exit_extra=f.read(MAX_EXIT_BYTES+1)
+        stage="history_lock"
         with owner_lock(a.directory):
+            stage="replay"
             report=run_long_replay(home=a.directory,plan=plan,owner_policy=policy,
                 matrix_raw=matrix,days=a.days,partition=a.partition,
                 horizons=a.horizon_hours,stops=a.stop_grid_bps,resolution=a.resolution,
@@ -72,13 +78,16 @@ def main(argv=None):
                 preserve_recent_90d=a.preserve_recent_90d,
                 progress=lambda n,total:print("D529 symbols processed: %d/%d"%(n,total),
                                              file=sys.stderr,flush=True))
+        stage="profile_final_check"
         if snapshot(a.policy_file)["revision"]!=rev:
             raise ValueError("profile changed during replay")
         report["profile_revision"]=rev
+        stage="report_serialization"
         print(json.dumps(report,default=str,sort_keys=True,separators=(",",":")))
         return 0 if report["status"]=="exploratory_replay_completed" else 2
     except (MarketDataError,OSError,TypeError,ValueError,ArithmeticError) as exc:
         print(json.dumps({"status":"d529_replay_unavailable","error_type":type(exc).__name__,
+                          "failure_stage":stage,
                           "orders_sent":False,"profile_modified":False}))
         return 1
 
