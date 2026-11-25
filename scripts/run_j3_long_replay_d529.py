@@ -27,6 +27,8 @@ def main(argv=None):
     p.add_argument("--entry-experiments-file",type=Path)
     p.add_argument("--exit-experiments-file",type=Path)
     p.add_argument("--strategy-names",nargs="+")
+    p.add_argument("--research-max-horizon-hours",type=int,choices=(72,168),default=72)
+    p.add_argument("--target-diagnostics",action="store_true")
     p.add_argument("--days",type=int,default=90)
     p.add_argument("--partition",choices=("development","validation","holdout"),default="development")
     p.add_argument("--horizon-hours",type=int,nargs="+",default=DEFAULT_HORIZONS)
@@ -62,6 +64,8 @@ def main(argv=None):
                 confirm_frozen_hypotheses=a.confirm_frozen_hypotheses,
                 entry_experiments_raw=extra,exit_experiments_raw=exit_extra,
                 strategy_names=a.strategy_names,
+                research_max_horizon_hours=a.research_max_horizon_hours,
+                target_diagnostics=a.target_diagnostics,
                 progress=lambda n,total:print("D529 symbols processed: %d/%d"%(n,total),
                                              file=sys.stderr,flush=True))
         if snapshot(a.policy_file)["revision"]!=rev:

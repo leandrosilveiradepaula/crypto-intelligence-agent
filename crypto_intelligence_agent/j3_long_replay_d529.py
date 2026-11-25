@@ -114,13 +114,17 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     stops=DEFAULT_STOPS,resolution="1h",
                     confirm_frozen_hypotheses=False,progress=None,
                     entry_experiments_raw=None,exit_experiments_raw=None,
-                    strategy_names=None):
+                    strategy_names=None,research_max_horizon_hours=72,
+                    target_diagnostics=False):
     plan=decode_plan(plan.encode())
     if (partition not in _PARTS or type(confirm_frozen_hypotheses) is not bool
             or (partition=="holdout" and not confirm_frozen_hypotheses)
             or resolution not in ("1h","5m") or type(horizons) not in (tuple,list)
             or not 1<=len(horizons)<=4
-            or any(type(x) is not int or not 1<=x<=72 for x in horizons)
+            or type(research_max_horizon_hours) is not int
+            or research_max_horizon_hours not in (72,168)
+            or type(target_diagnostics) is not bool
+            or any(type(x) is not int or not 1<=x<=research_max_horizon_hours for x in horizons)
             or tuple(sorted(set(horizons)))!=tuple(horizons)
             or owner_policy.leverage.for_new_positions!=50):
         raise DataValidationError("D529 explicit partition, resolution, ordered horizons and 50x required")
@@ -151,7 +155,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     if len(labels)*len(horizons)*len(exits)>3000:
         raise DataValidationError("D531 research grid exceeds 3000 scenarios")
     def fresh():
-        return empty_replay_totals(include_payoff=use_exit_experiments)
+        return empty_replay_totals(include_payoff=use_exit_experiments,
+                                   include_target_diagnostics=target_diagnostics)
     btc=read_window(home,plan,"BTCUSDT","1h",base_start,end,allow_gaps=True)
     manifest={"BTCUSDT":{"1h":{"count":len(btc),"sha256":bars_digest(btc)}}}
     market=btc_returns(btc)
@@ -217,6 +222,11 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     ok=len(hp)==h and (resolution=="1h" or
                         all(b.open_time_ms in good_hours for b in hp))
                     availability[h]=ok
+                # D533 extended comparison uses exactly the same complete paths
+                # across horizons: an incomplete longest path excludes all shorter ones.
+                if research_max_horizon_hours==168:
+                    availability={h:availability[max(horizons)] for h in horizons}
+                for h,ok in availability.items():
                     covered[h]+=int(ok)
                     bucket["covered"][h]+=int(ok)
                 with localcontext(_CTX):
@@ -254,7 +264,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                             one=fresh()
                             accumulate_replay(one,path,direction=ResearchDirection(side),
                                 decision_end_ms=at,now_ms=plan.observed_at_ms,margin=margin,
-                                policy=policy,research_max_horizon_hours=72,management=management)
+                                policy=policy,research_max_horizon_hours=research_max_horizon_hours,
+                                management=management)
                             for name in names:
                                 for group in groups:
                                     record((h,variant,stop,name,group),one)
@@ -311,6 +322,9 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             "regime_definition":"descriptive BTC trailing 24h return above/below +/-1 percent",
             "entry_reference":"next_trade_bar_open_ex_post",
             "all_horizons_share_same_decision_grid":True,"partition_crossing_paths_excluded":True,
+            **({"research_max_horizon_hours":168,"horizons_require_longest_complete_path":True}
+               if research_max_horizon_hours==168 else {}),
+            **({"target_diagnostics":True} if target_diagnostics else {}),
             "winner_selected":False,"out_of_sample_results_validated":False,
             "portfolio_simulated":False,"funding_settlement_verified":False,
             "liquidation_verified":False,"intrabar_path_verified":False,
