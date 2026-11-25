@@ -27,6 +27,26 @@ _ONE = Decimal(1)
 
 
 @dataclass(frozen=True)
+class ResearchStopManagement:
+    """D531 next-bar protection only. Entry-price stop is not net breakeven."""
+    protect_after_targets: int | None = None
+    trail_after_targets: int | None = None
+    trail_distance_bps: Decimal | None = None
+
+    def __post_init__(self):
+        for n in (self.protect_after_targets,self.trail_after_targets):
+            if n is not None and (type(n) is not int or not 1<=n<=8):
+                raise DataValidationError("D531 target trigger out of range")
+        if (self.trail_after_targets is None)!=(self.trail_distance_bps is None):
+            raise DataValidationError("D531 paired trailing parameters required")
+        d=self.trail_distance_bps
+        if d is not None and (type(d) is not Decimal or not d.is_finite() or not 1<=d<=1000):
+            raise DataValidationError("D531 trailing distance invalid")
+        if self.protect_after_targets is None and self.trail_after_targets is None:
+            raise DataValidationError("D531 explicit stop management required")
+
+
+@dataclass(frozen=True)
 class ExitScenario:
     targets_reached: int
     target_fraction: Decimal
@@ -82,6 +102,7 @@ def compare_exit_scenarios(
     direction: ResearchDirection, decision_end_ms: int, now_ms: int,
     margin: SyntheticMarginBasis, policy: PaperEntryExitPolicy,
     research_max_horizon_hours: int = 12,
+    management: ResearchStopManagement | None = None,
 ) -> dict[str, ExitScenario]:
     """Two scenario references, each with conserved normalized exit quantities.
 
@@ -97,6 +118,10 @@ def compare_exit_scenarios(
             or type(policy) is not PaperEntryExitPolicy
             or type(margin) is not SyntheticMarginBasis):
         raise DataValidationError("D517 explicit immutable research terms required")
+    if management is not None and (type(management) is not ResearchStopManagement
+            or any(n is not None and n>len(policy.target_distances_bps)
+                   for n in (management.protect_after_targets,management.trail_after_targets))):
+        raise DataValidationError("D531 stop management incompatible with targets")
     bars = _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours)
     schedule = plan_synthetic_partial_exits(
         SyntheticExitPlan(_ONE, policy.tranches, policy.runner_floor_percent)
@@ -104,12 +129,13 @@ def compare_exit_scenarios(
     sign = _ONE if direction is ResearchDirection.LONG else -_ONE
     with localcontext(_CTX):
         entry = bars[0].open
-        stop = entry * (_ONE-sign*policy.stop_distance_bps/BPS_DENOMINATOR)
+        initial_stop = entry * (_ONE-sign*policy.stop_distance_bps/BPS_DENOMINATOR)
         targets = tuple(entry*(_ONE+sign*d/BPS_DENOMINATOR)
                         for d in policy.target_distances_bps)
         notional = margin.entry_notional_quote
 
         def run(adverse_first):
+            stop = initial_stop
             remaining = _ONE
             target_fraction = stopped_fraction = exit_value = _ZERO
             hit = 0
@@ -148,6 +174,18 @@ def compare_exit_scenarios(
                 else:
                     targets_at(favorable)
                     stop_at(adverse)
+                # D531 protection only becomes effective on the NEXT bar,
+                # never using a favorable extreme to retroactively stop this bar.
+                if remaining and management is not None:
+                    def tighten(candidate):
+                        return max(stop,candidate) if sign>0 else min(stop,candidate)
+                    if (management.protect_after_targets is not None
+                            and hit>=management.protect_after_targets):
+                        stop=tighten(entry)
+                    if (management.trail_after_targets is not None
+                            and hit>=management.trail_after_targets):
+                        candidate=favorable*(_ONE-sign*management.trail_distance_bps/BPS_DENOMINATOR)
+                        stop=tighten(candidate)
             residual = remaining
             exit_value += residual*bars[-1].close
             if target_fraction+stopped_fraction+residual != _ONE:
@@ -176,7 +214,9 @@ def compare_exit_scenarios(
         return {"adverse_first": run(True), "favorable_first": run(False)}
 
 
-def empty_replay_totals() -> dict:
+def empty_replay_totals(*, include_payoff=False) -> dict:
+    if type(include_payoff) is not bool:
+        raise DataValidationError("D531 explicit payoff flag required")
     return {
         "candidate_count": 0, "complete_path_count": 0, "missing_path_count": 0,
         "ordering_sensitive_count": 0,
@@ -187,13 +227,16 @@ def empty_replay_totals() -> dict:
                   "stop_before_tp1_then_later_tp1_count": 0, "positive_with_stop_count": 0,
                   "full_path_mae_bps_sum": _ZERO, "full_path_mfe_bps_sum": _ZERO,
                   "gross_reference_quote": _ZERO, "assumed_fee_slippage_quote": _ZERO,
-                  "conditional_before_funding_quote": _ZERO}
+                  "conditional_before_funding_quote": _ZERO,
+                  **({"positive_net_quote_sum":_ZERO,"negative_net_quote_sum":_ZERO}
+                     if include_payoff else {})}
            for name in ("adverse_first", "favorable_first")},
     }
 
 
 def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
-                      now_ms, margin, policy, research_max_horizon_hours=12) -> None:
+                      now_ms, margin, policy, research_max_horizon_hours=12,
+                      management=None) -> None:
     totals["candidate_count"] += 1
     if candles is None:
         totals["missing_path_count"] += 1
@@ -201,7 +244,7 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
     outcomes = compare_exit_scenarios(
         candles, direction=direction, decision_end_ms=decision_end_ms,
         now_ms=now_ms, margin=margin, policy=policy,
-        research_max_horizon_hours=research_max_horizon_hours)
+        research_max_horizon_hours=research_max_horizon_hours,management=management)
     totals["complete_path_count"] += 1
     totals["ordering_sensitive_count"] += int(
         outcomes["adverse_first"] != outcomes["favorable_first"])
@@ -219,6 +262,9 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
             row = totals[name]
             net = result.conditional_before_funding_quote
             row["positive_count" if net > 0 else "negative_count" if net < 0 else "flat_count"] += 1
+            if "positive_net_quote_sum" in row:
+                row["positive_net_quote_sum"]+=max(_ZERO,net)
+                row["negative_net_quote_sum"]+=max(_ZERO,-net)
             row["stop_count"] += int(result.stopped_fraction > 0)
             row["with_targets_count"] += int(result.targets_reached > 0)
             row["positive_with_stop_count"] += int(result.stopped_fraction > 0 and net > 0)
@@ -252,6 +298,22 @@ def summarize_replay(totals: dict, *, margin: SyntheticMarginBasis) -> dict:
             row["average_before_funding_bps"] = (format(
                 (net/margin.entry_notional_quote*BPS_DENOMINATOR/count).quantize(
                     Decimal("0.01")), "f") if count else None)
+            if "positive_net_quote_sum" in row:
+                gain=row["positive_net_quote_sum"]
+                loss=row["negative_net_quote_sum"]
+                if gain-loss!=net:
+                    raise DataValidationError("D531 inconsistent payoff decomposition")
+                def ratio(a,b):
+                    return format((a/b).quantize(Decimal("0.0001")),"f") if b else None
+                row["profit_factor"]=ratio(gain,loss)
+                row["mean_winner_bps"]=ratio(gain*BPS_DENOMINATOR,
+                    margin.entry_notional_quote*row["positive_count"])
+                row["mean_loser_abs_bps"]=ratio(loss*BPS_DENOMINATOR,
+                    margin.entry_notional_quote*row["negative_count"])
+                row["payoff_ratio"]=ratio(gain*row["negative_count"],
+                    loss*row["positive_count"])
+                row["positive_net_quote_sum"]=format(gain,"f") if count else None
+                row["negative_net_quote_sum"]=format(loss,"f") if count else None
             for key in ("gross_reference_quote", "assumed_fee_slippage_quote",
                         "conditional_before_funding_quote"):
                 row[key] = format(row[key], "f") if count else None

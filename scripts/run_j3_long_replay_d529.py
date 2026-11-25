@@ -9,6 +9,7 @@ import sys
 
 from crypto_intelligence_agent.j3_combination_research_d520 import MAX_MATRIX_BYTES
 from crypto_intelligence_agent.j3_entry_research_d530 import MAX_BYTES as MAX_ENTRY_BYTES
+from crypto_intelligence_agent.j3_exit_research_d531 import MAX_BYTES as MAX_EXIT_BYTES
 from crypto_intelligence_agent.j3_long_history_d528 import load_plan
 from crypto_intelligence_agent.j3_long_replay_d529 import run_long_replay, DEFAULT_STOPS, DEFAULT_HORIZONS
 from crypto_intelligence_agent.market_data import MarketDataError
@@ -24,6 +25,7 @@ def main(argv=None):
     p.add_argument("--matrix-file",type=Path,default=Path(__file__).resolve().parents[1]/
                    "docs/examples/d526_rsi_filter_research_matrix.json")
     p.add_argument("--entry-experiments-file",type=Path)
+    p.add_argument("--exit-experiments-file",type=Path)
     p.add_argument("--days",type=int,default=90)
     p.add_argument("--partition",choices=("development","validation","holdout"),default="development")
     p.add_argument("--horizon-hours",type=int,nargs="+",default=DEFAULT_HORIZONS)
@@ -48,12 +50,16 @@ def main(argv=None):
         if a.entry_experiments_file is not None:
             with a.entry_experiments_file.open("rb") as f:
                 extra=f.read(MAX_ENTRY_BYTES+1)
+        exit_extra=None
+        if a.exit_experiments_file is not None:
+            with a.exit_experiments_file.open("rb") as f:
+                exit_extra=f.read(MAX_EXIT_BYTES+1)
         with owner_lock(a.directory):
             report=run_long_replay(home=a.directory,plan=plan,owner_policy=policy,
                 matrix_raw=matrix,days=a.days,partition=a.partition,
                 horizons=a.horizon_hours,stops=a.stop_grid_bps,resolution=a.resolution,
                 confirm_frozen_hypotheses=a.confirm_frozen_hypotheses,
-                entry_experiments_raw=extra,
+                entry_experiments_raw=extra,exit_experiments_raw=exit_extra,
                 progress=lambda n,total:print("D529 symbols processed: %d/%d"%(n,total),
                                              file=sys.stderr,flush=True))
         if snapshot(a.policy_file)["revision"]!=rev:
