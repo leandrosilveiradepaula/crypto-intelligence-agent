@@ -34,7 +34,7 @@ class FundingReplayTests(unittest.TestCase):
         traced=compare_exit_scenarios(cs,**args,trace_exposure=True)["adverse_first"]
         self.assertEqual(traced,compare_exit_scenarios(cs,**args)["adverse_first"])
         self.assertEqual(traced.exposure_changes,(
-            ExposureChange(0,D(1),D(".75")),ExposureChange(1,D(".75"),D(".375"))))
+            ExposureChange(0,D(1),D(".75"),D(".75")),ExposureChange(1,D(".75"),D(".375"),D(".375"))))
         rates=((END,".001"),(END+HOUR,".002"),(END+2*HOUR,"-.001"))
         source=history(END,END+3*HOUR,rates,(END,END+HOUR,END+2*HOUR))
         kw=dict(entry_at=END,end_at=END+3*HOUR,entry_price=D(100),notional=D(50),
@@ -100,12 +100,15 @@ class FundingReplayTests(unittest.TestCase):
             matrix_raw=(ROOT/"docs/examples/d530_entry_controls_matrix.json").read_bytes(),
             entry_experiments_raw=(ROOT/"docs/examples/d532_squeeze_optimization.json").read_bytes(),
             strategy_names=("sq_w04_v2",),horizons=(48,),stops=(150,),resolution="1h")
-        result=run_long_replay(**args,observed_funding=True)
+        result=run_long_replay(**args,observed_funding=True,maintenance_stress_bps=(50,100))
         self.assertTrue(result["observed_funding"])
         self.assertFalse(result["funding_settlement_verified"])
         a=result["scenarios"][0]["rows"][0]["adverse_first"]
         self.assertEqual(a["funding_matched_path_count"],1)
         self.assertGreater(a["funding_observed_event_count"],0)
+        self.assertEqual(a["stress_50bps_evaluated_count"],1)
+        self.assertEqual(a["stress_100bps_evaluated_count"],1)
+        self.assertTrue(result["maintenance_stress_is_not_venue_liquidation"])
         self.assertFalse(result["liquidation_verified"])
         with self.assertRaises(DataValidationError):
             run_long_replay(**args,observed_funding=True,partition="validation")

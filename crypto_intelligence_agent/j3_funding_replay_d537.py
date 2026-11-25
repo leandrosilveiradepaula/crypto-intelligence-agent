@@ -19,6 +19,7 @@ class ExposureChange:
     bar_index:int
     before:Decimal
     after:Decimal
+    minimum_positive:Decimal | None = None
 
 
 @dataclass(frozen=True)
@@ -91,7 +92,12 @@ class ObservedFundingHistory:
                     or not previous<change.bar_index<(end_at-entry_at)//self.duration
                     or type(change.before) is not Decimal or type(change.after) is not Decimal
                     or not change.before.is_finite() or not change.after.is_finite()
-                    or change.before!=remaining or not _ZERO<=change.after<change.before):
+                    or change.before!=remaining or not _ZERO<=change.after<change.before
+                    or (change.minimum_positive is not None and
+                        (type(change.minimum_positive) is not Decimal
+                         or not change.minimum_positive.is_finite()
+                         or not _ZERO<change.minimum_positive<=change.before
+                         or (change.after>0 and change.minimum_positive!=change.after)))):
                 raise DataValidationError("D537 nonconserving exposure trace")
             previous=change.bar_index
             remaining=change.after

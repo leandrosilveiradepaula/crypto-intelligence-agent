@@ -1,5 +1,9 @@
 # Estratégias e gestão de vencedores
 
+## D538 — avaliação de margem de manutenção em stress (25/11/2026 UTC)
+
+Complemento D537, mesmo pacote: --observed-funding --maintenance-stress-bps com 1..3 hipóteses explícitas. Usa mark OHLC enquanto há exposição, menor fração positiva efetivamente visitada na barra, margem inicial proporcional, custos e débitos observados retidos (sem creditar lucros/créditos). Buffer <=0 sinaliza possível violação sob hipótese, não liquidação da Bybit; PnL legado não reescrito, tiers/calendário histórico não verificados. Lacunas não viram sobrevivência. Relatório por hipótese/caminho, testes offline e CI pendentes. D536 integrado; owner VPS bloqueado, sem nova coleta. Não alterar 50x, sizing (adiado PO), stops, perfil, J1, PAPER, release, ordens ou custo. Ver docs/J3_MAINTENANCE_STRESS_D538.md.
+
 ## D537 — funding condicional sobre exposição remanescente (25/11/2026 UTC)
 
 D536 integrado e3c7192406ae63ea6a42c8aa175b30487b9665cd, árvore 44f7320d4836ea1b54becbb3c316d646ca4adba5, CI 45685488018/45685488030 SUCCESS. Conector VPS saudável mas runuser cia-probe continua sem permissão; PO sem terminal, nenhuma coleta real nova. D537 candidato integra --observed-funding em development: trilha causal de redução por barra/ordenação, taxas observadas D536 e mark da mesma resolução, limites condicionais de custo e net no subconjunto casado, indisponibilidade explícita sem imputação, manifesto de cobertura e hashes. Não prova calendário completo, settlement, liquidação, carteira ou OOS. CI/revisão pendentes. Próximo: aquisição owner D536, completar anual 5m, integrar avaliação de manutenção/liquidação, executar pesquisa com novos dados e congelar hipóteses antes de validar. Sem 50x alterado, stop/no-stop, sizing, J1, perfil, release, ordens ou custo. Ver docs/J3_FUNDING_REPLAY_D537.md.

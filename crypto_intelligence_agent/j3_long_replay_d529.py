@@ -22,6 +22,7 @@ from .j3_observed_exit_scenarios_d517 import (
 )
 from .market_data import DataValidationError
 from .j3_funding_replay_d537 import ObservedFundingHistory
+from .j3_maintenance_stress_d538 import parse_maintenance_grid
 from .j3_entry_research_d530 import EntryExperiment, parse_experiments, entry_events
 from .j3_exit_research_d531 import parse_exit_experiments, describe_exit_experiments
 from .synthetic_intrabar_barriers import ResearchDirection
@@ -121,7 +122,10 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     entry_experiments_raw=None,exit_experiments_raw=None,
                     strategy_names=None,research_max_horizon_hours=72,
                     target_diagnostics=False,separate_open_mark=False,
-                    preserve_recent_90d=False,observed_funding=False):
+                    preserve_recent_90d=False,observed_funding=False,maintenance_stress_bps=()):
+    maintenance_grid=parse_maintenance_grid(maintenance_stress_bps)
+    if maintenance_grid and not observed_funding:
+        raise DataValidationError("D538 maintenance stress requires observed funding")
     plan=decode_plan(plan.encode())
     if (partition not in _PARTS or type(confirm_frozen_hypotheses) is not bool
             or (partition=="holdout" and not confirm_frozen_hypotheses)
@@ -173,7 +177,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
         return empty_replay_totals(include_payoff=use_exit_experiments,
                                    include_target_diagnostics=target_diagnostics,
                                    include_open_mark=separate_open_mark,
-                                   include_observed_funding=observed_funding)
+                                   include_observed_funding=observed_funding,
+                                   maintenance_grid=maintenance_grid)
     btc=read_window(home,plan,"BTCUSDT","1h",base_start,end,allow_gaps=True)
     manifest={"BTCUSDT":{"1h":{"count":len(btc),"sha256":bars_digest(btc)}}}
     market=btc_returns(btc)
@@ -292,7 +297,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                             accumulate_replay(one,path,direction=ResearchDirection(side),
                                 decision_end_ms=at,now_ms=plan.observed_at_ms,margin=margin,
                                 policy=policy,research_max_horizon_hours=research_max_horizon_hours,
-                                management=management,observed_funding=funding_history)
+                                management=management,observed_funding=funding_history,
+                                maintenance_grid=maintenance_grid)
                             for name in names:
                                 for group in groups:
                                     record((h,variant,stop,name,group),one)
@@ -361,6 +367,11 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             **({"observed_funding":True,"funding_calendar_verified":False,
                 "funding_method":"observed_events_only_matched_subset_quantity_and_mark_bounds",
                 "funding_missing_queries_not_zero":True} if observed_funding else {}),
+            **({"maintenance_stress_bps":list(maintenance_grid),
+                "maintenance_stress_method":"isolated_proportional_initial_collateral_release_debits_retained_no_profit_or_credit",
+                "maintenance_stress_is_not_venue_liquidation":True,
+                "maintenance_stress_rewrites_pnl":False,
+                "historical_risk_tiers_verified":False} if maintenance_grid else {}),
             "winner_selected":False,"out_of_sample_results_validated":False,
             "portfolio_simulated":False,"funding_settlement_verified":False,
             "liquidation_verified":False,"intrabar_path_verified":False,
