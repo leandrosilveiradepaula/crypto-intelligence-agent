@@ -19,6 +19,7 @@ from .j3_intrahour_replay_d518 import refine_hourly_path, FIVE_MS
 from .j3_long_history_d528 import DAY, HOUR_MS, MAX_DAYS, read_window, decode_plan, canonical
 from .j3_observed_exit_scenarios_d517 import empty_replay_totals, accumulate_replay, summarize_replay
 from .market_data import DataValidationError
+from .j3_entry_research_d530 import EntryExperiment, parse_experiments, entry_events
 from .synthetic_intrabar_barriers import ResearchDirection
 from .synthetic_margin_envelope import SyntheticMarginBasis
 
@@ -66,7 +67,7 @@ def btc_returns(bars):
     return out
 
 
-def make_policies(owner,matrix_raw):
+def make_policies(owner,matrix_raw,entry_experiments_raw=None):
     periods,profiles,labels=parse_matrix(matrix_raw)
     base=replace(owner.research,entry_mode="breakout",indicators=None)
     cross=replace(base,entry_mode="ema_cross",ema_cross_periods=periods)
@@ -83,6 +84,13 @@ def make_policies(owner,matrix_raw):
             warmup=max(warmup,selection.minimum_closed_bars(cfg.features.quote_volume_period))
         if veto is not None:
             warmup=max(warmup,veto.period+2)
+    if entry_experiments_raw is not None:
+        for name,label,cfg,threshold,veto in parse_experiments(entry_experiments_raw):
+            if name in settings:
+                raise DataValidationError("D530 experiment name collides with base matrix")
+            settings[name]=(cfg,threshold,veto)
+            labels[name]=label
+            warmup=max(warmup,cfg.warmup,veto.period+2 if veto is not None else 0)
     return settings,labels,warmup
 
 
@@ -103,7 +111,8 @@ def _regime(ret):
 def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     partition="development",horizons=DEFAULT_HORIZONS,
                     stops=DEFAULT_STOPS,resolution="1h",
-                    confirm_frozen_hypotheses=False,progress=None):
+                    confirm_frozen_hypotheses=False,progress=None,
+                    entry_experiments_raw=None):
     plan=decode_plan(plan.encode())
     if (partition not in _PARTS or type(confirm_frozen_hypotheses) is not bool
             or (partition=="holdout" and not confirm_frozen_hypotheses)
@@ -121,7 +130,7 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     base_start=splits["development"][0]
     start,end=splits[partition]
     last_decision=end-max(horizons)*HOUR_MS
-    settings,labels,warmup=make_policies(owner_policy,matrix_raw)
+    settings,labels,warmup=make_policies(owner_policy,matrix_raw,entry_experiments_raw)
     notional=owner_policy.margin_quote*Decimal(50)
     margin=SyntheticMarginBasis(owner_policy.margin_quote,50,notional,"SYNTHETIC_USDT")
     exits={stop:replace(owner_policy.exits,stop_distance_bps=Decimal(stop)) for stop in grid}
@@ -166,10 +175,13 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             closes=tuple(b.close for b in run)
             for cfg,threshold,veto in settings.values():
                 if cfg not in by_config:
-                    found=evaluate_observed_bybit_research(series,config=cfg,
-                        decision_at_ms=run[-1].close_time_ms+1,close_safety_ms=1,
-                        allow_rest_historical_research=True,all_retrospective_hypotheses=True)
-                    by_config[cfg]={h.earliest_research_at_ms:h.side.value for h in found.hypotheses}
+                    if type(cfg) is EntryExperiment:
+                        by_config[cfg]=entry_events(run,cfg)
+                    else:
+                        found=evaluate_observed_bybit_research(series,config=cfg,
+                            decision_at_ms=run[-1].close_time_ms+1,close_safety_ms=1,
+                            allow_rest_historical_research=True,all_retrospective_hypotheses=True)
+                        by_config[cfg]={h.earliest_research_at_ms:h.side.value for h in found.hypotheses}
                 if veto is not None and veto not in gates:
                     gates[veto]=rsi_directions(closes,veto)
             for i in range(warmup-1,len(run)):
@@ -263,7 +275,9 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             "excluded_missing_warmup_or_btc":expected-eligible,
             "covered_symbol_hours_by_horizon":covered,"monthly_coverage":monthly_coverage,
             "manifest":{"plan_sha256":plan.digest,"matrix_sha256":sha256(matrix_raw).hexdigest(),
-                        "data":manifest},
+                        "data":manifest,
+                        **({"entry_experiments_sha256":sha256(entry_experiments_raw).hexdigest()}
+                           if entry_experiments_raw is not None else {})},
             "common_research_filters":asdict(owner_policy.research),
             "common_exit_policy":asdict(owner_policy.exits),
             "indicator_state":"continuous_causal_per_contiguous_run_not_D526_rolling_reseed",

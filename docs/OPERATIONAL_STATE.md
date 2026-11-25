@@ -1,5 +1,10 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D530 — pesquisa de entradas e continuidade do histórico (25/11/2026 UTC)
+
+D529 real concluído em f91de881a062c752b6e76adde922545a3645e300: 420/420 cenários adversos 1h negativos, 56987 slots elegíveis/cobertos em cada horizonte, 54d desenvolvimento, 18/18 reservados. RSI melhorou 160/231 pares e piorou 71; melhor BB reentry sem RSI -8,22 bps (250/72h, 216/372 positivas). Não repetir D529; recuperar decomposição de custos/ordenação/meses/regime do relatório privado. D528 90d 1h completo 108000/108000; anual 395280/465609 antes da retomada; retomada 365d e 90d 5m pararam J1BybitCaptureError sem causa específica, progresso posterior desconhecido. D530 adiciona hipóteses pullback/retomada e squeeze Bollinger editáveis, controles pareados sem/com RSI (19 estratégias, 399 cenários), sem alterar residente; diagnóstico sanitizado do coletor e pacing configurável. Próxima ação: revisão/CI, aquisição 90d 5m prioritária com no-retry em bloqueios e depois anual; pesquisa 5m quando coberta; 50x e sizing adiado. Não tocar holdout, J1, perfil, serviços, ordens ou custo. Ver docs/J3_ENTRY_RESEARCH_D530.md.
+
+
 ## Correção de inicialização D528 (24/11/2026)
 
 Primeira tentativa owner de coleta real 90d/1h no SHA 7ae59574b1b21e6a132e083fe729df0def874f52 falhou antes de salvar plano, em freeze_cohort: AttributeError ticker_received_at_ms; o contrato real D451 expõe ticker_received_ms. Corrigido junto à entrega D529 #755, sem mudar formato do plano ou apagar dados. Regressão com snapshot D451 real produzido pelo seletor, mais fluxo CLI init/retomada em diretório owner temporário, transportes injetados, lock e armazenamento reais. A CI anterior D529 (45512585927/45512586259) foi verde, mas não cobria a fronteira de inicialização. Novo head exige CI/revisão. Retomar no MESMO diretório histórico, --init somente se plano ausente; preservar arquivos de diagnóstico e checkpoints. Não repetir J1 nem D526. Nenhuma cobertura longa ou PnL novo comprovado.

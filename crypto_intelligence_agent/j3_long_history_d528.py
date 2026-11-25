@@ -243,6 +243,7 @@ def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_B
     store = None
     last = None
     limited = False
+    gaps=[]
     for start,end,symbol,first in jobs:
         path = shard_path(home, plan, start, interval)
         if path != last:
@@ -266,6 +267,7 @@ def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_B
             limited = True
         except ProviderGap:
             row["gap_shards"] += 1
+            gaps.append({"symbol":symbol,"shard_start_ms":start,"shard_end_ms":end})
         q = store.quality_report(exchange=EXCHANGE,market=MARKET,symbol=symbol,interval=interval,
                                  start_open_ms=first,end_open_ms=end)
         row["saved"] += q.persisted_candles
@@ -281,7 +283,7 @@ def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_B
             "expected_candles_after_launch":expected,"saved_candles":saved,
             "missing_candles":expected-saved,"complete_member_shards":complete,
             "expected_member_shards":len(jobs),"public_gets":source.gets,
-            "batch_limit_reached":limited, "by_symbol":stats,
+            "batch_limit_reached":limited, "by_symbol":stats, "gap_member_shards":gaps,
             "cohort_origin":"current_D451_provisional_survivors",
             "historical_marketwide_top50_verified":False,
             "retrospective_not_contemporaneous":True,"orders_sent":False,

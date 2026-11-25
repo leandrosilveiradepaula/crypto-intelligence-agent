@@ -1,0 +1,245 @@
+{
+  "schema": "d530-entry-experiments-v1",
+  "profiles": [
+    {
+      "name": "pullback_sma_10_30",
+      "label": "Retomada SMA 10/30 + FR",
+      "parameters": {
+        "trigger": "pullback",
+        "fast": 10,
+        "slow": 30,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "pullback_sma_10_30_rsi",
+      "label": "Retomada SMA 10/30 + FR + RSI",
+      "parameters": {
+        "trigger": "pullback",
+        "fast": 10,
+        "slow": 30,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "pullback_sma_20_50",
+      "label": "Retomada SMA 20/50 + FR",
+      "parameters": {
+        "trigger": "pullback",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "pullback_sma_20_50_rsi",
+      "label": "Retomada SMA 20/50 + FR + RSI",
+      "parameters": {
+        "trigger": "pullback",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "pullback_ema_9_21",
+      "label": "Retomada EMA 9/21 + FR",
+      "parameters": {
+        "trigger": "pullback",
+        "fast": 9,
+        "slow": 21,
+        "exponential": true,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "pullback_ema_9_21_rsi",
+      "label": "Retomada EMA 9/21 + FR + RSI",
+      "parameters": {
+        "trigger": "pullback",
+        "fast": 9,
+        "slow": 21,
+        "exponential": true,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "squeeze_bb_20_2",
+      "label": "Bollinger 20/2 compressão 5/30 + FR",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "squeeze_bb_20_2_rsi",
+      "label": "Bollinger 20/2 compressão 5/30 + FR + RSI",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "squeeze_bb_20_2_strict",
+      "label": "Bollinger 20/2 compressão 5/30 forte + FR",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "squeeze_bb_20_2_strict_rsi",
+      "label": "Bollinger 20/2 compressão 5/30 forte + FR + RSI",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    }
+  ]
+}
