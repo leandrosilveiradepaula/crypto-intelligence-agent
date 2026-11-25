@@ -20,6 +20,7 @@ from .j3_long_history_d528 import DAY, HOUR_MS, MAX_DAYS, read_window, decode_pl
 from .j3_observed_exit_scenarios_d517 import empty_replay_totals, accumulate_replay, summarize_replay
 from .market_data import DataValidationError
 from .j3_entry_research_d530 import EntryExperiment, parse_experiments, entry_events
+from .j3_exit_research_d531 import parse_exit_experiments, describe_exit_experiments
 from .synthetic_intrabar_barriers import ResearchDirection
 from .synthetic_margin_envelope import SyntheticMarginBasis
 
@@ -112,7 +113,7 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     partition="development",horizons=DEFAULT_HORIZONS,
                     stops=DEFAULT_STOPS,resolution="1h",
                     confirm_frozen_hypotheses=False,progress=None,
-                    entry_experiments_raw=None):
+                    entry_experiments_raw=None,exit_experiments_raw=None):
     plan=decode_plan(plan.encode())
     if (partition not in _PARTS or type(confirm_frozen_hypotheses) is not bool
             or (partition=="holdout" and not confirm_frozen_hypotheses)
@@ -133,7 +134,15 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     settings,labels,warmup=make_policies(owner_policy,matrix_raw,entry_experiments_raw)
     notional=owner_policy.margin_quote*Decimal(50)
     margin=SyntheticMarginBasis(owner_policy.margin_quote,50,notional,"SYNTHETIC_USDT")
-    exits={stop:replace(owner_policy.exits,stop_distance_bps=Decimal(stop)) for stop in grid}
+    use_exit_experiments=exit_experiments_raw is not None
+    variants=(parse_exit_experiments(exit_experiments_raw,owner_policy.exits)
+              if use_exit_experiments else {"owner_baseline":(owner_policy.exits,None,"Perfil de referência")})
+    exits={(name,stop):(replace(p,stop_distance_bps=Decimal(stop)),m)
+           for name,(p,m,_) in variants.items() for stop in grid}
+    if len(labels)*len(horizons)*len(exits)>3000:
+        raise DataValidationError("D531 research grid exceeds 3000 scenarios")
+    def fresh():
+        return empty_replay_totals(include_payoff=use_exit_experiments)
     btc=read_window(home,plan,"BTCUSDT","1h",base_start,end,allow_gaps=True)
     manifest={"BTCUSDT":{"1h":{"count":len(btc),"sha256":bars_digest(btc)}}}
     market=btc_returns(btc)
@@ -145,7 +154,7 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     monthly_coverage={}
     def record(key,one):
         if key not in totals:
-            totals[key]=empty_replay_totals()
+            totals[key]=fresh()
         _add(totals[key],one)
     for symbol,launch in plan.members:
         if symbol=="BTCUSDT":
@@ -232,24 +241,24 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                         path=(run[i+1:i+1+h] if resolution=="1h" else
                               tuple(fine_index[t] for t in range(at,at+h*HOUR_MS,FIVE_MS)))
                     for side,names in accepted.items():
-                        for stop,policy in exits.items():
-                            one=empty_replay_totals()
+                        for (variant,stop),(policy,management) in exits.items():
+                            one=fresh()
                             accumulate_replay(one,path,direction=ResearchDirection(side),
                                 decision_end_ms=at,now_ms=plan.observed_at_ms,margin=margin,
-                                policy=policy,research_max_horizon_hours=72)
+                                policy=policy,research_max_horizon_hours=72,management=management)
                             for name in names:
                                 for group in groups:
-                                    record((h,stop,name,group),one)
+                                    record((h,variant,stop,name,group),one)
         if progress is not None:
             progress(len(manifest),len(plan.members))
     def summary(key,group):
-        return summarize_replay(totals.get((*key,group),empty_replay_totals()),margin=margin)
+        return summarize_replay(totals.get((*key,group),fresh()),margin=margin)
     result=[]
     for h in horizons:
-        for stop in grid:
+        for variant,stop in exits:
             rows=[]
             for name,label in labels.items():
-                key=(h,stop,name)
+                key=(h,variant,stop,name)
                 row=summary(key,"all")
                 counts=directions.get((h,name),{"LONG":0,"SHORT":0,"covered_LONG":0,"covered_SHORT":0})
                 if (counts["LONG"]+counts["SHORT"]!=row["candidate_count"]
@@ -264,12 +273,13 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     "by_btc_regime":{g:summary(key,"regime:"+g)
                                      for g in ("BTC_up","BTC_down","BTC_sideways")}})
             result.append({"horizon_hours":h,"stop_bps":stop,"rows":rows,
-                           "common_covered_symbol_hours":covered[h]})
+                           "common_covered_symbol_hours":covered[h],
+                           **({"exit_variant":variant} if use_exit_experiments else {})})
     return {"schema_version":SCHEMA,
             "status":"exploratory_replay_completed" if any(covered.values()) else "no_complete_common_paths",
             "requested_days":days,"partition":partition,"partition_ranges_ms":splits,
             "decision_range_ms":[start,last_decision],"horizons_hours":list(horizons),
-            "stop_grid_bps":list(grid),"scenario_count":len(labels)*len(horizons)*len(grid),
+            "stop_grid_bps":list(grid),"scenario_count":len(labels)*len(horizons)*len(exits),
             "resolution":resolution,"leverage_at_intent":50,"warmup_hours":warmup,
             "expected_symbol_hours_after_launch":expected,"eligible_symbol_hours":eligible,
             "excluded_missing_warmup_or_btc":expected-eligible,
@@ -277,9 +287,14 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             "manifest":{"plan_sha256":plan.digest,"matrix_sha256":sha256(matrix_raw).hexdigest(),
                         "data":manifest,
                         **({"entry_experiments_sha256":sha256(entry_experiments_raw).hexdigest()}
-                           if entry_experiments_raw is not None else {})},
+                           if entry_experiments_raw is not None else {}),
+                        **({"exit_experiments_sha256":sha256(exit_experiments_raw).hexdigest()}
+                           if use_exit_experiments else {})},
             "common_research_filters":asdict(owner_policy.research),
             "common_exit_policy":asdict(owner_policy.exits),
+            **({"exit_variants":describe_exit_experiments(variants),
+                "protect_and_trail_activation":"next_bar_only_entry_price_not_net_breakeven"}
+               if use_exit_experiments else {}),
             "indicator_state":"continuous_causal_per_contiguous_run_not_D526_rolling_reseed",
             "cohort_origin":"current_D451_provisional_survivors",
             "historical_marketwide_top50_verified":False,

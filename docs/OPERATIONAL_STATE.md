@@ -1,5 +1,10 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D531 — saídas parciais e proteção em pesquisa (25/11/2026 UTC)
+
+D530 integrado em dbf9d03678da8c9617c065dbfa16126dd17989d5, CI 45521088598/45521088705 SUCCESS, review 6049890764. D530 399 cenários ainda não executados; D529 real 420/420 negativos na ordenação adversa 1h. D531 acrescenta matriz JSON opt-in de saídas: perfil owner de referência e até 5 variantes de alvos/tranches/runner, proteção do preço de entrada após parcial e trailing após alvo escolhido, ambos efetivos apenas na barra seguinte e monotônicos. Não altera perfil nem comportamento padrão D517/D529. Compara as mesmas entradas e trajetórias, ambas as ordenações, custos, payoff médio e profit factor líquido pré-funding; não presume que stop no preço de entrada zere custos. Runner marcado ao fim do horizonte. Preset com 4 variantes; 19 estratégias x 3 stops x 1 horizonte x 5 saídas = 285 cenários numa triagem focalizada; grade completa opcional até 3000. Primeiro executar D530 no desenvolvimento; não repetir D529 nem consumir holdout. Coleta 5m continua bloqueada por erro não identificado, diagnóstico D530 aprovado; MCP sem UID owner. Sem ordens reais, sizing, custo, J1 ou publicação. Ver docs/J3_EXIT_RESEARCH_D531.md. Código candidato, CI/revisão e execução real pendentes.
+
+
 D530: priorizar --oldest-first para 90d/5m, pois desenvolvimento corresponde aos dias iniciais. Shards/checkpoints preservados; ordem padrão inalterada. Sem retry de erro do transporte.
 
 ## D530 — pesquisa de entradas e continuidade do histórico (25/11/2026 UTC)
