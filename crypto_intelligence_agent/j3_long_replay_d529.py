@@ -17,7 +17,9 @@ from .j3_archived_strategy_comparison_d512 import _warmup
 from .j3_combination_research_d520 import parse_matrix, parse_stop_grid
 from .j3_intrahour_replay_d518 import refine_hourly_path, FIVE_MS
 from .j3_long_history_d528 import DAY, HOUR_MS, MAX_DAYS, read_window, decode_plan, canonical
-from .j3_observed_exit_scenarios_d517 import empty_replay_totals, accumulate_replay, summarize_replay
+from .j3_observed_exit_scenarios_d517 import (
+    empty_replay_totals, accumulate_replay, summarize_replay, MAX_RESEARCH_HOLD_HOURS,
+)
 from .market_data import DataValidationError
 from .j3_entry_research_d530 import EntryExperiment, parse_experiments, entry_events
 from .j3_exit_research_d531 import parse_exit_experiments, describe_exit_experiments
@@ -31,12 +33,14 @@ _CTX = Context(prec=128)
 _PARTS = ("development","validation","holdout")
 
 
-def partitions(plan, days):
+def partitions(plan, days, *, preserve_recent_90d=False):
     if type(days) is not int or not 30 <= days <= MAX_DAYS:
         raise DataValidationError("D529 use 30..730 historical days")
+    if type(preserve_recent_90d) is not bool or (preserve_recent_90d and days<90):
+        raise DataValidationError("D534 preserve original 90d reservation only for >=90 days")
     start = plan.cutoff_ms-days*DAY
-    a = start+(days*60//100)*DAY
-    b = start+(days*80//100)*DAY
+    a = plan.cutoff_ms-36*DAY if preserve_recent_90d else start+(days*60//100)*DAY
+    b = plan.cutoff_ms-18*DAY if preserve_recent_90d else start+(days*80//100)*DAY
     return dict(zip(_PARTS,((start,a),(a,b),(b,plan.cutoff_ms))))
 
 
@@ -115,15 +119,18 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     confirm_frozen_hypotheses=False,progress=None,
                     entry_experiments_raw=None,exit_experiments_raw=None,
                     strategy_names=None,research_max_horizon_hours=72,
-                    target_diagnostics=False):
+                    target_diagnostics=False,separate_open_mark=False,
+                    preserve_recent_90d=False):
     plan=decode_plan(plan.encode())
     if (partition not in _PARTS or type(confirm_frozen_hypotheses) is not bool
             or (partition=="holdout" and not confirm_frozen_hypotheses)
             or resolution not in ("1h","5m") or type(horizons) not in (tuple,list)
-            or not 1<=len(horizons)<=4
+            or not 1<=len(horizons)<=6
             or type(research_max_horizon_hours) is not int
-            or research_max_horizon_hours not in (72,168)
+            or not 72<=research_max_horizon_hours<=MAX_RESEARCH_HOLD_HOURS
             or type(target_diagnostics) is not bool
+            or type(separate_open_mark) is not bool
+            or type(preserve_recent_90d) is not bool
             or any(type(x) is not int or not 1<=x<=research_max_horizon_hours for x in horizons)
             or tuple(sorted(set(horizons)))!=tuple(horizons)
             or owner_policy.leverage.for_new_positions!=50):
@@ -132,10 +139,15 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     if not grid:
         raise DataValidationError("D529 explicit stop grid required")
     horizons=tuple(horizons)
-    splits=partitions(plan,days)
+    splits=partitions(plan,days,preserve_recent_90d=preserve_recent_90d)
     base_start=splits["development"][0]
     start,end=splits[partition]
     last_decision=end-max(horizons)*HOUR_MS
+    if research_max_horizon_hours>168:
+        if days<365 or not separate_open_mark or not preserve_recent_90d:
+            raise DataValidationError("D534 multiweek research requires annual base, open accounting and reserved recent tail")
+        if last_decision<=start:
+            raise DataValidationError("D534 horizon leaves no decisions in selected partition")
     settings,labels,warmup=make_policies(owner_policy,matrix_raw,entry_experiments_raw)
     # Compute shared warmup from the entire matrix, even when replaying a subset.
     if strategy_names is not None:
@@ -156,7 +168,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
         raise DataValidationError("D531 research grid exceeds 3000 scenarios")
     def fresh():
         return empty_replay_totals(include_payoff=use_exit_experiments,
-                                   include_target_diagnostics=target_diagnostics)
+                                   include_target_diagnostics=target_diagnostics,
+                                   include_open_mark=separate_open_mark)
     btc=read_window(home,plan,"BTCUSDT","1h",base_start,end,allow_gaps=True)
     manifest={"BTCUSDT":{"1h":{"count":len(btc),"sha256":bars_digest(btc)}}}
     market=btc_returns(btc)
@@ -192,6 +205,12 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
         for run in contiguous_runs(hourly):
             if len(run)<warmup:
                 continue
+            # Prefix count of uncorroborated hours avoids scanning months of
+            # candles for each hourly decision and each requested horizon.
+            missing_prefix=[0]
+            if resolution=="5m":
+                for b in run:
+                    missing_prefix.append(missing_prefix[-1]+int(b.open_time_ms not in good_hours))
             series=BybitClosedResearchSeries(run,bars_digest(run),plan.digest,_RETROSPECTIVE_STATUS)
             by_config={}
             gates={}
@@ -218,13 +237,13 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                 bucket["eligible"]+=1
                 availability={}
                 for h in horizons:
-                    hp=run[i+1:i+1+h]
-                    ok=len(hp)==h and (resolution=="1h" or
-                        all(b.open_time_ms in good_hours for b in hp))
+                    j=i+1+h
+                    ok=j<=len(run) and (resolution=="1h" or
+                        missing_prefix[j]==missing_prefix[i+1])
                     availability[h]=ok
                 # D533 extended comparison uses exactly the same complete paths
                 # across horizons: an incomplete longest path excludes all shorter ones.
-                if research_max_horizon_hours==168:
+                if research_max_horizon_hours>=168:
                     availability={h:availability[max(horizons)] for h in horizons}
                 for h,ok in availability.items():
                     covered[h]+=int(ok)
@@ -322,8 +341,14 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             "regime_definition":"descriptive BTC trailing 24h return above/below +/-1 percent",
             "entry_reference":"next_trade_bar_open_ex_post",
             "all_horizons_share_same_decision_grid":True,"partition_crossing_paths_excluded":True,
-            **({"research_max_horizon_hours":168,"horizons_require_longest_complete_path":True}
-               if research_max_horizon_hours==168 else {}),
+            **({"research_max_horizon_hours":research_max_horizon_hours,
+                "horizons_require_longest_complete_path":True}
+               if research_max_horizon_hours>=168 else {}),
+            **({"separate_open_mark":True,"residual_is_open_at_observation_end":True,
+                "positive_count_includes_open_marks":True} if separate_open_mark else {}),
+            **({"preserve_recent_90d":True,"previously_explored_90d_development_ms":
+                [plan.cutoff_ms-90*DAY,plan.cutoff_ms-36*DAY]}
+               if preserve_recent_90d else {}),
             **({"target_diagnostics":True} if target_diagnostics else {}),
             "winner_selected":False,"out_of_sample_results_validated":False,
             "portfolio_simulated":False,"funding_settlement_verified":False,
