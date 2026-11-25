@@ -227,12 +227,32 @@ def research_history_kline_url(symbol: str, interval: str, start: int, end: int)
     ))
 
 
+def research_funding_url(symbol: str, start: int, end: int) -> str:
+    """D536 half-open retrospective interval, at most 30 days per request."""
+    if (type(symbol) is not str or _SYMBOL.fullmatch(symbol) is None
+            or type(start) is not int or type(end) is not int
+            or not 0 < start < end <= 4_000_000_000_000
+            or end-start > 30*24*HOUR_MS):
+        raise J1BybitCaptureError("invalid_research_funding_window")
+    return BASE_URL + "/v5/market/funding/history?" + urlencode((
+        ("category","linear"),("symbol",symbol),("startTime",str(start)),
+        ("endTime",str(end-1)),("limit","200"),
+    ))
+
+
+def research_mark_url(symbol: str, interval: str, start: int, end: int) -> str:
+    """D536 mark-price OHLC, distinct from trade candles."""
+    return research_history_kline_url(symbol,interval,start,end).replace(
+        "/v5/market/kline?","/v5/market/mark-price-kline?",1)
+
+
 class BoundedBybitPublicClient:
     def __init__(
         self, transport: Callable[[str, int], bytes] | None = None,
         *, min_interval_seconds: float = MIN_PUBLIC_GET_INTERVAL_SECONDS,
         allow_five_minute_research: bool = False,
         allow_long_history_research: bool = False,
+        allow_derivatives_history_research: bool = False,
     ):
         # D311: bounded, optional conservative pacing for the N50 hourly
         # worker. This does not modify the 372-request capture path, allow
@@ -245,6 +265,9 @@ class BoundedBybitPublicClient:
             raise ValueError("explicit_five_minute_research_flag_required")
         if type(allow_long_history_research) is not bool:
             raise ValueError("explicit_long_history_research_flag_required")
+        if type(allow_derivatives_history_research) is not bool:
+            raise ValueError("explicit_derivatives_history_research_flag_required")
+        self.allow_derivatives_history_research = allow_derivatives_history_research
         self.allow_long_history_research = allow_long_history_research
         self.allow_five_minute_research = allow_five_minute_research
         self.min_interval_seconds = float(min_interval_seconds)
@@ -291,6 +314,23 @@ class BoundedBybitPublicClient:
         elif parsed.path == "/v5/market/tickers":
             # Only one public aggregate endpoint, no optional filter params.
             allowed = url == tickers_url()
+        elif parsed.path == "/v5/market/funding/history" and self.allow_derivatives_history_research:
+            allowed = False
+            if set(queries) == {"category","symbol","startTime","endTime","limit"}:
+                try:
+                    allowed = url == research_funding_url(queries["symbol"][0],
+                        int(queries["startTime"][0]),int(queries["endTime"][0])+1)
+                except (ValueError, IndexError, TypeError, J1BybitCaptureError):
+                    allowed = False
+        elif parsed.path == "/v5/market/mark-price-kline" and self.allow_derivatives_history_research:
+            allowed = False
+            if set(queries) == {"category","symbol","interval","start","end","limit"}:
+                try:
+                    interval = {"60":"1h","5":"5m"}[queries["interval"][0]]
+                    allowed = url == research_mark_url(queries["symbol"][0],interval,
+                        int(queries["start"][0]),int(queries["end"][0])+1)
+                except (KeyError, ValueError, IndexError, TypeError, J1BybitCaptureError):
+                    allowed = False
         elif parsed.path == "/v5/market/kline" and self.allow_long_history_research:
             allowed = False
             if set(queries) == {"category", "symbol", "interval", "start", "end", "limit"}:
@@ -334,6 +374,8 @@ class BoundedBybitPublicClient:
             and "symbol" in queries else
             "instrument_universe" if parsed.path.endswith("instruments-info")
             else "ticker_review_proxy" if parsed.path.endswith("tickers")
+            else "research_funding_history" if parsed.path.endswith("funding/history")
+            else "research_mark_price_kline" if parsed.path.endswith("mark-price-kline")
             else "research_closed_kline_5m" if queries.get("interval") == ["5"]
             else "closed_kline_" + queries["limit"][0] + "h"
         )
@@ -357,6 +399,7 @@ class BoundedBybitPublicClient:
                  and queries.get("limit") == ["1000"])
                 or parsed.path == "/v5/market/tickers"
                 or (parsed.path == "/v5/market/kline" and self.allow_long_history_research)
+                or (parsed.path == "/v5/market/mark-price-kline" and self.allow_derivatives_history_research)
             ) else 131_072
         )
         wire = (self.transport(url, limit) if self.transport is not None
