@@ -2,6 +2,9 @@
 from pathlib import Path
 from decimal import Decimal
 import json
+import os
+import io
+from contextlib import redirect_stdout
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -11,10 +14,15 @@ from crypto_intelligence_agent.bybit_public_j1_transport import (
 )
 from crypto_intelligence_agent.j3_long_history_d528 import (
     HistoryPlan, decode_plan, windows, collect_batch, read_window,
+    freeze_cohort, load_plan, PLAN_FILE,
     rank_closed_cohort, DAY, HOUR_MS, QUALITY, EXCHANGE, MARKET,
 )
 from crypto_intelligence_agent.market_data import ClosedCandle, DataGapError, DataValidationError
 from urllib.parse import parse_qs,urlsplit
+from test_j2_dynamic_public_n50_d451 import scenario, selected, NOW as D451_NOW
+from crypto_intelligence_agent.j2_dynamic_public_n50_d451 import capture_dynamic_public_n50
+from crypto_intelligence_agent.bybit_public_j1_transport import instruments_url, tickers_url
+from scripts.run_j3_long_history_d528 import main as collector_main
 
 END=20_700*DAY
 NOW=END+HOUR_MS
@@ -33,6 +41,70 @@ def fake(url, limit):
 
 
 class LongHistoryTests(unittest.TestCase):
+    def test_freeze_actual_d451_snapshot(self):
+        # Regress the real AttributeError: exercise the real D451 dataclass,
+        # not a prebuilt HistoryPlan or a mock with permissive attributes.
+        snapshot=selected()
+        plan=freeze_cohort(snapshot)
+        self.assertEqual(plan.observed_at_ms,snapshot.ticker_received_ms)
+        self.assertEqual(plan.cohort_sha256,snapshot.fingerprint_sha256)
+        self.assertEqual(plan.members,tuple(sorted(
+            (m.symbol,m.launch_time_ms) for m in snapshot.ranked)))
+        self.assertEqual(plan.cutoff_ms,((D451_NOW-2000)//DAY)*DAY)
+        self.assertEqual(len(plan.members),50)
+        self.assertEqual(decode_plan(plan.encode()),plan)
+
+    @unittest.skipUnless(os.name=="posix" and hasattr(os,"geteuid")
+                         and os.geteuid()!=0,"real POSIX private owner CLI")
+    @patch("crypto_intelligence_agent.j3_long_history_d528.MIN_FREE_BYTES",0)
+    def test_cli_init_real_d451_capture_then_resume(self):
+        # Use real D451 selection, real D528 plan publication, lock, transport
+        # parsing, SQLite/checkpoint writes and readback. Inject only network
+        # payloads and time. The second invocation must not recapture D451.
+        pages,tick=scenario()
+        replies={instruments_url():pages[0],
+                 instruments_url(cursor="cursor2"):pages[1],tickers_url():tick}
+        cohort_client=BoundedBybitPublicClient(
+            transport=lambda url,limit:json.dumps(replies[url]).encode())
+        snapshot=capture_dynamic_public_n50(client=cohort_client,wall_ms=lambda:D451_NOW,
+            allow_public_network=True,confirm_personal_readonly_research=True,
+            confirm_region_eligible=True,confirm_public_data_rights=True)
+        self.assertEqual(cohort_client.requests_attempted,3)
+        with tempfile.TemporaryDirectory(prefix="d528-history-test-") as d:
+            home=Path(d)
+            home.chmod(0o700)
+            args=["--directory",str(home),"--days","90","--interval","1h","--max-gets","1",
+                  "--allow-public-network","--confirm-personal-readonly-research",
+                  "--confirm-region-eligible","--confirm-public-data-rights"]
+            clients=[]
+            def bounded(**kwargs):
+                c=BoundedBybitPublicClient(transport=fake,**kwargs)
+                clients.append(c)
+                return c
+            with patch("scripts.run_j3_long_history_d528.capture_dynamic_public_n50",
+                       return_value=snapshot) as capture, \
+                 patch("scripts.run_j3_long_history_d528.BoundedBybitPublicClient",side_effect=bounded), \
+                 patch("scripts.run_j3_long_history_d528.time.time_ns",return_value=(D451_NOW+1000)*1000000), \
+                 patch("scripts.run_j3_long_history_d528.time.sleep"):
+                stream=io.StringIO()
+                with redirect_stdout(stream):
+                    self.assertEqual(collector_main(args+["--init"]),0)
+                first=json.loads(stream.getvalue())
+                plan=load_plan(home)
+                self.assertEqual(plan,freeze_cohort(snapshot))
+                raw=(home/PLAN_FILE).read_bytes()
+                self.assertEqual(first["public_gets"],1)
+                self.assertGreater(first["saved_candles"],0)
+                stream=io.StringIO()
+                with redirect_stdout(stream):
+                    self.assertEqual(collector_main(args),0)
+                second=json.loads(stream.getvalue())
+                self.assertEqual(capture.call_count,1)
+                self.assertEqual(second["public_gets"],1)
+                self.assertGreater(second["saved_candles"],first["saved_candles"])
+                self.assertEqual((home/PLAN_FILE).read_bytes(),raw)
+                self.assertEqual(len(clients),2)
+
     def test_transport_is_opt_in_and_bounded(self):
         url=research_history_kline_url("BTCUSDT","1h",END-1000*HOUR_MS,END)
         with self.assertRaises(J1BybitCaptureError):

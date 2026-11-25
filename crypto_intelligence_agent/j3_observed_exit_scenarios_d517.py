@@ -39,8 +39,11 @@ class ExitScenario:
     stop_bar_index: int | None = field(default=None, compare=False)
 
 
-def _validate_path(candles, decision_end_ms, now_ms):
-    if (type(candles) is not tuple or not 1 <= len(candles) <= 720
+def _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours=12):
+    if type(research_max_horizon_hours) is not int or research_max_horizon_hours not in (12,72):
+        raise DataValidationError("D529 invalid explicit research horizon cap")
+    limit = 864 if research_max_horizon_hours == 72 else 720
+    if (type(candles) is not tuple or not 1 <= len(candles) <= limit
             or type(decision_end_ms) is not int or type(now_ms) is not int
             or not 0 < decision_end_ms < now_ms
             or any(type(c) is not ClosedCandle for c in candles)):
@@ -51,8 +54,9 @@ def _validate_path(candles, decision_end_ms, now_ms):
             or first.interval not in ("1m", "5m", "15m", "1h")):
         raise DataValidationError("D517 unsupported observed Bybit path")
     duration = interval_duration_ms(first.interval)
-    if len(candles) * duration > 12 * 3_600_000:
-        raise DataValidationError("D517 research horizon exceeds 12 hours")
+    if (research_max_horizon_hours == 72 and first.interval not in ("1h","5m")
+            or len(candles) * duration > research_max_horizon_hours * 3_600_000):
+        raise DataValidationError("D517/D529 research horizon exceeds explicit cap")
     for i, bar in enumerate(candles):
         if ((bar.exchange, bar.market, bar.symbol, bar.interval) !=
                 (first.exchange, first.market, first.symbol, first.interval)
@@ -77,6 +81,7 @@ def compare_exit_scenarios(
     candles: tuple[ClosedCandle, ...], *,
     direction: ResearchDirection, decision_end_ms: int, now_ms: int,
     margin: SyntheticMarginBasis, policy: PaperEntryExitPolicy,
+    research_max_horizon_hours: int = 12,
 ) -> dict[str, ExitScenario]:
     """Two scenario references, each with conserved normalized exit quantities.
 
@@ -92,7 +97,7 @@ def compare_exit_scenarios(
             or type(policy) is not PaperEntryExitPolicy
             or type(margin) is not SyntheticMarginBasis):
         raise DataValidationError("D517 explicit immutable research terms required")
-    bars = _validate_path(candles, decision_end_ms, now_ms)
+    bars = _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours)
     schedule = plan_synthetic_partial_exits(
         SyntheticExitPlan(_ONE, policy.tranches, policy.runner_floor_percent)
     )
@@ -188,14 +193,15 @@ def empty_replay_totals() -> dict:
 
 
 def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
-                      now_ms, margin, policy) -> None:
+                      now_ms, margin, policy, research_max_horizon_hours=12) -> None:
     totals["candidate_count"] += 1
     if candles is None:
         totals["missing_path_count"] += 1
         return
     outcomes = compare_exit_scenarios(
         candles, direction=direction, decision_end_ms=decision_end_ms,
-        now_ms=now_ms, margin=margin, policy=policy)
+        now_ms=now_ms, margin=margin, policy=policy,
+        research_max_horizon_hours=research_max_horizon_hours)
     totals["complete_path_count"] += 1
     totals["ordering_sensitive_count"] += int(
         outcomes["adverse_first"] != outcomes["favorable_first"])
