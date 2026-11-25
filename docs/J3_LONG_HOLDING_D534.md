@@ -1,0 +1,15 @@
+# D534 — posições de semanas ou meses, observação sem fechamento por tempo
+
+PO 25/11/2026: sete dias é apenas horizonte de pesquisa, posição pode permanecer meses em lateralização e depois expandir. Preservar último 25% livre/TP4 10% e proteção, sem antecipar discussão stop/no-stop. D533 integrado em 305aab29c990fffb0f221b9b03febad21a073b6b, árvore dba629348587ddda648ad5ef9ab8688e48e6402c, CI 45625538121/45625537966 SUCCESS, revisão 6058619841. Execução D533 real ainda pendente. Registro issue #4 comentário 7164185636.
+
+## Contrato
+
+Horizontes configuráveis em horas, até 4320h (180 dias), máximo seis comparados na mesma execução. Padrões legados 12/72h e D533 168h preservados. Para cap acima de 168h exigir base >=365d, --separate-open-mark e --preserve-recent-90d. Não fechar posição pelo relógio; o fim da observação apenas marca saldo remanescente no preço do último candle, sem fingir fill. Contabilizar separadamente realizado hipotético bruto das parciais/stops, custos de entrada e saídas já simuladas, não realizado bruto do saldo e custo de eventual saída do saldo. Soma reconcilia exatamente com resultado condicional pré-funding existente. Contar posições totalmente encerradas e abertas positivas/negativas/flat; contagem positiva tradicional inclui marcações, não taxa de acerto de posições encerradas. Nenhuma liquidação, funding, carteira, execução real ou promessa de lucro. Dados faltantes são excluídos, não interpolados; comparação exige caminho completo até o maior horizonte, sem cruzar partição. Prefixo de cobertura evita examinar todos os meses para cada slot; replay longo ainda pode ser computacionalmente pesado, usar grade focalizada. Não aplicar novos caps ao PAPER.
+
+## Dados e partições
+
+90d/5m já completo; anual 1h 464770/465609 no último recibo, anual 5m ainda por coletar. Reutilizar D528 no mesmo plano sem init; 365 e 730 dias. --preserve-recent-90d preserva os 18+18 dias reservados originais e amplia desenvolvimento para trás, registrando intervalo de 54d já explorado. Não rotular janela anual inteira como OOS. Não há 30/60/90/180d de observação dentro de cada reserva de 18d; validação independente longa precisa novas janelas não utilizadas de tamanho adequado, ou dados futuros. Rejeitar horizonte sem espaço para decisões. Comparar 48/168/720/1440/2160h em 365d e 4320h na base 730d quando disponível, em lotes pequenos, foco nas oito entradas D533, sem otimizar indiscriminadamente. O relatório exclui as entradas próximas do corte que não possuem horizonte completo; não inferir resultados para essas entradas ainda não observadas.
+
+## Execução após coleta e CI
+
+CLI D529 aceita --days 365 --partition development --horizon-hours 168 720 1440 2160 --research-max-horizon-hours 2160 --separate-open-mark --preserve-recent-90d --target-diagnostics --resolution 5m --low-priority, matriz D532 e saídas D533, nomes e stops selecionados explicitamente. Usar --days 730 e cap 4320 para seis meses. Nenhuma coleta nova executada por esta mudança. Medir tempo/funding e liquidação antes de homologar permanência a 50x; sem perfil, sizing, J1, serviços, release, ordens ou custo adicional.

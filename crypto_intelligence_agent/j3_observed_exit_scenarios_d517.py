@@ -24,6 +24,7 @@ QUALITY = "bybit_public_rest_historical_closed_unverified"
 _CTX = Context(prec=128, rounding=ROUND_HALF_EVEN)
 _ZERO = Decimal(0)
 _ONE = Decimal(1)
+MAX_RESEARCH_HOLD_HOURS = 180*24
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,17 @@ class ResearchStopManagement:
 
 
 @dataclass(frozen=True)
+class OpenMarkAccounting:
+    """Hypothetical accounting, not fills or a statement of actual PnL."""
+    realized_gross_quote: Decimal
+    unrealized_gross_quote: Decimal
+    incurred_fee_slippage_quote: Decimal
+    hypothetical_residual_exit_cost_quote: Decimal
+    realized_after_incurred_cost_quote: Decimal
+    open_after_assumed_exit_cost_quote: Decimal
+
+
+@dataclass(frozen=True)
 class ExitScenario:
     targets_reached: int
     target_fraction: Decimal
@@ -57,10 +69,11 @@ class ExitScenario:
     conditional_before_funding_quote: Decimal
     loss_at_least_requested_margin: bool
     stop_bar_index: int | None = field(default=None, compare=False)
+    open_mark: OpenMarkAccounting | None = field(default=None, compare=False)
 
 
 def _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours=12):
-    if type(research_max_horizon_hours) is not int or research_max_horizon_hours not in (12,72,168):
+    if type(research_max_horizon_hours) is not int or not (research_max_horizon_hours==12 or 72<=research_max_horizon_hours<=MAX_RESEARCH_HOLD_HOURS):
         raise DataValidationError("D529 invalid explicit research horizon cap")
     limit = 720 if research_max_horizon_hours == 12 else 12*research_max_horizon_hours
     if (type(candles) is not tuple or not 1 <= len(candles) <= limit
@@ -103,6 +116,7 @@ def compare_exit_scenarios(
     margin: SyntheticMarginBasis, policy: PaperEntryExitPolicy,
     research_max_horizon_hours: int = 12,
     management: ResearchStopManagement | None = None,
+    separate_open_mark: bool = False,
 ) -> dict[str, ExitScenario]:
     """Two scenario references, each with conserved normalized exit quantities.
 
@@ -116,7 +130,8 @@ def compare_exit_scenarios(
     """
     if (type(direction) is not ResearchDirection
             or type(policy) is not PaperEntryExitPolicy
-            or type(margin) is not SyntheticMarginBasis):
+            or type(margin) is not SyntheticMarginBasis
+            or type(separate_open_mark) is not bool):
         raise DataValidationError("D517 explicit immutable research terms required")
     if management is not None and (type(management) is not ResearchStopManagement
             or any(n is not None and n>len(policy.target_distances_bps)
@@ -187,6 +202,7 @@ def compare_exit_scenarios(
                         candidate=favorable*(_ONE-sign*management.trail_distance_bps/BPS_DENOMINATOR)
                         stop=tighten(candidate)
             residual = remaining
+            realized_exit_value = exit_value
             exit_value += residual*bars[-1].close
             if target_fraction+stopped_fraction+residual != _ONE:
                 raise DataValidationError("D517 normalized quantity not conserved")
@@ -207,15 +223,30 @@ def compare_exit_scenarios(
                 exit_adverse_slippage_bps=policy.exit_adverse_slippage_bps,
             )).fees_and_slippage_units
             net = gross-costs
+            accounting=None
+            if separate_open_mark:
+                # Allocate the rounded aggregate exit notional exactly. The
+                # unclosed remainder is marked, never booked as a realized exit.
+                realized_notional=(notional*realized_exit_value/entry).quantize(Decimal("1e-18"))
+                realized_gross=sign*(realized_notional-(1-residual)*notional)
+                open_gross=gross-realized_gross
+                entry_cost=notional*(policy.entry_fee_bps+policy.entry_adverse_slippage_bps)/BPS_DENOMINATOR
+                incurred=entry_cost+realized_notional*(policy.exit_fee_bps+policy.exit_adverse_slippage_bps)/BPS_DENOMINATOR
+                open_exit_cost=costs-incurred
+                accounting=OpenMarkAccounting(realized_gross,open_gross,incurred,open_exit_cost,
+                                              realized_gross-incurred,open_gross-open_exit_cost)
+                if accounting.realized_after_incurred_cost_quote+accounting.open_after_assumed_exit_cost_quote!=net:
+                    raise DataValidationError("D534 mark accounting does not reconcile")
             return ExitScenario(hit, target_fraction, stopped_fraction, residual,
                                 gross, costs, net, net <= -margin.requested_margin_quote,
-                                stop_bar_index)
+                                stop_bar_index,accounting)
 
         return {"adverse_first": run(True), "favorable_first": run(False)}
 
 
-def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=False) -> dict:
-    if type(include_payoff) is not bool or type(include_target_diagnostics) is not bool:
+def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=False,
+                        include_open_mark=False) -> dict:
+    if any(type(v) is not bool for v in (include_payoff,include_target_diagnostics,include_open_mark)):
         raise DataValidationError("D531/D533 explicit diagnostic flags required")
     return {
         "candidate_count": 0, "complete_path_count": 0, "missing_path_count": 0,
@@ -232,7 +263,11 @@ def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=Fals
                      if include_payoff else {}),
                   **({**{f"tp{i}_reached_count":0 for i in range(1,9)},
                       "after_tp3_stopped_count":0,"after_tp3_residual_at_horizon_count":0}
-                     if include_target_diagnostics else {})}
+                     if include_target_diagnostics else {}),
+                  **({**{k:_ZERO for k in OpenMarkAccounting.__dataclass_fields__},
+                      "fully_exited_count":0,"open_positive_count":0,"open_negative_count":0,
+                      "open_flat_count":0,"open_fraction_sum":_ZERO}
+                     if include_open_mark else {})}
            for name in ("adverse_first", "favorable_first")},
     }
 
@@ -247,10 +282,12 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
     outcomes = compare_exit_scenarios(
         candles, direction=direction, decision_end_ms=decision_end_ms,
         now_ms=now_ms, margin=margin, policy=policy,
-        research_max_horizon_hours=research_max_horizon_hours,management=management)
+        research_max_horizon_hours=research_max_horizon_hours,management=management,
+        separate_open_mark="realized_gross_quote" in totals["adverse_first"])
     totals["complete_path_count"] += 1
     totals["ordering_sensitive_count"] += int(
-        outcomes["adverse_first"] != outcomes["favorable_first"])
+        outcomes["adverse_first"] != outcomes["favorable_first"]
+        or outcomes["adverse_first"].open_mark!=outcomes["favorable_first"].open_mark)
     with localcontext(_CTX):
         entry = candles[0].open
         long = direction is ResearchDirection.LONG
@@ -273,6 +310,14 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
                     row[f"tp{i}_reached_count"]+=int(result.targets_reached>=i)
                 row["after_tp3_stopped_count"]+=int(result.targets_reached>=3 and result.stopped_fraction>0)
                 row["after_tp3_residual_at_horizon_count"]+=int(result.targets_reached>=3 and result.horizon_residual_fraction>0)
+            if result.open_mark is not None:
+                for k in OpenMarkAccounting.__dataclass_fields__:
+                    row[k]+=getattr(result.open_mark,k)
+                if result.horizon_residual_fraction:
+                    row["open_fraction_sum"]+=result.horizon_residual_fraction
+                    row["open_positive_count" if net>0 else "open_negative_count" if net<0 else "open_flat_count"]+=1
+                else:
+                    row["fully_exited_count"]+=1
             row["stop_count"] += int(result.stopped_fraction > 0)
             row["with_targets_count"] += int(result.targets_reached > 0)
             row["positive_with_stop_count"] += int(result.stopped_fraction > 0 and net > 0)
@@ -322,6 +367,13 @@ def summarize_replay(totals: dict, *, margin: SyntheticMarginBasis) -> dict:
                     loss*row["positive_count"])
                 row["positive_net_quote_sum"]=format(gain,"f") if count else None
                 row["negative_net_quote_sum"]=format(loss,"f") if count else None
+            if "realized_gross_quote" in row:
+                if (row["fully_exited_count"]+row["residual_at_horizon_count"]!=count
+                        or row["open_positive_count"]+row["open_negative_count"]+row["open_flat_count"]!=row["residual_at_horizon_count"]
+                        or row["realized_after_incurred_cost_quote"]+row["open_after_assumed_exit_cost_quote"]!=net):
+                    raise DataValidationError("D534 aggregate open accounting mismatch")
+                for k in (*OpenMarkAccounting.__dataclass_fields__,"open_fraction_sum"):
+                    row[k]=format(row[k],"f") if count else None
             for key in ("gross_reference_quote", "assumed_fee_slippage_quote",
                         "conditional_before_funding_quote"):
                 row[key] = format(row[key], "f") if count else None

@@ -27,7 +27,9 @@ def main(argv=None):
     p.add_argument("--entry-experiments-file",type=Path)
     p.add_argument("--exit-experiments-file",type=Path)
     p.add_argument("--strategy-names",nargs="+")
-    p.add_argument("--research-max-horizon-hours",type=int,choices=(72,168),default=72)
+    p.add_argument("--research-max-horizon-hours",type=int,default=72,help="Explicit research cap, up to 4320 hours (180 days)")
+    p.add_argument("--separate-open-mark",action="store_true")
+    p.add_argument("--preserve-recent-90d",action="store_true")
     p.add_argument("--target-diagnostics",action="store_true")
     p.add_argument("--days",type=int,default=90)
     p.add_argument("--partition",choices=("development","validation","holdout"),default="development")
@@ -66,6 +68,8 @@ def main(argv=None):
                 strategy_names=a.strategy_names,
                 research_max_horizon_hours=a.research_max_horizon_hours,
                 target_diagnostics=a.target_diagnostics,
+                separate_open_mark=a.separate_open_mark,
+                preserve_recent_90d=a.preserve_recent_90d,
                 progress=lambda n,total:print("D529 symbols processed: %d/%d"%(n,total),
                                              file=sys.stderr,flush=True))
         if snapshot(a.policy_file)["revision"]!=rev:

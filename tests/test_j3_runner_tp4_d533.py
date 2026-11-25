@@ -82,7 +82,7 @@ class D533Tests(unittest.TestCase):
         self.assertEqual(len(cs),2016)
         kw=dict(direction=ResearchDirection.LONG,decision_end_ms=START,
                 now_ms=START+169*HOUR,margin=MARGIN,policy=POLICY)
-        for cap in (12,72,169):
+        for cap in (12,72,4321):
             with self.assertRaises(DataValidationError):
                 compare_exit_scenarios(cs,**kw,research_max_horizon_hours=cap)
         self.assertIn("adverse_first",compare_exit_scenarios(cs,**kw,research_max_horizon_hours=168))
