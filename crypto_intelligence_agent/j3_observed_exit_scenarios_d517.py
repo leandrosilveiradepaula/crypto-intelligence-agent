@@ -73,7 +73,7 @@ class ExitScenario:
 
 
 def _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours=12):
-    if type(research_max_horizon_hours) is not int or research_max_horizon_hours!=12 and not 72<=research_max_horizon_hours<=MAX_RESEARCH_HOLD_HOURS:
+    if type(research_max_horizon_hours) is not int or not (research_max_horizon_hours==12 or 72<=research_max_horizon_hours<=MAX_RESEARCH_HOLD_HOURS):
         raise DataValidationError("D529 invalid explicit research horizon cap")
     limit = 720 if research_max_horizon_hours == 12 else 12*research_max_horizon_hours
     if (type(candles) is not tuple or not 1 <= len(candles) <= limit
