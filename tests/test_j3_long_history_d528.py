@@ -105,6 +105,35 @@ class LongHistoryTests(unittest.TestCase):
                 self.assertEqual((home/PLAN_FILE).read_bytes(),raw)
                 self.assertEqual(len(clients),2)
 
+    @unittest.skipUnless(os.name=="posix" and hasattr(os,"geteuid")
+                         and os.geteuid()!=0,"real POSIX private owner CLI")
+    def test_sanitized_failure_and_no_retry(self):
+        with tempfile.TemporaryDirectory(prefix="d528-history-test-") as d:
+            home=Path(d)
+            home.chmod(0o700)
+            args=["--directory",str(home),"--days","90","--interval","5m",
+                  "--max-gets","10","--request-spacing-seconds","5",
+                  "--allow-public-network","--confirm-personal-readonly-research",
+                  "--confirm-region-eligible","--confirm-public-data-rights"]
+            for code,expected in (("provider_rate_limit_no_retry","provider_rate_limit_no_retry"),
+                                 ("untrusted arbitrary provider text","unclassified_capture_error_no_retry")):
+                client=BoundedBybitPublicClient(transport=fake,allow_long_history_research=True)
+                client.requests_attempted=1
+                with patch("scripts.run_j3_long_history_d528.load_plan",return_value=PLAN), \
+                     patch("scripts.run_j3_long_history_d528.BoundedBybitPublicClient",return_value=client) as factory, \
+                     patch("scripts.run_j3_long_history_d528.collect_batch",
+                           side_effect=J1BybitCaptureError(code)) as collect:
+                    stream=io.StringIO()
+                    with redirect_stdout(stream):
+                        self.assertEqual(collector_main(args),1)
+                    report=json.loads(stream.getvalue())
+                    self.assertEqual(report["failure_code"],expected)
+                    self.assertEqual(report["requests_attempted"],1)
+                    self.assertFalse(report["automatic_retry"])
+                    self.assertNotIn("untrusted arbitrary",stream.getvalue())
+                    self.assertEqual(collect.call_count,1)
+                    factory.assert_called_once_with(allow_long_history_research=True,min_interval_seconds=5)
+
     def test_transport_is_opt_in_and_bounded(self):
         url=research_history_kline_url("BTCUSDT","1h",END-1000*HOUR_MS,END)
         with self.assertRaises(J1BybitCaptureError):

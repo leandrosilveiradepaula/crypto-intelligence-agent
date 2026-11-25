@@ -32,7 +32,7 @@ class D530Tests(unittest.TestCase):
 
     def test_pullback_requires_prior_correction_and_is_prefix_causal(self):
         cfg=EntryExperiment("pullback",3,8,False,5,3,20,D(2),5,30,D(".7"),5,D(1),0)
-        prices=[D(100)+i for i in range(30)]+[D(127),D(126),D(132),D(133),D(134)]
+        prices=[D(100)+i for i in range(30)]+[D(127),D("127.5"),D(132),D(133),D(134)]
         def make(values):
             return tuple(ClosedCandle(EXCHANGE,MARKET,"ETHUSDT","1h",
                 START+i*HOUR_MS,START+(i+1)*HOUR_MS-1,p,p+D(".1"),p-D(".1"),p,
