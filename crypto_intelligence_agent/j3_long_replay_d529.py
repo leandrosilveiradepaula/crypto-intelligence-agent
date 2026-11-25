@@ -113,7 +113,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     partition="development",horizons=DEFAULT_HORIZONS,
                     stops=DEFAULT_STOPS,resolution="1h",
                     confirm_frozen_hypotheses=False,progress=None,
-                    entry_experiments_raw=None,exit_experiments_raw=None):
+                    entry_experiments_raw=None,exit_experiments_raw=None,
+                    strategy_names=None):
     plan=decode_plan(plan.encode())
     if (partition not in _PARTS or type(confirm_frozen_hypotheses) is not bool
             or (partition=="holdout" and not confirm_frozen_hypotheses)
@@ -132,6 +133,14 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     start,end=splits[partition]
     last_decision=end-max(horizons)*HOUR_MS
     settings,labels,warmup=make_policies(owner_policy,matrix_raw,entry_experiments_raw)
+    # Compute shared warmup from the entire matrix, even when replaying a subset.
+    if strategy_names is not None:
+        if (type(strategy_names) not in (tuple,list) or not strategy_names
+                or any(type(name) is not str or name not in settings for name in strategy_names)
+                or len(set(strategy_names))!=len(strategy_names)):
+            raise DataValidationError("D532 unique known strategy names required")
+        settings={name:settings[name] for name in strategy_names}
+        labels={name:labels[name] for name in strategy_names}
     notional=owner_policy.margin_quote*Decimal(50)
     margin=SyntheticMarginBasis(owner_policy.margin_quote,50,notional,"SYNTHETIC_USDT")
     use_exit_experiments=exit_experiments_raw is not None
@@ -286,6 +295,7 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             "covered_symbol_hours_by_horizon":covered,"monthly_coverage":monthly_coverage,
             "manifest":{"plan_sha256":plan.digest,"matrix_sha256":sha256(matrix_raw).hexdigest(),
                         "data":manifest,
+                        **({"selected_strategy_names":list(labels)} if strategy_names is not None else {}),
                         **({"entry_experiments_sha256":sha256(entry_experiments_raw).hexdigest()}
                            if entry_experiments_raw is not None else {}),
                         **({"exit_experiments_sha256":sha256(exit_experiments_raw).hexdigest()}

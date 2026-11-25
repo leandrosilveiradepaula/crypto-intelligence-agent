@@ -1,0 +1,88 @@
+{
+  "schema": "d531-exit-experiments-v1",
+  "profiles": [
+    {
+      "name": "runner_25_wide",
+      "label": "Parciais 1,5/3/5% + residual 25%",
+      "targets_bps": [
+        "150",
+        "300",
+        "500"
+      ],
+      "tranches": [
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        },
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        },
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        }
+      ],
+      "runner_floor_percent": "25",
+      "management": null
+    },
+    {
+      "name": "runner_25_protected",
+      "label": "Mesmo residual, stop na entrada após TP1",
+      "targets_bps": [
+        "100",
+        "200",
+        "300"
+      ],
+      "tranches": [
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        },
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        },
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        }
+      ],
+      "runner_floor_percent": "25",
+      "management": {
+        "protect_after_targets": 1,
+        "trail_after_targets": null,
+        "trail_distance_bps": null
+      }
+    },
+    {
+      "name": "runner_25_wide_protected",
+      "label": "Alvos 1,5/3/5% + proteção após TP1",
+      "targets_bps": [
+        "150",
+        "300",
+        "500"
+      ],
+      "tranches": [
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        },
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        },
+        {
+          "basis": "INITIAL_POSITION",
+          "percent": "25"
+        }
+      ],
+      "runner_floor_percent": "25",
+      "management": {
+        "protect_after_targets": 1,
+        "trail_after_targets": null,
+        "trail_distance_bps": null
+      }
+    }
+  ]
+}

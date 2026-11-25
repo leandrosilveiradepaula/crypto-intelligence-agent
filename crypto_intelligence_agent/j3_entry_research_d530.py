@@ -4,13 +4,14 @@ Immutable explicit parameters; no live signal, profile or trading integration.
 RSI is evaluated separately in D529, after the original candidate.
 """
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, localcontext
 import json
 import re
 
 from .j2_configurable_indicators_d513 import (
     BollingerBands, moving_average, bollinger_bands, parse_rsi,
+    PivotSuperTrend, pivot_trend,
 )
 from .j3_combination_research_d520 import _unique, _decimal
 from .market_data import DataValidationError
@@ -36,6 +37,7 @@ class EntryExperiment:
     volume_period: int
     min_volume_ratio: Decimal
     cooldown_bars: int
+    pivot_filter: PivotSuperTrend | None = None
 
     def __post_init__(self):
         if type(self.trigger) is not str or self.trigger not in ("pullback","bb_squeeze"):
@@ -50,6 +52,9 @@ class EntryExperiment:
             v=getattr(self,k)
             if type(v) is not int or not lo<=v<=hi:
                 raise DataValidationError("D530 invalid integer parameter")
+        if self.pivot_filter is not None and (type(self.pivot_filter) is not PivotSuperTrend
+                or not self.pivot_filter.enabled):
+            raise DataValidationError("D532 explicit enabled Pivot veto required")
         if self.fast>=self.slow:
             raise DataValidationError("D530 ordered MAs")
         for v,lo,hi in ((self.bb_deviations,Decimal(".1"),Decimal(10)),
@@ -90,9 +95,16 @@ def parse_experiments(raw):
                 or any(ord(c)<32 for c in label)):
             raise DataValidationError("D530 profile identity")
         args=p["parameters"]
-        if type(args) is not dict or set(args)!=set(EntryExperiment.__dataclass_fields__):
+        required=set(EntryExperiment.__dataclass_fields__)-{"pivot_filter"}
+        if type(args) is not dict or not required<=set(args)<=required|{"pivot_filter"}:
             raise DataValidationError("D530 explicit parameters")
         args=dict(args)
+        pivot=args.get("pivot_filter")
+        if pivot is not None:
+            if type(pivot) is not dict or set(pivot)!={"pivot_period","atr_period","atr_factor"}:
+                raise DataValidationError("D532 exact Pivot veto parameters")
+            args["pivot_filter"]=PivotSuperTrend(True,pivot["pivot_period"],
+                pivot["atr_period"],_decimal(pivot["atr_factor"]))
         for key in ("bb_deviations","max_width_ratio","min_volume_ratio"):
             args[key]=_decimal(args[key])
         cfg=EntryExperiment(**args)
@@ -121,6 +133,14 @@ def entry_events(candles, cfg):
     """
     if type(cfg) is not EntryExperiment:
         raise DataValidationError("D530 typed experiment")
+    # Pure veto of the already generated event, including its cooldown.
+    # Rejected events never re-arm the underlying trigger or change its clock.
+    if cfg.pivot_filter is not None:
+        original=entry_events(candles,replace(cfg,pivot_filter=None))
+        trend=pivot_trend(tuple(candles),cfg.pivot_filter)
+        return {c.close_time_ms+1:original[c.close_time_ms+1]
+                for i,c in enumerate(candles) if c.close_time_ms+1 in original
+                and trend[i]==(1 if original[c.close_time_ms+1]=="LONG" else -1)}
     closes=tuple(c.close for c in candles)
     fast=moving_average(closes,cfg.fast,exponential=cfg.exponential)
     slow=moving_average(closes,cfg.slow,exponential=cfg.exponential)
