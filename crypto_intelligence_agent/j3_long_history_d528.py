@@ -224,11 +224,12 @@ def _store(path):
     return SQLiteMarketDataStore(path)
 
 
-def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_BATCH_GETS):
+def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_BATCH_GETS,
+                  oldest_first=False):
     """One bounded batch. A successful partial report is NOT full coverage."""
     plan = decode_plan(plan.encode())
     started = wall_ms()
-    if (type(max_gets) is not int or not 1 <= max_gets <= MAX_BATCH_GETS
+    if (type(oldest_first) is not bool or type(max_gets) is not int or not 1 <= max_gets <= MAX_BATCH_GETS
             or not plan.observed_at_ms <= started < plan.observed_at_ms+MAX_PLAN_AGE_MS
             or type(client) is not BoundedBybitPublicClient or not client.allow_long_history_research
             or (client.transport is None and plan.source_mode != "public_rest_observed_unverified")):
@@ -236,6 +237,10 @@ def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_B
     source = HistorySource(plan, client, wall_ms, started, max_gets, home)
     duration = interval_duration_ms(interval)
     jobs = tuple(windows(plan, days, interval))
+    if oldest_first:
+        # Preserve shard identity/checkpoints; prioritize development rather
+        # than downloading the reserved newest partition first.
+        jobs=tuple(sorted(jobs,key=lambda job:(job[0],job[2])))
     stats = {s:{"expected":0,"saved":0,"complete_shards":0,"gap_shards":0}
              for s,_ in plan.members}
     for _, end, symbol, first in jobs:
@@ -284,6 +289,7 @@ def collect_batch(*, home, plan, days, interval, client, wall_ms, max_gets=MAX_B
             "missing_candles":expected-saved,"complete_member_shards":complete,
             "expected_member_shards":len(jobs),"public_gets":source.gets,
             "batch_limit_reached":limited, "by_symbol":stats, "gap_member_shards":gaps,
+            "collection_order":"oldest_first" if oldest_first else "newest_first",
             "cohort_origin":"current_D451_provisional_survivors",
             "historical_marketwide_top50_verified":False,
             "retrospective_not_contemporaneous":True,"orders_sent":False,

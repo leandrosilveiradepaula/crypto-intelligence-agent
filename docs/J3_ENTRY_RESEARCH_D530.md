@@ -16,3 +16,5 @@ Comando de pesquisa quando código aprovado:
       --resolution 5m --low-priority > "$REPORT"
 
 Sem real orders, gastos, serviços ou mudança de perfil. Cobertura sobrevivente não N50 histórico. Sem funding/liquidação.
+
+A opção --oldest-first altera somente a ordem dos jobs dos shards existentes: prioriza os dias de desenvolvimento (mais antigos) na coleta 90d 5m. Não muda cutoff, hash, identidade dos checkpoints ou conteúdo do plano. A cobertura de cada partição deve ser medida; ainda não usar holdout. O wrapper deve parar toda a aquisição diante de J1BybitCaptureError e nunca tentar outro endpoint para contornar o erro.

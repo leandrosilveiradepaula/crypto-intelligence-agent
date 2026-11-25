@@ -54,6 +54,7 @@ def main(argv=None):
     p.add_argument("--interval",choices=("1h","5m"),default="1h")
     p.add_argument("--max-gets",type=int,default=MAX_BATCH_GETS,choices=range(1,MAX_BATCH_GETS+1),metavar="1..400")
     p.add_argument("--request-spacing-seconds",type=int,choices=range(2,13),default=2)
+    p.add_argument("--oldest-first",action="store_true",help="Prioritize older shards without changing plan")
     p.add_argument("--init",action="store_true",help="Freeze a new provisional cohort, never replace an existing one")
     p.add_argument("--low-priority",action="store_true")
     for flag in ("allow-public-network","confirm-personal-readonly-research",
@@ -88,7 +89,8 @@ def main(argv=None):
             client=BoundedBybitPublicClient(allow_long_history_research=True,
                                             min_interval_seconds=a.request_spacing_seconds)
             result=collect_batch(home=home,plan=plan,days=a.days,interval=a.interval,
-                client=client,wall_ms=lambda:time.time_ns()//1_000_000,max_gets=a.max_gets)
+                client=client,wall_ms=lambda:time.time_ns()//1_000_000,max_gets=a.max_gets,
+                oldest_first=a.oldest_first)
         print(json.dumps(result,sort_keys=True,separators=(",",":")))
         return 0
     except (MarketDataError,J1BybitCaptureError,OSError,ValueError,TypeError,ArithmeticError) as exc:
