@@ -21,7 +21,7 @@ from .bybit_public_j1_transport import (
 )
 from .decimal_json import decode_public_market_json_exact, positive_market_decimal
 from .j3_long_history_d528 import (
-    DAY, HOUR_MS, MAX_BATCH_MS, MAX_PLAN_AGE_MS, MIN_FREE_BYTES, canonical,
+    DAY, HOUR_MS, SHARD, MAX_DAYS, MAX_BATCH_MS, MAX_PLAN_AGE_MS, MIN_FREE_BYTES, canonical,
     decode_plan, windows, read_window,
 )
 from .j4_automatic_entry_materializer_d448 import _read_owner_bytes
@@ -81,7 +81,7 @@ def normalize_page(payload,kind,symbol,start,end):
                 raise DataValidationError("D536 funding symbol mismatch")
             t=_timestamp(row.get("fundingRateTimestamp"))
             v=_rate(row.get("fundingRate"))
-            output.append([t,str(v)])
+            output.append([t,format(v,"f")])
         else:
             if type(row) is not list or len(row)!=5:
                 raise DataValidationError("D536 mark OHLC requires five fields")
@@ -89,7 +89,7 @@ def normalize_page(payload,kind,symbol,start,end):
             op,hi,lo,cl=map(_price,row[1:])
             if t%interval_duration_ms(kind[5:]) or lo>min(op,cl,hi) or hi<max(op,cl,lo):
                 raise DataValidationError("D536 invalid mark grid or OHLC")
-            output.append([t,*map(str,(op,hi,lo,cl))])
+            output.append([t,*[format(v,"f") for v in (op,hi,lo,cl)]])
         if not start<=t<end:
             raise DataValidationError("D536 row outside requested interval")
     output.sort(key=lambda x:x[0])
@@ -175,17 +175,23 @@ def _page(home,plan,kind,symbol,start,end,*,client,wall_ms,budget,started):
 
 
 def jobs(plan,days,kind):
-    if kind not in KINDS:
-        raise DataValidationError("D536 explicit dataset")
-    interval="1h" if kind=="funding" else kind[5:]
+    if kind not in KINDS or type(days) is not int or not 1<=days<=MAX_DAYS:
+        raise DataValidationError("D536 explicit dataset and days")
+    if kind=="funding":
+        for i in reversed(range((days+29)//30)):
+            end=plan.cutoff_ms-i*SHARD
+            start=max(end-SHARD,plan.cutoff_ms-MAX_DAYS*DAY)
+            for symbol,launch in plan.members:
+                first=max(start,launch)
+                if first<end:
+                    yield symbol,first,end
+        return
+    interval=kind[5:]
     for start,end,symbol,first in sorted(windows(plan,days,interval),
                                        key=lambda j:(j[0],j[2])):
-        if kind=="funding":
-            yield symbol,max(start,dict(plan.members)[symbol]),end
-        else:
-            step=1000*interval_duration_ms(interval)
-            for a in range(first,end,step):
-                yield symbol,a,min(a+step,end)
+        step=1000*interval_duration_ms(interval)
+        for a in range(first,end,step):
+            yield symbol,a,min(a+step,end)
 
 
 def collect_derivatives(*,home,plan,days,kind,client=None,wall_ms,budget=MAX_GETS):
@@ -234,6 +240,54 @@ def collect_derivatives(*,home,plan,days,kind,client=None,wall_ms,budget=MAX_GET
             **counts,"public_gets":0 if client is None else client.requests_attempted,
             "funding_calendar_verified":False,"historical_risk_tiers_verified":False,
             "liquidation_verified":False,"orders_sent":False,"j1_touched":False}
+
+
+def read_derivatives_window(home,plan,kind,symbol,start,end):
+    """Read only observed records; separately flag query completeness.
+
+    A complete funding query window is not an independently verified calendar.
+    Never turn missing mark bars or uncovered funding queries into zero rates.
+    """
+    plan=decode_plan(plan.encode())
+    if (kind not in KINDS or symbol not in dict(plan.members)
+            or type(start) is not int or type(end) is not int
+            or not plan.cutoff_ms-MAX_DAYS*DAY<=start<end<=plan.cutoff_ms
+            or start<dict(plan.members)[symbol]):
+        raise DataValidationError("D536 explicit post-launch read range required")
+    if kind!="funding":
+        dt=interval_duration_ms(kind[5:])
+        if start%dt or end%dt:
+            raise DataValidationError("D536 mark read grid")
+    result=[]
+    complete=True
+    def visit(a,b):
+        if b<=start or a>=end:
+            return
+        nonlocal complete
+        rows=_page(home,plan,kind,symbol,a,b,client=None,wall_ms=lambda:0,
+                   budget=0,started=0)
+        if rows is None:
+            complete=False
+            return
+        if kind=="funding" and len(rows)==200:
+            mid=(a+b)//2
+            if mid==a or mid==b:
+                raise DataValidationError("D536 saturated indivisible window")
+            visit(a,mid)
+            visit(mid,b)
+            return
+        result.extend(tuple(row) for row in rows if start<=row[0]<end)
+    days=(plan.cutoff_ms-start+DAY-1)//DAY
+    for s,a,b in jobs(plan,days,kind):
+        if s==symbol:
+            visit(a,b)
+    result.sort(key=lambda row:row[0])
+    if any(a[0]>=b[0] for a,b in zip(result,result[1:])):
+        raise DataValidationError("D536 duplicate stored event across pages")
+    if kind!="funding":
+        complete=complete and len(result)==(end-start)//dt
+    return {"rows":tuple(result),"query_coverage_complete":complete,
+            "funding_calendar_verified":False}
 
 
 def trade_coverage(home,plan,days,interval):

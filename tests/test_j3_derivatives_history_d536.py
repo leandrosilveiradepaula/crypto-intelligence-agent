@@ -1,6 +1,7 @@
 """D536 deterministic derivatives history, resume, and conditional funding costs."""
 from decimal import Decimal as D
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from crypto_intelligence_agent.bybit_public_j1_transport import (
 )
 from crypto_intelligence_agent.j3_derivatives_history_d536 import (
     collect_derivatives,normalize_page,FundingExposure,funding_cost_bounds,trade_coverage,
+    read_derivatives_window,
 )
 from crypto_intelligence_agent.j3_long_history_d528 import HistoryPlan,DAY,HOUR_MS
 from crypto_intelligence_agent.market_data import DataValidationError
@@ -51,6 +53,7 @@ class DerivativesTests(unittest.TestCase):
         with self.assertRaises(J1BybitCaptureError):
             research_funding_url("BTCUSDT",END-31*DAY,END)
 
+    @unittest.skipUnless(os.name=="posix","owner-only POSIX storage")
     def test_funding_resume_saturation_and_zero_get_coverage(self):
         with tempfile.TemporaryDirectory() as tmp:
             home=Path(tmp)
@@ -69,11 +72,16 @@ class DerivativesTests(unittest.TestCase):
             self.assertFalse(done["funding_calendar_verified"])
             self.assertEqual(collect(30)["public_gets"],0)
             self.assertEqual(collect(30,False)["saved_rows"],720)
+            got=read_derivatives_window(home,PLAN,"funding","BTCUSDT",END-DAY,END)
+            self.assertTrue(got["query_coverage_complete"])
+            self.assertFalse(got["funding_calendar_verified"])
+            self.assertEqual(len(got["rows"]),24)
             page=next(home.glob("d536-*.json"))
             page.write_bytes(page.read_bytes().replace(b'"raw_sha256":',b'"bad_sha256":'))
             with self.assertRaises(DataValidationError):
                 collect(30,False)
 
+    @unittest.skipUnless(os.name=="posix","owner-only POSIX storage")
     def test_mark_is_separate_and_reports_gap(self):
         def gap(url,limit):
             d=json.loads(fake(url,limit))
@@ -87,6 +95,11 @@ class DerivativesTests(unittest.TestCase):
             self.assertEqual(result["expected_mark_rows"],720)
             self.assertEqual(result["mark_gap_windows"],1)
             self.assertEqual(result["status"],"query_coverage_partial")
+
+    def test_small_fixed_decimal_survives_normalization(self):
+        payload=json.loads(fake(research_funding_url("BTCUSDT",END-DAY,END),100000))
+        payload["result"]["list"][0]["fundingRate"]="0.00000001"
+        self.assertIn("0.00000001",[r[1] for r in normalize_page(payload,"funding","BTCUSDT",END-DAY,END)])
 
     def test_duplicate_and_wrong_symbol_rejected(self):
         payload=json.loads(fake(research_funding_url("BTCUSDT",END-DAY,END),100000))
