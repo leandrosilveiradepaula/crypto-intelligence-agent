@@ -60,9 +60,9 @@ class ExitScenario:
 
 
 def _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours=12):
-    if type(research_max_horizon_hours) is not int or research_max_horizon_hours not in (12,72):
+    if type(research_max_horizon_hours) is not int or research_max_horizon_hours not in (12,72,168):
         raise DataValidationError("D529 invalid explicit research horizon cap")
-    limit = 864 if research_max_horizon_hours == 72 else 720
+    limit = 720 if research_max_horizon_hours == 12 else 12*research_max_horizon_hours
     if (type(candles) is not tuple or not 1 <= len(candles) <= limit
             or type(decision_end_ms) is not int or type(now_ms) is not int
             or not 0 < decision_end_ms < now_ms
@@ -74,7 +74,7 @@ def _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours=
             or first.interval not in ("1m", "5m", "15m", "1h")):
         raise DataValidationError("D517 unsupported observed Bybit path")
     duration = interval_duration_ms(first.interval)
-    if (research_max_horizon_hours == 72 and first.interval not in ("1h","5m")
+    if (research_max_horizon_hours > 12 and first.interval not in ("1h","5m")
             or len(candles) * duration > research_max_horizon_hours * 3_600_000):
         raise DataValidationError("D517/D529 research horizon exceeds explicit cap")
     for i, bar in enumerate(candles):
@@ -214,9 +214,9 @@ def compare_exit_scenarios(
         return {"adverse_first": run(True), "favorable_first": run(False)}
 
 
-def empty_replay_totals(*, include_payoff=False) -> dict:
-    if type(include_payoff) is not bool:
-        raise DataValidationError("D531 explicit payoff flag required")
+def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=False) -> dict:
+    if type(include_payoff) is not bool or type(include_target_diagnostics) is not bool:
+        raise DataValidationError("D531/D533 explicit diagnostic flags required")
     return {
         "candidate_count": 0, "complete_path_count": 0, "missing_path_count": 0,
         "ordering_sensitive_count": 0,
@@ -229,7 +229,10 @@ def empty_replay_totals(*, include_payoff=False) -> dict:
                   "gross_reference_quote": _ZERO, "assumed_fee_slippage_quote": _ZERO,
                   "conditional_before_funding_quote": _ZERO,
                   **({"positive_net_quote_sum":_ZERO,"negative_net_quote_sum":_ZERO}
-                     if include_payoff else {})}
+                     if include_payoff else {}),
+                  **({**{f"tp{i}_reached_count":0 for i in range(1,9)},
+                      "after_tp3_stopped_count":0,"after_tp3_residual_at_horizon_count":0}
+                     if include_target_diagnostics else {})}
            for name in ("adverse_first", "favorable_first")},
     }
 
@@ -265,6 +268,11 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
             if "positive_net_quote_sum" in row:
                 row["positive_net_quote_sum"]+=max(_ZERO,net)
                 row["negative_net_quote_sum"]+=max(_ZERO,-net)
+            if "tp1_reached_count" in row:
+                for i in range(1,9):
+                    row[f"tp{i}_reached_count"]+=int(result.targets_reached>=i)
+                row["after_tp3_stopped_count"]+=int(result.targets_reached>=3 and result.stopped_fraction>0)
+                row["after_tp3_residual_at_horizon_count"]+=int(result.targets_reached>=3 and result.horizon_residual_fraction>0)
             row["stop_count"] += int(result.stopped_fraction > 0)
             row["with_targets_count"] += int(result.targets_reached > 0)
             row["positive_with_stop_count"] += int(result.stopped_fraction > 0 and net > 0)
