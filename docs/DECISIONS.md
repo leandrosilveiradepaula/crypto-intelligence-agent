@@ -1,5 +1,10 @@
 # Decisões do produto
 
+## D530 — pesquisa de entradas e continuidade do histórico (25/11/2026 UTC)
+
+D529 real concluído em f91de881a062c752b6e76adde922545a3645e300: 420/420 cenários adversos 1h negativos, 56987 slots elegíveis/cobertos em cada horizonte, 54d desenvolvimento, 18/18 reservados. RSI melhorou 160/231 pares e piorou 71; melhor BB reentry sem RSI -8,22 bps (250/72h, 216/372 positivas). Não repetir D529; recuperar decomposição de custos/ordenação/meses/regime do relatório privado. D528 90d 1h completo 108000/108000; anual 395280/465609 antes da retomada; retomada 365d e 90d 5m pararam J1BybitCaptureError sem causa específica, progresso posterior desconhecido. D530 adiciona hipóteses pullback/retomada e squeeze Bollinger editáveis, controles pareados sem/com RSI (19 estratégias, 399 cenários), sem alterar residente; diagnóstico sanitizado do coletor e pacing configurável. Próxima ação: revisão/CI, aquisição 90d 5m prioritária com no-retry em bloqueios e depois anual; pesquisa 5m quando coberta; 50x e sizing adiado. Não tocar holdout, J1, perfil, serviços, ordens ou custo. Ver docs/J3_ENTRY_RESEARCH_D530.md.
+
+
 ## D529 — pesquisa retrospectiva longa (24/11/2026)
 
 D528 integrado em 7ae59574b1b21e6a132e083fe729df0def874f52, CI 45510118117/45510118137 SUCCESS; 38,6 GB livres na VPS via host_status; coleta real ainda pendente, MCP sem acesso owner. D529 reusa hipóteses D526 e saídas D517 em modo REST retrospectivo separado: indicadores contínuos por sequência, reset nas lacunas, RSI somente veto, 1h/5m, 24/48/72h, matriz padrão 420 cenários por partição. Partições 60/20/20 sem cruzamento de trajetórias; holdout exige parâmetros congelados e não deve ser usado para ajuste. Métricas por mês e regime, hashes e cobertura; coorte sobrevivente, não N50 histórico. Não equivaler ao reseed D526, carteira ou liquidação. Ver docs/J3_LONG_REPLAY_D529.md. Código e testes candidatos; CI e execução real pendentes. Próximo: coleta owner 90d e expansão 365d, replay desenvolvimento após aceite, 5m e universo mais amplo. Sem alteração J1, perfil, serviço, ordens ou custo.

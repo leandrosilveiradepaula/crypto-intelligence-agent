@@ -105,6 +105,35 @@ class LongHistoryTests(unittest.TestCase):
                 self.assertEqual((home/PLAN_FILE).read_bytes(),raw)
                 self.assertEqual(len(clients),2)
 
+    @unittest.skipUnless(os.name=="posix" and hasattr(os,"geteuid")
+                         and os.geteuid()!=0,"real POSIX private owner CLI")
+    def test_sanitized_failure_and_no_retry(self):
+        with tempfile.TemporaryDirectory(prefix="d528-history-test-") as d:
+            home=Path(d)
+            home.chmod(0o700)
+            args=["--directory",str(home),"--days","90","--interval","5m",
+                  "--max-gets","10","--request-spacing-seconds","5",
+                  "--allow-public-network","--confirm-personal-readonly-research",
+                  "--confirm-region-eligible","--confirm-public-data-rights"]
+            for code,expected in (("provider_rate_limit_no_retry","provider_rate_limit_no_retry"),
+                                 ("untrusted arbitrary provider text","unclassified_capture_error_no_retry")):
+                client=BoundedBybitPublicClient(transport=fake,allow_long_history_research=True)
+                client.requests_attempted=1
+                with patch("scripts.run_j3_long_history_d528.load_plan",return_value=PLAN), \
+                     patch("scripts.run_j3_long_history_d528.BoundedBybitPublicClient",return_value=client) as factory, \
+                     patch("scripts.run_j3_long_history_d528.collect_batch",
+                           side_effect=J1BybitCaptureError(code)) as collect:
+                    stream=io.StringIO()
+                    with redirect_stdout(stream):
+                        self.assertEqual(collector_main(args),1)
+                    report=json.loads(stream.getvalue())
+                    self.assertEqual(report["failure_code"],expected)
+                    self.assertEqual(report["requests_attempted"],1)
+                    self.assertFalse(report["automatic_retry"])
+                    self.assertNotIn("untrusted arbitrary",stream.getvalue())
+                    self.assertEqual(collect.call_count,1)
+                    factory.assert_called_once_with(allow_long_history_research=True,min_interval_seconds=5)
+
     def test_transport_is_opt_in_and_bounded(self):
         url=research_history_kline_url("BTCUSDT","1h",END-1000*HOUR_MS,END)
         with self.assertRaises(J1BybitCaptureError):
@@ -117,6 +146,27 @@ class LongHistoryTests(unittest.TestCase):
             research_history_kline_url("BTCUSDT","5m",END-1001*300_000,END)
         with self.assertRaises(J1BybitCaptureError):
             client.get(url+"&limit=1000")
+
+    @patch("crypto_intelligence_agent.j3_long_history_d528.MIN_FREE_BYTES",0)
+    def test_oldest_first_preserves_checkpoint_identity(self):
+        with tempfile.TemporaryDirectory() as d:
+            home=Path(d)
+            requests=[]
+            def transport(url,limit):
+                requests.append(parse_qs(urlsplit(url).query))
+                return fake(url,limit)
+            def collect(oldest,budget):
+                return collect_batch(home=home,plan=PLAN,days=40,interval="1h",
+                    client=BoundedBybitPublicClient(transport=transport,allow_long_history_research=True),
+                    wall_ms=lambda:NOW,max_gets=budget,oldest_first=oldest)
+            first=collect(True,1)
+            self.assertEqual(first["collection_order"],"oldest_first")
+            self.assertEqual(int(requests[0]["start"][0]),END-40*DAY)
+            self.assertEqual(first["saved_candles"],10*24)
+            second=collect(False,10)
+            self.assertEqual(second["public_gets"],2)
+            self.assertEqual(second["status"],"coverage_complete")
+            self.assertEqual(collect(True,10)["public_gets"],0)
 
     def test_plan_fixed_shards_extend_and_launch_clip(self):
         self.assertEqual(decode_plan(PLAN.encode()),PLAN)
