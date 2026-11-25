@@ -26,6 +26,7 @@ def main(argv=None):
                    "docs/examples/d526_rsi_filter_research_matrix.json")
     p.add_argument("--entry-experiments-file",type=Path)
     p.add_argument("--exit-experiments-file",type=Path)
+    p.add_argument("--strategy-names",nargs="+")
     p.add_argument("--days",type=int,default=90)
     p.add_argument("--partition",choices=("development","validation","holdout"),default="development")
     p.add_argument("--horizon-hours",type=int,nargs="+",default=DEFAULT_HORIZONS)
@@ -60,6 +61,7 @@ def main(argv=None):
                 horizons=a.horizon_hours,stops=a.stop_grid_bps,resolution=a.resolution,
                 confirm_frozen_hypotheses=a.confirm_frozen_hypotheses,
                 entry_experiments_raw=extra,exit_experiments_raw=exit_extra,
+                strategy_names=a.strategy_names,
                 progress=lambda n,total:print("D529 symbols processed: %d/%d"%(n,total),
                                              file=sys.stderr,flush=True))
         if snapshot(a.policy_file)["revision"]!=rev:

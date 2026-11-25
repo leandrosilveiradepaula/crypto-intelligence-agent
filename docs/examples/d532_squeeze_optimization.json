@@ -1,0 +1,555 @@
+{
+  "schema": "d530-entry-experiments-v1",
+  "profiles": [
+    {
+      "name": "squeeze_bb_20_2_strict",
+      "label": "Bollinger 20/2 compressão 5/30 forte + FR",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "squeeze_bb_20_2_strict_rsi",
+      "label": "Bollinger 20/2 compressão 5/30 forte + FR + RSI",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "squeeze_bb_20_2",
+      "label": "Bollinger 20/2 compressão 5/30 + FR",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "squeeze_bb_20_2_rsi",
+      "label": "Bollinger 20/2 compressão 5/30 + FR + RSI",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.7",
+        "volume_period": 20,
+        "min_volume_ratio": "1",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "sq_w04_v125",
+      "label": "Squeeze largura 0.4, volume 1.25x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.4",
+        "volume_period": 20,
+        "min_volume_ratio": "1.25",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_w04_v15",
+      "label": "Squeeze largura 0.4, volume 1.5x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.4",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_w04_v2",
+      "label": "Squeeze largura 0.4, volume 2x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.4",
+        "volume_period": 20,
+        "min_volume_ratio": "2",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_w05_v125",
+      "label": "Squeeze largura 0.5, volume 1.25x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.25",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_w05_v2",
+      "label": "Squeeze largura 0.5, volume 2x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "2",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_w06_v125",
+      "label": "Squeeze largura 0.6, volume 1.25x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.6",
+        "volume_period": 20,
+        "min_volume_ratio": "1.25",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_w06_v15",
+      "label": "Squeeze largura 0.6, volume 1.5x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.6",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_w06_v2",
+      "label": "Squeeze largura 0.6, volume 2x",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.6",
+        "volume_period": 20,
+        "min_volume_ratio": "2",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_sma_10_30",
+      "label": "Squeeze SMA 10/30",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 10,
+        "slow": 30,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_ema_9_21",
+      "label": "Squeeze EMA 9/21",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 9,
+        "slow": 21,
+        "exponential": true,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_sma_30_60",
+      "label": "Squeeze SMA 30/60",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 30,
+        "slow": 60,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_bb_15",
+      "label": "Squeeze Bollinger 15/2",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 15,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_bb_25",
+      "label": "Squeeze Bollinger 25/2",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 25,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_bb_dev_15",
+      "label": "Squeeze Bollinger 20/1,5",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "1.5",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_bb_dev_25",
+      "label": "Squeeze Bollinger 20/2,5",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2.5",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_fr_25",
+      "label": "Squeeze FR minima 25 bps",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "25",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_fr_50",
+      "label": "Squeeze FR minima 50 bps",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6
+      },
+      "relative_strength_bps": "50",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_pivot",
+      "label": "Squeeze + veto Pivot 2/10/3",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6,
+        "pivot_filter": {
+          "pivot_period": 2,
+          "atr_period": 10,
+          "atr_factor": "3"
+        }
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    },
+    {
+      "name": "sq_pivot_rsi",
+      "label": "Squeeze + veto Pivot + RSI",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 6,
+        "pivot_filter": {
+          "pivot_period": 2,
+          "atr_period": 10,
+          "atr_factor": "3"
+        }
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": {
+        "period": 14,
+        "long_min": 50,
+        "long_max": 70
+      }
+    },
+    {
+      "name": "sq_cooldown_3",
+      "label": "Squeeze cooldown 3 barras",
+      "parameters": {
+        "trigger": "bb_squeeze",
+        "fast": 20,
+        "slow": 50,
+        "exponential": false,
+        "pullback_bars": 5,
+        "trend_bars": 3,
+        "bb_period": 20,
+        "bb_deviations": "2",
+        "compression_bars": 5,
+        "baseline_bars": 30,
+        "max_width_ratio": "0.5",
+        "volume_period": 20,
+        "min_volume_ratio": "1.5",
+        "cooldown_bars": 3
+      },
+      "relative_strength_bps": "0",
+      "rsi_filter": null
+    }
+  ]
+}
