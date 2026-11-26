@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
 
 from .market_data import ClosedCandle, DataGapError, DataValidationError, interval_duration_ms
+from .j3_funding_replay_d537 import ExposureChange, ObservedFundingHistory
+from .j3_maintenance_stress_d538 import parse_maintenance_grid, stress_paths
 from .j4_automatic_entry_materializer_d448 import PaperEntryExitPolicy
 from .synthetic_cost_scenarios import (
     BPS_DENOMINATOR, SyntheticCostScenario, evaluate_synthetic_costs,
@@ -70,6 +72,7 @@ class ExitScenario:
     loss_at_least_requested_margin: bool
     stop_bar_index: int | None = field(default=None, compare=False)
     open_mark: OpenMarkAccounting | None = field(default=None, compare=False)
+    exposure_changes: tuple[ExposureChange, ...] | None = field(default=None, compare=False)
 
 
 def _validate_path(candles, decision_end_ms, now_ms, research_max_horizon_hours=12):
@@ -117,6 +120,7 @@ def compare_exit_scenarios(
     research_max_horizon_hours: int = 12,
     management: ResearchStopManagement | None = None,
     separate_open_mark: bool = False,
+    trace_exposure: bool = False,
 ) -> dict[str, ExitScenario]:
     """Two scenario references, each with conserved normalized exit quantities.
 
@@ -131,7 +135,7 @@ def compare_exit_scenarios(
     if (type(direction) is not ResearchDirection
             or type(policy) is not PaperEntryExitPolicy
             or type(margin) is not SyntheticMarginBasis
-            or type(separate_open_mark) is not bool):
+            or type(separate_open_mark) is not bool or type(trace_exposure) is not bool):
         raise DataValidationError("D517 explicit immutable research terms required")
     if management is not None and (type(management) is not ResearchStopManagement
             or any(n is not None and n>len(policy.target_distances_bps)
@@ -155,6 +159,7 @@ def compare_exit_scenarios(
             target_fraction = stopped_fraction = exit_value = _ZERO
             hit = 0
             stop_bar_index = None
+            changes=[]
 
             def stop_at(price, *, gap=False):
                 nonlocal remaining, stopped_fraction, exit_value, stop_bar_index
@@ -165,7 +170,7 @@ def compare_exit_scenarios(
                     remaining = _ZERO
 
             def targets_at(price):
-                nonlocal hit, remaining, target_fraction, exit_value
+                nonlocal hit, remaining, target_fraction, exit_value, minimum_positive
                 while (remaining and hit < len(targets)
                        and sign*(price-targets[hit]) >= 0):
                     quantity = schedule.allocations[hit].exit_units
@@ -173,12 +178,16 @@ def compare_exit_scenarios(
                         raise DataValidationError("D517 exit fraction exceeds remainder")
                     exit_value += quantity*targets[hit]
                     remaining -= quantity
+                    if remaining and trace_exposure:
+                        minimum_positive=min(minimum_positive,remaining)
                     target_fraction += quantity
                     hit += 1
 
             for bar_index, bar in enumerate(bars):
                 if not remaining:
                     break
+                before=remaining
+                minimum_positive=before
                 stop_at(bar.open, gap=True)
                 targets_at(bar.open)
                 adverse = bar.low if sign > 0 else bar.high
@@ -189,6 +198,8 @@ def compare_exit_scenarios(
                 else:
                     targets_at(favorable)
                     stop_at(adverse)
+                if trace_exposure and remaining<before:
+                    changes.append(ExposureChange(bar_index,before,remaining,minimum_positive))
                 # D531 protection only becomes effective on the NEXT bar,
                 # never using a favorable extreme to retroactively stop this bar.
                 if remaining and management is not None:
@@ -239,14 +250,17 @@ def compare_exit_scenarios(
                     raise DataValidationError("D534 mark accounting does not reconcile")
             return ExitScenario(hit, target_fraction, stopped_fraction, residual,
                                 gross, costs, net, net <= -margin.requested_margin_quote,
-                                stop_bar_index,accounting)
+                                stop_bar_index,accounting,tuple(changes) if trace_exposure else None)
 
         return {"adverse_first": run(True), "favorable_first": run(False)}
 
 
 def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=False,
-                        include_open_mark=False) -> dict:
-    if any(type(v) is not bool for v in (include_payoff,include_target_diagnostics,include_open_mark)):
+                        include_open_mark=False,include_observed_funding=False,maintenance_grid=()) -> dict:
+    grid=parse_maintenance_grid(maintenance_grid)
+    if grid and not include_observed_funding:
+        raise DataValidationError("D538 stress requires observed funding mode")
+    if any(type(v) is not bool for v in (include_payoff,include_target_diagnostics,include_open_mark,include_observed_funding)):
         raise DataValidationError("D531/D533 explicit diagnostic flags required")
     return {
         "candidate_count": 0, "complete_path_count": 0, "missing_path_count": 0,
@@ -267,14 +281,33 @@ def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=Fals
                   **({**{k:_ZERO for k in OpenMarkAccounting.__dataclass_fields__},
                       "fully_exited_count":0,"open_positive_count":0,"open_negative_count":0,
                       "open_flat_count":0,"open_fraction_sum":_ZERO}
-                     if include_open_mark else {})}
+                     if include_open_mark else {}),
+                  **({"funding_matched_path_count":0,"funding_unavailable_path_count":0,
+                      "funding_observed_event_count":0,"funding_no_observed_events_path_count":0,
+                      "funding_matched_before_quote":_ZERO,"funding_observed_cost_low_quote":_ZERO,
+                      "funding_observed_cost_high_quote":_ZERO,"funding_matched_net_low_quote":_ZERO,
+                      "funding_matched_net_high_quote":_ZERO,"funding_matched_positive_low_count":0,
+                      "funding_matched_positive_high_count":0}
+                     if include_observed_funding else {}),
+                  **{f"stress_{bps}bps_{metric}":0 for bps in grid for metric in (
+                      "evaluated_count","unavailable_count","possible_breach_count",
+                      "positive_before_funding_with_possible_breach_count",
+                      "no_observed_breach_count","checked_bars")}}
            for name in ("adverse_first", "favorable_first")},
     }
 
 
 def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
                       now_ms, margin, policy, research_max_horizon_hours=12,
-                      management=None) -> None:
+                      management=None,observed_funding=None,maintenance_grid=()) -> None:
+    grid=parse_maintenance_grid(maintenance_grid)
+    expected={f"stress_{bps}bps_evaluated_count" for bps in grid}
+    actual={k for k in totals["adverse_first"] if k.startswith("stress_") and k.endswith("_evaluated_count")}
+    if expected!=actual:
+        raise DataValidationError("D538 stress totals mismatch")
+    funding_enabled="funding_matched_path_count" in totals["adverse_first"]
+    if observed_funding is not None and (type(observed_funding) is not ObservedFundingHistory or not funding_enabled):
+        raise DataValidationError("D537 explicit funding totals and history required")
     totals["candidate_count"] += 1
     if candles is None:
         totals["missing_path_count"] += 1
@@ -283,7 +316,8 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
         candles, direction=direction, decision_end_ms=decision_end_ms,
         now_ms=now_ms, margin=margin, policy=policy,
         research_max_horizon_hours=research_max_horizon_hours,management=management,
-        separate_open_mark="realized_gross_quote" in totals["adverse_first"])
+        separate_open_mark="realized_gross_quote" in totals["adverse_first"],
+        trace_exposure=funding_enabled)
     totals["complete_path_count"] += 1
     totals["ordering_sensitive_count"] += int(
         outcomes["adverse_first"] != outcomes["favorable_first"]
@@ -302,6 +336,43 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
             row = totals[name]
             net = result.conditional_before_funding_quote
             row["positive_count" if net > 0 else "negative_count" if net < 0 else "flat_count"] += 1
+            if funding_enabled:
+                cost=(None if observed_funding is None else observed_funding.cost_bounds(
+                    direction=direction,entry_at=decision_end_ms,end_at=candles[-1].close_time_ms+1,
+                    entry_price=entry,notional=margin.entry_notional_quote,changes=result.exposure_changes))
+                if cost is None:
+                    row["funding_unavailable_path_count"]+=1
+                else:
+                    low,high=net-cost.cost_high,net-cost.cost_low
+                    row["funding_matched_path_count"]+=1
+                    row["funding_observed_event_count"]+=cost.exposed_event_count
+                    row["funding_no_observed_events_path_count"]+=int(cost.exposed_event_count==0)
+                    row["funding_matched_before_quote"]+=net
+                    row["funding_observed_cost_low_quote"]+=cost.cost_low
+                    row["funding_observed_cost_high_quote"]+=cost.cost_high
+                    row["funding_matched_net_low_quote"]+=low
+                    row["funding_matched_net_high_quote"]+=high
+                    row["funding_matched_positive_low_count"]+=int(low>0)
+                    row["funding_matched_positive_high_count"]+=int(high>0)
+            if grid:
+                stress=(None if observed_funding is None else stress_paths(
+                    observed_funding,direction=direction,entry_at=decision_end_ms,
+                    end_at=candles[-1].close_time_ms+1,entry_price=entry,margin=margin,
+                    changes=result.exposure_changes,
+                    entry_cost_bps=policy.entry_fee_bps+policy.entry_adverse_slippage_bps,
+                    close_reserve_bps=policy.exit_fee_bps+policy.exit_adverse_slippage_bps,
+                    maintenance_grid=grid))
+                for bps in grid:
+                    prefix=f"stress_{bps}bps_"
+                    if stress is None:
+                        row[prefix+"unavailable_count"]+=1
+                        continue
+                    item=stress[bps]
+                    row[prefix+"evaluated_count"]+=1
+                    row[prefix+"checked_bars"]+=item.checked_bars
+                    breach=item.first_possible_breach_bar is not None
+                    row[prefix+"possible_breach_count" if breach else prefix+"no_observed_breach_count"]+=1
+                    row[prefix+"positive_before_funding_with_possible_breach_count"]+=int(breach and net>0)
             if "positive_net_quote_sum" in row:
                 row["positive_net_quote_sum"]+=max(_ZERO,net)
                 row["negative_net_quote_sum"]+=max(_ZERO,-net)
@@ -374,6 +445,24 @@ def summarize_replay(totals: dict, *, margin: SyntheticMarginBasis) -> dict:
                     raise DataValidationError("D534 aggregate open accounting mismatch")
                 for k in (*OpenMarkAccounting.__dataclass_fields__,"open_fraction_sum"):
                     row[k]=format(row[k],"f") if count else None
+            for key in tuple(row):
+                if key.startswith("stress_") and key.endswith("_evaluated_count"):
+                    prefix=key[:-len("evaluated_count")]
+                    n=row[key]
+                    if (n+row[prefix+"unavailable_count"]!=count
+                            or row[prefix+"possible_breach_count"]+row[prefix+"no_observed_breach_count"]!=n
+                            or row[prefix+"positive_before_funding_with_possible_breach_count"]>row[prefix+"possible_breach_count"]):
+                        raise DataValidationError("D538 inconsistent stress counts")
+            if "funding_matched_path_count" in row:
+                matched=row["funding_matched_path_count"]
+                if (matched+row["funding_unavailable_path_count"]!=count
+                        or row["funding_matched_net_low_quote"]!=row["funding_matched_before_quote"]-row["funding_observed_cost_high_quote"]
+                        or row["funding_matched_net_high_quote"]!=row["funding_matched_before_quote"]-row["funding_observed_cost_low_quote"]):
+                    raise DataValidationError("D537 matched funding accounting mismatch")
+                for key in ("funding_matched_before_quote","funding_observed_cost_low_quote",
+                            "funding_observed_cost_high_quote","funding_matched_net_low_quote",
+                            "funding_matched_net_high_quote"):
+                    row[key]=format(row[key],"f") if matched else None
             for key in ("gross_reference_quote", "assumed_fee_slippage_quote",
                         "conditional_before_funding_quote"):
                 row[key] = format(row[key], "f") if count else None
