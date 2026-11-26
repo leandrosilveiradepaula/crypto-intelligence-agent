@@ -299,7 +299,10 @@ def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=Fals
 
 def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
                       now_ms, margin, policy, research_max_horizon_hours=12,
-                      management=None,observed_funding=None,maintenance_grid=()) -> None:
+                      management=None,observed_funding=None,maintenance_grid=(),
+                      return_exposure=False) -> dict[str, ExitScenario] | None:
+    if type(return_exposure) is not bool:
+        raise DataValidationError("D540 explicit exposure diagnostic flag required")
     grid=parse_maintenance_grid(maintenance_grid)
     expected={f"stress_{bps}bps_evaluated_count" for bps in grid}
     actual={k for k in totals["adverse_first"] if k.startswith("stress_") and k.endswith("_evaluated_count")}
@@ -317,7 +320,7 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
         now_ms=now_ms, margin=margin, policy=policy,
         research_max_horizon_hours=research_max_horizon_hours,management=management,
         separate_open_mark="realized_gross_quote" in totals["adverse_first"],
-        trace_exposure=funding_enabled)
+        trace_exposure=funding_enabled or return_exposure)
     totals["complete_path_count"] += 1
     totals["ordering_sensitive_count"] += int(
         outcomes["adverse_first"] != outcomes["favorable_first"]
@@ -407,6 +410,7 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
             for key in ("gross_reference_quote", "assumed_fee_slippage_quote",
                         "conditional_before_funding_quote"):
                 row[key] += getattr(result, key)
+    return outcomes if return_exposure else None
 
 
 def summarize_replay(totals: dict, *, margin: SyntheticMarginBasis) -> dict:

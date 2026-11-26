@@ -22,6 +22,7 @@ from .j3_observed_exit_scenarios_d517 import (
 )
 from .market_data import DataValidationError
 from .j3_funding_replay_d537 import ObservedFundingHistory
+from .j3_exposure_diagnostics_d540 import ExposureDiagnostics, MAX_SCENARIOS, MAX_TRACED_PATHS
 from .j3_maintenance_stress_d538 import parse_maintenance_grid
 from .j3_entry_research_d530 import EntryExperiment, parse_experiments, entry_events
 from .j3_exit_research_d531 import parse_exit_experiments, describe_exit_experiments
@@ -122,7 +123,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     entry_experiments_raw=None,exit_experiments_raw=None,
                     strategy_names=None,research_max_horizon_hours=72,
                     target_diagnostics=False,separate_open_mark=False,
-                    preserve_recent_90d=False,observed_funding=False,maintenance_stress_bps=()):
+                    preserve_recent_90d=False,observed_funding=False,maintenance_stress_bps=(),
+                    exposure_diagnostics=False):
     maintenance_grid=parse_maintenance_grid(maintenance_stress_bps)
     if maintenance_grid and not observed_funding:
         raise DataValidationError("D538 maintenance stress requires observed funding")
@@ -137,6 +139,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             or type(separate_open_mark) is not bool
             or type(preserve_recent_90d) is not bool
             or type(observed_funding) is not bool
+            or type(exposure_diagnostics) is not bool
+            or (exposure_diagnostics and partition!="development")
             or (observed_funding and partition!="development")
             or any(type(x) is not int or not 1<=x<=research_max_horizon_hours for x in horizons)
             or tuple(sorted(set(horizons)))!=tuple(horizons)
@@ -171,8 +175,14 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
               if use_exit_experiments else {"owner_baseline":(owner_policy.exits,None,"Perfil de referência")})
     exits={(name,stop):(replace(p,stop_distance_bps=Decimal(stop)),m)
            for name,(p,m,_) in variants.items() for stop in grid}
-    if len(labels)*len(horizons)*len(exits)>3000:
+    scenario_count=len(labels)*len(horizons)*len(exits)
+    if scenario_count>3000:
         raise DataValidationError("D531 research grid exceeds 3000 scenarios")
+    if exposure_diagnostics and scenario_count>MAX_SCENARIOS:
+        raise DataValidationError("D540 use focused grids for exposure diagnostics")
+    diagnostics={}
+    traced_paths=0
+    duration=HOUR_MS if resolution=="1h" else FIVE_MS
     def fresh():
         return empty_replay_totals(include_payoff=use_exit_experiments,
                                    include_target_diagnostics=target_diagnostics,
@@ -294,12 +304,26 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     for side,names in accepted.items():
                         for (variant,stop),(policy,management) in exits.items():
                             one=fresh()
-                            accumulate_replay(one,path,direction=ResearchDirection(side),
+                            outcomes=accumulate_replay(one,path,direction=ResearchDirection(side),
                                 decision_end_ms=at,now_ms=plan.observed_at_ms,margin=margin,
                                 policy=policy,research_max_horizon_hours=research_max_horizon_hours,
                                 management=management,observed_funding=funding_history,
-                                maintenance_grid=maintenance_grid)
+                                maintenance_grid=maintenance_grid,return_exposure=exposure_diagnostics)
                             for name in names:
+                                if outcomes is not None:
+                                    traced_paths+=1
+                                    if traced_paths>MAX_TRACED_PATHS:
+                                        raise DataValidationError("D540 exposure diagnostic path budget exceeded")
+                                    for order,outcome in outcomes.items():
+                                        diag_key=(h,variant,stop,name,order)
+                                        if diag_key not in diagnostics:
+                                            diagnostics[diag_key]=ExposureDiagnostics(duration)
+                                        diagnostics[diag_key].record(symbol=symbol,
+                                            direction=ResearchDirection(side),start=at,
+                                            end=path[-1].close_time_ms+1,
+                                            changes=outcome.exposure_changes,
+                                            residual=outcome.horizon_residual_fraction,
+                                            net=outcome.conditional_before_funding_quote)
                                 for group in groups:
                                     record((h,variant,stop,name,group),one)
         if progress is not None:
@@ -321,6 +345,15 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                 if v is not None and (v["checked"]-v["rejected"]!=row["candidate_count"]
                     or v["covered_checked"]-v["covered_rejected"]!=row["complete_path_count"]):
                     raise DataValidationError("D529 RSI veto count mismatch")
+                if exposure_diagnostics:
+                    row["exposure_diagnostics"]={}
+                    for order in ("adverse_first","favorable_first"):
+                        diag=diagnostics.pop((*key,order),None)
+                        if diag is None:
+                            diag=ExposureDiagnostics(duration)
+                        row["exposure_diagnostics"][order]=diag.summary(
+                            expected_count=row["complete_path_count"],
+                            expected_net=row[order]["conditional_before_funding_quote"])
                 rows.append({"name":name,"label":label,**row,"directions":counts,"rsi_veto":v,
                     "by_month":{m:summary(key,"month:"+m) for m in sorted(monthly_coverage)},
                     "by_btc_regime":{g:summary(key,"regime:"+g)
@@ -372,6 +405,11 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                 "maintenance_stress_is_not_venue_liquidation":True,
                 "maintenance_stress_rewrites_pnl":False,
                 "historical_risk_tiers_verified":False} if maintenance_grid else {}),
+            **({"exposure_diagnostics":True,"exposure_diagnostic_method":
+                "independent_complete_paths_bar_start_reference_not_portfolio",
+                "exposure_diagnostic_traced_paths":traced_paths,
+                "exposure_diagnostic_excludes_missing_paths":True,
+                "exposure_diagnostic_uses_pre_funding_pnl":True} if exposure_diagnostics else {}),
             "winner_selected":False,"out_of_sample_results_validated":False,
             "portfolio_simulated":False,"funding_settlement_verified":False,
             "liquidation_verified":False,"intrabar_path_verified":False,
