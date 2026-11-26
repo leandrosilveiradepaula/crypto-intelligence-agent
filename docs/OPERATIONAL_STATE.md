@@ -1,5 +1,9 @@
 # Estado operacional — J1 D360 aceita para pesquisa; J2/J3 prospectiva em preparação (15/11/2026 UTC)
 
+## D540 — coleta em andamento e diagnóstico de concentração (26/11/2026 UTC)
+
+D537/D538 integrados ba803bf2d7db6aff2d18bc2a6ac9ccffc4f28fe4, CI 45704800545/45704800474 SUCCESS, revisão 6065234732. D539 serviço transitório owner iniciado; conector confirma active/running e leitura journal. Cobertura inicial exata 365d 1h 436320/437149; 5m 1352160/5245798. Funding 88382 registros e 648/648 janelas consultadas, mark-1h 465608/465609 no plano 390d, uma lacuna; zero GET nessas duas etapas, trade-5m iniciado. D540 candidato: exposição simultânea de caminhos independentes, sobreposição por ativo, frações remanescentes e concentração de ganhos pré-funding, opt-in development, duas ordenações, sem sizing/carteira. CI/revisão pendentes. Próximo: terminar D539, executar anual 1h com funding/mark/stress e exposição, completar mark-5m para pesquisa fina; não repetir D535 sem dados novos. Sem 50x alterado, stops, J1/PAPER/perfil, ordens, release ou custo. MCP consulta status/journal, mas sem UID owner. Ver docs/J3_EXPOSURE_DIAGNOSTICS_D540.md.
+
 ## D538 — avaliação de margem de manutenção em stress (25/11/2026 UTC)
 
 Complemento D537, mesmo pacote: --observed-funding --maintenance-stress-bps com 1..3 hipóteses explícitas. Usa mark OHLC enquanto há exposição, menor fração positiva efetivamente visitada na barra, margem inicial proporcional, custos e débitos observados retidos (sem creditar lucros/créditos). Buffer <=0 sinaliza possível violação sob hipótese, não liquidação da Bybit; PnL legado não reescrito, tiers/calendário histórico não verificados. Lacunas não viram sobrevivência. Relatório por hipótese/caminho, testes offline e CI pendentes. D536 integrado; owner VPS bloqueado, sem nova coleta. Não alterar 50x, sizing (adiado PO), stops, perfil, J1, PAPER, release, ordens ou custo. Ver docs/J3_MAINTENANCE_STRESS_D538.md.

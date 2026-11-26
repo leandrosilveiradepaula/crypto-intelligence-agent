@@ -31,6 +31,7 @@ def main(argv=None):
     p.add_argument("--separate-open-mark",action="store_true")
     p.add_argument("--preserve-recent-90d",action="store_true")
     p.add_argument("--target-diagnostics",action="store_true")
+    p.add_argument("--exposure-diagnostics",action="store_true",help="Development only: overlap and concentration of independent paths, not portfolio")
     p.add_argument("--observed-funding",action="store_true",help="Conditional on observed D536 rates only; development; no liquidation")
     p.add_argument("--maintenance-stress-bps",type=int,nargs="+",default=(),help="Explicit hypothetical maintenance rates, 1..3 ordered bps; requires observed funding")
     p.add_argument("--days",type=int,default=90)
@@ -78,6 +79,7 @@ def main(argv=None):
                 target_diagnostics=a.target_diagnostics,
                 separate_open_mark=a.separate_open_mark,
                 preserve_recent_90d=a.preserve_recent_90d,
+                exposure_diagnostics=a.exposure_diagnostics,
                 observed_funding=a.observed_funding,
                 maintenance_stress_bps=a.maintenance_stress_bps,
                 progress=lambda n,total:print("D529 symbols processed: %d/%d"%(n,total),
