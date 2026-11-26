@@ -1,5 +1,9 @@
 # Plano de validação e gates
 
+## D542 — continuidade autônoma e comparação financeira (26/11/2026 UTC)
+
+D540 integrado 3d1eb48556bff990e955183fa12a57da99633396, CI 45821875157/45821875038 SUCCESS; D541 probe remoto PASS, executor fixo ba803bf2 sem exposição D540. D539 active/running em trade-5m lote 1, funding e mark horário já armazenados. Automação real criada para checar a cada hora, até 48 verificações, iniciar uma única vez replay-annual D541 após lock livre, registrar resultado terminal sem retry/ordens; não alterar serviços. D542 candidato lê JSON financeiro existente sem reexecutar, compara saídas apenas com mesma grade e cobertura de funding integral nas duas ordens, intervalos de diferença, coortes de entrada mensais e stress, realizado/aberto e concentração quando presente. Sem seleção automática ou validação financeira. Reserva 18+18 dias intacta, insuficiente para horizontes mensais; protocolo congelado antes de qualquer leitura independente, D537/D538 ainda development-only. Atualização controlada D541 necessária para D540/D542. CI/revisão pendentes. Sem J1/PAPER/perfil, sizing, 50x alterado, release, ordens ou custo. Ver docs/J3_FINANCIAL_EVIDENCE_D542.md e issue #4.
+
 ## D505 — impedir desaparecimento de posição aberta no histórico
 
 - Montar diário AUTO4 real isolado com duas posições; concluir a mais recente, mantendo a mais antiga OPEN. Reduzir apenas o limite de visualização de 50 para 1 no teste. Exigir lista J5 com ambas, posição OPEN no topo e contagens preservadas; não escrever no diário por leitura.
