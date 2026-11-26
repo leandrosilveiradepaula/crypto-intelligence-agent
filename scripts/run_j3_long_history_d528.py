@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sqlite3
 from pathlib import Path
 import time
 from contextlib import contextmanager
@@ -11,6 +12,7 @@ from contextlib import contextmanager
 from crypto_intelligence_agent.j3_long_history_d528 import (
     collect_batch, freeze_cohort, load_plan, save_plan, MAX_BATCH_GETS, PLAN_FILE,
 )
+from crypto_intelligence_agent.j3_exact_history_d543 import collect_exact_batch, MAX_EXACT_GETS
 from crypto_intelligence_agent.bybit_public_j1_transport import BoundedBybitPublicClient, J1BybitCaptureError
 from crypto_intelligence_agent.j2_dynamic_public_n50_d451 import capture_dynamic_public_n50
 from crypto_intelligence_agent.j4_private_paper_ws_operator_d425 import _private_directory, _owner_file
@@ -54,6 +56,7 @@ def main(argv=None):
     p.add_argument("--interval",choices=("1h","5m"),default="1h")
     p.add_argument("--max-gets",type=int,default=MAX_BATCH_GETS,choices=range(1,MAX_BATCH_GETS+1),metavar="1..400")
     p.add_argument("--request-spacing-seconds",type=int,choices=range(2,13),default=2)
+    p.add_argument("--exact-missing",action="store_true",help="D543 exact requested window, only missing trade rows, max 50 GETs, no init")
     p.add_argument("--oldest-first",action="store_true",help="Prioritize older shards without changing plan")
     p.add_argument("--init",action="store_true",help="Freeze a new provisional cohort, never replace an existing one")
     p.add_argument("--low-priority",action="store_true")
@@ -63,6 +66,8 @@ def main(argv=None):
     a=p.parse_args(argv)
     client=None
     try:
+        if a.exact_missing and (a.init or a.max_gets>MAX_EXACT_GETS or a.request_spacing_seconds<10):
+            raise ValueError("D543 requires existing plan, max 50 GETs and spacing >=10s")
         if not all((a.allow_public_network,a.confirm_personal_readonly_research,
                     a.confirm_region_eligible,a.confirm_public_data_rights)):
             raise ValueError("explicit public research authorizations required")
@@ -88,12 +93,13 @@ def main(argv=None):
                 plan=load_plan(home)
             client=BoundedBybitPublicClient(allow_long_history_research=True,
                                             min_interval_seconds=a.request_spacing_seconds)
-            result=collect_batch(home=home,plan=plan,days=a.days,interval=a.interval,
+            collector=collect_exact_batch if a.exact_missing else collect_batch
+            result=collector(home=home,plan=plan,days=a.days,interval=a.interval,
                 client=client,wall_ms=lambda:time.time_ns()//1_000_000,max_gets=a.max_gets,
                 oldest_first=a.oldest_first)
         print(json.dumps(result,sort_keys=True,separators=(",",":")))
         return 0
-    except (MarketDataError,J1BybitCaptureError,OSError,ValueError,TypeError,ArithmeticError) as exc:
+    except (MarketDataError,J1BybitCaptureError,OSError,ValueError,TypeError,ArithmeticError,sqlite3.Error) as exc:
         failure={"status":"d528_batch_stopped","error_type":type(exc).__name__,
                  "completed_pages_preserved":True,"automatic_retry":False,
                  "orders_sent":False,"j1_touched":False}
