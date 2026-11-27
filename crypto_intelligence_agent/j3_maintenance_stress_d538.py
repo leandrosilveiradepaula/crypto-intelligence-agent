@@ -29,6 +29,8 @@ class MaintenanceStressResult:
     checked_bars:int
     first_possible_breach_bar:int | None
     worst_buffer_quote:Decimal
+    first_breach_stage:str | None = None
+    fixed_exposure_mark_only_breach:bool = False
 
 
 def stress_paths(source,*,direction,entry_at,end_at,entry_price,margin,changes,
@@ -61,6 +63,8 @@ def stress_paths(source,*,direction,entry_at,end_at,entry_price,margin,changes,
     checked=0
     worst={x:None for x in grid}
     first={x:None for x in grid}
+    stages={x:None for x in grid}
+    fixed={x:False for x in grid}
     with localcontext(_CTX):
         for index,t in enumerate(range(entry_at,end_at,dt)):
             if not remaining:
@@ -88,12 +92,22 @@ def stress_paths(source,*,direction,entry_at,end_at,entry_price,margin,changes,
                 base=per_fraction_equity-marked_notional*(_D(bps)+close_reserve_bps)/_BPS
                 buffer=(min(qmin*base,remaining*base)-debit).quantize(_Q,rounding=ROUND_FLOOR)
                 worst[bps]=buffer if worst[bps] is None else min(worst[bps],buffer)
+                # Later full bars with unchanged exposure avoid the unknown
+                # ordering of reductions versus the mark extreme. Exclude the
+                # entry bar and all reduction bars. Ignore funding debits for
+                # this stronger mark-only diagnostic, retaining D538's no-credit
+                # and no-realized-profit assumptions. This is still hypothetical.
+                if index>0 and change is None and remaining*base<=0:
+                    fixed[bps]=True
                 if buffer<=0 and first[bps] is None:
                     first[bps]=index
+                    stages[bps]=("entry_bar" if index==0 else
+                                 "reduction_bar" if change is not None else
+                                 "unchanged_bar")
             checked+=1
             if change is not None:
                 remaining=change.after
                 cursor+=1
     if not checked:
         raise DataValidationError("D538 empty exposed path")
-    return {bps:MaintenanceStressResult(checked,first[bps],worst[bps]) for bps in grid}
+    return {bps:MaintenanceStressResult(checked,first[bps],worst[bps],stages[bps],fixed[bps]) for bps in grid}

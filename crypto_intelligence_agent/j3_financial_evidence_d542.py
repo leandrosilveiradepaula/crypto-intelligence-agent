@@ -12,6 +12,7 @@ from itertools import combinations
 import re
 
 from .j3_maintenance_stress_d538 import parse_maintenance_grid
+from .j3_stress_attribution_d545 import decode_attribution
 from .market_data import DataValidationError
 
 ORDERS=("adverse_first","favorable_first")
@@ -104,6 +105,9 @@ def _order(row,n,grid,open_mark):
         stress[str(bps)]={"evaluated":a,"unavailable":u,
                           "possible_breaches":b,
                           "positive_pre_funding_with_possible_breach":wins}
+        attribution=decode_attribution(row,p)
+        if attribution is not None:
+            stress[str(bps)]["conditional_attribution"]=attribution
     opened=_count(row["residual_at_horizon_count"])
     _require(opened<=n)
     result={"funding_matched_paths":matched,"funding_unavailable_paths":unavailable,
