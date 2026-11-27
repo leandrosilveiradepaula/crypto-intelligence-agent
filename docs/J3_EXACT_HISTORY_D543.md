@@ -11,3 +11,6 @@ D528 arredonda para shards completos: 365 solicita até 390 dias; oldest-first i
 ## Operação
 
 Após CI e revisão, preparar atualização controlada do executor root-owned para D543 e leitor D542; não contornar isolamento do broker nem mudar unidade sem autorização administrativa. Não iniciar novos GET após o rate limit até verificar normalização da quota; o retCode 10006 é documentado por https://bybit-exchange.github.io/docs/v5/rate-limit, sem timestamp de reset na resposta observada. Não trocar IP/credencial/rota. Próximas aquisições em lotes menores; não repetir backtest anual 1h. Exemplo de CLI owner com --exact-missing --days 365 --interval 5m --max-gets 50 --request-spacing-seconds 10 e quatro confirmações públicas já exigidas por D528. Mark-5m ainda depende de coleta independente D536; não afirmar melhora do prazo ou cobertura sem evidência. 50x, stops, sizing adiado, holdout preservado; sem release, ordens ou custo.
+
+
+D546: sequência de lotes D543 bem-sucedidos no owner executor, proposta em docs/J3_HISTORY_CAMPAIGN_D546.md; não usar automação externa desativada como prova de continuidade.
