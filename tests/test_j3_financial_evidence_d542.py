@@ -129,6 +129,7 @@ class FinancialEvidenceTests(unittest.TestCase):
         self.assertEqual(out["fully_matched_scenario_count"],6)
         self.assertEqual(out["paired_comparison_count"],15)
         self.assertIn("concentration_pre_funding",out["rows"][0])
+        self.assertIn("conditional_attribution",out["rows"][0]["orders"]["adverse_first"]["stress"]["50"])
         self.assertFalse(out["winner_selected"])
 
 

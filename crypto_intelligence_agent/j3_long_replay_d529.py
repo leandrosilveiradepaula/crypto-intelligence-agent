@@ -404,6 +404,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                 "maintenance_stress_method":"isolated_proportional_initial_collateral_release_debits_retained_no_profit_or_credit",
                 "maintenance_stress_is_not_venue_liquidation":True,
                 "maintenance_stress_rewrites_pnl":False,
+                "stress_attribution_method":"d545_fixed_exposure_mark_only_and_conditional_funding_matched_pnl",
+                "stress_attribution_rewrites_pnl":False,
                 "historical_risk_tiers_verified":False} if maintenance_grid else {}),
             **({"exposure_diagnostics":True,"exposure_diagnostic_method":
                 "independent_complete_paths_bar_start_reference_not_portfolio",

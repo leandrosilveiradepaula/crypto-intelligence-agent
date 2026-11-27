@@ -13,6 +13,7 @@ from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
 from .market_data import ClosedCandle, DataGapError, DataValidationError, interval_duration_ms
 from .j3_funding_replay_d537 import ExposureChange, ObservedFundingHistory
 from .j3_maintenance_stress_d538 import parse_maintenance_grid, stress_paths
+from .j3_stress_attribution_d545 import attribution_fields, record_attribution, format_attribution
 from .j4_automatic_entry_materializer_d448 import PaperEntryExitPolicy
 from .synthetic_cost_scenarios import (
     BPS_DENOMINATOR, SyntheticCostScenario, evaluate_synthetic_costs,
@@ -292,7 +293,8 @@ def empty_replay_totals(*, include_payoff=False, include_target_diagnostics=Fals
                   **{f"stress_{bps}bps_{metric}":0 for bps in grid for metric in (
                       "evaluated_count","unavailable_count","possible_breach_count",
                       "positive_before_funding_with_possible_breach_count",
-                      "no_observed_breach_count","checked_bars")}}
+                      "no_observed_breach_count","checked_bars")},
+                  **{k:v for bps in grid for k,v in attribution_fields(f"stress_{bps}bps_").items()}}
            for name in ("adverse_first", "favorable_first")},
     }
 
@@ -367,6 +369,8 @@ def accumulate_replay(totals: dict, candles, *, direction, decision_end_ms,
                     maintenance_grid=grid))
                 for bps in grid:
                     prefix=f"stress_{bps}bps_"
+                    record_attribution(row,prefix,None if stress is None else stress[bps],
+                                       None if cost is None else (low,high))
                     if stress is None:
                         row[prefix+"unavailable_count"]+=1
                         continue
@@ -457,6 +461,7 @@ def summarize_replay(totals: dict, *, margin: SyntheticMarginBasis) -> dict:
                             or row[prefix+"possible_breach_count"]+row[prefix+"no_observed_breach_count"]!=n
                             or row[prefix+"positive_before_funding_with_possible_breach_count"]>row[prefix+"possible_breach_count"]):
                         raise DataValidationError("D538 inconsistent stress counts")
+                    format_attribution(row,prefix)
             if "funding_matched_path_count" in row:
                 matched=row["funding_matched_path_count"]
                 if (matched+row["funding_unavailable_path_count"]!=count
