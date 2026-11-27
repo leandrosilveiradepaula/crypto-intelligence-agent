@@ -16,6 +16,14 @@ class CampaignUpgradeTests(unittest.TestCase):
         digest=hashlib.sha256(old).hexdigest()
         result=updated_runner(old,digest)
         self.assertIn(b"D546_OWNER_PROBE=PASS",result)
+        self.assertIn(b"D547_OWNER_PROBE=PASS",result)
+        for task in (b"campaign-mark-5m-365",b"preflight-annual-5m",
+                     b"summary-annual-5m",b"replay-annual-5m"):
+            self.assertIn(b'[ "$TASK" = '+task+b' ]',result)
+        self.assertIn(b"--resolution 5m",result)
+        self.assertIn(b"--preserve-recent-90d",result)
+        self.assertIn(b'ln -- "$TMP" "$REPORT"',result)
+        self.assertIn(b'--report "$OUT/annual5m-d547.json"',result)
         self.assertIn(b"^campaign-trade-5m-(365|730)$",result)
         self.assertIn(b'--directory "$HISTORY" --days "$DAYS"',result)
         self.assertIn(b"--exact-missing",result)
