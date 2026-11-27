@@ -1,9 +1,8 @@
 """D544 upgrade is bounded, preserves original policy/paths and rejects drift."""
 import hashlib
-from pathlib import Path
+import os
 import shutil
 import subprocess
-import tempfile
 import unittest
 
 from scripts.prepare_j3_executor_upgrade_d544 import updated_runner
@@ -44,11 +43,11 @@ class UpgradeTests(unittest.TestCase):
         self.assertIn(b'D544_OWNER_PROBE=PASS',new)
         self.assertIn(b'else\n  exit 2',new)
         self.assertNotIn(b'--oldest-first',new)
-        if shutil.which("bash"):
-            with tempfile.TemporaryDirectory() as d:
-                path=Path(d)/"run.sh"
-                path.write_bytes(new)
-                subprocess.run(["bash","-n",str(path)],check=True)
+
+    @unittest.skipUnless(os.name=="posix" and shutil.which("bash"),
+                         "POSIX Bash required for Linux VPS runner")
+    def test_generated_runner_shell_syntax(self):
+        subprocess.run(["bash","-n"],input=updated_runner(OLD,SHA),check=True)
 
     def test_refuses_wrong_digest_and_unexpected_shape(self):
         with self.assertRaises(ValueError):
