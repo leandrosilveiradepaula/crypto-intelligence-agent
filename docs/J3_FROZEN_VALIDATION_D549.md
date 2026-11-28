@@ -12,9 +12,11 @@ para sinais e PAPER. Não iniciar 730d nesta etapa.
 D548 integrado em 6cf461745831385822a5f677cb39156d72b86964, sem instalação.
 D547 continua instalado em c227a797fa3a44e3762b84c996229fe8a8bcb3ab.
 Campanha trade-5m-365 retomada 28/11 14:40:21 UTC sob autorização do PO;
-baseline 1.990.120/5.245.798 (37,94%), primeiro lote ainda não comprovado
-na consulta inicial. Issue #4 comentário 7240847168. Não interromper
-coleta, não iniciar concorrente, respeitar parada sem retry em erro/quota.
+baseline 1.990.120/5.245.798 (37,94%). Parou em 14:45:20 UTC, retCode10006
+na tentativa 25, sem retry/cabeçalho de quota. Coverage offline 14:48:37–14:49:17
+UTC confirmou 2.013.040/5.245.798 (38,37%), +22.920 preservadas, faltam
+3.232.758. Issue #4 comentários 7240847168/7240948178. Acompanhamento
+desativado após falha terminal; não reiniciar automaticamente nem contornar.
 D549 é trabalho independente, não altera executor/unidades/broker ou
 requer terminal do PO nesta sessão.
 
@@ -28,7 +30,8 @@ não desativa a proteção genérica nem cria segundo motor de backtest.
 Após D547 gerar annual5m-d547.json válido, D549 deriva contrato canônico
 do relatório de desenvolvimento e de inputs reais: SHA256 do relatório,
 plano, perfil owner, configuração de indicadores e saídas, política
-efetiva (incluindo margem/50x), janelas e grid. Valida o relatório inteiro
+efetiva (incluindo margem/50x), árvore de fontes Python do motor e scripts,
+versão do interpretador, janelas e grid. Valida o relatório inteiro
 com D542 e exige as mesmas 8 entradas e 6 saídas do estudo D547, stop
 150bps, stress hipotético 50/100/150bps. Não ranqueia ou escolhe vencedor.
 Parâmetros fixos SOMENTE para este estudo registrado, não para o produto.
@@ -54,7 +57,9 @@ configuração/plano, grava contrato uma vez, não lê velas da reserva.
 Registrar digest retornado externamente (issue #4, sem dados privados)
 ANTES de qualquer replay. Recomputar contrato e confrontar digest
 externo e arquivo local a cada ação. Não usar contrato fabricado ou
-mudar perfil entre partições. Os arquivos de configuração permanecem
+mudar perfil ou motor entre partições. Mudanças de qualquer fonte Python
+fixada ou versão do interpretador invalidam o contrato; é vínculo de
+reprodutibilidade, não atestado assinado do runtime. Os arquivos de configuração permanecem
 parametrizáveis, mas o protocolo não permite alterá-los durante o teste.
 
 Exemplo da interface (não executar agora):
