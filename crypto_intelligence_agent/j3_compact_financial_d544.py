@@ -39,6 +39,11 @@ def compact_financial_summary(summary):
                  "scenario_count":summary["scenario_count"],"fully_matched_scenario_count":summary["fully_matched_scenario_count"],
                  "paired_comparison_count":summary["paired_comparison_count"],
                  "resolution":summary["resolution"],"requested_days":summary["requested_days"],
+                 **({"partition":summary["partition"],
+                     "financial_validation_contract_sha256":summary["financial_validation_contract_sha256"],
+                     "validation_scope":"reserved_short_horizon_conditional_research",
+                     "independent_data_access_attested":False}
+                    if summary.get("partition") in ("validation","holdout") else {}),
                  "maintenance_stress_bps":summary["maintenance_stress_bps"],
                  "liquidation_verified":False,"funding_calendar_verified":False,
                  "out_of_sample_results_validated":False,"orders_sent":False}]
@@ -48,7 +53,8 @@ def compact_financial_summary(summary):
                 return tuple(Decimal(x) for x in row["full_match_conditional_net_range_quote"])
             def key(row):
                 return bounds(row)[0]/row["complete_trade_paths"],row["strategy"],row["exit_variant"],row["stop_bps"]
-            ranked=sorted(full,key=key,reverse=True)
+            ranked=([] if summary.get("partition") in ("validation","holdout")
+                    else sorted(full,key=key,reverse=True))
             top=[]
             for row in ranked[:2]:
                 top.append({"strategy":row["strategy"],"exit_variant":row["exit_variant"],"stop_bps":row["stop_bps"],

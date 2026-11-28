@@ -24,6 +24,7 @@ from .market_data import DataValidationError
 from .j3_funding_replay_d537 import ObservedFundingHistory
 from .j3_exposure_diagnostics_d540 import ExposureDiagnostics, MAX_SCENARIOS, MAX_TRACED_PATHS
 from .j3_maintenance_stress_d538 import parse_maintenance_grid
+from .j3_frozen_validation_d549 import bind_replay
 from .j3_entry_research_d530 import EntryExperiment, parse_experiments, entry_events
 from .j3_exit_research_d531 import parse_exit_experiments, describe_exit_experiments
 from .synthetic_intrabar_barriers import ResearchDirection
@@ -124,7 +125,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                     strategy_names=None,research_max_horizon_hours=72,
                     target_diagnostics=False,separate_open_mark=False,
                     preserve_recent_90d=False,observed_funding=False,maintenance_stress_bps=(),
-                    exposure_diagnostics=False):
+                    exposure_diagnostics=False,frozen_financial_validation=None,
+                    expected_frozen_sha256=None):
     maintenance_grid=parse_maintenance_grid(maintenance_stress_bps)
     if maintenance_grid and not observed_funding:
         raise DataValidationError("D538 maintenance stress requires observed funding")
@@ -141,7 +143,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
             or type(observed_funding) is not bool
             or type(exposure_diagnostics) is not bool
             or (exposure_diagnostics and partition!="development")
-            or (observed_funding and partition!="development")
+            or (observed_funding and partition!="development"
+                and frozen_financial_validation is None)
             or any(type(x) is not int or not 1<=x<=research_max_horizon_hours for x in horizons)
             or tuple(sorted(set(horizons)))!=tuple(horizons)
             or owner_policy.leverage.for_new_positions!=50):
@@ -150,6 +153,18 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     if not grid:
         raise DataValidationError("D529 explicit stop grid required")
     horizons=tuple(horizons)
+    frozen=None
+    if frozen_financial_validation is not None or expected_frozen_sha256 is not None:
+        frozen=bind_replay(frozen_financial_validation,expected_frozen_sha256,
+            plan=plan,owner_policy=owner_policy,matrix_raw=matrix_raw,
+            entry_raw=entry_experiments_raw,exit_raw=exit_experiments_raw,
+            partition=partition,days=days,resolution=resolution,horizons=horizons,
+            stops=grid,strategies=strategy_names,
+            research_max_horizon_hours=research_max_horizon_hours,
+            confirm_frozen_hypotheses=confirm_frozen_hypotheses,
+            preserve_recent_90d=preserve_recent_90d,separate_open_mark=separate_open_mark,
+            target_diagnostics=target_diagnostics,observed_funding=observed_funding,
+            maintenance_grid=maintenance_grid,exposure_diagnostics=exposure_diagnostics)
     splits=partitions(plan,days,preserve_recent_90d=preserve_recent_90d)
     base_start=splits["development"][0]
     start,end=splits[partition]
@@ -176,6 +191,8 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
     exits={(name,stop):(replace(p,stop_distance_bps=Decimal(stop)),m)
            for name,(p,m,_) in variants.items() for stop in grid}
     scenario_count=len(labels)*len(horizons)*len(exits)
+    if frozen is not None and (scenario_count!=96 or sorted(variants)!=frozen["exit_variants"]):
+        raise DataValidationError("D549 frozen grid mismatch")
     if scenario_count>3000:
         raise DataValidationError("D531 research grid exceeds 3000 scenarios")
     if exposure_diagnostics and scenario_count>MAX_SCENARIOS:
@@ -412,6 +429,10 @@ def run_long_replay(*,home,plan,owner_policy,matrix_raw,days=90,
                 "exposure_diagnostic_traced_paths":traced_paths,
                 "exposure_diagnostic_excludes_missing_paths":True,
                 "exposure_diagnostic_uses_pre_funding_pnl":True} if exposure_diagnostics else {}),
+            **({"financial_validation_contract":frozen,
+                "financial_validation_contract_sha256":expected_frozen_sha256,
+                "validation_scope":"reserved_short_horizon_conditional_research",
+                "independent_data_access_attested":False} if frozen is not None else {}),
             "winner_selected":False,"out_of_sample_results_validated":False,
             "portfolio_simulated":False,"funding_settlement_verified":False,
             "liquidation_verified":False,"intrabar_path_verified":False,
