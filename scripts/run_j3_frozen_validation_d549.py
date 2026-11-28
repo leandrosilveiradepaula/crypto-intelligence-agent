@@ -19,7 +19,7 @@ from crypto_intelligence_agent.j3_exit_research_d531 import MAX_BYTES as MAX_EXI
 from crypto_intelligence_agent.j3_financial_evidence_d542 import summarize_financial_replay
 from crypto_intelligence_agent.j3_frozen_validation_d549 import (
     build_contract, decode_json, digest, validate_contract, MAX_REPORT_BYTES,
-    MAX_CONTRACT_BYTES, HORIZONS, STOPS, MAINTENANCE, require,
+    MAX_CONTRACT_BYTES, HORIZONS, STOPS, MAINTENANCE, require, engine_fingerprint,
 )
 from crypto_intelligence_agent.j3_long_history_d528 import load_plan, canonical
 from crypto_intelligence_agent.j3_long_replay_d529 import run_long_replay
@@ -151,6 +151,7 @@ def run(args):
             frozen_financial_validation=raw, expected_frozen_sha256=contract_sha)
         require(snapshot(args.policy_file)["revision"] == revision
                 and load_plan(home).digest == plan.digest)
+        require(engine_fingerprint() == c["engine_sha256"])
         report["profile_revision"] = revision
         serialized = json.dumps(report, default=str, sort_keys=True,
                                 separators=(",", ":"), allow_nan=False).encode("utf-8")
