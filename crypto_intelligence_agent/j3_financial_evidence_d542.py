@@ -12,6 +12,7 @@ from itertools import combinations
 import re
 
 from .j3_maintenance_stress_d538 import parse_maintenance_grid
+from .j3_frozen_validation_d549 import verify_reserved_report, expected_grid
 from .j3_stress_attribution_d545 import decode_attribution
 from .market_data import DataValidationError
 
@@ -185,7 +186,7 @@ def _summarize(report):
     _require(type(report) is dict
              and report.get("schema_version")=="d529-retrospective-cohort-replay-v1"
              and report.get("status")=="exploratory_replay_completed"
-             and report.get("partition")=="development"
+             and report.get("partition") in ("development","validation","holdout")
              and report.get("observed_funding") is True
              and report.get("funding_missing_queries_not_zero") is True
              and report.get("leverage_at_intent")==50
@@ -198,6 +199,11 @@ def _summarize(report):
                  "winner_selected","out_of_sample_results_validated",
                  "funding_calendar_verified","funding_settlement_verified",
                  "liquidation_verified")))
+    frozen=None
+    if report["partition"]!="development":
+        frozen=verify_reserved_report(report)
+    elif "financial_validation_contract" in report or "financial_validation_contract_sha256" in report:
+        raise DataValidationError("D549 contract cannot label development as reserved")
     grid=parse_maintenance_grid(report.get("maintenance_stress_bps",()))
     if grid:
         _require(report.get("maintenance_stress_is_not_venue_liquidation") is True
@@ -266,6 +272,10 @@ def _summarize(report):
             entries.append(entry)
             _require(len(entries)<=count)
     _require(len(entries)==count)
+    if frozen is not None:
+        _require({(x["strategy"],x["exit_variant"],x["horizon_hours"],x["stop_bps"])
+                  for x in entries}==expected_grid(frozen["strategy_names"],
+                       frozen["exit_variants"],frozen["horizons_hours"]))
     comparisons=[]
     for (name,h,stop),group in sorted(groups.items()):
         # All exits in a D529 scenario use the same accepted signal path.
@@ -292,6 +302,10 @@ def _summarize(report):
     entries.sort(key=lambda x:(x["horizon_hours"],x["strategy"],x["stop_bps"],x["exit_variant"]))
     return {"schema_version":"d542-financial-evidence-v1","status":"conditional_report_summarized",
             "requested_days":days,"resolution":report["resolution"],"scenario_count":count,
+            **({"partition":report["partition"],
+                "financial_validation_contract_sha256":report["financial_validation_contract_sha256"],
+                "validation_scope":"reserved_short_horizon_conditional_research",
+                "independent_data_access_attested":False} if frozen is not None else {}),
             "maintenance_stress_bps":list(grid),
             "fully_matched_scenario_count":sum(x["full_funding_match_both_orders"] for x in entries),
             "paired_comparison_count":sum(x["status"]=="full_match_conditional_comparison" for x in comparisons),
