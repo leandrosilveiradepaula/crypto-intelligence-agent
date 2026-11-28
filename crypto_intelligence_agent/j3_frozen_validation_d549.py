@@ -10,7 +10,9 @@ from __future__ import annotations
 from dataclasses import asdict
 from hashlib import sha256
 import json
+from pathlib import Path
 import re
+import sys
 
 from .j3_long_history_d528 import DAY, HOUR_MS, canonical
 from .market_data import DataValidationError
@@ -27,7 +29,7 @@ _SHA = re.compile(r"[0-9a-f]{64}\Z")
 _NAME = re.compile(r"[a-z][a-z0-9_]{0,95}\Z")
 _KEYS = {
     "schema_version", "source_report_sha256", "plan_sha256", "profile_revision",
-    "policy_sha256", "matrix_sha256", "entry_experiments_sha256",
+    "policy_sha256", "engine_sha256", "matrix_sha256", "entry_experiments_sha256",
     "exit_experiments_sha256", "cutoff_ms", "partition_ranges_ms",
     "strategy_names", "exit_variants", "horizons_hours", "stop_grid_bps",
     "maintenance_stress_bps", "requested_days", "resolution",
@@ -97,8 +99,38 @@ def policy_fingerprint(policy):
     }))
 
 
+def engine_fingerprint():
+    """Conservative source/interpreter pin, not a signed runtime attestation.
+
+    Read only the bounded project Python source tree; reject symlinked
+    source files/directories. An unrelated Python change also invalidates
+    the protocol, intentionally, rather than allowing a silent engine swap.
+    """
+    root = Path(__file__).resolve().parents[1]
+    files = []
+    for name in ("crypto_intelligence_agent", "scripts"):
+        folder = root / name
+        require(folder.is_dir() and not folder.is_symlink())
+        for p in folder.rglob("*.py"):
+            require(not p.is_symlink() and p.is_file()
+                    and not any(q.is_symlink() for q in p.parents if q != root and root in q.parents))
+            files.append(p)
+            require(len(files) <= 2000)
+    require(bool(files))
+    h = sha256(canonical({"python": list(sys.version_info[:3])}))
+    total = 0
+    for p in sorted(files, key=lambda q: q.relative_to(root).as_posix()):
+        with p.open("rb") as stream:
+            raw = stream.read(4 * 1024 * 1024 + 1)
+        total += len(raw)
+        require(len(raw) <= 4 * 1024 * 1024 and total <= 64 * 1024 * 1024)
+        h.update(canonical([p.relative_to(root).as_posix(), digest(raw)]) + b"\n")
+    return h.hexdigest()
+
+
 def _fingerprints(plan, policy, matrix_raw, entry_raw, exit_raw):
     return {"plan_sha256": plan.digest, "policy_sha256": policy_fingerprint(policy),
+            "engine_sha256": engine_fingerprint(),
             "matrix_sha256": digest(matrix_raw),
             "entry_experiments_sha256": digest(entry_raw),
             "exit_experiments_sha256": digest(exit_raw)}
@@ -120,7 +152,7 @@ def validate_contract(raw, expected_sha):
     require(raw == canonical(c) and set(c) == _KEYS
             and c["schema_version"] == SCHEMA
             and all(_sha(c[k]) for k in ("source_report_sha256", "plan_sha256",
-                "profile_revision", "policy_sha256", "matrix_sha256",
+                "profile_revision", "policy_sha256", "engine_sha256", "matrix_sha256",
                 "entry_experiments_sha256", "exit_experiments_sha256"))
             and _names(c["strategy_names"], 8)
             and _names(c["exit_variants"], 6)
