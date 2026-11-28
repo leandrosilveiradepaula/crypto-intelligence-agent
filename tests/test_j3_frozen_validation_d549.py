@@ -152,6 +152,9 @@ class FrozenValidationTests(unittest.TestCase):
                       {"frozen_financial_validation": None, "expected_frozen_sha256": None}):
             with self.subTest(keys=list(delta)), self.assertRaises(DataValidationError):
                 run_long_replay(**dict(args, **delta))
+        with patch("crypto_intelligence_agent.j3_frozen_validation_d549.engine_fingerprint",
+                   return_value="0"*64), self.assertRaises(DataValidationError):
+            run_long_replay(**args)
         read.assert_not_called()
 
     @patch("crypto_intelligence_agent.j3_long_replay_d529.ObservedFundingHistory.load")
